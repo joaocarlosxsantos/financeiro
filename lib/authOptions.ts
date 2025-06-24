@@ -1,9 +1,8 @@
-// lib/authOptions.ts
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcrypt"
 import { JWT } from "next-auth/jwt"
-import { Session } from "next-auth"
+import { Session, User } from "next-auth"
 import prisma from "@/lib/db"
 
 export const authOptions = {
@@ -23,14 +22,21 @@ export const authOptions = {
         })
 
         if (!user) return null
-        const isValid = await compare(credentials.password, user.password)
 
+        const isValid = await compare(credentials.password, user.password)
         if (!isValid) return null
+
         return user
       },
     }),
   ],
   callbacks: {
+    async jwt({ token, user }: { token: JWT; user?: User & { id: string } }): Promise<JWT> {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
     async session({ session, token }: { session: Session; token: JWT }) {
       if (token && session?.user) {
         session.user.id = token.id as string
