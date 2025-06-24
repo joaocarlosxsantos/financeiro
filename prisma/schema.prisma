@@ -1,0 +1,51 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ===================
+// Modelos do Sistema
+// ===================
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?
+  password      String // armazena hash da senha
+  sessions      Session[]
+  categories    Category[]
+  transactions  Transaction[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  expires      DateTime
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  date        DateTime
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+}
