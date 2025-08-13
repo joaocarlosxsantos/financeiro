@@ -122,23 +122,21 @@ export function RendasFixasTab() {
         {rendas.map((renda) => (
           <Card key={renda.id}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">{renda.description}</h3>
-                      <p className="text-sm text-gray-600">
-                        Dia {renda.dayOfMonth} de cada mês • {renda.category}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Início: {formatDate(renda.startDate)}
-                        {renda.endDate && ` • Fim: ${formatDate(renda.endDate)}`}
-                      </p>
-                    </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div>
+                    <h3 className="font-semibold text-lg truncate">{renda.description}</h3>
+                    <p className="text-sm text-gray-600 break-words">
+                      Dia {renda.dayOfMonth} de cada mês • {renda.category}
+                    </p>
+                    <p className="text-xs text-gray-500 break-words">
+                      Início: {formatDate(renda.startDate)}
+                      {renda.endDate && ` • Fim: ${formatDate(renda.endDate)}`}
+                    </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="text-right">
                     <p className="text-lg font-bold text-green-600">
                       {formatCurrency(renda.amount)}

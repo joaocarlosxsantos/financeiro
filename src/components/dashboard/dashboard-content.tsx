@@ -55,9 +55,9 @@ export function DashboardContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600">Visão geral das suas finanças</p>
         </div>
         
@@ -70,9 +70,9 @@ export function DashboardContent() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
-          <div className="flex items-center space-x-2 px-4 py-2 bg-white rounded-md border">
+          <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white rounded-md border">
             <Calendar className="h-4 w-4 text-gray-500" />
-            <span className="font-medium">{getMonthYear(currentDate)}</span>
+            <span className="font-medium text-sm sm:text-base">{getMonthYear(currentDate)}</span>
           </div>
           
           <Button
@@ -86,7 +86,7 @@ export function DashboardContent() {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Renda Total</CardTitle>
@@ -134,7 +134,7 @@ export function DashboardContent() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Despesas por Categoria</CardTitle>

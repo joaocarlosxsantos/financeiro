@@ -49,15 +49,15 @@ export function IncomeChart({ data }: IncomeChartProps) {
       
       <div className="mt-4 space-y-2">
         {chartData.map((item, index) => (
-          <div key={index} className="flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-2">
+          <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-2">
+            <div className="flex items-center space-x-2 min-w-0">
               <div 
-                className="w-3 h-3 rounded-full" 
+                className="w-3 h-3 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: item.color }}
               />
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-shrink-0">
               <span className="font-medium">{formatCurrency(item.value)}</span>
               <span className="text-gray-500">({item.percentage}%)</span>
             </div>

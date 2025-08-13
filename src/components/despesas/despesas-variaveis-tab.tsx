@@ -110,19 +110,17 @@ export function DespesasVariaveisTab() {
         {despesas.map((despesa) => (
           <Card key={despesa.id}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">{despesa.description}</h3>
-                      <p className="text-sm text-gray-600">
-                        {formatDate(despesa.date)} • {despesa.category}
-                      </p>
-                    </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div>
+                    <h3 className="font-semibold text-lg truncate">{despesa.description}</h3>
+                    <p className="text-sm text-gray-600 break-words">
+                      {formatDate(despesa.date)} • {despesa.category}
+                    </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="text-right">
                     <p className="text-lg font-bold text-red-600">
                       {formatCurrency(despesa.amount)}
