@@ -16,28 +16,43 @@ import { ExpenseChart } from './expense-chart'
 import { IncomeChart } from './income-chart'
 
 import { Loader } from '@/components/ui/loader'
+
 import { SummaryRatioChart } from './summary-ratio-chart'
 import { TagChart } from './tag-chart'
+import { MonthlyBarChart } from './monthly-bar-chart'
+import { TopExpenseCategoriesChart } from './top-expense-categories-chart'
+
+// Função utilitária para formatar data yyyy-MM-dd
+const toYmd = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 export function DashboardContent() {
+
+  // hooks de estado
+  const [summary, setSummary] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    balance: 0,
+    expensesByCategory: [] as Array<{ category: string; amount: number; color: string }> ,
+    incomesByCategory: [] as Array<{ category: string; amount: number; color: string }> ,
+    expensesByTag: [] as Array<{ tag: string; amount: number; color: string }> ,
+    monthlyData: [] as Array<{ month: string; income: number; expense: number; balance: number }> ,
+    topExpenseCategories: [] as Array<{ category: string; amount: number; diff: number }> ,
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedWallet, setSelectedWallet] = useState<string>('')
   const [currentDate, setCurrentDate] = useState(new Date())
   const today = new Date()
   const isAtCurrentMonth =
     currentDate.getFullYear() === today.getFullYear() &&
     currentDate.getMonth() === today.getMonth()
-  
-  const [summary, setSummary] = useState({
-    totalIncome: 0,
-    totalExpenses: 0,
-    balance: 0,
-    expensesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
-    incomesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
-    expensesByTag: [] as Array<{ tag: string; amount: number; color: string }>,
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
-  const [selectedWallet, setSelectedWallet] = useState<string>('')
 
+  // Carregar carteiras
   useEffect(() => {
     const fetchWallets = async () => {
       const res = await fetch('/api/wallets', { cache: 'no-store' })
@@ -46,6 +61,50 @@ export function DashboardContent() {
     fetchWallets()
   }, [])
 
+  // Carregar dados dos últimos 12 meses para gráfico de barras empilhadas
+  useEffect(() => {
+    const fetchMonthlyData = async () => {
+      const now = new Date()
+      const months: { year: number; month: number; label: string }[] = []
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        months.push({
+          year: d.getFullYear(),
+          month: d.getMonth() + 1,
+          label: `${d.toLocaleString('pt-BR', { month: 'short' })}/${d.getFullYear().toString().slice(-2)}`
+        })
+      }
+      const fetchOpts: RequestInit = { cache: 'no-store', credentials: 'same-origin' }
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : ''
+      const results = await Promise.all(months.map(async ({ year, month }) => {
+        const { start, end } = getMonthRange(year, month)
+        const startStr = toYmd(start)
+        const endStr = toYmd(end)
+        const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
+          fetch(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+          fetch(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+          fetch(`/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+          fetch(`/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+        ])
+        const [expVar, expFix, incVar, incFix] = await Promise.all([
+          expVarRes.ok ? expVarRes.json() : [],
+          expFixRes.ok ? expFixRes.json() : [],
+          incVarRes.ok ? incVarRes.json() : [],
+          incFixRes.ok ? incFixRes.json() : [],
+        ])
+        const allExpenses: any[] = [...expVar, ...expFix]
+        const allIncomes: any[] = [...incVar, ...incFix]
+        const expense = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
+        const income = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0)
+        const balance = income - expense
+        return { expense, income, balance }
+      }))
+      setSummary(prev => ({ ...prev, monthlyData: months.map((m, i) => ({ month: m.label, ...results[i] })) }))
+    }
+    fetchMonthlyData()
+  }, [selectedWallet])
+
+  // Carregar dados do mês atual e anterior para top 5 categorias
   useEffect(() => {
     const fetchSummary = async () => {
       setIsLoading(true)
@@ -53,12 +112,6 @@ export function DashboardContent() {
       const month = currentDate.getMonth() + 1
       const { start, end } = getMonthRange(year, month)
       // normalizar para yyyy-MM-dd local sem timezone
-      const toYmd = (d: Date) => {
-        const y = d.getFullYear()
-        const m = String(d.getMonth() + 1).padStart(2, '0')
-        const day = String(d.getDate()).padStart(2, '0')
-        return `${y}-${m}-${day}`
-      }
       const startStr = toYmd(start)
       const endStr = toYmd(end)
 
@@ -136,14 +189,53 @@ export function DashboardContent() {
       }
       const expensesByTag = Array.from(tagMap.entries()).map(([tag, v]) => ({ tag: tagIdToName[tag] || tag, amount: v.amount, color: v.color }));
 
-      setSummary({
+      // Top 5 categorias de despesa do mês atual
+      const topCategories = [...expensesByCategory]
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5)
+
+      // Buscar dados do mês anterior para variação
+      const prevMonth = new Date(currentDate)
+      prevMonth.setMonth(currentDate.getMonth() - 1)
+      const { start: prevStart, end: prevEnd } = getMonthRange(prevMonth.getFullYear(), prevMonth.getMonth() + 1)
+      const prevStartStr = toYmd(prevStart)
+      const prevEndStr = toYmd(prevEnd)
+      let prevExpensesByCategory: Array<{ category: string; amount: number }> = []
+      try {
+        const prevExpVarRes = await fetch(`/api/expenses?type=VARIABLE&start=${prevStartStr}&end=${prevEndStr}${selectedWallet ? `&walletId=${selectedWallet}` : ''}&_=${Date.now()}`, { cache: 'no-store', credentials: 'same-origin' })
+        const prevExpFixRes = await fetch(`/api/expenses?type=FIXED&start=${prevStartStr}&end=${prevEndStr}${selectedWallet ? `&walletId=${selectedWallet}` : ''}&_=${Date.now()}`, { cache: 'no-store', credentials: 'same-origin' })
+        const [prevExpVar, prevExpFix] = await Promise.all([
+          prevExpVarRes.ok ? prevExpVarRes.json() : [],
+          prevExpFixRes.ok ? prevExpFixRes.json() : [],
+        ])
+        const allPrevExpenses: any[] = [...prevExpVar, ...prevExpFix]
+        const prevExpenseMap = new Map<string, number>()
+        for (const e of allPrevExpenses) {
+          const key = e.category?.name || 'Sem categoria'
+          prevExpenseMap.set(key, (prevExpenseMap.get(key) || 0) + Number(e.amount))
+        }
+        prevExpensesByCategory = Array.from(prevExpenseMap.entries()).map(([category, amount]) => ({ category, amount }))
+      } catch {}
+
+      const prevAmounts: Record<string, number> = {}
+      for (const c of prevExpensesByCategory) prevAmounts[c.category] = c.amount
+
+      const topExpenseCategories = topCategories.map(c => ({
+        category: c.category,
+        amount: c.amount,
+        diff: c.amount - (prevAmounts[c.category] || 0),
+      }))
+
+      setSummary(prev => ({
+        ...prev,
         totalIncome,
         totalExpenses,
         balance: totalIncome - totalExpenses,
         expensesByCategory,
         incomesByCategory,
         expensesByTag,
-      })
+        topExpenseCategories,
+      }))
       setIsLoading(false)
     }
 
@@ -173,8 +265,17 @@ export function DashboardContent() {
     })
   }
 
+  // Cálculo do limite diário seguro
+  const diasRestantes = (() => {
+    const hoje = new Date(currentDate)
+    const fim = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    // Se for hoje, conta o dia de hoje também
+    return Math.max(1, fim.getDate() - hoje.getDate() + 1)
+  })();
+  const limiteDiario = diasRestantes > 0 ? summary.balance / diasRestantes : 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex-1 min-h-screen flex flex-col">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -219,7 +320,7 @@ export function DashboardContent() {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Renda Total</CardTitle>
@@ -258,11 +359,28 @@ export function DashboardContent() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Card Limite Diário */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Limite Diário Seguro</CardTitle>
+            <span className="h-4 w-4 text-orange-500">💸</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">
+              {formatCurrency(limiteDiario)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Para não ficar com saldo ≤ 0 até o fim do mês
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
 
+
       {/* Gráficos */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Rendas por Categoria</CardTitle>
@@ -307,6 +425,36 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Renda vs Despesas (12 meses)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {summary.monthlyData.length > 0 ? (
+            <MonthlyBarChart data={summary.monthlyData} />
+          ) : (
+            <Loader text="Carregando histórico..." />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Top 5 categorias de despesa do período */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top 5 Categorias de Despesa (vs mês anterior)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {summary.topExpenseCategories.length > 0 ? (
+            <TopExpenseCategoriesChart data={summary.topExpenseCategories} />
+          ) : (
+            <Loader text="Carregando categorias..." />
+          )}
+        </CardContent>
+      </Card>
       </div>
 
       {/* Gráfico de relação (largura total) */}
