@@ -22,7 +22,7 @@ interface RendaVariavel {
 
 export function RendasVariaveisTab() {
   const [rendas, setRendas] = useState<RendaVariavel[]>([])
-  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([])
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
   const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '' })
   const [isLoading, setIsLoading] = useState(false)
@@ -156,9 +156,12 @@ export function RendasVariaveisTab() {
                     onChange={(e) => setForm(f => ({ ...f, categoryId: e.target.value }))}
                   >
                     <option value="">Sem categoria</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {categories
+                      .filter(c => c.type === 'INCOME' || c.type === 'BOTH') // aqui é FIXED/EXPENSE
+                      .map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))
+                    }
                   </select>
                 </div>
                 <div>

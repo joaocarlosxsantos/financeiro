@@ -24,7 +24,7 @@ interface RendaFixa {
 
 export function RendasFixasTab() {
   const [rendas, setRendas] = useState<RendaFixa[]>([])
-  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([])
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
   const [isLoading, setIsLoading] = useState(false)
   const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
@@ -161,9 +161,12 @@ export function RendasFixasTab() {
                     onChange={(e) => setForm(f => ({ ...f, categoryId: e.target.value }))}
                   >
                     <option value="">Sem categoria</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {categories
+                      .filter(c => c.type === 'INCOME' || c.type === 'BOTH') // aqui é FIXED/EXPENSE
+                      .map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))
+                    }
                   </select>
                 </div>
                 <div>
