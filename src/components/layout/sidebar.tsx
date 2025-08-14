@@ -3,13 +3,16 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
 import { 
   BarChart3, 
   CreditCard, 
   DollarSign, 
   Home, 
   Tag,
-  User
+  User,
+  LogOut
 } from 'lucide-react'
 
 const navigation = [
@@ -21,6 +24,7 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
 
   return (
     <div className="flex h-full w-64 flex-col bg-gray-900">
@@ -55,14 +59,36 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-gray-800 p-4">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <User className="h-8 w-8 text-gray-400" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {user?.image ? (
+                <img 
+                  src={user.image} 
+                  alt={user.name || 'User'} 
+                  className="h-8 w-8 rounded-full"
+                />
+              ) : (
+                <User className="h-8 w-8 text-gray-400" />
+              )}
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-white">
+                {user?.name || 'Usuário'}
+              </p>
+              <p className="text-xs text-gray-400">
+                {user?.email || 'usuario@email.com'}
+              </p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">Usuário</p>
-            <p className="text-xs text-gray-400">usuario@email.com</p>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={logout}
+            className="text-gray-400 hover:text-white"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>
