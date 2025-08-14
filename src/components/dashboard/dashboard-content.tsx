@@ -266,13 +266,21 @@ export function DashboardContent() {
   }
 
   // Cálculo do limite diário seguro
-  const diasRestantes = (() => {
-    const hoje = new Date(currentDate)
-    const fim = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-    // Se for hoje, conta o dia de hoje também
-    return Math.max(1, fim.getDate() - hoje.getDate() + 1)
-  })();
-  const limiteDiario = diasRestantes > 0 ? summary.balance / diasRestantes : 0;
+  const hoje = new Date();
+  const fim = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  let diasRestantes = 0;
+  let limiteDiario = 0;
+  // Se o mês já passou, limite é 0
+  if (
+    currentDate.getFullYear() < hoje.getFullYear() ||
+    (currentDate.getFullYear() === hoje.getFullYear() && currentDate.getMonth() < hoje.getMonth())
+  ) {
+    diasRestantes = 0;
+    limiteDiario = 0;
+  } else {
+    diasRestantes = Math.max(1, fim.getDate() - (currentDate.getFullYear() === hoje.getFullYear() && currentDate.getMonth() === hoje.getMonth() ? hoje.getDate() : 1) + 1);
+    limiteDiario = diasRestantes > 0 ? summary.balance / diasRestantes : 0;
+  }
 
   return (
     <div className="space-y-6 flex-1 min-h-screen flex flex-col">
