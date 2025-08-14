@@ -109,8 +109,8 @@ export function CategoriasContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Categorias</h1>
-          <p className="text-gray-600">Gerencie suas categorias de despesas e rendas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Categorias</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas categorias de despesas e rendas</p>
         </div>
         
         <Button onClick={() => setShowForm(true)}>
@@ -193,7 +193,7 @@ export function CategoriasContent() {
                   />
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-lg truncate">{category.name}</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-foreground">
                       {getTypeLabel(category.type)}
                     </p>
                   </div>
@@ -225,8 +225,8 @@ export function CategoriasContent() {
       {categories.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Tag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Nenhuma categoria cadastrada</p>
+            <Tag className="h-12 w-12 text-gray-400 dark:text-foreground mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-foreground">Nenhuma categoria cadastrada</p>
             <Button 
               className="mt-4"
               onClick={() => setShowForm(true)}

@@ -144,13 +144,13 @@ export function DashboardContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Visão geral das suas finanças</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-foreground">Visão geral das suas finanças</p>
         </div>
         
         <div className="flex items-center space-x-2">
           <select
-            className="border rounded px-2 py-1 text-sm"
+            className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
             onChange={e => setSelectedWallet(e.target.value)}
           >
@@ -167,9 +167,9 @@ export function DashboardContent() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
-          <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white rounded-md border">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <span className="font-medium text-sm sm:text-base">{getMonthYear(currentDate)}</span>
+          <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-background border border-border rounded-md">
+            <Calendar className="h-4 w-4 text-foreground" />
+            <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">{getMonthYear(currentDate)}</span>
           </div>
           
           <Button
@@ -238,7 +238,7 @@ export function DashboardContent() {
             ) : summary.expensesByCategory.length > 0 ? (
               <ExpenseChart data={summary.expensesByCategory} />
             ) : (
-              <div className="text-sm text-gray-500">Sem dados para o período selecionado</div>
+              <div className="text-sm text-gray-500 dark:text-foreground">Sem dados para o período selecionado</div>
             )}
           </CardContent>
         </Card>
@@ -253,7 +253,7 @@ export function DashboardContent() {
             ) : summary.incomesByCategory.length > 0 ? (
               <IncomeChart data={summary.incomesByCategory} />
             ) : (
-              <div className="text-sm text-gray-500">Sem dados para o período selecionado</div>
+              <div className="text-sm text-gray-500 dark:text-foreground">Sem dados para o período selecionado</div>
             )}
           </CardContent>
         </Card>

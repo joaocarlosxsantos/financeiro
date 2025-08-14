@@ -94,8 +94,8 @@ export function CarteirasContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Carteiras</h1>
-          <p className="text-gray-600">Gerencie suas carteiras e saldos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Carteiras</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas carteiras e saldos</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -144,10 +144,10 @@ export function CarteirasContent() {
                 <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
                     <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
-                        <WalletIcon className="h-8 w-8 text-gray-500 flex-shrink-0" />
+                        <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
                         <div className="min-w-0">
                         <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
-                        <p className="text-sm text-gray-500">{wallet.type}</p>
+                        <p className="text-sm text-gray-500 dark:text-foreground">{wallet.type}</p>
                         </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
@@ -173,8 +173,8 @@ export function CarteirasContent() {
       {wallets.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
-            <WalletIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Nenhuma carteira cadastrada</p>
+            <WalletIcon className="h-12 w-12 text-gray-400 dark:text-foreground mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-foreground">Nenhuma carteira cadastrada</p>
             <Button className="mt-4" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeira Carteira

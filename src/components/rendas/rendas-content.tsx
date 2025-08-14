@@ -13,8 +13,8 @@ export function RendasContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Rendas</h1>
-          <p className="text-gray-600">Gerencie suas rendas fixas e variáveis</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas fixas e variáveis</p>
         </div>
       </div>
 
@@ -23,23 +23,23 @@ export function RendasContent() {
         <TabsList className="grid w-full grid-cols-2 gap-2 bg-transparent p-0">
           <TabsTrigger 
             value="fixas"
-            className="border border-transparent bg-white text-gray-600 rounded-md py-2 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900 data-[state=active]:border-gray-200"
+            className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
           >
             Rendas Fixas
           </TabsTrigger>
           <TabsTrigger 
             value="variaveis"
-            className="border border-transparent bg-white text-gray-600 rounded-md py-2 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-900 data-[state=active]:border-gray-200"
+            className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
           >
             Rendas Variáveis
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="fixas" className="space-y-4 rounded-md border border-gray-200 bg-gray-50 p-4 sm:p-6">
+  <TabsContent value="fixas" className="space-y-4 rounded-md border border-border bg-background p-4 sm:p-6">
           <RendasFixasTab />
         </TabsContent>
         
-        <TabsContent value="variaveis" className="space-y-4 rounded-md border border-gray-200 bg-gray-50 p-4 sm:p-6">
+  <TabsContent value="variaveis" className="space-y-4 rounded-md border border-border bg-background p-4 sm:p-6">
           <RendasVariaveisTab />
         </TabsContent>
       </Tabs>
