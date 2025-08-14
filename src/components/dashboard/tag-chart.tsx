@@ -32,7 +32,7 @@ export function TagChart({ data }: TagChartProps) {
               cy="50%"
               label={false}
               labelLine={false}
-              outerRadius={90}
+              outerRadius={120}
               fill="#8884d8"
               dataKey="value"
             >
