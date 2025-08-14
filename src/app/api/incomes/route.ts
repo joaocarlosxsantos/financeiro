@@ -41,8 +41,11 @@ export async function GET(req: NextRequest) {
       { OR: [ { endDate: null }, { endDate: { gte: startD } } ] },
     ]
   }
+  // Adicionar filtro por carteira, se informado
+  const walletId = url.searchParams.get('walletId');
+  if (walletId) where.walletId = walletId;
 
-  const incomes = await prisma.income.findMany({ where, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], include: { category: true } })
+  const incomes = await prisma.income.findMany({ where, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], include: { category: true, wallet: true } })
   return NextResponse.json(incomes)
 }
 
@@ -53,20 +56,21 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { description, amount, date, type, isFixed = false, startDate, endDate, dayOfMonth, categoryId } = body
+  const { description, amount, date, type, isFixed = false, startDate, endDate, dayOfMonth, categoryId, walletId } = body
   if (!description || !amount) return NextResponse.json({ error: 'Descrição e valor são obrigatórios' }, { status: 400 })
 
   const income = await prisma.income.create({
     data: {
       description,
       amount,
-      date: date ? parseFlexibleDate(date) : new Date(),
+      date: date ? parseFlexibleDate(date) ?? new Date() : new Date(),
       type,
       isFixed,
       startDate: parseFlexibleDate(startDate),
       endDate: parseFlexibleDate(endDate),
       dayOfMonth,
       categoryId,
+      walletId,
       userId: user.id,
     },
   })

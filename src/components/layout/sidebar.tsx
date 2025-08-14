@@ -12,13 +12,15 @@ import {
   Home, 
   Tag,
   User,
-  LogOut
+  LogOut,
+  Wallet
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Despesas', href: '/despesas', icon: CreditCard },
   { name: 'Rendas', href: '/rendas', icon: DollarSign },
+  { name: 'Carteiras', href: '/wallets', icon: Wallet },
   { name: 'Categorias', href: '/categorias', icon: Tag },
 ]
 

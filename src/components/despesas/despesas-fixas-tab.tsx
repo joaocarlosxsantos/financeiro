@@ -16,6 +16,8 @@ interface DespesaFixa {
   dayOfMonth: number
   categoryName?: string
   categoryId?: string | null
+  walletId?: string | null
+  walletName?: string
   startDate: Date
   endDate?: Date
 }
@@ -23,6 +25,7 @@ interface DespesaFixa {
 export function DespesasFixasTab() {
   const [despesas, setDespesas] = useState<DespesaFixa[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
@@ -32,6 +35,7 @@ export function DespesasFixasTab() {
     amount: '',
     dayOfMonth: '',
     categoryId: '',
+    walletId: '',
     startDate: '',
     endDate: '',
   })
@@ -39,11 +43,13 @@ export function DespesasFixasTab() {
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
-      const [catsRes, listRes] = await Promise.all([
+      const [catsRes, walletsRes, listRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
+        fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/expenses?type=FIXED', { cache: 'no-store' }),
       ])
       if (catsRes.ok) setCategories(await catsRes.json())
+      if (walletsRes.ok) setWallets(await walletsRes.json())
       if (listRes.ok) {
         const data = await listRes.json()
         const mapped = data.map((e: any) => ({
@@ -53,6 +59,8 @@ export function DespesasFixasTab() {
           dayOfMonth: e.dayOfMonth ?? 1,
           categoryName: e.category?.name,
           categoryId: e.categoryId,
+          walletId: e.walletId,
+          walletName: e.wallet?.name,
           startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
         }))
@@ -72,6 +80,7 @@ export function DespesasFixasTab() {
         amount: String(d.amount),
         dayOfMonth: String(d.dayOfMonth ?? ''),
         categoryId: d.categoryId || '',
+        walletId: d.walletId || '',
         startDate: d.startDate ? new Date(d.startDate).toISOString().slice(0,10) : '',
         endDate: d.endDate ? new Date(d.endDate).toISOString().slice(0,10) : '',
       })
@@ -99,6 +108,7 @@ export function DespesasFixasTab() {
           endDate: form.endDate || undefined,
           dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
           categoryId: form.categoryId || undefined,
+          walletId: form.walletId || undefined,
         }),
       })
       if (res.ok) {
@@ -110,6 +120,8 @@ export function DespesasFixasTab() {
           dayOfMonth: updated.dayOfMonth ?? 1,
           categoryName: categories.find(c => c.id === updated.categoryId)?.name,
           categoryId: updated.categoryId,
+          walletId: updated.walletId,
+          walletName: wallets.find(w => w.id === updated.walletId)?.name,
           startDate: updated.startDate ? new Date(updated.startDate) : new Date(),
           endDate: updated.endDate ? new Date(updated.endDate) : undefined,
         } : x))
@@ -127,6 +139,7 @@ export function DespesasFixasTab() {
           endDate: form.endDate || undefined,
           dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
           categoryId: form.categoryId || undefined,
+          walletId: form.walletId || undefined,
         }),
       })
       if (res.ok) {
@@ -138,6 +151,8 @@ export function DespesasFixasTab() {
           dayOfMonth: created.dayOfMonth ?? 1,
           categoryName: categories.find(c => c.id === created.categoryId)?.name,
           categoryId: created.categoryId,
+          walletId: created.walletId,
+          walletName: wallets.find(w => w.id === created.walletId)?.name,
           startDate: created.startDate ? new Date(created.startDate) : new Date(),
           endDate: created.endDate ? new Date(created.endDate) : undefined,
         }, ...prev])
@@ -145,7 +160,7 @@ export function DespesasFixasTab() {
     }
     setShowForm(false)
     setEditingId(null)
-    setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', startDate: '', endDate: '' })
+    setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
   }
 
   return (
@@ -184,6 +199,20 @@ export function DespesasFixasTab() {
                     <option value="">Sem categoria</option>
                     {categories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="wallet">Carteira</Label>
+                  <select
+                    id="wallet"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.walletId}
+                    onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                  >
+                    <option value="">Selecione</option>
+                    {wallets.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
                   </select>
                 </div>
@@ -243,6 +272,7 @@ export function DespesasFixasTab() {
                     <p className="text-xs text-gray-500 break-words">
                       Início: {formatDate(despesa.startDate)}
                       {despesa.endDate && ` • Fim: ${formatDate(despesa.endDate)}`}
+                      {despesa.walletName && ` • Carteira: ${despesa.walletName}`}
                     </p>
                   </div>
                 </div>

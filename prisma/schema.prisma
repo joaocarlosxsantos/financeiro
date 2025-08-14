@@ -49,6 +49,8 @@ model User {
   categories    Category[]
   expenses      Expense[]
   incomes       Income[]
+  wallets       Wallet[]
+  transfers     Transfer[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -91,6 +93,8 @@ model Expense {
   category    Category?     @relation(fields: [categoryId], references: [id])
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId    String?
+  wallet      Wallet?       @relation(fields: [walletId], references: [id])
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
@@ -109,8 +113,40 @@ model Income {
   category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId    String?
+  wallet      Wallet?     @relation(fields: [walletId], references: [id])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+}
+
+model Wallet {
+  id        String    @id @default(cuid())
+  name      String
+  type      String    // Ex: "carteira", "banco", "cartao"
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses  Expense[]
+  incomes   Income[]
+  transfersFrom Transfer[] @relation("FromWallet")
+  transfersTo   Transfer[] @relation("ToWallet")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, name])
+}
+
+model Transfer {
+  id          String   @id @default(cuid())
+  fromWallet  Wallet   @relation("FromWallet", fields: [fromWalletId], references: [id])
+  fromWalletId String
+  toWallet    Wallet   @relation("ToWallet", fields: [toWalletId], references: [id])
+  toWalletId  String
+  amount      Decimal  @db.Decimal(10, 2)
+  date        DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum CategoryType {

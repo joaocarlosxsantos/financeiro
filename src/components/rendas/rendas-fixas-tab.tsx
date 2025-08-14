@@ -16,6 +16,8 @@ interface RendaFixa {
   dayOfMonth: number
   categoryName?: string
   categoryId?: string | null
+  walletId?: string | null
+  walletName?: string
   startDate: Date
   endDate?: Date
 }
@@ -23,17 +25,20 @@ interface RendaFixa {
 export function RendasFixasTab() {
   const [rendas, setRendas] = useState<RendaFixa[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', startDate: '', endDate: '' })
+  const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
 
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
-      const [catsRes, listRes] = await Promise.all([
+      const [catsRes, walletsRes, listRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
+        fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/incomes?type=FIXED', { cache: 'no-store' }),
       ])
       if (catsRes.ok) setCategories(await catsRes.json())
+      if (walletsRes.ok) setWallets(await walletsRes.json())
       if (listRes.ok) {
         const data = await listRes.json()
         const mapped = data.map((e: any) => ({
@@ -43,6 +48,8 @@ export function RendasFixasTab() {
           dayOfMonth: e.dayOfMonth ?? 1,
           categoryName: e.category?.name,
           categoryId: e.categoryId,
+          walletId: e.walletId,
+          walletName: e.wallet?.name,
           startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
         }))
@@ -65,6 +72,7 @@ export function RendasFixasTab() {
         amount: String(r.amount),
         dayOfMonth: String(r.dayOfMonth ?? ''),
         categoryId: r.categoryId || '',
+        walletId: r.walletId || '',
         startDate: r.startDate ? new Date(r.startDate).toISOString().slice(0,10) : '',
         endDate: r.endDate ? new Date(r.endDate).toISOString().slice(0,10) : '',
       })
@@ -88,6 +96,7 @@ export function RendasFixasTab() {
       endDate: form.endDate || undefined,
       dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
       categoryId: form.categoryId || undefined,
+      walletId: form.walletId || undefined,
     }
     const res = await fetch(editingId ? `/api/incomes/${editingId}` : '/api/incomes', {
       method: editingId ? 'PUT' : 'POST',
@@ -104,13 +113,15 @@ export function RendasFixasTab() {
           dayOfMonth: saved.dayOfMonth ?? 1,
           categoryName: categories.find(c => c.id === saved.categoryId)?.name,
           categoryId: saved.categoryId,
+          walletId: saved.walletId,
+          walletName: wallets.find(w => w.id === saved.walletId)?.name,
           startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
           endDate: saved.endDate ? new Date(saved.endDate) : undefined,
         }
         if (editingId) return prev.map(x => x.id === saved.id ? item : x)
         return [item, ...prev]
       })
-      setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', startDate: '', endDate: '' })
+      setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
       setEditingId(null)
       setShowForm(false)
     }
@@ -152,6 +163,20 @@ export function RendasFixasTab() {
                     <option value="">Sem categoria</option>
                     {categories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="wallet">Carteira</Label>
+                  <select
+                    id="wallet"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.walletId}
+                    onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                  >
+                    <option value="">Selecione</option>
+                    {wallets.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
                   </select>
                 </div>
@@ -211,6 +236,8 @@ export function RendasFixasTab() {
                     <p className="text-xs text-gray-500 break-words">
                       Início: {formatDate(renda.startDate)}
                       {renda.endDate && ` • Fim: ${formatDate(renda.endDate)}`}
+                      <br />
+                      Carteira: {renda.walletName || 'N/A'}
                     </p>
                   </div>
                 </div>

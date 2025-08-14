@@ -1,0 +1,187 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Edit, Trash2, Plus, Wallet as WalletIcon } from 'lucide-react'
+import { Loader } from '@/components/ui/loader'
+
+interface Wallet {
+  id: string
+  name: string
+  type: string
+  expenses: { amount: number | string }[]
+  incomes: { amount: number | string }[]
+}
+
+export function CarteirasContent() {
+  const [wallets, setWallets] = useState<Wallet[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [type, setType] = useState('carteira')
+
+  // Carrega carteiras
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true)
+      try {
+        const res = await fetch('/api/wallets', { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          setWallets(data)
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const handleEdit = (id: string) => {
+    const wallet = wallets.find(w => w.id === id)
+    if (wallet) {
+      setEditingId(id)
+      setName(wallet.name)
+      setType(wallet.type)
+      setShowForm(true)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/wallets/${id}`, { method: 'DELETE' })
+    if (res.ok) setWallets(wallets.filter(w => w.id !== id))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name) return
+
+    if (editingId) {
+      const res = await fetch(`/api/wallets/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setWallets(prev => prev.map(w => (w.id === updated.id ? updated : w)))
+      }
+    } else {
+      const res = await fetch('/api/wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type })
+      })
+      if (res.ok) {
+        const created = await res.json()
+        setWallets(prev => [created, ...prev])
+      }
+    }
+
+    setShowForm(false)
+    setEditingId(null)
+    setName('')
+    setType('carteira')
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Carteiras</h1>
+          <p className="text-gray-600">Gerencie suas carteiras e saldos</p>
+        </div>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Carteira
+        </Button>
+      </div>
+
+      {/* Formulário */}
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingId ? 'Editar Carteira' : 'Nova Carteira'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Nome</Label>
+                  <Input id="name" placeholder="Ex: Carteira Principal" value={name} onChange={e => setName(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="type">Tipo</Label>
+                  <Input id="type" placeholder="Ex: banco, cartão" value={type} onChange={e => setType(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
+                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancelar</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lista de carteiras */}
+      {isLoading ? (
+        <Loader text="Carregando carteiras..." />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-6">
+            {wallets.map(wallet => {
+                const saldo =
+                (wallet.incomes?.reduce((acc, i) => acc + Number(i.amount), 0) || 0) -
+                (wallet.expenses?.reduce((acc, e) => acc + Number(e.amount), 0) || 0)
+
+                return (
+                <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <WalletIcon className="h-8 w-8 text-gray-500 flex-shrink-0" />
+                        <div className="min-w-0">
+                        <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
+                        <p className="text-sm text-gray-500">{wallet.type}</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                        <span className={saldo >= 0 ? 'text-green-600 font-bold text-lg' : 'text-red-600 font-bold text-lg'}>
+                        {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                        <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
+                            <Edit className="h-5 w-5" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                        </div>
+                    </div>
+                    </CardContent>
+                </Card>
+                )
+            })}
+        </div>
+      )}
+
+      {wallets.length === 0 && !showForm && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <WalletIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">Nenhuma carteira cadastrada</p>
+            <Button className="mt-4" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Primeira Carteira
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

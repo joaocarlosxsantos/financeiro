@@ -32,6 +32,16 @@ export function DashboardContent() {
     incomesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedWallet, setSelectedWallet] = useState<string>('')
+
+  useEffect(() => {
+    const fetchWallets = async () => {
+      const res = await fetch('/api/wallets', { cache: 'no-store' })
+      if (res.ok) setWallets(await res.json())
+    }
+    fetchWallets()
+  }, [])
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -50,11 +60,12 @@ export function DashboardContent() {
       const endStr = toYmd(end)
 
       const fetchOpts: RequestInit = { cache: 'no-store', credentials: 'same-origin' }
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : ''
       const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
-        fetch(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/incomes?type=FIXED&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
       ])
 
       const [expVar, expFix, incVar, incFix] = await Promise.all([
@@ -103,7 +114,7 @@ export function DashboardContent() {
     }
 
     fetchSummary()
-  }, [currentDate])
+  }, [currentDate, selectedWallet])
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => {
@@ -138,6 +149,16 @@ export function DashboardContent() {
         </div>
         
         <div className="flex items-center space-x-2">
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={selectedWallet}
+            onChange={e => setSelectedWallet(e.target.value)}
+          >
+            <option value="">Todas as carteiras</option>
+            {wallets.map(w => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </select>
           <Button
             variant="outline"
             size="sm"

@@ -23,6 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         endDate: body.endDate ? new Date(body.endDate) : undefined,
         dayOfMonth: body.dayOfMonth,
         categoryId: body.categoryId,
+        walletId: body.walletId,
       },
     })
     return NextResponse.json(updated)

@@ -102,6 +102,16 @@ export default function SignInPage() {
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push('/auth/register')}
+            >
+              Criar nova conta
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -16,12 +16,15 @@ interface RendaVariavel {
   date: Date
   categoryName?: string
   categoryId?: string | null
+  walletId?: string | null
+  walletName?: string
 }
 
 export function RendasVariaveisTab() {
   const [rendas, setRendas] = useState<RendaVariavel[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
-  const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '' })
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
+  const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '' })
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
@@ -30,11 +33,13 @@ export function RendasVariaveisTab() {
       const today = new Date()
       const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0,10)
       const end = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0,10)
-      const [catsRes, listRes] = await Promise.all([
+      const [catsRes, walletsRes, listRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
+        fetch('/api/wallets', { cache: 'no-store' }),
         fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}`, { cache: 'no-store' }),
       ])
       if (catsRes.ok) setCategories(await catsRes.json())
+      if (walletsRes.ok) setWallets(await walletsRes.json())
       if (listRes.ok) {
         const data = await listRes.json()
         const mapped = data.map((e: any) => ({
@@ -44,6 +49,8 @@ export function RendasVariaveisTab() {
           date: parseApiDate(e.date),
           categoryName: e.category?.name,
           categoryId: e.categoryId,
+          walletId: e.walletId,
+          walletName: e.wallet?.name,
         }))
         setRendas(mapped)
       }
@@ -66,6 +73,7 @@ export function RendasVariaveisTab() {
         amount: String(r.amount),
         date: ddmmyyyy,
         categoryId: r.categoryId || '',
+        walletId: r.walletId || '',
       })
       setShowForm(true)
     }
@@ -85,6 +93,7 @@ export function RendasVariaveisTab() {
       type: 'VARIABLE',
       isFixed: false,
       categoryId: form.categoryId || undefined,
+      walletId: form.walletId || undefined,
     }
     const res = await fetch(editingId ? `/api/incomes/${editingId}` : '/api/incomes', {
       method: editingId ? 'PUT' : 'POST',
@@ -101,11 +110,13 @@ export function RendasVariaveisTab() {
           date: new Date(saved.date),
           categoryName: categories.find(c => c.id === saved.categoryId)?.name,
           categoryId: saved.categoryId,
+          walletId: saved.walletId,
+          walletName: wallets.find(w => w.id === saved.walletId)?.name,
         }
         if (editingId) return prev.map(x => x.id === saved.id ? item : x)
         return [item, ...prev]
       })
-      setForm({ description: '', amount: '', date: '', categoryId: '' })
+      setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '' })
       setEditingId(null)
       setShowForm(false)
     }
@@ -147,6 +158,20 @@ export function RendasVariaveisTab() {
                     <option value="">Sem categoria</option>
                     {categories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="wallet">Carteira</Label>
+                  <select
+                    id="wallet"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.walletId}
+                    onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                  >
+                    <option value="">Selecione</option>
+                    {wallets.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
                   </select>
                 </div>
@@ -194,6 +219,9 @@ export function RendasVariaveisTab() {
                     <h3 className="font-semibold text-lg truncate">{renda.description}</h3>
                   <p className="text-sm text-gray-600 break-words">
                         {formatDate(renda.date)} • {renda.categoryName}
+                  </p>
+                  <p className="text-xs text-gray-500 break-words">
+                    Carteira: {renda.walletName || 'N/A'}
                   </p>
                   </div>
                 </div>
