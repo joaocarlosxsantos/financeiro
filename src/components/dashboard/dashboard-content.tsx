@@ -14,8 +14,10 @@ import {
 } from 'lucide-react'
 import { ExpenseChart } from './expense-chart'
 import { IncomeChart } from './income-chart'
+
 import { Loader } from '@/components/ui/loader'
 import { SummaryRatioChart } from './summary-ratio-chart'
+import { TagChart } from './tag-chart'
 
 export function DashboardContent() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -30,6 +32,7 @@ export function DashboardContent() {
     balance: 0,
     expensesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
     incomesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
+    expensesByTag: [] as Array<{ tag: string; amount: number; color: string }>,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
@@ -61,19 +64,26 @@ export function DashboardContent() {
 
       const fetchOpts: RequestInit = { cache: 'no-store', credentials: 'same-origin' }
       const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : ''
-      const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
+      const [expVarRes, expFixRes, incVarRes, incFixRes, tagsRes] = await Promise.all([
         fetch(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
         fetch(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
         fetch(`/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
         fetch(`/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`, fetchOpts),
+        fetch('/api/tags', { cache: 'no-store' }),
       ])
 
-      const [expVar, expFix, incVar, incFix] = await Promise.all([
+      const [expVar, expFix, incVar, incFix, tagsList] = await Promise.all([
         expVarRes.ok ? expVarRes.json() : [],
         expFixRes.ok ? expFixRes.json() : [],
         incVarRes.ok ? incVarRes.json() : [],
         incFixRes.ok ? incFixRes.json() : [],
+        tagsRes.ok ? tagsRes.json() : [],
       ])
+
+      const tagIdToName: Record<string, string> = {};
+      if (Array.isArray(tagsList)) {
+        for (const t of tagsList) tagIdToName[t.id] = t.name;
+      }
 
       const allExpenses: any[] = [...expVar, ...expFix]
       const allIncomes: any[] = [...incVar, ...incFix]
@@ -103,12 +113,36 @@ export function DashboardContent() {
       }
       const incomesByCategory = Array.from(incomeMap.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }))
 
+      // Agrupar despesas por tag
+      const tagMap = new Map<string, { amount: number; color: string }>()
+      for (const e of allExpenses) {
+        if (Array.isArray(e.tags) && e.tags.length > 0 && e.tags[0]) {
+          for (const tag of e.tags) {
+            // cor baseada no hash do nome da tag
+            let color = '#6366f1';
+            if (e.tagColors && e.tagColors[tag]) color = e.tagColors[tag];
+            else {
+              // fallback: cor baseada no hash
+              let hash = 0;
+              for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+              color = `hsl(${hash % 360}, 70%, 60%)`;
+            }
+            const cur = tagMap.get(tag) || { amount: 0, color };
+            cur.amount += Number(e.amount);
+            cur.color = color;
+            tagMap.set(tag, cur);
+          }
+        }
+      }
+      const expensesByTag = Array.from(tagMap.entries()).map(([tag, v]) => ({ tag: tagIdToName[tag] || tag, amount: v.amount, color: v.color }));
+
       setSummary({
         totalIncome,
         totalExpenses,
         balance: totalIncome - totalExpenses,
         expensesByCategory,
         incomesByCategory,
+        expensesByTag,
       })
       setIsLoading(false)
     }
@@ -226,8 +260,24 @@ export function DashboardContent() {
         </Card>
       </div>
 
+
       {/* Gráficos */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Rendas por Categoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Carregando rendas..." />
+            ) : summary.incomesByCategory.length > 0 ? (
+              <IncomeChart data={summary.incomesByCategory} />
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-foreground">Sem dados para o período selecionado</div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Despesas por Categoria</CardTitle>
@@ -245,13 +295,13 @@ export function DashboardContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Rendas por Categoria</CardTitle>
+            <CardTitle>Despesas por Tag</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Loader text="Carregando rendas..." />
-            ) : summary.incomesByCategory.length > 0 ? (
-              <IncomeChart data={summary.incomesByCategory} />
+              <Loader text="Carregando tags..." />
+            ) : summary.expensesByTag.length > 0 ? (
+              <TagChart data={summary.expensesByTag} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">Sem dados para o período selecionado</div>
             )}
