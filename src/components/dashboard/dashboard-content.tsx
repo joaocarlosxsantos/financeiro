@@ -312,9 +312,9 @@ export function DashboardContent() {
           <p className="text-gray-600 dark:text-foreground">Visão geral das suas finanças</p>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-2 w-full">
           <select
-            className="border border-border rounded px-3 sm:px-4 py-2 min-w-[180px] text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-border rounded px-3 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
             onChange={e => setSelectedWallet(e.target.value)}
           >
@@ -323,33 +323,33 @@ export function DashboardContent() {
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreviousMonth}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <div className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-background border border-border rounded-md">
-            <Calendar className="h-4 w-4 text-foreground" />
-            <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">{getMonthYear(currentDate)}</span>
+          <div className="flex w-full sm:w-auto items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousMonth}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center space-x-2 px-3 py-2 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
+              <Calendar className="h-4 w-4 text-foreground" />
+              <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">{getMonthYear(currentDate)}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextMonth}
+              disabled={isAtCurrentMonth}
+              aria-disabled={isAtCurrentMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextMonth}
-            disabled={isAtCurrentMonth}
-            aria-disabled={isAtCurrentMonth}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
-      {/* Cards de Resumo */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    {/* Cards de Resumo */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full">
         <Card onClick={() => setModal('income')} className="cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Renda Total</CardTitle>
@@ -515,8 +515,8 @@ export function DashboardContent() {
 
 
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 sm:gap-6">
+  {/* Gráficos */}
+  <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full">
         <Card>
           <CardHeader>
             <CardTitle>Rendas por Categoria</CardTitle>
@@ -563,7 +563,7 @@ export function DashboardContent() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
       {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
       <Card>
         <CardHeader>
@@ -594,18 +594,20 @@ export function DashboardContent() {
       </div>
 
       {/* Gráfico de relação (largura total) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Renda x Despesas (Percentual)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Loader text="Calculando percentuais..." />
-          ) : (
-            <SummaryRatioChart totalIncome={summary.totalIncome} totalExpenses={summary.totalExpenses} />
-          )}
-        </CardContent>
-      </Card>
+      <div className="w-full overflow-x-auto">
+        <Card className="w-full min-w-[320px]">
+          <CardHeader>
+            <CardTitle>Renda x Despesas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Calculando percentuais..." />
+            ) : (
+              <SummaryRatioChart totalIncome={summary.totalIncome} totalExpenses={summary.totalExpenses} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

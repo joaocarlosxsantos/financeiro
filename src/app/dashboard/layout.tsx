@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <span className="text-lg font-bold">Controle Financeiro</span>
         </div>
-        <div className="flex-1 w-full p-4 sm:p-8 flex flex-col">
+        <div className="flex-1 w-full max-w-full p-2 sm:p-6 flex flex-col overflow-x-auto">
           {children}
         </div>
       </main>
