@@ -21,6 +21,7 @@ import { SummaryRatioChart } from './summary-ratio-chart'
 import { TagChart } from './tag-chart'
 import { MonthlyBarChart } from './monthly-bar-chart'
 import { TopExpenseCategoriesChart } from './top-expense-categories-chart'
+import { Modal } from '@/components/ui/modal'
 
 // Função utilitária para formatar data yyyy-MM-dd
 const toYmd = (d: Date) => {
@@ -31,6 +32,8 @@ const toYmd = (d: Date) => {
 }
 
 export function DashboardContent() {
+  // Modal de detalhes
+  const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance'>(null)
 
   // hooks de estado
   const [summary, setSummary] = useState({
@@ -293,7 +296,7 @@ export function DashboardContent() {
         
         <div className="flex items-center space-x-2">
           <select
-            className="border border-border rounded px-2 py-1 text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-border rounded px-3 sm:px-4 py-2 min-w-[180px] text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
             onChange={e => setSelectedWallet(e.target.value)}
           >
@@ -329,7 +332,7 @@ export function DashboardContent() {
 
       {/* Cards de Resumo */}
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card>
+        <Card onClick={() => setModal('income')} className="cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Renda Total</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
@@ -341,7 +344,7 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card onClick={() => setModal('expense')} className="cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Despesas Totais</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
@@ -353,7 +356,7 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card onClick={() => setModal('balance')} className="cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saldo</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -367,6 +370,68 @@ export function DashboardContent() {
             </p>
           </CardContent>
         </Card>
+      {/* Modal de detalhes de rendas/despesas/saldo */}
+      <Modal open={modal !== null} onClose={() => setModal(null)}
+        title={modal === 'income' ? 'Rendas do mês' : modal === 'expense' ? 'Despesas do mês' : modal === 'balance' ? 'Rendas e Despesas do mês' : ''}>
+        {modal === 'income' && (
+          <div className="mt-4">
+            {summary.incomesByCategory.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma renda encontrada.</div> :
+              <ul className="space-y-2">
+                {summary.incomesByCategory.map((item) => (
+                  <li key={item.category} className="flex justify-between items-center">
+                    <span>{item.category}</span>
+                    <span className="font-semibold text-green-600">{formatCurrency(item.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            }
+          </div>
+        )}
+        {modal === 'expense' && (
+          <div className="mt-4">
+            {summary.expensesByCategory.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma despesa encontrada.</div> :
+              <ul className="space-y-2">
+                {summary.expensesByCategory.map((item) => (
+                  <li key={item.category} className="flex justify-between items-center">
+                    <span>{item.category}</span>
+                    <span className="font-semibold text-red-600">{formatCurrency(item.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            }
+          </div>
+        )}
+        {modal === 'balance' && (
+          <div className="space-y-6 mt-4">
+            <div>
+              <div className="font-semibold mb-2"></div>
+              {summary.incomesByCategory.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma renda encontrada.</div> :
+                <ul className="space-y-2">
+                  {summary.incomesByCategory.map((item) => (
+                    <li key={item.category} className="flex justify-between items-center">
+                      <span>{item.category}</span>
+                      <span className="font-semibold text-green-600">{formatCurrency(item.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              }
+            </div>
+            <div>
+              <div className="font-semibold mb-2"></div>
+              {summary.expensesByCategory.length === 0 ? <div className="text-sm text-muted-foreground">Nenhuma despesa encontrada.</div> :
+                <ul className="space-y-2">
+                  {summary.expensesByCategory.map((item) => (
+                    <li key={item.category} className="flex justify-between items-center">
+                      <span>{item.category}</span>
+                      <span className="font-semibold text-red-600">{formatCurrency(item.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              }
+            </div>
+          </div>
+        )}
+      </Modal>
 
         {/* Card Limite Diário */}
         <Card>
