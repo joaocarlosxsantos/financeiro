@@ -22,6 +22,12 @@ import { TagChart } from './tag-chart'
 import { MonthlyBarChart } from './monthly-bar-chart'
 import { TopExpenseCategoriesChart } from './top-expense-categories-chart'
 import { Modal } from '@/components/ui/modal'
+import { Fab } from '@/components/ui/fab'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { QuickDespesaVariavelForm } from '../quick-add/quick-despesa-variavel-form'
+import { QuickDespesaFixaForm } from '../quick-add/quick-despesa-fixa-form'
+import { QuickRendaVariavelForm } from '../quick-add/quick-renda-variavel-form'
+import { QuickRendaFixaForm } from '../quick-add/quick-renda-fixa-form'
 
 // Função utilitária para formatar data yyyy-MM-dd
 const toYmd = (d: Date) => {
@@ -32,6 +38,11 @@ const toYmd = (d: Date) => {
 }
 
 export function DashboardContent() {
+  // Quick Add modal state
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  // Tabs: despesa/renda e fixas/variáveis
+  const [quickTab, setQuickTab] = useState<'despesa' | 'renda'>('despesa')
+  const [tipoTab, setTipoTab] = useState<'variavel' | 'fixa'>('variavel')
   // Modal de detalhes
   const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance'>(null)
 
@@ -285,6 +296,13 @@ export function DashboardContent() {
     limiteDiario = diasRestantes > 0 ? summary.balance / diasRestantes : 0;
   }
 
+  // Função para fechar o modal e recarregar o dashboard
+  const handleQuickAddSuccess = () => {
+    setQuickAddOpen(false);
+    // Forçar recarregamento dos dados do dashboard
+    setCurrentDate(new Date(currentDate));
+  };
+
   return (
     <div className="space-y-6 flex-1 min-h-screen flex flex-col">
       {/* Header */}
@@ -370,7 +388,52 @@ export function DashboardContent() {
             </p>
           </CardContent>
         </Card>
-      {/* Modal de detalhes de rendas/despesas/saldo */}
+  {/* Modal de detalhes de rendas/despesas/saldo */}
+      {/* Quick Add FAB */}
+      <Fab onClick={() => { setQuickAddOpen(true); setQuickTab('despesa'); setTipoTab('variavel'); }} label="Quick Add" />
+
+      {/* Quick Add Modal */}
+      <Modal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Adicionar rápido">
+        <div className="space-y-4">
+          <div className="flex gap-2 mb-2">
+            <button
+              className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${quickTab === 'despesa' ? 'border-primary' : ''}`}
+              onClick={() => { setQuickTab('despesa'); setTipoTab('variavel'); }}
+              type="button"
+            >
+              Despesa
+            </button>
+            <button
+              className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${quickTab === 'renda' ? 'border-primary' : ''}`}
+              onClick={() => { setQuickTab('renda'); setTipoTab('variavel'); }}
+              type="button"
+            >
+              Renda
+            </button>
+          </div>
+          <div className="flex gap-2 mb-4">
+            <button
+              className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${tipoTab === 'variavel' ? 'border-primary' : ''}`}
+              onClick={() => setTipoTab('variavel')}
+              type="button"
+            >
+              Variável
+            </button>
+            <button
+              className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${tipoTab === 'fixa' ? 'border-primary' : ''}`}
+              onClick={() => setTipoTab('fixa')}
+              type="button"
+            >
+              Fixa
+            </button>
+          </div>
+          {/* Renderiza apenas o formulário correspondente */}
+          {quickTab === 'despesa' && tipoTab === 'variavel' && <QuickDespesaVariavelForm onSuccess={handleQuickAddSuccess} />}
+          {quickTab === 'despesa' && tipoTab === 'fixa' && <QuickDespesaFixaForm onSuccess={handleQuickAddSuccess} />}
+          {quickTab === 'renda' && tipoTab === 'variavel' && <QuickRendaVariavelForm onSuccess={handleQuickAddSuccess} />}
+          {quickTab === 'renda' && tipoTab === 'fixa' && <QuickRendaFixaForm onSuccess={handleQuickAddSuccess} />}
+        </div>
+      </Modal>
       <Modal open={modal !== null} onClose={() => setModal(null)}
         title={modal === 'income' ? 'Rendas do mês' : modal === 'expense' ? 'Despesas do mês' : modal === 'balance' ? 'Rendas e Despesas do mês' : ''}>
         {modal === 'income' && (
