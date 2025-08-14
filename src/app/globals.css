@@ -1,3 +1,17 @@
+@keyframes slide-in-mobile {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-mobile {
+  animation: slide-in-mobile 0.25s cubic-bezier(0.4,0,0.2,1);
+}
 /* Corrige ícone do input type=date no modo escuro */
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1);

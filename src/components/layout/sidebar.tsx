@@ -26,16 +26,26 @@ const navigation = [
   { name: 'Tags', href: '/tags', icon: BarChart3 },
 ]
 
-export function Sidebar() {
+export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
 
   return (
-  <div className="flex h-full w-64 flex-col bg-gray-900 dark:bg-slate-900 text-white">
-      <div className="flex h-16 items-center justify-center border-b border-border">
+    <div className="flex h-full w-64 flex-col bg-gray-900 dark:bg-slate-900 text-white">
+      <div className="flex h-16 items-center justify-between border-b border-border px-4">
         <h1 className="text-xl font-bold">Controle Financeiro</h1>
+        {/* Botão de fechar no mobile */}
+        {onClose && (
+          <button
+            aria-label="Fechar menu"
+            className="md:hidden p-2 rounded-md hover:bg-gray-800 focus:outline-none"
+            onClick={onClose}
+          >
+            <span className="sr-only">Fechar menu</span>
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        )}
       </div>
-      
       <nav className="flex-1 space-y-1 px-2 py-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href
@@ -49,6 +59,7 @@ export function Sidebar() {
                   ? 'bg-white text-gray-900 dark:bg-white dark:text-blue-900'
                   : 'text-white/80 hover:bg-white hover:text-gray-900 dark:hover:bg-white dark:hover:text-blue-900 dark:text-white/80'
               )}
+              onClick={onClose}
             >
               <item.icon
                 className={cn(
@@ -61,11 +72,10 @@ export function Sidebar() {
           )
         })}
       </nav>
-
-  <div className="border-t border-border p-4">
+      <div className="border-t border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <Link href="/user" className="flex items-center group cursor-pointer">
+            <Link href="/user" className="flex items-center group cursor-pointer" onClick={onClose}>
               <div className="flex-shrink-0">
                 {user?.image ? (
                   <img 
