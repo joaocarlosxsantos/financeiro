@@ -1,7 +1,13 @@
 import { useTheme } from "@/components/providers/theme-provider";
+import { useEffect, useState } from "react";
 
 export function ThemeSwitch() {
   const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <button
@@ -10,7 +16,7 @@ export function ThemeSwitch() {
       aria-label="Alternar tema"
       type="button"
     >
-      {theme === "dark" ? "🌙" : "☀️"}
+      {mounted ? (theme === "dark" ? "🌙" : "☀️") : null}
     </button>
   );
 }

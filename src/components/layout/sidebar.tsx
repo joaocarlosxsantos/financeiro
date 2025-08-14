@@ -65,7 +65,7 @@ export function Sidebar() {
   <div className="border-t border-border p-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
+            <Link href="/user" className="flex items-center group cursor-pointer">
               <div className="flex-shrink-0">
                 {user?.image ? (
                   <img 
@@ -74,18 +74,18 @@ export function Sidebar() {
                     className="h-8 w-8 rounded-full"
                   />
                 ) : (
-                  <User className="h-8 w-8 text-white/80 dark:text-white/80" />
+                  <User className="h-8 w-8 text-white/80 dark:text-white/80 group-hover:text-blue-500" />
                 )}
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium group-hover:text-blue-500">
                   {user?.name || 'Usuário'}
                 </p>
-                <p className="text-xs text-white/80 dark:text-white/80">
+                <p className="text-xs text-white/80 dark:text-white/80 group-hover:text-blue-400">
                   {user?.email || 'usuario@email.com'}
                 </p>
               </div>
-            </div>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
