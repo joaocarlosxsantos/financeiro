@@ -6,26 +6,30 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils'
+import { TagSelector } from '@/components/ui/tag-selector'
 import { Edit, Trash2, Plus } from 'lucide-react'
+
 import { Loader } from '@/components/ui/loader'
 
 interface DespesaFixa {
-  id: string
-  description: string
-  amount: number
-  dayOfMonth: number
-  categoryName?: string
-  categoryId?: string | null
-  walletId?: string | null
-  walletName?: string
-  startDate: Date
-  endDate?: Date
+  id: string;
+  description: string;
+  amount: number;
+  dayOfMonth: number;
+  categoryName?: string;
+  categoryId?: string | null;
+  walletId?: string | null;
+  walletName?: string;
+  startDate: Date;
+  endDate?: Date;
+  tags: string[];
 }
 
 export function DespesasFixasTab() {
   const [despesas, setDespesas] = useState<DespesaFixa[]>([])
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([])
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
@@ -38,18 +42,21 @@ export function DespesasFixasTab() {
     walletId: '',
     startDate: '',
     endDate: '',
+    tags: [] as string[],
   })
 
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
-      const [catsRes, walletsRes, listRes] = await Promise.all([
+      const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/expenses?type=FIXED', { cache: 'no-store' }),
+        fetch('/api/tags', { cache: 'no-store' }),
       ])
       if (catsRes.ok) setCategories(await catsRes.json())
       if (walletsRes.ok) setWallets(await walletsRes.json())
+      if (tagsRes.ok) setTags(await tagsRes.json())
       if (listRes.ok) {
         const data = await listRes.json()
         const mapped = data.map((e: any) => ({
@@ -63,6 +70,7 @@ export function DespesasFixasTab() {
           walletName: e.wallet?.name,
           startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
+          tags: e.tags || [],
         }))
         setDespesas(mapped)
       }
@@ -83,6 +91,7 @@ export function DespesasFixasTab() {
         walletId: d.walletId || '',
         startDate: d.startDate ? new Date(d.startDate).toISOString().slice(0,10) : '',
         endDate: d.endDate ? new Date(d.endDate).toISOString().slice(0,10) : '',
+        tags: d.tags && d.tags.length > 0 ? [d.tags[0]] : [],
       })
       setShowForm(true)
     }
@@ -95,72 +104,53 @@ export function DespesasFixasTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const payload = {
+      description: form.description,
+      amount: Number(form.amount),
+      type: 'FIXED',
+      isFixed: true,
+      startDate: form.startDate || undefined,
+      endDate: form.endDate || undefined,
+      dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
+      categoryId: form.categoryId || undefined,
+      walletId: form.walletId || undefined,
+      tags: form.tags,
+    }
+    let res;
     if (editingId) {
-      const res = await fetch(`/api/expenses/${editingId}`, {
+      res = await fetch(`/api/expenses/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: form.description,
-          amount: Number(form.amount),
-          type: 'FIXED',
-          isFixed: true,
-          startDate: form.startDate || undefined,
-          endDate: form.endDate || undefined,
-          dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
-          categoryId: form.categoryId || undefined,
-          walletId: form.walletId || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
-      if (res.ok) {
-        const updated = await res.json()
-        setDespesas(prev => prev.map(x => x.id === updated.id ? {
-          id: updated.id,
-          description: updated.description,
-          amount: Number(updated.amount),
-          dayOfMonth: updated.dayOfMonth ?? 1,
-          categoryName: categories.find(c => c.id === updated.categoryId)?.name,
-          categoryId: updated.categoryId,
-          walletId: updated.walletId,
-          walletName: wallets.find(w => w.id === updated.walletId)?.name,
-          startDate: updated.startDate ? new Date(updated.startDate) : new Date(),
-          endDate: updated.endDate ? new Date(updated.endDate) : undefined,
-        } : x))
-      }
     } else {
-      const res = await fetch('/api/expenses', {
+      res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: form.description,
-          amount: Number(form.amount),
-          type: 'FIXED',
-          isFixed: true,
-          startDate: form.startDate || undefined,
-          endDate: form.endDate || undefined,
-          dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
-          categoryId: form.categoryId || undefined,
-          walletId: form.walletId || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
-      if (res.ok) {
-        const created = await res.json()
-        setDespesas(prev => [{
-          id: created.id,
-          description: created.description,
-          amount: Number(created.amount),
-          dayOfMonth: created.dayOfMonth ?? 1,
-          categoryName: categories.find(c => c.id === created.categoryId)?.name,
-          categoryId: created.categoryId,
-          walletId: created.walletId,
-          walletName: wallets.find(w => w.id === created.walletId)?.name,
-          startDate: created.startDate ? new Date(created.startDate) : new Date(),
-          endDate: created.endDate ? new Date(created.endDate) : undefined,
-        }, ...prev])
-      }
     }
-    setShowForm(false)
-    setEditingId(null)
-    setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
+    if (res.ok) {
+      const saved = await res.json()
+      const item = {
+        id: saved.id,
+        description: saved.description,
+        amount: Number(saved.amount),
+        dayOfMonth: saved.dayOfMonth ?? 1,
+        categoryName: categories.find(c => c.id === saved.categoryId)?.name,
+        categoryId: saved.categoryId,
+        walletId: saved.walletId,
+        walletName: wallets.find(w => w.id === saved.walletId)?.name,
+        startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
+        endDate: saved.endDate ? new Date(saved.endDate) : undefined,
+        tags: saved.tags || [],
+      }
+      if (editingId) setDespesas(prev => prev.map(x => x.id === saved.id ? item : x))
+      else setDespesas(prev => [item, ...prev])
+      setShowForm(false)
+      setEditingId(null)
+  setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] })
+    }
   }
 
   return (
@@ -178,32 +168,15 @@ export function DespesasFixasTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="description">Descrição</Label>
-                  <Input id="description" placeholder="Ex: Aluguel" value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} />
+                  <Input id="description" placeholder="Ex: Aluguel" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div>
                   <Label htmlFor="amount">Valor</Label>
-                  <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} />
+                  <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
                 </div>
                 <div>
-                  <Label htmlFor="dayOfMonth">Dia do Mês</Label>
-                  <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="5" value={form.dayOfMonth} onChange={(e) => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="category">Categoria</Label>
-                  <select 
-                    id="category"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={form.categoryId}
-                    onChange={(e) => setForm(f => ({ ...f, categoryId: e.target.value }))}
-                  >
-                    <option value="">Sem categoria</option>
-                    {categories
-                      .filter(c => c.type === 'EXPENSE' || c.type === 'BOTH') // aqui é FIXED/EXPENSE
-                      .map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))
-                    }
-                  </select>
+                  <Label htmlFor="dayOfMonth">Dia do mês</Label>
+                  <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="5" value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
                 </div>
                 <div>
                   <Label htmlFor="wallet">Carteira</Label>
@@ -220,21 +193,38 @@ export function DespesasFixasTab() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="startDate">Data de Início</Label>
-                  <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={(e) => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                  <Label htmlFor="category">Categoria</Label>
+                  <select
+                    id="category"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.categoryId}
+                    onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                  >
+                    <option value="">Sem categoria</option>
+                    {categories.filter(c => c.type === 'EXPENSE' || c.type === 'BOTH').map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <Label htmlFor="endDate">Data de Fim (Opcional)</Label>
-                  <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={(e) => setForm(f => ({ ...f, endDate: e.target.value }))} />
+                  <Label htmlFor="tag">Tag</Label>
+                  <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
+                </div>
+                <div>
+                  <Label htmlFor="startDate">Data de início</Label>
+                  <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                </div>
+                <div>
+                  <Label htmlFor="endDate">Data de fim (opcional)</Label>
+                  <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
                 </div>
               </div>
-              
               <div className="flex space-x-2">
                 <Button type="submit">
                   {editingId ? 'Atualizar' : 'Cadastrar'}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setShowForm(false)
@@ -251,7 +241,11 @@ export function DespesasFixasTab() {
 
       {/* Botão para adicionar */}
       {!showForm && (
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => {
+          setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+          setEditingId(null);
+          setShowForm(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Despesa Fixa
         </Button>
@@ -318,7 +312,11 @@ export function DespesasFixasTab() {
             <p className="text-gray-500">Nenhuma despesa fixa cadastrada</p>
             <Button 
               className="mt-4"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+                setEditingId(null);
+                setShowForm(true);
+              }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeira Despesa

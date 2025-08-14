@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DespesasFixasTab } from './despesas-fixas-tab'
-import { DespesasVariaveisTab } from './despesas-variaveis-tab'
+import DespesasVariaveisTab from './despesas-variaveis-tab'
 
 export function DespesasContent() {
   const [activeTab, setActiveTab] = useState('fixas')

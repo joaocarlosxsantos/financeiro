@@ -23,6 +23,7 @@ const navigation = [
   { name: 'Rendas', href: '/rendas', icon: DollarSign },
   { name: 'Carteiras', href: '/wallets', icon: Wallet },
   { name: 'Categorias', href: '/categorias', icon: Tag },
+  { name: 'Tags', href: '/tags', icon: BarChart3 },
 ]
 
 export function Sidebar() {

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { description, amount, date, type, isFixed = false, startDate, endDate, dayOfMonth, categoryId, walletId } = body
+  const { description, amount, date, type, isFixed = false, startDate, endDate, dayOfMonth, categoryId, walletId, tags = [] } = body
   if (!description || !amount) return NextResponse.json({ error: 'Descrição e valor são obrigatórios' }, { status: 400 })
 
   const income = await prisma.income.create({
@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
       categoryId,
       walletId,
       userId: user.id,
+      tags,
     },
   })
   return NextResponse.json(income, { status: 201 })

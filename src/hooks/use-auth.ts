@@ -9,7 +9,7 @@ export function useAuth() {
   const router = useRouter()
 
   const login = (email: string, password: string) => signIn('credentials', { email, password })
-  const logout = () => signOut()
+  const logout = () => signOut({ callbackUrl: '/auth/signin' })
 
   const requireAuth = (callback?: () => void) => {
     useEffect(() => {

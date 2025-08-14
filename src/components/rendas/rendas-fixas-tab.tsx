@@ -10,37 +10,47 @@ import { Edit, Trash2, Plus } from 'lucide-react'
 import { Loader } from '@/components/ui/loader'
 
 interface RendaFixa {
-  id: string
-  description: string
-  amount: number
-  dayOfMonth: number
-  categoryName?: string
-  categoryId?: string | null
-  walletId?: string | null
-  walletName?: string
-  startDate: Date
-  endDate?: Date
+  id: string;
+  description: string;
+  amount: number;
+  dayOfMonth: number;
+  categoryName?: string;
+  categoryId?: string | null;
+  walletId?: string | null;
+  walletName?: string;
+  startDate: Date;
+  endDate?: Date;
+  tagId?: string | null;
+  tags: string[];
 }
 
+import { TagSelector } from '@/components/ui/tag-selector'
+
+
 export function RendasFixasTab() {
-  const [rendas, setRendas] = useState<RendaFixa[]>([])
-  const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([])
-  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
+  const [rendas, setRendas] = useState<RendaFixa[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([]);
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([]);
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] as string[] });
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      setIsLoading(true)
-      const [catsRes, walletsRes, listRes] = await Promise.all([
+      setIsLoading(true);
+      const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/incomes?type=FIXED', { cache: 'no-store' }),
-      ])
-      if (catsRes.ok) setCategories(await catsRes.json())
-      if (walletsRes.ok) setWallets(await walletsRes.json())
+        fetch('/api/tags', { cache: 'no-store' }),
+      ]);
+      if (catsRes.ok) setCategories(await catsRes.json());
+      if (walletsRes.ok) setWallets(await walletsRes.json());
+      if (tagsRes.ok) setTags(await tagsRes.json());
       if (listRes.ok) {
-        const data = await listRes.json()
+        const data = await listRes.json();
         const mapped = data.map((e: any) => ({
           id: e.id,
           description: e.description,
@@ -52,41 +62,40 @@ export function RendasFixasTab() {
           walletName: e.wallet?.name,
           startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
-        }))
-        setRendas(mapped)
+          tags: e.tags || [],
+        }));
+        setRendas(mapped);
       }
-      setIsLoading(false)
-    }
-    load()
-  }, [])
-
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+      setIsLoading(false);
+    };
+    load();
+  }, []);
 
   const handleEdit = (id: string) => {
-    const r = rendas.find(x => x.id === id)
+    const r = rendas.find(x => x.id === id);
     if (r) {
-      setEditingId(id)
+      setEditingId(id);
       setForm({
         description: r.description,
         amount: String(r.amount),
         dayOfMonth: String(r.dayOfMonth ?? ''),
         categoryId: r.categoryId || '',
         walletId: r.walletId || '',
-        startDate: r.startDate ? new Date(r.startDate).toISOString().slice(0,10) : '',
-        endDate: r.endDate ? new Date(r.endDate).toISOString().slice(0,10) : '',
-      })
-      setShowForm(true)
+        startDate: r.startDate ? new Date(r.startDate).toISOString().slice(0, 10) : '',
+        endDate: r.endDate ? new Date(r.endDate).toISOString().slice(0, 10) : '',
+        tags: r.tags && r.tags.length > 0 ? [r.tags[0]] : [],
+      });
+      setShowForm(true);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/incomes/${id}`, { method: 'DELETE' })
-    if (res.ok) setRendas(rendas.filter(r => r.id !== id))
-  }
+    const res = await fetch(`/api/incomes/${id}`, { method: 'DELETE' });
+    if (res.ok) setRendas(rendas.filter(r => r.id !== id));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     const payload = {
       description: form.description,
       amount: Number(form.amount),
@@ -97,16 +106,17 @@ export function RendasFixasTab() {
       dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
       categoryId: form.categoryId || undefined,
       walletId: form.walletId || undefined,
-    }
+      tags: form.tags,
+    };
     const res = await fetch(editingId ? `/api/incomes/${editingId}` : '/api/incomes', {
       method: editingId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    })
+    });
     if (res.ok) {
-      const saved = await res.json()
+      const saved = await res.json();
       setRendas(prev => {
-        const item = {
+        const item: RendaFixa = {
           id: saved.id,
           description: saved.description,
           amount: Number(saved.amount),
@@ -117,15 +127,16 @@ export function RendasFixasTab() {
           walletName: wallets.find(w => w.id === saved.walletId)?.name,
           startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
           endDate: saved.endDate ? new Date(saved.endDate) : undefined,
-        }
-        if (editingId) return prev.map(x => x.id === saved.id ? item : x)
-        return [item, ...prev]
-      })
-      setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '' })
-      setEditingId(null)
-      setShowForm(false)
+          tags: saved.tags || [],
+        };
+        if (editingId) return prev.map(x => x.id === saved.id ? item : x);
+        return [item, ...prev];
+      });
+      setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+      setEditingId(null);
+      setShowForm(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -142,31 +153,30 @@ export function RendasFixasTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="description">Descrição</Label>
-                  <Input id="description" placeholder="Ex: Salário" value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} />
+                  <Input id="description" placeholder="Ex: Salário" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div>
                   <Label htmlFor="amount">Valor</Label>
-                  <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} />
+                  <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
                 </div>
                 <div>
-                  <Label htmlFor="dayOfMonth">Dia do Mês</Label>
-                  <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="25" value={form.dayOfMonth} onChange={(e) => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
+                  <Label htmlFor="dayOfMonth">Dia do mês</Label>
+                  <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="25" value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
                 </div>
                 <div>
                   <Label htmlFor="category">Categoria</Label>
-                  <select 
+                  <select
                     id="category"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={form.categoryId}
-                    onChange={(e) => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                    onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
                   >
                     <option value="">Sem categoria</option>
                     {categories
-                      .filter(c => c.type === 'INCOME' || c.type === 'BOTH') // aqui é FIXED/EXPENSE
+                      .filter(c => c.type === 'INCOME' || c.type === 'BOTH')
                       .map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
-                      ))
-                    }
+                      ))}
                   </select>
                 </div>
                 <div>
@@ -184,25 +194,28 @@ export function RendasFixasTab() {
                   </select>
                 </div>
                 <div>
+                  <Label htmlFor="tag">Tag</Label>
+                  <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
+                </div>
+                <div>
                   <Label htmlFor="startDate">Data de Início</Label>
-                  <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={(e) => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                  <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
                 </div>
                 <div>
                   <Label htmlFor="endDate">Data de Fim (Opcional)</Label>
-                  <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={(e) => setForm(f => ({ ...f, endDate: e.target.value }))} />
+                  <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
                 </div>
               </div>
-              
               <div className="flex space-x-2">
                 <Button type="submit">
                   {editingId ? 'Atualizar' : 'Cadastrar'}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
-                    setShowForm(false)
-                    setEditingId(null)
+                    setShowForm(false);
+                    setEditingId(null);
                   }}
                 >
                   Cancelar
@@ -215,7 +228,11 @@ export function RendasFixasTab() {
 
       {/* Botão para adicionar */}
       {!showForm && (
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => {
+          setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+          setEditingId(null);
+          setShowForm(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Renda Fixa
         </Button>
@@ -225,65 +242,67 @@ export function RendasFixasTab() {
       {isLoading ? (
         <Loader text="Carregando rendas..." />
       ) : (
-      <div className="space-y-4">
-        {rendas.map((renda) => (
-          <Card key={renda.id}>
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div>
-                    <h3 className="font-semibold text-lg truncate">{renda.description}</h3>
-                    <p className="text-sm text-gray-600 break-words">
-                      Dia {renda.dayOfMonth} de cada mês • {renda.categoryName}
-                    </p>
-                    <p className="text-xs text-gray-500 break-words">
-                      Início: {formatDate(renda.startDate)}
-                      {renda.endDate && ` • Fim: ${formatDate(renda.endDate)}`}
-                      <br />
-                      Carteira: {renda.walletName || 'N/A'}
-                    </p>
+        <div className="space-y-4">
+          {rendas.map((renda) => (
+            <Card key={renda.id}>
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div>
+                      <h3 className="font-semibold text-lg truncate">{renda.description}</h3>
+                      <p className="text-sm text-gray-600 break-words">
+                        Dia {renda.dayOfMonth} de cada mês • {renda.categoryName}
+                      </p>
+                      <p className="text-xs text-gray-500 break-words">
+                        Início: {formatDate(renda.startDate)}
+                        {renda.endDate && ` • Fim: ${formatDate(renda.endDate)}`}
+                        <br />
+                        Carteira: {renda.walletName || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-green-600">
+                        {formatCurrency(renda.amount)}
+                      </p>
+                      <p className="text-sm text-gray-500">por mês</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(renda.id)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(renda.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-green-600">
-                      {formatCurrency(renda.amount)}
-                    </p>
-                    <p className="text-sm text-gray-500">por mês</p>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(renda.id)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(renda.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {rendas.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
             <p className="text-gray-500">Nenhuma renda fixa cadastrada</p>
-            <Button 
+            <Button
               className="mt-4"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+                setEditingId(null);
+                setShowForm(true);
+              }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeira Renda
@@ -292,5 +311,5 @@ export function RendasFixasTab() {
         </Card>
       )}
     </div>
-  )
+  );
 }

@@ -24,6 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         dayOfMonth: body.dayOfMonth,
         categoryId: body.categoryId,
         walletId: body.walletId,
+        tags: body.tags ?? [],
       },
     })
     return NextResponse.json(updated)
