@@ -1,6 +1,6 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 
 interface ExpenseChartProps {
@@ -22,16 +22,17 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
   }))
 
   return (
-    <div className="h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+    <div className="w-full">
+      <div className="h-72 md:h-96">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
           <Pie
             data={chartData}
             cx="50%"
             cy="50%"
+            label={false}
             labelLine={false}
-            label={({ name, percentage }) => `${name} (${percentage}%)`}
-            outerRadius={80}
+            outerRadius={90}
             fill="#8884d8"
             dataKey="value"
           >
@@ -39,23 +40,23 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip 
-            formatter={(value: number) => [formatCurrency(value), 'Valor']}
-            labelFormatter={(label) => `Categoria: ${label}`}
-          />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
+            <Tooltip 
+              formatter={(value: number) => [formatCurrency(value), 'Valor']}
+              labelFormatter={(label) => `Categoria: ${label}`}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
       
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2 w-full min-w-0 max-w-full">
         {chartData.map((item, index) => (
-          <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-2">
-            <div className="flex items-center space-x-2 min-w-0">
+          <div key={index} className="flex w-full flex-col sm:flex-row sm:justify-between text-sm gap-2 min-w-0 items-start">
+            <div className="flex items-start space-x-2 min-w-0">
               <div 
                 className="w-3 h-3 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: item.color }}
               />
-              <span className="truncate">{item.name}</span>
+              <span className="whitespace-normal break-words">{item.name}</span>
             </div>
             <div className="flex items-center space-x-2 flex-shrink-0">
               <span className="font-medium">{formatCurrency(item.value)}</span>

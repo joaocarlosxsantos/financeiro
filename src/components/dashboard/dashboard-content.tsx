@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency, getCurrentMonth, getMonthYear } from '@/lib/utils'
+import { formatCurrency, getMonthRange, getMonthYear } from '@/lib/utils'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,27 +14,96 @@ import {
 } from 'lucide-react'
 import { ExpenseChart } from './expense-chart'
 import { IncomeChart } from './income-chart'
+import { Loader } from '@/components/ui/loader'
+import { SummaryRatioChart } from './summary-ratio-chart'
 
 export function DashboardContent() {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const today = new Date()
+  const isAtCurrentMonth =
+    currentDate.getFullYear() === today.getFullYear() &&
+    currentDate.getMonth() === today.getMonth()
   
-  // Dados mockados para demonstração
-  const mockData = {
-    totalIncome: 5000,
-    totalExpenses: 3200,
-    balance: 1800,
-    expensesByCategory: [
-      { category: 'Alimentação', amount: 800, color: '#ef4444' },
-      { category: 'Transporte', amount: 600, color: '#3b82f6' },
-      { category: 'Moradia', amount: 1200, color: '#10b981' },
-      { category: 'Lazer', amount: 400, color: '#f59e0b' },
-      { category: 'Outros', amount: 200, color: '#8b5cf6' },
-    ],
-    incomesByCategory: [
-      { category: 'Salário', amount: 4500, color: '#10b981' },
-      { category: 'Freelance', amount: 500, color: '#3b82f6' },
-    ]
-  }
+  const [summary, setSummary] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    balance: 0,
+    expensesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
+    incomesByCategory: [] as Array<{ category: string; amount: number; color: string }>,
+  })
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      setIsLoading(true)
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth() + 1
+      const { start, end } = getMonthRange(year, month)
+      // normalizar para yyyy-MM-dd local sem timezone
+      const toYmd = (d: Date) => {
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${y}-${m}-${day}`
+      }
+      const startStr = toYmd(start)
+      const endStr = toYmd(end)
+
+      const fetchOpts: RequestInit = { cache: 'no-store', credentials: 'same-origin' }
+      const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
+        fetch(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?type=FIXED&start=${startStr}&end=${endStr}&_=${Date.now()}`, fetchOpts),
+      ])
+
+      const [expVar, expFix, incVar, incFix] = await Promise.all([
+        expVarRes.ok ? expVarRes.json() : [],
+        expFixRes.ok ? expFixRes.json() : [],
+        incVarRes.ok ? incVarRes.json() : [],
+        incFixRes.ok ? incFixRes.json() : [],
+      ])
+
+      const allExpenses: any[] = [...expVar, ...expFix]
+      const allIncomes: any[] = [...incVar, ...incFix]
+
+      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
+      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0)
+
+      const expenseMap = new Map<string, { amount: number; color: string }>()
+      for (const e of allExpenses) {
+        const key = e.category?.name || 'Sem categoria'
+        const color = e.category?.color || '#94a3b8'
+        const cur = expenseMap.get(key) || { amount: 0, color }
+        cur.amount += Number(e.amount)
+        cur.color = color
+        expenseMap.set(key, cur)
+      }
+      const expensesByCategory = Array.from(expenseMap.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }))
+
+      const incomeMap = new Map<string, { amount: number; color: string }>()
+      for (const i of allIncomes) {
+        const key = i.category?.name || 'Sem categoria'
+        const color = i.category?.color || '#10b981'
+        const cur = incomeMap.get(key) || { amount: 0, color }
+        cur.amount += Number(i.amount)
+        cur.color = color
+        incomeMap.set(key, cur)
+      }
+      const incomesByCategory = Array.from(incomeMap.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }))
+
+      setSummary({
+        totalIncome,
+        totalExpenses,
+        balance: totalIncome - totalExpenses,
+        expensesByCategory,
+        incomesByCategory,
+      })
+      setIsLoading(false)
+    }
+
+    fetchSummary()
+  }, [currentDate])
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => {
@@ -46,9 +115,16 @@ export function DashboardContent() {
 
   const handleNextMonth = () => {
     setCurrentDate(prev => {
-      const newDate = new Date(prev)
-      newDate.setMonth(prev.getMonth() + 1)
-      return newDate
+      // Bloqueia avançar para meses futuros em relação ao mês atual
+      const next = new Date(prev)
+      next.setMonth(prev.getMonth() + 1)
+      if (
+        next.getFullYear() > today.getFullYear() ||
+        (next.getFullYear() === today.getFullYear() && next.getMonth() > today.getMonth())
+      ) {
+        return prev
+      }
+      return next
     })
   }
 
@@ -79,6 +155,8 @@ export function DashboardContent() {
             variant="outline"
             size="sm"
             onClick={handleNextMonth}
+            disabled={isAtCurrentMonth}
+            aria-disabled={isAtCurrentMonth}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -94,11 +172,8 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(mockData.totalIncome)}
+              {formatCurrency(summary.totalIncome)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              +12% em relação ao mês anterior
-            </p>
           </CardContent>
         </Card>
 
@@ -109,11 +184,8 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(mockData.totalExpenses)}
+              {formatCurrency(summary.totalExpenses)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              +8% em relação ao mês anterior
-            </p>
           </CardContent>
         </Card>
 
@@ -124,7 +196,7 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(mockData.balance)}
+              {formatCurrency(summary.balance)}
             </div>
             <p className="text-xs text-muted-foreground">
               Saldo disponível
@@ -140,7 +212,13 @@ export function DashboardContent() {
             <CardTitle>Despesas por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            <ExpenseChart data={mockData.expensesByCategory} />
+            {isLoading ? (
+              <Loader text="Carregando despesas..." />
+            ) : summary.expensesByCategory.length > 0 ? (
+              <ExpenseChart data={summary.expensesByCategory} />
+            ) : (
+              <div className="text-sm text-gray-500">Sem dados para o período selecionado</div>
+            )}
           </CardContent>
         </Card>
 
@@ -149,10 +227,30 @@ export function DashboardContent() {
             <CardTitle>Rendas por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            <IncomeChart data={mockData.incomesByCategory} />
+            {isLoading ? (
+              <Loader text="Carregando rendas..." />
+            ) : summary.incomesByCategory.length > 0 ? (
+              <IncomeChart data={summary.incomesByCategory} />
+            ) : (
+              <div className="text-sm text-gray-500">Sem dados para o período selecionado</div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráfico de relação (largura total) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Renda x Despesas (Percentual)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Loader text="Calculando percentuais..." />
+          ) : (
+            <SummaryRatioChart totalIncome={summary.totalIncome} totalExpenses={summary.totalExpenses} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

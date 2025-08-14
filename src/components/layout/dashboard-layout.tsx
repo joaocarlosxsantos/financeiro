@@ -9,7 +9,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
       <main className="flex-1 overflow-auto">
-        <div className="p-6">
+        <div className="w-full max-w-5xl mx-auto p-6 sm:p-8">
           {children}
         </div>
       </main>

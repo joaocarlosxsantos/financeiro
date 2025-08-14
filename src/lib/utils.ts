@@ -35,3 +35,23 @@ export function getMonthRange(year: number, month: number): { start: Date; end: 
   const end = new Date(year, month, 0, 23, 59, 59)
   return { start, end }
 }
+
+// Parses date strings from API (e.g., 'YYYY-MM-DD' or ISO) into a local Date without timezone shift
+export function parseApiDate(input: string | Date): Date {
+  if (input instanceof Date) {
+    return new Date(input.getFullYear(), input.getMonth(), input.getDate())
+  }
+  const s = String(input)
+  const ymd = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (ymd) {
+    const y = Number(ymd[1]); const m = Number(ymd[2]); const d = Number(ymd[3])
+    return new Date(y, m - 1, d)
+  }
+  const dmy = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (dmy) {
+    const d = Number(dmy[1]); const m = Number(dmy[2]); const y = Number(dmy[3])
+    return new Date(y, m - 1, d)
+  }
+  const dt = new Date(s)
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())
+}
