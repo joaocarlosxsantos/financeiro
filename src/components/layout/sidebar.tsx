@@ -24,6 +24,7 @@ const navigation = [
   { name: 'Carteiras', href: '/wallets', icon: Wallet },
   { name: 'Categorias', href: '/categorias', icon: Tag },
   { name: 'Tags', href: '/tags', icon: BarChart3 },
+  { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
 ]
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
