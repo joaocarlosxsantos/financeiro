@@ -594,8 +594,7 @@ export function DashboardContent() {
       </div>
 
       {/* Gráfico de relação (largura total) */}
-      <div className="w-full overflow-x-auto">
-        <Card className="w-full min-w-[320px]">
+  <Card className="w-full">
           <CardHeader>
             <CardTitle>Renda x Despesas</CardTitle>
           </CardHeader>
@@ -606,8 +605,7 @@ export function DashboardContent() {
               <SummaryRatioChart totalIncome={summary.totalIncome} totalExpenses={summary.totalExpenses} />
             )}
           </CardContent>
-        </Card>
-      </div>
+  </Card>
     </div>
   )
 }

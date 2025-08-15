@@ -41,7 +41,7 @@ export function SummaryRatioChart({ totalIncome, totalExpenses }: SummaryRatioCh
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-sm">
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
         <div className="rounded-md border p-3 text-center">
           <p className="text-gray-500">Renda</p>
           <p className="font-semibold text-green-600">{safeIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
