@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 
 import { TagSelector } from '@/components/ui/tag-selector';
@@ -41,7 +41,11 @@ interface Tag {
   name: string;
 }
 
-export default function DespesasVariaveisTab() {
+interface DespesasVariaveisTabProps {
+  currentDate: Date;
+}
+
+export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisTabProps) {
   const [despesas, setDespesas] = useState<DespesaVariavel[]>([]);
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
@@ -54,11 +58,15 @@ export default function DespesasVariaveisTab() {
   useEffect(() => {
     async function load() {
       setIsLoading(true);
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const start = new Date(year, month, 1).toISOString().slice(0, 10);
+      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
       const [catsRes, walletsRes, tagsRes, despesasRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
-        fetch('/api/expenses?type=VARIABLE', { cache: 'no-store' }),
+        fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}`, { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
       if (walletsRes.ok) setWallets(await walletsRes.json());
@@ -74,7 +82,9 @@ export default function DespesasVariaveisTab() {
       setIsLoading(false);
     }
     load();
-  }, []);
+  }, [currentDate]);
+
+  // Navegação de mês removida, pois agora é global
 
   const handleEdit = (id: string) => {
     const d = despesas.find(x => x.id === id);
@@ -142,6 +152,11 @@ export default function DespesasVariaveisTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas Variáveis</h1>
+        <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas variáveis</p>
+      </div>
       {/* Formulário */}
       {showForm && (
         <Card>

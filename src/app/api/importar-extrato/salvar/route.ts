@@ -59,11 +59,25 @@ export async function POST(req: NextRequest) {
 
   // Cria novas categorias em lote (evita duplicidade)
   const criadas: any[] = [];
+  // Função para gerar cor RGB baseada no nome
+  function corPorNome(nome: string) {
+    let hash = 0;
+    for (let i = 0; i < nome.length; i++) {
+      hash = nome.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const r = (hash >> 0) & 0xff;
+    const g = (hash >> 8) & 0xff;
+    const b = (hash >> 16) & 0xff;
+    return `rgb(${Math.abs(r)},${Math.abs(g)},${Math.abs(b)})`;
+  }
+
   for (const nova of novasCategorias) {
-    const key = `${nova.name.toLowerCase()}|${nova.type}`;
+    // Sempre criar como BOTH e cor baseada no nome
+    const key = `${nova.name.toLowerCase()}|BOTH`;
     if (!categoriasCache[key]) {
+      const cor = corPorNome(nova.name);
       const cat = await prisma.category.create({
-        data: { name: nova.name, type: nova.type as any, userId: user.id, color: '#3B82F6' },
+        data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
       });
       categoriasCache[key] = cat;
       criadas.push(cat);

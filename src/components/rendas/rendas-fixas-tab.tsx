@@ -27,7 +27,7 @@ interface RendaFixa {
 import { TagSelector } from '@/components/ui/tag-selector'
 
 
-export function RendasFixasTab() {
+export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   const [rendas, setRendas] = useState<RendaFixa[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([]);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([]);
@@ -40,10 +40,14 @@ export function RendasFixasTab() {
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const start = new Date(year, month, 1).toISOString().slice(0, 10);
+      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
       const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
-        fetch('/api/incomes?type=FIXED', { cache: 'no-store' }),
+        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}`, { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
@@ -69,7 +73,7 @@ export function RendasFixasTab() {
       setIsLoading(false);
     };
     load();
-  }, []);
+  }, [currentDate]);
 
   const handleEdit = (id: string) => {
     const r = rendas.find(x => x.id === id);

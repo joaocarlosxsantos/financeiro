@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+// import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +24,7 @@ interface RendaVariavel {
 import { TagSelector } from '@/components/ui/tag-selector'
 
 
-export function RendasVariaveisTab() {
+export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   const [rendas, setRendas] = useState<RendaVariavel[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([]);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([]);
@@ -36,9 +37,10 @@ export function RendasVariaveisTab() {
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      const today = new Date();
-      const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const start = new Date(year, month, 1).toISOString().slice(0, 10);
+      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
       const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
@@ -66,7 +68,9 @@ export function RendasVariaveisTab() {
       setIsLoading(false);
     };
     load();
-  }, []);
+  }, [currentDate]);
+
+  // mês e ano removidos, pois calendário é global
 
   const handleEdit = (id: string) => {
     const r = rendas.find(x => x.id === id);
@@ -133,6 +137,19 @@ export function RendasVariaveisTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header com seletor de mês */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Variáveis</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas variáveis</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Botão de mês removido, navegação global */}
+          {/* Calendário removido, pois agora é global */}
+          {/* Botão de mês removido, navegação global */}
+        </div>
+      </div>
+
       {/* Formulário */}
       {showForm && (
         <Card>
@@ -146,7 +163,7 @@ export function RendasVariaveisTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="description">Descrição</Label>
-                  <Input id="description" placeholder="Ex: Freelance" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                  <Input id="description" placeholder="Ex: Freelancer" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div>
                   <Label htmlFor="amount">Valor</Label>
@@ -292,5 +309,4 @@ export function RendasVariaveisTab() {
         </Card>
       )}
     </div>
-  );
-}
+  );}
