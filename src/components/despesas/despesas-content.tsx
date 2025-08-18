@@ -1,6 +1,8 @@
+
 'use client'
 
 import { useState } from 'react'
+import { useMonth } from '@/components/providers/month-provider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DespesasFixasTab } from './despesas-fixas-tab'
 import DespesasVariaveisTab from './despesas-variaveis-tab'
@@ -10,14 +12,11 @@ import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 
 export default function DespesasContent() {
   const [activeTab, setActiveTab] = useState('fixas')
-  const [currentDate, setCurrentDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  const { currentDate, setCurrentDate } = useMonth();
 
   // Navegação de mês global
   const handlePrevMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
   const handleNextMonth = () => {
     const now = new Date();
@@ -25,7 +24,7 @@ export default function DespesasContent() {
       currentDate.getFullYear() < now.getFullYear() ||
       (currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() < now.getMonth())
     ) {
-      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     }
   };
   const monthLabel = currentDate.toLocaleString('pt-BR', { month: 'long' });

@@ -4,6 +4,7 @@ import { useDailyExpenseData } from "@/hooks/use-dashboard-data";
 import { DailyCategoryChart } from "./daily-category-chart";
 import { DailyWalletChart } from "./daily-wallet-chart";
 import { useEffect, useState } from "react";
+import { useMonth } from '@/components/providers/month-provider';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -81,7 +82,7 @@ export function DashboardContent() {
     []
   );
   const [selectedWallet, setSelectedWallet] = useState<string>("");
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
   const isAtCurrentMonth =
     currentDate.getFullYear() === today.getFullYear() &&
@@ -359,27 +360,19 @@ export function DashboardContent() {
   }, [currentDate, selectedWallet]);
 
   const handlePreviousMonth = () => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(prev.getMonth() - 1);
-      return newDate;
-    });
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentDate((prev) => {
-      // Bloqueia avançar para meses futuros em relação ao mês atual
-      const next = new Date(prev);
-      next.setMonth(prev.getMonth() + 1);
-      if (
-        next.getFullYear() > today.getFullYear() ||
-        (next.getFullYear() === today.getFullYear() &&
-          next.getMonth() > today.getMonth())
-      ) {
-        return prev;
-      }
-      return next;
-    });
+    const today = new Date();
+    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    if (
+      next.getFullYear() > today.getFullYear() ||
+      (next.getFullYear() === today.getFullYear() && next.getMonth() > today.getMonth())
+    ) {
+      return;
+    }
+    setCurrentDate(next);
   };
 
   // Cálculo do limite diário seguro
