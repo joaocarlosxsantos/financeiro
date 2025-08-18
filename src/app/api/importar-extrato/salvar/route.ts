@@ -71,14 +71,16 @@ export async function POST(req: NextRequest) {
     } else if (categoriaNome) {
       const key = `${categoriaNome.toLowerCase()}|${tipo}`;
       categoriaObj = categoriasCache[key];
-      if (!categoriaObj) {
-        // Marca para criar depois, se ainda não está na lista
+      // Só cria categoria se o nome for válido (não id, não vazio, não string aleatória)
+      const isProvavelId = /^[a-z0-9]{20,}$/.test(categoriaNome); // ids do prisma geralmente são grandes
+      if (!categoriaObj && categoriaNome && !isProvavelId && categoriaNome !== '' && categoriaNome !== undefined) {
         if (!novasCategorias.some(c => c.name.toLowerCase() === categoriaNome.toLowerCase() && c.type === tipo)) {
           novasCategorias.push({ name: categoriaNome, type: tipo });
         }
       }
     }
-    return { ...reg, categoriaId: categoriaObj ? categoriaObj.id : categoriaNome, tipo };
+    // Se não encontrou categoria válida, deixa undefined
+    return { ...reg, categoriaId: categoriaObj ? categoriaObj.id : undefined, tipo };
   });
 
   // Cria novas categorias em lote (evita duplicidade)

@@ -41,14 +41,16 @@ export function ExtratoPreview({ preview, wallets, selectedWallet, onWalletChang
   useEffect(() => {
     setRegistros(preview.map((r) => {
       // Se a categoria sugerida já existe, preenche com o id dela
-      let categoriaId = '';
+      let categoriaId: string | undefined = undefined;
       if (r.categoriaSugerida && categorias.length > 0) {
         const match = categorias.find((c: any) => c.name.toLowerCase() === r.categoriaSugerida.toLowerCase());
         if (match) categoriaId = match.id;
         else categoriaId = r.categoriaSugerida;
-      } else {
-        categoriaId = r.categoriaSugerida || '';
+      } else if (r.categoriaSugerida) {
+        categoriaId = r.categoriaSugerida;
       }
+      // Se categoriaId for string vazia, deixa como undefined
+      if (categoriaId === '') categoriaId = undefined;
       return {
         ...r,
         categoriaId,
