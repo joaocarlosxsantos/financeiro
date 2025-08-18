@@ -34,6 +34,23 @@ export async function POST(req: NextRequest) {
     categoriasCache[key] = cat;
   }
 
+  // Garante que a categoria 'Saldo' exista (type BOTH ou INCOME)
+  let saldoCategoria = categoriasExistentes.find(
+    c => c.name.toLowerCase() === 'saldo' && (c.type === 'BOTH' || c.type === 'INCOME')
+  );
+  if (!saldoCategoria) {
+    saldoCategoria = await prisma.category.create({
+      data: {
+        name: 'Saldo',
+        type: 'BOTH',
+        userId: user.id,
+        color: 'rgb(0,128,255)',
+      },
+    });
+    const key = `saldo|BOTH`;
+    categoriasCache[key] = saldoCategoria;
+  }
+
   // Para criar novas categorias em lote
   const novasCategorias: { name: string, type: 'INCOME' | 'EXPENSE' }[] = [];
   const registrosAtualizados = registros.map(reg => {
@@ -46,7 +63,12 @@ export async function POST(req: NextRequest) {
       categoriaNome = categoriaId;
     }
     let categoriaObj = null;
-    if (categoriaNome) {
+    // Se for lançamento de saldo inicial, força categoria 'Saldo'
+    if (reg.isSaldoInicial || categoriaId === 'Saldo' || categoriaId === 'saldo') {
+      categoriaObj = saldoCategoria;
+      categoriaNome = 'Saldo';
+      categoriaId = saldoCategoria.id;
+    } else if (categoriaNome) {
       const key = `${categoriaNome.toLowerCase()}|${tipo}`;
       categoriaObj = categoriasCache[key];
       if (!categoriaObj) {

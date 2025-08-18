@@ -10,6 +10,8 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ className }: UserProfileProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [user, setUser] = useState({ name: "", email: "", phone: "" });
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
@@ -131,6 +133,9 @@ export function UserProfile({ className }: UserProfileProps) {
           <Button variant="secondary" className="w-full mt-2" onClick={() => setShowPasswordModal(true)}>
             Alterar senha
           </Button>
+          <Button variant="destructive" className="w-full mt-2" onClick={() => setShowDeleteModal(true)}>
+            Excluir TODOS os meus dados (atalho de limpeza)
+          </Button>
         </div>
       </CardContent>
       <Modal open={showPasswordModal} onClose={() => { setShowPasswordModal(false); setPasswords({ password: "", confirm: "" }); setPasswordError(""); }} title="Alterar senha">
@@ -147,6 +152,38 @@ export function UserProfile({ className }: UserProfileProps) {
           <div className="flex gap-2 mt-4">
             <Button onClick={handlePasswordSave} className="flex-1" disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
             <Button onClick={() => { setShowPasswordModal(false); setPasswords({ password: "", confirm: "" }); setPasswordError(""); }} className="flex-1" variant="outline" disabled={loading}>Cancelar</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de confirmação de exclusão */}
+      <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Excluir todos os dados?">
+        <div className="space-y-4">
+          <div className="text-red-600 text-center font-semibold">Tem certeza que deseja excluir TODOS os seus dados? Essa ação não pode ser desfeita!</div>
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="destructive"
+              className="flex-1"
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true);
+                await fetch('/api/user/delete-data', { method: 'POST' });
+                setDeleting(false);
+                setShowDeleteModal(false);
+                setMessage('Todos os dados foram excluídos!');
+                // Opcional: recarregar a página ou buscar novamente os dados do usuário
+              }}
+            >
+              {deleting ? 'Excluindo...' : 'Sim, excluir tudo'}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              disabled={deleting}
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancelar
+            </Button>
           </div>
         </div>
       </Modal>
