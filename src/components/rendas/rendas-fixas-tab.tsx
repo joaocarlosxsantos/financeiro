@@ -29,6 +29,24 @@ import { TagSelector } from '@/components/ui/tag-selector'
 
 export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   const [rendas, setRendas] = useState<RendaFixa[]>([]);
+  const [search, setSearch] = useState('');
+  // Filtro de busca
+  const filteredRendas = rendas.filter(renda => {
+    if (!search.trim()) return true;
+    const s = search.trim().toLowerCase();
+    // Busca por descrição
+    if (renda.description && renda.description.toLowerCase().includes(s)) return true;
+    // Busca por data (dd/mm/yyyy ou dd/mm)
+    if (renda.dayOfMonth && renda.startDate) {
+      const d = renda.dayOfMonth.toString().padStart(2, '0');
+      const m = (renda.startDate.getMonth() + 1).toString().padStart(2, '0');
+      const y = renda.startDate.getFullYear().toString();
+      const full = `${d}/${m}/${y}`;
+      const partial = `${d}/${m}`;
+      if (full.includes(s) || partial.includes(s)) return true;
+    }
+    return false;
+  });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([]);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([]);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
@@ -144,6 +162,14 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
 
   return (
     <div className="space-y-6">
+      {/* Busca */}
+      <div className="mb-2">
+        <Input
+          placeholder="Buscar por descrição ou data (dd/mm/yyyy ou dd/mm)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
       {/* Formulário */}
       {showForm && (
         <Card>
@@ -247,7 +273,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         <Loader text="Carregando rendas..." />
       ) : (
         <div className="space-y-4">
-          {rendas.map((renda) => (
+          {filteredRendas.map((renda) => (
             <Card key={renda.id}>
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -296,7 +322,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         </div>
       )}
 
-      {rendas.length === 0 && !showForm && (
+      {filteredRendas.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
             <p className="text-gray-500">Nenhuma renda fixa cadastrada</p>

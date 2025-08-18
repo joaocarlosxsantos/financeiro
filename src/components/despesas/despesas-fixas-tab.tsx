@@ -32,6 +32,24 @@ interface DespesasFixasTabProps {
 
 export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
   const [despesas, setDespesas] = useState<DespesaFixa[]>([])
+  const [search, setSearch] = useState('');
+  // Filtro de busca
+  const filteredDespesas = despesas.filter(despesa => {
+    if (!search.trim()) return true;
+    const s = search.trim().toLowerCase();
+    // Busca por descrição
+    if (despesa.description && despesa.description.toLowerCase().includes(s)) return true;
+    // Busca por data (dd/mm/yyyy ou dd/mm)
+    if (despesa.dayOfMonth && despesa.startDate) {
+      const d = despesa.dayOfMonth.toString().padStart(2, '0');
+      const m = (despesa.startDate.getMonth() + 1).toString().padStart(2, '0');
+      const y = despesa.startDate.getFullYear().toString();
+      const full = `${d}/${m}/${y}`;
+      const partial = `${d}/${m}`;
+      if (full.includes(s) || partial.includes(s)) return true;
+    }
+    return false;
+  });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([])
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([])
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
@@ -76,7 +94,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
-          walletName: e.wallet?.name,
+          walletName: e.walletId ? (wallets.find(w => w.id === e.walletId)?.name || 'N/A') : 'N/A',
           startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
           tags: e.tags || [],
@@ -170,6 +188,14 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas Fixas</h1>
         <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas fixas</p>
+      </div>
+      {/* Busca */}
+      <div className="mb-2">
+        <Input
+          placeholder="Buscar por descrição ou data (dd/mm/yyyy ou dd/mm)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
       {/* Formulário */}
       {showForm && (
@@ -272,7 +298,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
         <Loader text="Carregando despesas..." />
       ) : (
       <div className="space-y-4">
-        {despesas.map((despesa) => (
+        {filteredDespesas.map((despesa) => (
           <Card key={despesa.id}>
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -322,7 +348,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
       </div>
       )}
 
-      {despesas.length === 0 && !showForm && (
+      {filteredDespesas.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
             <p className="text-gray-500">Nenhuma despesa fixa cadastrada</p>

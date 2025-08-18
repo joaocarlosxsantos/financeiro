@@ -47,6 +47,24 @@ interface DespesasVariaveisTabProps {
 
 export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisTabProps) {
   const [despesas, setDespesas] = useState<DespesaVariavel[]>([]);
+  const [search, setSearch] = useState('');
+  // Filtro de busca
+  const filteredDespesas = despesas.filter(despesa => {
+    if (!search.trim()) return true;
+    const s = search.trim().toLowerCase();
+    // Busca por descrição
+    if (despesa.description && despesa.description.toLowerCase().includes(s)) return true;
+    // Busca por data (dd/mm/yyyy ou dd/mm)
+    if (despesa.date) {
+      const d = despesa.date.getDate().toString().padStart(2, '0');
+      const m = (despesa.date.getMonth() + 1).toString().padStart(2, '0');
+      const y = despesa.date.getFullYear().toString();
+      const full = `${d}/${m}/${y}`;
+      const partial = `${d}/${m}`;
+      if (full.includes(s) || partial.includes(s)) return true;
+    }
+    return false;
+  });
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -83,6 +101,14 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
     }
     load();
   }, [currentDate]);
+  // Atualiza walletName das despesas sempre que a lista de carteiras mudar
+  useEffect(() => {
+    if (!wallets.length || !despesas.length) return;
+    setDespesas(prev => prev.map(d => ({
+      ...d,
+      walletName: d.walletId ? (wallets.find(w => w.id === d.walletId)?.name || 'Sem carteira') : 'Sem carteira',
+    })));
+  }, [wallets, despesas]);
 
   // Navegação de mês removida, pois agora é global
 
@@ -156,6 +182,14 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas Variáveis</h1>
         <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas variáveis</p>
+      </div>
+      {/* Busca */}
+      <div className="mb-2">
+        <Input
+          placeholder="Buscar por descrição ou data (dd/mm/yyyy ou dd/mm)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
       {/* Formulário */}
       {showForm && (
@@ -252,7 +286,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
         <Loader text="Carregando despesas..." />
       ) : (
         <div className="space-y-4">
-          {despesas.map((despesa) => (
+          {filteredDespesas.map((despesa) => (
             <Card key={despesa.id}>
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -263,7 +297,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
                         {formatDate(despesa.date)} • {despesa.categoryName}
                       </p>
                       <p className="text-xs text-gray-500 break-words">
-                        Carteira: {despesa.walletName || 'N/A'}
+                        Carteira: {despesa.walletName || 'Sem carteira'}
                       </p>
                     </div>
                   </div>
@@ -297,7 +331,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
         </div>
       )}
 
-      {despesas.length === 0 && !showForm && (
+      {filteredDespesas.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
             <p className="text-gray-500">Nenhuma despesa variável cadastrada</p>

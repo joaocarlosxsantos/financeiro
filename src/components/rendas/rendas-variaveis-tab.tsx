@@ -26,6 +26,24 @@ import { TagSelector } from '@/components/ui/tag-selector'
 
 export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   const [rendas, setRendas] = useState<RendaVariavel[]>([]);
+  const [search, setSearch] = useState('');
+  // Filtro de busca
+  const filteredRendas = rendas.filter(renda => {
+    if (!search.trim()) return true;
+    const s = search.trim().toLowerCase();
+    // Busca por descrição
+    if (renda.description && renda.description.toLowerCase().includes(s)) return true;
+    // Busca por data (dd/mm/yyyy ou dd/mm)
+    if (renda.date) {
+      const d = renda.date.getDate().toString().padStart(2, '0');
+      const m = (renda.date.getMonth() + 1).toString().padStart(2, '0');
+      const y = renda.date.getFullYear().toString();
+      const full = `${d}/${m}/${y}`;
+      const partial = `${d}/${m}`;
+      if (full.includes(s) || partial.includes(s)) return true;
+    }
+    return false;
+  });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([]);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([]);
   const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] as string[] });
@@ -143,11 +161,15 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Variáveis</h1>
           <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas variáveis</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Botão de mês removido, navegação global */}
-          {/* Calendário removido, pois agora é global */}
-          {/* Botão de mês removido, navegação global */}
-        </div>
+        <div className="flex items-center gap-2"></div>
+      </div>
+      {/* Busca */}
+      <div className="mb-2">
+        <Input
+          placeholder="Buscar por descrição ou data (dd/mm/yyyy ou dd/mm)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       {/* Formulário */}
@@ -245,7 +267,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
         <Loader text="Carregando rendas..." />
       ) : (
         <div className="space-y-4">
-          {rendas.map((renda) => (
+          {filteredRendas.map((renda) => (
             <Card key={renda.id}>
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -290,7 +312,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
         </div>
       )}
 
-      {rendas.length === 0 && !showForm && (
+      {filteredRendas.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
             <p className="text-gray-500">Nenhuma renda variável cadastrada</p>
