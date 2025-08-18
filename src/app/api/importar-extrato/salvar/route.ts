@@ -72,8 +72,10 @@ export async function POST(req: NextRequest) {
       const key = `${categoriaNome.toLowerCase()}|${tipo}`;
       categoriaObj = categoriasCache[key];
       if (!categoriaObj) {
-        // Marca para criar depois
-        novasCategorias.push({ name: categoriaNome, type: tipo });
+        // Marca para criar depois, se ainda não está na lista
+        if (!novasCategorias.some(c => c.name.toLowerCase() === categoriaNome.toLowerCase() && c.type === tipo)) {
+          novasCategorias.push({ name: categoriaNome, type: tipo });
+        }
       }
     }
     return { ...reg, categoriaId: categoriaObj ? categoriaObj.id : categoriaNome, tipo };
@@ -106,6 +108,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Atualiza os registros com os ids corretos das categorias criadas
+  const registrosFinal = registrosAtualizados.map(reg => {
+    let categoriaId = reg.categoriaId;
+    if (categoriaId && categoriaId.length <= 40) {
+      // Pode ser nome, resolve para id
+      const key = `${categoriaId.toLowerCase()}|INCOME`;
+      const key2 = `${categoriaId.toLowerCase()}|EXPENSE`;
+      const keyBoth = `${categoriaId.toLowerCase()}|BOTH`;
+      categoriaId = (categoriasCache[key]?.id || categoriasCache[key2]?.id || categoriasCache[keyBoth]?.id || categoriaId);
+      // Se não for um id válido (não está no cache), remove
+      if (!Object.values(categoriasCache).some(c => c.id === categoriaId)) {
+        categoriaId = undefined;
+      }
+    }
+    return { ...reg, categoriaId };
+  });
+
   // Salva lançamentos em transação atômica
   if (!session?.user?.email) {
     // Não deve acontecer, mas evita erro de tipo
@@ -116,14 +135,10 @@ export async function POST(req: NextRequest) {
     // Separar lançamentos em incomes e expenses
     const incomes = [];
     const expenses = [];
-    for (const reg of registrosAtualizados) {
+    for (const reg of registrosFinal) {
       const dataObj = parsePtBrDate(reg.data);
       if (!dataObj) throw new Error('Data inválida em um dos lançamentos');
       let categoriaId = reg.categoriaId;
-      if (categoriaId && categoriaId.length <= 40) {
-        const key = `${categoriaId.toLowerCase()}|${reg.tipo}`;
-        if (categoriasCache[key]) categoriaId = categoriasCache[key].id;
-      }
       const base = {
         amount: Math.abs(reg.valor),
         date: dataObj,
