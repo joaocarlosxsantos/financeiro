@@ -20,14 +20,13 @@ export default function RendasContent() {
   };
   const handleNextMonth = () => {
     const now = new Date();
-    if (
-      currentDate.getFullYear() < now.getFullYear() ||
-      (currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() < now.getMonth())
-    ) {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    if (nextMonth <= now) {
+      setCurrentDate(nextMonth);
     }
   };
   const monthLabel = currentDate.toLocaleString('pt-BR', { month: 'long' });
+  const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
   const yearLabel = currentDate.getFullYear();
 
   return (
@@ -39,9 +38,16 @@ export default function RendasContent() {
           <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas fixas e variáveis</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handlePrevMonth}><ChevronLeft className="w-4 h-4" /></Button>
-          <div className="flex items-center px-2 py-1 border rounded bg-background text-foreground"><Calendar className="w-4 h-4 mr-1" />{monthLabel} {yearLabel}</div>
-          <Button variant="outline" size="sm" onClick={handleNextMonth}><ChevronRight className="w-4 h-4" /></Button>
+          <Button variant="outline" size="sm" onClick={handlePrevMonth} aria-label="Mês anterior">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center px-2 py-1 border rounded bg-background text-foreground">
+            <Calendar className="w-4 h-4 mr-1" />
+            {monthLabelCapitalized} {yearLabel}
+          </div>
+          <Button variant="outline" size="sm" onClick={handleNextMonth} aria-label="Próximo mês">
+            <ChevronRight className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 

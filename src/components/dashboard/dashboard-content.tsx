@@ -450,13 +450,17 @@ export function DashboardContent() {
             ))}
           </select>
           <div className="flex w-full sm:w-auto items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
+            <Button variant="outline" size="sm" onClick={handlePreviousMonth} aria-label="Mês anterior">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center space-x-2 px-3 py-2 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
               <Calendar className="h-4 w-4 text-foreground" />
               <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">
-                {getMonthYear(currentDate)}
+                {(() => {
+                  const label = getMonthYear(currentDate);
+                  // Capitaliza o mês
+                  return label.charAt(0).toUpperCase() + label.slice(1);
+                })()}
               </span>
             </div>
             <Button
@@ -465,6 +469,7 @@ export function DashboardContent() {
               onClick={handleNextMonth}
               disabled={isAtCurrentMonth}
               aria-disabled={isAtCurrentMonth}
+              aria-label="Próximo mês"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
