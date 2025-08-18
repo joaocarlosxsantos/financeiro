@@ -106,46 +106,44 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Salva lançamentos em paralelo
+  // Salva lançamentos em transação atômica
   if (!session?.user?.email) {
     // Não deve acontecer, mas evita erro de tipo
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
   const userEmail = session.user.email;
-  await Promise.all(registrosAtualizados.map(async reg => {
-    const dataObj = parsePtBrDate(reg.data);
-    if (!dataObj) return;
-    let categoriaId = reg.categoriaId;
-    if (categoriaId && categoriaId.length <= 40) {
-      // Pode ser nome, resolve para id
-      const key = `${categoriaId.toLowerCase()}|${reg.tipo}`;
-      if (categoriasCache[key]) categoriaId = categoriasCache[key].id;
+  try {
+    // Separar lançamentos em incomes e expenses
+    const incomes = [];
+    const expenses = [];
+    for (const reg of registrosAtualizados) {
+      const dataObj = parsePtBrDate(reg.data);
+      if (!dataObj) throw new Error('Data inválida em um dos lançamentos');
+      let categoriaId = reg.categoriaId;
+      if (categoriaId && categoriaId.length <= 40) {
+        const key = `${categoriaId.toLowerCase()}|${reg.tipo}`;
+        if (categoriasCache[key]) categoriaId = categoriasCache[key].id;
+      }
+      const base = {
+        amount: Math.abs(reg.valor),
+        date: dataObj,
+        description: reg.descricaoSimplificada || reg.descricao,
+        type: 'VARIABLE' as const,
+        walletId: carteiraId,
+        userId: user.id,
+        categoryId: categoriaId || undefined,
+      };
+      if (reg.valor > 0) incomes.push(base);
+      else if (reg.valor < 0) expenses.push(base);
     }
-    if (reg.valor > 0) {
-      await prisma.income.create({
-        data: {
-          amount: reg.valor,
-          date: dataObj,
-          description: reg.descricaoSimplificada || reg.descricao,
-          type: 'VARIABLE',
-          wallet: { connect: { id: carteiraId } },
-          user: { connect: { email: userEmail } },
-          ...(categoriaId ? { category: { connect: { id: categoriaId } } } : {}),
-        },
-      });
-    } else if (reg.valor < 0) {
-      await prisma.expense.create({
-        data: {
-          amount: Math.abs(reg.valor),
-          date: dataObj,
-          description: reg.descricaoSimplificada || reg.descricao,
-          type: 'VARIABLE',
-          wallet: { connect: { id: carteiraId } },
-          user: { connect: { email: userEmail } },
-          ...(categoriaId ? { category: { connect: { id: categoriaId } } } : {}),
-        },
-      });
+    const queries = [];
+    if (incomes.length) queries.push(prisma.income.createMany({ data: incomes }));
+    if (expenses.length) queries.push(prisma.expense.createMany({ data: expenses }));
+    if (queries.length) {
+      await prisma.$transaction(queries);
     }
-  }));
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Erro ao salvar lançamentos' }, { status: 500 });
+  }
 }

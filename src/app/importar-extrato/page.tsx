@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import { Loader } from "@/components/ui/loader";
+import { Toast } from "@/components/ui/toast";
 
 import { ExtratoUpload } from "@/components/importar-extrato/extrato-upload";
 import { ExtratoPreview } from "@/components/importar-extrato/extrato-preview";
@@ -15,6 +17,8 @@ export default function ImportarExtratoPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -24,6 +28,7 @@ export default function ImportarExtratoPage() {
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setUploading(true);
     if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
@@ -31,6 +36,7 @@ export default function ImportarExtratoPage() {
       method: "POST",
       body: formData,
     });
+    setUploading(false);
     if (!res.ok) {
       setError("Erro ao processar arquivo");
       return;
@@ -56,6 +62,7 @@ export default function ImportarExtratoPage() {
       return;
     }
     setSuccess(true);
+    setShowToast(true);
     setStep("upload");
     setFile(null);
     setPreview([]);
@@ -74,11 +81,13 @@ export default function ImportarExtratoPage() {
     <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold mb-2">Importar Extrato</h1>
-        {step === "upload" && (
+        {uploading && <Loader text="Enviando arquivo..." />}
+        {!uploading && step === "upload" && (
           <ExtratoUpload
             onFileChange={setFile}
             onSubmit={handleUpload}
             file={file}
+            disabled={uploading}
           />
         )}
         {step === "preview" && (
@@ -93,6 +102,7 @@ export default function ImportarExtratoPage() {
             success={success}
           />
         )}
+        <Toast open={showToast} message="Extrato enviado com sucesso!" onClose={() => setShowToast(false)} />
       </div>
     </DashboardLayout>
   );
