@@ -23,7 +23,7 @@ export function CarteirasContent() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
-  const [type, setType] = useState('carteira')
+  const [type, setType] = useState('Banco')
 
   // Carrega carteiras
   useEffect(() => {
@@ -47,7 +47,7 @@ export function CarteirasContent() {
     if (wallet) {
       setEditingId(id)
       setName(wallet.name)
-      setType(wallet.type)
+  setType(wallet.type)
       setShowForm(true)
     }
   }
@@ -86,7 +86,7 @@ export function CarteirasContent() {
     setShowForm(false)
     setEditingId(null)
     setName('')
-    setType('carteira')
+  setType('Banco')
   }
 
   return (
@@ -118,7 +118,17 @@ export function CarteirasContent() {
                 </div>
                 <div>
                   <Label htmlFor="type">Tipo</Label>
-                  <Input id="type" placeholder="Ex: banco, cartão" value={type} onChange={e => setType(e.target.value)} />
+                  <select
+                    id="type"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={type}
+                    onChange={e => setType(e.target.value)}
+                  >
+                    <option value="Banco">Banco</option>
+                    <option value="Vale Benefícios">Vale Benefícios</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Outros">Outros</option>
+                  </select>
                 </div>
               </div>
               <div className="flex space-x-2">

@@ -19,8 +19,8 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Despesas', href: '/despesas', icon: CreditCard },
-  { name: 'Rendas', href: '/rendas', icon: DollarSign },
+  { name: 'Entradas', href: '/rendas', icon: DollarSign },
+  { name: 'Saídas', href: '/despesas', icon: CreditCard },
   { name: 'Carteiras', href: '/wallets', icon: Wallet },
   { name: 'Categorias', href: '/categorias', icon: Tag },
   { name: 'Tags', href: '/tags', icon: BarChart3 },

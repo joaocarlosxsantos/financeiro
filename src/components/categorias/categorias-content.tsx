@@ -24,6 +24,8 @@ export function CategoriasContent() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [color, setColor] = useState('#3b82f6')
+
+  // (Removido useEffect de sincronização de cor, pois resetForm já garante o valor correto)
   const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'BOTH'>('EXPENSE')
   const [icon, setIcon] = useState('')
 
@@ -43,15 +45,21 @@ export function CategoriasContent() {
     load()
   }, [])
 
+  // Função para resetar o formulário
+  const resetForm = (cat?: Category) => {
+    setEditingId(cat ? cat.id : null)
+    setName(cat ? cat.name : '')
+    setColor(cat ? cat.color : '#3b82f6')
+    setType(cat ? cat.type : 'EXPENSE')
+    setIcon(cat && cat.icon ? cat.icon : '')
+    // Só abre o formulário após garantir que todos os states foram atualizados
+    setTimeout(() => setShowForm(true), 0);
+  }
+
   const handleEdit = (id: string) => {
     const cat = categories.find(c => c.id === id)
     if (cat) {
-      setEditingId(id)
-      setName(cat.name)
-      setColor(cat.color)
-      setType(cat.type)
-      setIcon(cat.icon || '')
-      setShowForm(true)
+      resetForm(cat)
     }
   }
 
@@ -113,7 +121,7 @@ export function CategoriasContent() {
           <p className="text-gray-600 dark:text-foreground">Gerencie suas categorias de despesas e rendas</p>
         </div>
         
-        <Button onClick={() => setShowForm(true)}>
+  <Button onClick={() => resetForm(undefined)}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Categoria
         </Button>

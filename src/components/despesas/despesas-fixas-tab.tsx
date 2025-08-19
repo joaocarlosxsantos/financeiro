@@ -1,3 +1,4 @@
+// import { toTitleCase } from '@/lib/camelcase';
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -166,7 +167,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
         description: saved.description,
         amount: Number(saved.amount),
         dayOfMonth: saved.dayOfMonth ?? 1,
-        categoryName: categories.find(c => c.id === saved.categoryId)?.name,
+  categoryName: categories.find(c => c.id === saved.categoryId)?.name,
         categoryId: saved.categoryId,
         walletId: saved.walletId,
         walletName: wallets.find(w => w.id === saved.walletId)?.name,

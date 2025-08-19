@@ -1,3 +1,4 @@
+// import { toTitleCase } from '@/lib/camelcase';
 import { Button } from "@/components/ui/button";
 import React, { useEffect, useState } from "react";
 import { Select } from "@/components/ui/select";
@@ -93,6 +94,7 @@ export function ExtratoPreview({ preview, wallets, selectedWallet, onWalletChang
           categoriaSugerida: 'Saldo',
           tagId: '',
           tipo: 'RENDA_VARIAVEL',
+          isSaldoInicial: true,
         },
         ...novosRegistros
       ];

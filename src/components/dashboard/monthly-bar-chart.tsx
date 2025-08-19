@@ -18,8 +18,8 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
         <YAxis />
         <Tooltip formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
         <Legend />
-        <Bar dataKey="income" stackId="a" fill="#10b981" name="Renda" />
-        <Bar dataKey="expense" stackId="a" fill="#ef4444" name="Despesa" />
+  <Bar dataKey="income" fill="#10b981" name="Entradas" />
+  <Bar dataKey="expense" fill="#ef4444" name="Saídas" />
         <Line type="monotone" dataKey="balance" stroke="#3b82f6" name="Saldo" dot={false} strokeWidth={2} />
       </BarChart>
     </ResponsiveContainer>

@@ -4,7 +4,7 @@ import { useDailyExpenseData } from "@/hooks/use-dashboard-data";
 import { DailyCategoryChart } from "./daily-category-chart";
 import { DailyWalletChart } from "./daily-wallet-chart";
 import { useEffect, useState } from "react";
-import { useMonth } from '@/components/providers/month-provider';
+import { useMonth } from "@/components/providers/month-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -43,6 +43,8 @@ import { QuickRendaFixaForm } from "../quick-add/quick-renda-fixa-form";
 import React from "react";
 
 export function DashboardContent() {
+  const [saldoDoMes, setSaldoDoMes] = useState<number>(0);
+  const [saldoAcumulado, setSaldoAcumulado] = useState<number>(0);
   // Estado para modal de adição rápida e tabs
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickTab, setQuickTab] = useState<"despesa" | "renda">("despesa");
@@ -78,9 +80,7 @@ export function DashboardContent() {
     }>,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>(
-    []
-  );
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [selectedWallet, setSelectedWallet] = useState<string>("");
   const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
@@ -90,9 +90,108 @@ export function DashboardContent() {
 
   // Carregar carteiras
   useEffect(() => {
+    // Busca saldo acumulado de meses anteriores ao mês atual
+    const fetchSaldos = async () => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      const fetchOpts: RequestInit = {
+        cache: "no-store",
+        credentials: "same-origin",
+      };
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
+      // Saldo acumulado até o fim do mês selecionado
+      const { end: endAcumulado } = getMonthRange(year, month);
+      const endAcumuladoStr = toYmd(endAcumulado);
+      const [expVarResA, expFixResA, incVarResA, incFixResA] =
+        await Promise.all([
+          fetch(
+            `/api/expenses?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            fetchOpts
+          ),
+          fetch(
+            `/api/expenses?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            fetchOpts
+          ),
+          fetch(
+            `/api/incomes?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            fetchOpts
+          ),
+          fetch(
+            `/api/incomes?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            fetchOpts
+          ),
+        ]);
+      const [expVarA, expFixA, incVarA, incFixA] = await Promise.all([
+        expVarResA.ok ? expVarResA.json() : [],
+        expFixResA.ok ? expFixResA.json() : [],
+        incVarResA.ok ? incVarResA.json() : [],
+        incFixResA.ok ? incFixResA.json() : [],
+      ]);
+      const allExpensesA: any[] = [...expVarA, ...expFixA];
+      const allIncomesA: any[] = [...incVarA, ...incFixA];
+      const totalExpensesA = allExpensesA.reduce(
+        (sum, e) => sum + Number(e.amount),
+        0
+      );
+      const totalIncomeA = allIncomesA.reduce(
+        (sum, i) => sum + Number(i.amount),
+        0
+      );
+      setSaldoAcumulado(totalIncomeA - totalExpensesA);
+
+      // Saldo do mês selecionado
+      const { start: startMes, end: endMes } = getMonthRange(year, month);
+      const startMesStr = toYmd(startMes);
+      const endMesStr = toYmd(endMes);
+      const [expVarResM, expFixResM, incVarResM, incFixResM] =
+        await Promise.all([
+          fetch(
+            `/api/expenses?start=${startMesStr}&end=${endMesStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            fetchOpts
+          ),
+          fetch(
+            `/api/expenses?start=${startMesStr}&end=${endMesStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            fetchOpts
+          ),
+          fetch(
+            `/api/incomes?start=${startMesStr}&end=${endMesStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            fetchOpts
+          ),
+          fetch(
+            `/api/incomes?start=${startMesStr}&end=${endMesStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            fetchOpts
+          ),
+        ]);
+      const [expVarM, expFixM, incVarM, incFixM] = await Promise.all([
+        expVarResM.ok ? expVarResM.json() : [],
+        expFixResM.ok ? expFixResM.json() : [],
+        incVarResM.ok ? incVarResM.json() : [],
+        incFixResM.ok ? incFixResM.json() : [],
+      ]);
+      const allExpensesM: any[] = [...expVarM, ...expFixM];
+      const allIncomesM: any[] = [...incVarM, ...incFixM];
+      const totalExpensesM = allExpensesM.reduce(
+        (sum, e) => sum + Number(e.amount),
+        0
+      );
+      const totalIncomeM = allIncomesM.reduce(
+        (sum, i) => sum + Number(i.amount),
+        0
+      );
+      setSaldoDoMes(totalIncomeM - totalExpensesM);
+    };
+    fetchSaldos();
     const fetchWallets = async () => {
       const res = await fetch("/api/wallets", { cache: "no-store" });
-      if (res.ok) setWallets(await res.json());
+      if (res.ok) {
+        // Garante que cada carteira tenha as propriedades id, name e type
+        const data = await res.json();
+        setWallets(
+          Array.isArray(data)
+            ? data.map((w) => ({ id: w.id, name: w.name, type: w.type || "Outros" }))
+            : []
+        );
+      }
     };
     fetchWallets();
   }, []);
@@ -360,15 +459,22 @@ export function DashboardContent() {
   }, [currentDate, selectedWallet]);
 
   const handlePreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+    );
   };
 
   const handleNextMonth = () => {
     const today = new Date();
-    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    const next = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      1
+    );
     if (
       next.getFullYear() > today.getFullYear() ||
-      (next.getFullYear() === today.getFullYear() && next.getMonth() > today.getMonth())
+      (next.getFullYear() === today.getFullYear() &&
+        next.getMonth() > today.getMonth())
     ) {
       return;
     }
@@ -450,7 +556,12 @@ export function DashboardContent() {
             ))}
           </select>
           <div className="flex w-full sm:w-auto items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePreviousMonth} aria-label="Mês anterior">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousMonth}
+              aria-label="Mês anterior"
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center space-x-2 px-3 py-2 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
@@ -481,7 +592,9 @@ export function DashboardContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full">
         <Card onClick={() => setModal("income")} className="cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Renda Total</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Entradas Totais
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -493,9 +606,7 @@ export function DashboardContent() {
 
         <Card onClick={() => setModal("expense")} className="cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Despesas Totais
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Saídas Totais</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -504,20 +615,42 @@ export function DashboardContent() {
             </div>
           </CardContent>
         </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Saldo do mês
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {formatCurrency(saldoDoMes)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Entradas - Saídas do mês selecionado
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card onClick={() => setModal("balance")} className="cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(summary.balance)}
-            </div>
-            <p className="text-xs text-muted-foreground">Saldo disponível</p>
-          </CardContent>
-        </Card>
-        {/* Modal de detalhes de rendas/despesas/saldo */}
+          <Card onClick={() => setModal("balance")} className="cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Saldo acumulado
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {formatCurrency(saldoAcumulado)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Entradas - Saídas de todos os meses até o selecionado
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        {/* Modal de detalhes de entradas/saídas/saldo */}
         {/* Quick Add FAB */}
         <Fab
           onClick={() => {
@@ -546,7 +679,7 @@ export function DashboardContent() {
                 }}
                 type="button"
               >
-                Despesa
+                Saída
               </button>
               <button
                 className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${
@@ -558,7 +691,7 @@ export function DashboardContent() {
                 }}
                 type="button"
               >
-                Renda
+                Entrada
               </button>
             </div>
             <div className="flex gap-2 mb-4">
@@ -601,11 +734,11 @@ export function DashboardContent() {
           onClose={() => setModal(null)}
           title={
             modal === "income"
-              ? "Rendas do mês"
+              ? "Entradas do mês"
               : modal === "expense"
-              ? "Despesas do mês"
+              ? "Saídas do mês"
               : modal === "balance"
-              ? "Rendas e Despesas do mês"
+              ? "Entradas e Saídas do mês"
               : ""
           }
         >
@@ -613,7 +746,7 @@ export function DashboardContent() {
             <div className="mt-4">
               {summary.incomesByCategory.length === 0 ? (
                 <div className="text-sm text-muted-foreground">
-                  Nenhuma renda encontrada.
+                  Nenhuma entrada encontrada.
                 </div>
               ) : (
                 <ul className="space-y-2">
@@ -636,7 +769,7 @@ export function DashboardContent() {
             <div className="mt-4">
               {summary.expensesByCategory.length === 0 ? (
                 <div className="text-sm text-muted-foreground">
-                  Nenhuma despesa encontrada.
+                  Nenhuma saída encontrada.
                 </div>
               ) : (
                 <ul className="space-y-2">
@@ -661,7 +794,7 @@ export function DashboardContent() {
                 <div className="font-semibold mb-2"></div>
                 {summary.incomesByCategory.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    Nenhuma renda encontrada.
+                    Nenhuma entrada encontrada.
                   </div>
                 ) : (
                   <ul className="space-y-2">
@@ -683,7 +816,7 @@ export function DashboardContent() {
                 <div className="font-semibold mb-2"></div>
                 {summary.expensesByCategory.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    Nenhuma despesa encontrada.
+                    Nenhuma saída encontrada.
                   </div>
                 ) : (
                   <ul className="space-y-2">
@@ -728,11 +861,11 @@ export function DashboardContent() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full">
         <Card>
           <CardHeader>
-            <CardTitle>Rendas por Categoria</CardTitle>
+            <CardTitle>Entradas por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Loader text="Carregando rendas..." />
+              <Loader text="Carregando entradas..." />
             ) : summary.incomesByCategory.length > 0 ? (
               <IncomeChart data={summary.incomesByCategory} />
             ) : (
@@ -745,11 +878,11 @@ export function DashboardContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Despesas por Categoria</CardTitle>
+            <CardTitle>Saídas por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Loader text="Carregando despesas..." />
+              <Loader text="Carregando saídas..." />
             ) : summary.expensesByCategory.length > 0 ? (
               <ExpenseChart data={summary.expensesByCategory} />
             ) : (
@@ -762,7 +895,7 @@ export function DashboardContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Despesas por Tag</CardTitle>
+            <CardTitle>Saídas por Tag</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -788,7 +921,10 @@ export function DashboardContent() {
             {loadingDaily ? (
               <Loader text="Carregando gráfico diário..." />
             ) : dailyByCategory.length > 0 ? (
-              <DailyCategoryChart data={dailyByCategory} />
+              <DailyCategoryChart
+                data={dailyByCategory}
+                categoryColors={Object.fromEntries(summary.expensesByCategory.map(c => [c.category, c.color]))}
+              />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
@@ -804,7 +940,7 @@ export function DashboardContent() {
             {loadingDaily ? (
               <Loader text="Carregando gráfico diário..." />
             ) : dailyByWallet.length > 0 ? (
-              <DailyWalletChart data={dailyByWallet} />
+              <DailyWalletChart data={dailyByWallet} walletsMeta={wallets} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
@@ -818,7 +954,7 @@ export function DashboardContent() {
         {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
         <Card>
           <CardHeader>
-            <CardTitle>Renda vs Despesas (12 meses)</CardTitle>
+            <CardTitle>Entradas vs Saídas (12 meses)</CardTitle>
           </CardHeader>
           <CardContent>
             {summary.monthlyData.length > 0 ? (
@@ -832,14 +968,22 @@ export function DashboardContent() {
         {/* Top 5 categorias de despesa do período */}
         <Card>
           <CardHeader>
-            <CardTitle>Top 5 Categorias de Despesa (vs mês anterior)</CardTitle>
+            <CardTitle>Top 5 Categorias de Saída (vs mês anterior)</CardTitle>
           </CardHeader>
           <CardContent>
-            {summary.topExpenseCategories.length > 0 ? (
-              <TopExpenseCategoriesChart data={summary.topExpenseCategories} />
-            ) : (
-              <Loader text="Carregando categorias..." />
-            )}
+            <TopExpenseCategoriesChart
+              data={
+                summary.topExpenseCategories.length > 0
+                  ? summary.topExpenseCategories
+                  : [
+                      { category: "Sem categoria", amount: 0, diff: 0 },
+                      { category: "---", amount: 0, diff: 0 },
+                      { category: "---", amount: 0, diff: 0 },
+                      { category: "---", amount: 0, diff: 0 },
+                      { category: "---", amount: 0, diff: 0 },
+                    ]
+              }
+            />
           </CardContent>
         </Card>
       </div>
@@ -847,7 +991,7 @@ export function DashboardContent() {
       {/* Gráfico de relação (largura total) */}
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Renda x Despesas</CardTitle>
+          <CardTitle>Entradas x Saídas</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (

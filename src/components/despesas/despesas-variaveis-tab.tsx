@@ -1,3 +1,4 @@
+// import { toTitleCase } from '@/lib/camelcase';
 'use client'
 
 import { useEffect, useState } from 'react';
@@ -159,7 +160,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
         description: saved.description,
         amount: Number(saved.amount),
         date: new Date(saved.date),
-        categoryName: categories.find(c => c.id === saved.categoryId)?.name,
+  categoryName: categories.find(c => c.id === saved.categoryId)?.name,
         categoryId: saved.categoryId,
         walletId: saved.walletId,
         walletName: wallets.find(w => w.id === saved.walletId)?.name,

@@ -29,14 +29,17 @@ export async function POST(req: NextRequest) {
   // Busca todas as categorias do usuário uma vez (cache)
   const categoriasExistentes = await prisma.category.findMany({ where: { userId: user.id } });
   const categoriasCache: { [key: string]: any } = {};
+  function normalizeNome(nome: string) {
+    return nome.trim().toLowerCase();
+  }
   for (const cat of categoriasExistentes) {
-    const key = `${cat.name.toLowerCase()}|${cat.type}`;
+    const key = `${normalizeNome(cat.name)}|${cat.type}`;
     categoriasCache[key] = cat;
   }
 
   // Garante que a categoria 'Saldo' exista (type BOTH ou INCOME)
   let saldoCategoria = categoriasExistentes.find(
-    c => c.name.toLowerCase() === 'saldo' && (c.type === 'BOTH' || c.type === 'INCOME')
+    c => normalizeNome(c.name) === 'saldo' && (c.type === 'BOTH' || c.type === 'INCOME')
   );
   if (!saldoCategoria) {
     saldoCategoria = await prisma.category.create({
@@ -62,19 +65,20 @@ export async function POST(req: NextRequest) {
     } else if (categoriaId && categoriaId.length <= 40) {
       categoriaNome = categoriaId;
     }
+    categoriaNome = categoriaNome ? normalizeNome(categoriaNome) : '';
     let categoriaObj = null;
     // Se for lançamento de saldo inicial, força categoria 'Saldo'
-    if (reg.isSaldoInicial || categoriaId === 'Saldo' || categoriaId === 'saldo') {
+    if (reg.isSaldoInicial || categoriaNome === 'saldo') {
       categoriaObj = saldoCategoria;
-      categoriaNome = 'Saldo';
+      categoriaNome = 'saldo';
       categoriaId = saldoCategoria.id;
     } else if (categoriaNome) {
-      const key = `${categoriaNome.toLowerCase()}|${tipo}`;
+      const key = `${categoriaNome}|${tipo}`;
       categoriaObj = categoriasCache[key];
       // Só cria categoria se o nome for válido (não id, não vazio, não string aleatória)
       const isProvavelId = /^[a-z0-9]{20,}$/.test(categoriaNome); // ids do prisma geralmente são grandes
       if (!categoriaObj && categoriaNome && !isProvavelId && categoriaNome !== '' && categoriaNome !== undefined) {
-        if (!novasCategorias.some(c => c.name.toLowerCase() === categoriaNome.toLowerCase() && c.type === tipo)) {
+        if (!novasCategorias.some(c => normalizeNome(c.name) === categoriaNome && c.type === tipo)) {
           novasCategorias.push({ name: categoriaNome, type: tipo });
         }
       }
@@ -85,7 +89,30 @@ export async function POST(req: NextRequest) {
 
   // Cria novas categorias em lote (evita duplicidade)
   const criadas: any[] = [];
-  // Função para gerar cor RGB baseada no nome
+  // Função para cor fixa por sugestão de categoria
+  function corFixaCategoria(nome: string) {
+    const n = nome.trim().toLowerCase();
+  if (n.includes('ifood')) return 'rgb(220,38,38)'; // vermelho
+  if (n.includes('uber')) return 'rgb(16,185,129)'; // verde água
+  if (n.includes('farm')) return 'rgb(34,197,94)'; // verde
+  if (n.includes('mercado') || n.includes('supermercado')) return 'rgb(251,191,36)'; // amarelo
+  if (n.includes('academia')) return 'rgb(59,130,246)'; // azul
+  if (n.includes('pet')) return 'rgb(168,85,247)'; // roxo
+  if (n.includes('aluguel')) return 'rgb(245,158,11)'; // laranja
+  if (n.includes('energia')) return 'rgb(251,113,133)'; // rosa
+  if (n.includes('água') || n.includes('agua')) return 'rgb(56,189,248)'; // azul claro
+  if (n.includes('internet')) return 'rgb(99,102,241)'; // azul escuro
+  if (n.includes('luz')) return 'rgb(253,224,71)'; // amarelo claro
+  if (n.includes('combust')) return 'rgb(239,68,68)'; // vermelho escuro
+  if (n.includes('restaurante')) return 'rgb(251,113,133)'; // rosa
+  if (n.includes('salário') || n.includes('salario')) return 'rgb(34,197,94)'; // verde
+  if (n.includes('dinheiro')) return 'rgb(34,197,94)'; // verde
+  if (n.includes('pix')) return 'rgb(59,130,246)'; // azul
+  if (n.includes('saúde') || n.includes('saude')) return 'rgb(168,85,247)'; // roxo
+    return null;
+  }
+
+  // Função para gerar cor RGB baseada no nome (fallback)
   function corPorNome(nome: string) {
     let hash = 0;
     for (let i = 0; i < nome.length; i++) {
@@ -99,25 +126,49 @@ export async function POST(req: NextRequest) {
 
   for (const nova of novasCategorias) {
     // Sempre criar como BOTH e cor baseada no nome
-    const key = `${nova.name.toLowerCase()}|BOTH`;
+    const nomeNorm = normalizeNome(nova.name);
+    const key = `${nomeNorm}|BOTH`;
     if (!categoriasCache[key]) {
-      const cor = corPorNome(nova.name);
+      const cor = corFixaCategoria(nova.name) || corPorNome(nova.name);
       const cat = await prisma.category.create({
         data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
       });
       categoriasCache[key] = cat;
       criadas.push(cat);
+      // Atualiza todos os registrosAtualizados que usam essa categoria para já receberem o id correto
+      for (const reg of registrosAtualizados) {
+        let categoriaNome = '';
+        if (reg.categoriaSugerida) {
+          categoriaNome = normalizeNome(reg.categoriaSugerida);
+        } else if (reg.categoriaId && reg.categoriaId.length <= 40) {
+          categoriaNome = normalizeNome(reg.categoriaId);
+        }
+        if (categoriaNome === nomeNorm) {
+          reg.categoriaId = cat.id;
+        }
+      }
     }
   }
 
   // Atualiza os registros com os ids corretos das categorias criadas
   const registrosFinal = registrosAtualizados.map(reg => {
     let categoriaId = reg.categoriaId;
-    if (categoriaId && categoriaId.length <= 40) {
+    // Normaliza nome para busca
+    let categoriaNome = '';
+    if (reg.categoriaSugerida) {
+      categoriaNome = normalizeNome(reg.categoriaSugerida);
+    } else if (categoriaId && categoriaId.length <= 40) {
+      categoriaNome = normalizeNome(categoriaId);
+    }
+    // Se for saldo inicial, sempre força o id da categoria Saldo
+    if (reg.isSaldoInicial || categoriaNome === 'saldo') {
+      const catSaldo = Object.values(categoriasCache).find(c => normalizeNome(c.name) === 'saldo');
+      if (catSaldo) categoriaId = catSaldo.id;
+    } else if (categoriaId && categoriaId.length <= 40) {
       // Pode ser nome, resolve para id
-      const key = `${categoriaId.toLowerCase()}|INCOME`;
-      const key2 = `${categoriaId.toLowerCase()}|EXPENSE`;
-      const keyBoth = `${categoriaId.toLowerCase()}|BOTH`;
+      const key = `${normalizeNome(categoriaId)}|INCOME`;
+      const key2 = `${normalizeNome(categoriaId)}|EXPENSE`;
+      const keyBoth = `${normalizeNome(categoriaId)}|BOTH`;
       categoriaId = (categoriasCache[key]?.id || categoriasCache[key2]?.id || categoriasCache[keyBoth]?.id || categoriaId);
       // Se não for um id válido (não está no cache), remove
       if (!Object.values(categoriasCache).some(c => c.id === categoriaId)) {

@@ -34,8 +34,8 @@ export default function DespesasContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas</h1>
-          <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas fixas e variáveis</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Saídas</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas saídas fixas e variáveis</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handlePrevMonth} aria-label="Mês anterior">
@@ -58,13 +58,13 @@ export default function DespesasContent() {
             value="fixas"
             className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
           >
-            Despesas Fixas
+            Saídas Fixas
           </TabsTrigger>
           <TabsTrigger 
             value="variaveis"
             className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
           >
-            Despesas Variáveis
+            Saídas Variáveis
           </TabsTrigger>
         </TabsList>
         
