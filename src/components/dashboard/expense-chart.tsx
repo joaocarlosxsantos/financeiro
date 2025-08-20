@@ -9,10 +9,12 @@ interface ExpenseChartProps {
     category: string
     amount: number
     color: string
-  }>
+  }>;
+  onCategoryClick?: (categoria: string) => void;
+  categoriaSelecionada?: string | null;
 }
 
-export function ExpenseChart({ data }: ExpenseChartProps) {
+export function ExpenseChart({ data, onCategoryClick, categoriaSelecionada }: ExpenseChartProps) {
   const total = data.reduce((sum, item) => sum + item.amount, 0)
 
   const chartData = data.map(item => ({
@@ -27,21 +29,36 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
       <div className="h-72 md:h-96">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            label={false}
-            labelLine={false}
-            outerRadius={120}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-            <Tooltip 
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              label={false}
+              labelLine={false}
+              outerRadius={120}
+              fill="#8884d8"
+              dataKey="value"
+              onClick={(_, index) => {
+                if (onCategoryClick) {
+                  const cat = chartData[index]?.name;
+                  if (cat) {
+                    if (categoriaSelecionada === cat) onCategoryClick("");
+                    else onCategoryClick(cat);
+                  }
+                }
+              }}
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color}
+                  stroke={categoriaSelecionada === entry.name ? '#000' : '#fff'}
+                  strokeWidth={categoriaSelecionada === entry.name ? 3 : 1}
+                  cursor={onCategoryClick ? 'pointer' : 'default'}
+                />
+              ))}
+            </Pie>
+            <Tooltip
               formatter={(value: number) => [formatCurrency(value), 'Valor']}
               labelFormatter={(label) => `Categoria: ${label}`}
             />
