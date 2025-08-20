@@ -550,11 +550,11 @@ export function DashboardContent() {
 
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:space-x-2 w-full">
           <select
-            multiple
             className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
             onChange={e => setSelectedWallet(e.target.value)}
           >
+            <option value="">Todas as carteiras</option>
             {wallets.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
