@@ -91,32 +91,92 @@ export function DashboardContent() {
     currentDate.getFullYear() === today.getFullYear() &&
     currentDate.getMonth() === today.getMonth();
 
-  // Carregar dados do dashboard em uma única chamada
+  // Carregar dados dos cards do dashboard usando múltiplas APIs (lógica antiga)
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchCards = async () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
-      const params = new URLSearchParams();
-      params.set('year', String(year));
-      params.set('month', String(month));
-      if (selectedWallet) params.set('walletId', selectedWallet);
-      const res = await fetch(`/api/dashboard-summary?${params.toString()}`);
-      if (!res.ok) return;
-      const data = await res.json();
+      const { start, end } = getMonthRange(year, month);
+      const startStr = toYmd(start);
+      const endStr = toYmd(end);
+      const fetchOpts: RequestInit = {
+        cache: "no-store",
+        credentials: "same-origin",
+      };
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
+      // Entradas e saídas do mês
+      const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
+        fetch(`/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+      ]);
+      const [expVar, expFix, incVar, incFix] = await Promise.all([
+        expVarRes.ok ? expVarRes.json() : [],
+        expFixRes.ok ? expFixRes.json() : [],
+        incVarRes.ok ? incVarRes.json() : [],
+        incFixRes.ok ? incFixRes.json() : [],
+      ]);
+      const allExpenses: any[] = [...expVar, ...expFix];
+      const allIncomes: any[] = [...incVar, ...incFix];
+      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
       setSummary((prev: typeof summary) => ({
         ...prev,
-        totalIncome: data.totalIncome,
-        totalExpenses: data.totalExpenses,
-        expensesByCategory: data.expensesByCategory,
-        expensesByTag: data.expensesByTag,
-        // Adicione outros campos conforme necessário
+        totalIncome,
+        totalExpenses,
       }));
-      setSaldoAcumulado(data.saldoAcumulado ?? 0);
-      setSaldoDoMes(data.saldoDoMes ?? 0);
-      setWallets(data.wallets || []);
-      setLimiteDiario(data.limiteDiario ?? 0);
+      setSaldoDoMes(totalIncome - totalExpenses);
+
+      // Saldo acumulado até o fim do mês
+      const [expVarResA, expFixResA, incVarResA, incFixResA] = await Promise.all([
+        fetch(`/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
+        fetch(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+      ]);
+      const [expVarA, expFixA, incVarA, incFixA] = await Promise.all([
+        expVarResA.ok ? expVarResA.json() : [],
+        expFixResA.ok ? expFixResA.json() : [],
+        incVarResA.ok ? incVarResA.json() : [],
+        incFixResA.ok ? incFixResA.json() : [],
+      ]);
+      const allExpensesA: any[] = [...expVarA, ...expFixA];
+      const allIncomesA: any[] = [...incVarA, ...incFixA];
+      const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncomeA = allIncomesA.reduce((sum, i) => sum + Number(i.amount), 0);
+      setSaldoAcumulado(totalIncomeA - totalExpensesA);
+
+      // Limite diário
+      const hoje = new Date();
+      const fim = new Date(year, month, 0);
+      let diasRestantes = 0;
+      if (
+        year < hoje.getFullYear() ||
+        (year === hoje.getFullYear() && month - 1 < hoje.getMonth())
+      ) {
+        diasRestantes = 0;
+      } else {
+        diasRestantes = Math.max(
+          1,
+          fim.getDate() -
+            (year === hoje.getFullYear() && month - 1 === hoje.getMonth()
+              ? hoje.getDate()
+              : 1) +
+            1
+        );
+      }
+      const limite = diasRestantes > 0 ? (totalIncomeA - totalExpensesA) / diasRestantes : 0;
+      setLimiteDiario(limite);
+
+      // Buscar carteiras
+      const resWallets = await fetch("/api/wallets", { cache: "no-store" });
+      if (resWallets.ok) {
+        const data = await resWallets.json();
+        setWallets(Array.isArray(data) ? data : []);
+      }
     };
-    fetchDashboard();
+    fetchCards();
   }, [selectedWallet, currentDate]);
 
   // Carregar dados dos últimos 12 meses para gráfico de barras empilhadas
