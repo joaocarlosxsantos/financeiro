@@ -138,6 +138,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
     }
   };
+  // Carrega categorias, carteiras, tags e despesas
   useEffect(() => {
     async function load() {
       setIsLoading(true);
@@ -156,7 +157,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       if (tagsRes.ok) setTags(await tagsRes.json());
       if (despesasRes.ok) {
         const data = await despesasRes.json();
-        const mapped = data.map((e: any) => ({
+        setDespesas(data.map((e: any) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),
@@ -164,15 +165,21 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
-          walletName: e.walletId ? (wallets.find(w => w.id === e.walletId)?.name || 'N/A') : 'N/A',
           tags: e.tags || [],
-        }));
-        setDespesas(mapped);
+        })));
       }
       setIsLoading(false);
     }
     load();
   }, [currentDate]);
+
+  // Remapeia o nome da carteira sempre que as carteiras mudam
+  useEffect(() => {
+    setDespesas(prev => prev.map(d => ({
+      ...d,
+      walletName: d.walletId ? (wallets.find(w => w.id === d.walletId)?.name || 'N/A') : 'N/A',
+    })));
+  }, [wallets]);
 
   return (
     <div className="space-y-4 px-2 sm:px-0">
