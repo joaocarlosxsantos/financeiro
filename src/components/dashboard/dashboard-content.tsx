@@ -416,7 +416,7 @@ export function DashboardContent() {
         );
         const prevExpFixRes = await fetch(
           `/api/expenses?type=FIXED&start=${prevStartStr}&end=${prevEndStr}${
-            selectedWallet ? `&walletId=${selectedWallet}` : ""
+            selectedWallets.length > 0 ? selectedWallets.map((id: string) => `&walletId=${id}`).join("") : ""
           }&_=${Date.now()}`,
           { cache: "no-store", credentials: "same-origin" }
         );
