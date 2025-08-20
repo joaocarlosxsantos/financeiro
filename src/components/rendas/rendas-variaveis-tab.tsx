@@ -169,7 +169,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           setShowForm(true);
         }}>
           <Plus className="h-4 w-4 mr-2" />
-          Adicionar Renda Variável
+          Adicionar Entrada Variável
         </Button>
       </div>
       {/* Busca */}

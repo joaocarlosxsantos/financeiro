@@ -176,7 +176,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           setShowForm(true);
         }}>
           <Plus className="h-4 w-4 mr-2" />
-          Adicionar Renda Fixa
+          Adicionar Entrada Fixa
         </Button>
       </div>
       {/* Busca */}
