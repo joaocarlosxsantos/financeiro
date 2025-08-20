@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   for (const e of expenses) {
     if (Array.isArray(e.tags) && e.tags.length > 0) {
       for (const tag of e.tags) {
-        const tagName = typeof tag === 'string' ? tag : tag.name;
+        const tagName = tag;
         if (!expensesByTag[tagName]) expensesByTag[tagName] = { amount: 0, color: '#6366f1' };
         expensesByTag[tagName].amount += Number(e.amount);
       }
