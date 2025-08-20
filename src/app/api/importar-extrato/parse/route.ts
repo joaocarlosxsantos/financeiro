@@ -9,12 +9,13 @@ function sugerirCategoria(descricaoSimplificada: string): string {
   if (desc.includes('fatura') || desc.includes('pagamento fatura')) return 'Pagamento fatura';
   if (desc.includes('nubank') || desc.includes('itau') || desc.includes('santander') || desc.includes('banco do brasil') || desc.includes('caixa')) return 'PIX/TRANSF';
   if (desc.includes('pagseguro') || desc.includes('pag*')) return 'Pagamentos';
-  if (desc.includes('amazon') || desc.includes('compra') || desc.includes('compras')) return '';
   if (desc.includes('google') || desc.includes('apple')) return 'Tecnologia';
-  if (desc.includes('pix') || desc.includes('transf')) return 'PIX/TRANSF';
   if (desc.includes('farmacia') || desc.includes('drogaria')) return 'Saúde';
   if (desc.includes('bar') || desc.includes('restaurante') || desc.includes('lanchonete') || desc.includes('food')) return 'Alimentação';
   if (desc.includes('cinema') || desc.includes('lazer') || desc.includes('parque')) return 'Lazer';
+  if (desc.includes('compra') || desc.includes('compras') || desc.includes('Compra')) return 'Compras Cartão';
+  if (desc.includes('pix') || desc.includes('transf')) return 'PIX/TRANSF';
+    if (desc.includes('pix') || desc.includes('transf')) return 'PIX/TRANSF';
   // fallback
   return 'PIX/TRANSF';
 }
@@ -25,7 +26,7 @@ function simplificarDescricao(descricao: string): string {
   // Dicionário de padrões comuns
   if (desc.includes('uber')) return 'Uber';
   if (desc.includes('99*') || desc.includes('99 pop')) return '99 Pop';
-  if (desc.includes('ifd*organizacao') || desc.includes('ifood')) return 'Ifood';
+  if (desc.includes('ifd') || desc.includes('ifood')) return 'Ifood';
   if (desc.includes('mercado livre')) return 'Mercado Livre';
   if (desc.includes('nubank')) return 'Nubank';
   if (desc.includes('pag*') || desc.includes('pagseguro')) return 'PagSeguro';
@@ -39,6 +40,7 @@ function simplificarDescricao(descricao: string): string {
   if (desc.includes('amazon')) return 'Amazon';
   if (desc.includes('google')) return 'Google';
   if (desc.includes('apple')) return 'Apple';
+  if (desc.includes('Pagamento Fatura') || desc.includes('fatura')) return 'Fatura';
   // Se for nome de pessoa (muitas palavras, sem palavras-chave conhecidas)
   const palavras = descricao.replace(/\*/g, '').trim().split(/\s+/);
   if (palavras.length >= 2 && palavras.length <= 4 && palavras.every(p => /^[A-Za-zÀ-ÿ]+$/.test(p))) {
