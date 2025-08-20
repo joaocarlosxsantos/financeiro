@@ -5,11 +5,17 @@ Uma aplicação web completa para controle de despesas e rendas pessoais, desenv
 ## 🚀 Funcionalidades
 
 - **Dashboard** com gráficos e resumos financeiros
-- **Despesas Fixas e Variáveis** com sistema de categorias
-- **Rendas Fixas e Variáveis** com sistema de categorias
-- **Categorias Personalizáveis** com cores e ícones
-- **Interface Moderna** com design responsivo
-- **Filtros por Período** para análise temporal
+- **Gestão de despesas** (fixas e variáveis) e **rendas** (fixas e variáveis), com categorias e tags
+- **Importação de extrato bancário** (OFX/CSV), com sugestão automática de categorias e criação de categorias/tags durante a importação
+- **Sistema de carteiras** (wallets) e transferências entre carteiras
+- **Filtros por período e por carteira**
+- **Edição e exclusão em massa de dados do usuário**
+- **Interface moderna e responsiva**, com modo escuro
+- **Autenticação com NextAuth.js**
+- **Notificações (toasts)**
+- **Sistema de tags** para despesas/rendas
+- **Exportação de relatórios** (em desenvolvimento)
+- **Validação de dados com Zod** (em desenvolvimento)
 
 ## 🛠️ Tecnologias
 
@@ -107,13 +113,9 @@ O projeto utiliza PostgreSQL com Prisma ORM. As principais tabelas são:
 
 ## 🔄 Próximos Passos
 
-- [ ] Implementar sistema de autenticação com NextAuth.js
-- [ ] Conectar formulários com API Routes
-- [ ] Implementar validação de dados com Zod
 - [ ] Adicionar testes automatizados
-- [ ] Implementar notificações com toast
-- [ ] Adicionar exportação de relatórios
-- [ ] Implementar modo escuro
+- [ ] Finalizar exportação de relatórios
+- [ ] Finalizar validação de dados com Zod
 
 ## 📝 Licença
 
