@@ -162,6 +162,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
     }
     if (res.ok) {
       const saved = await res.json();
+      console.log('Resposta do backend:', saved);
       const item = {
         id: saved.id,
         description: saved.description,
