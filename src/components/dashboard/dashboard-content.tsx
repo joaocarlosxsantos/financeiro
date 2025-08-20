@@ -3,7 +3,7 @@
 import { useDailyExpenseData } from "@/hooks/use-dashboard-data";
 import { DailyCategoryChart } from "./daily-category-chart";
 import { DailyWalletChart } from "./daily-wallet-chart";
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { useMonth } from "@/components/providers/month-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,117 +90,32 @@ export function DashboardContent() {
     currentDate.getFullYear() === today.getFullYear() &&
     currentDate.getMonth() === today.getMonth();
 
-  // Carregar carteiras
+  // Carregar dados do dashboard em uma única chamada
   useEffect(() => {
-    // Busca saldo acumulado de meses anteriores ao mês atual
-    const fetchSaldos = async () => {
+    const fetchDashboard = async () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
-      const fetchOpts: RequestInit = {
-        cache: "no-store",
-        credentials: "same-origin",
-      };
-  const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
-      // Saldo acumulado até o fim do mês selecionado
-      const { end: endAcumulado } = getMonthRange(year, month);
-      const endAcumuladoStr = toYmd(endAcumulado);
-      const [expVarResA, expFixResA, incVarResA, incFixResA] =
-        await Promise.all([
-          fetch(
-            `/api/expenses?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/expenses?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/incomes?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/incomes?start=1900-01-01&end=${endAcumuladoStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-            fetchOpts
-          ),
-        ]);
-      const [expVarA, expFixA, incVarA, incFixA] = await Promise.all([
-        expVarResA.ok ? expVarResA.json() : [],
-        expFixResA.ok ? expFixResA.json() : [],
-        incVarResA.ok ? incVarResA.json() : [],
-        incFixResA.ok ? incFixResA.json() : [],
-      ]);
-      const allExpensesA: any[] = [...expVarA, ...expFixA];
-      const allIncomesA: any[] = [...incVarA, ...incFixA];
-      const totalExpensesA = allExpensesA.reduce(
-        (sum, e) => sum + Number(e.amount),
-        0
-      );
-      const totalIncomeA = allIncomesA.reduce(
-        (sum, i) => sum + Number(i.amount),
-        0
-      );
-      setSaldoAcumulado(totalIncomeA - totalExpensesA);
-
-      // Saldo do mês selecionado
-      const { start: startMes, end: endMes } = getMonthRange(year, month);
-      const startMesStr = toYmd(startMes);
-      const endMesStr = toYmd(endMes);
-      const [expVarResM, expFixResM, incVarResM, incFixResM] =
-        await Promise.all([
-          fetch(
-            `/api/expenses?start=${startMesStr}&end=${endMesStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/expenses?start=${startMesStr}&end=${endMesStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/incomes?start=${startMesStr}&end=${endMesStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/incomes?start=${startMesStr}&end=${endMesStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-            fetchOpts
-          ),
-        ]);
-      const [expVarM, expFixM, incVarM, incFixM] = await Promise.all([
-        expVarResM.ok ? expVarResM.json() : [],
-        expFixResM.ok ? expFixResM.json() : [],
-        incVarResM.ok ? incVarResM.json() : [],
-        incFixResM.ok ? incFixResM.json() : [],
-      ]);
-      const allExpensesM: any[] = [...expVarM, ...expFixM];
-      const allIncomesM: any[] = [...incVarM, ...incFixM];
-      const totalExpensesM = allExpensesM.reduce(
-        (sum, e) => sum + Number(e.amount),
-        0
-      );
-      const totalIncomeM = allIncomesM.reduce(
-        (sum, i) => sum + Number(i.amount),
-        0
-      );
-      setSaldoDoMes(totalIncomeM - totalExpensesM);
+      const params = new URLSearchParams();
+      params.set('year', String(year));
+      params.set('month', String(month));
+      if (selectedWallet) params.set('walletId', selectedWallet);
+      const res = await fetch(`/api/dashboard-summary?${params.toString()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+  setSummary((prev: typeof summary) => ({
+        ...prev,
+        totalIncome: data.totalIncome,
+        totalExpenses: data.totalExpenses,
+        expensesByCategory: data.expensesByCategory,
+        expensesByTag: data.expensesByTag,
+        // Adicione outros campos conforme necessário
+      }));
+      setSaldoAcumulado(data.totalIncome - data.totalExpenses);
+      setSaldoDoMes(data.totalIncome - data.totalExpenses); // ajuste se necessário
+      setWallets(data.wallets || []);
     };
-    fetchSaldos();
-    const fetchWallets = async () => {
-      const res = await fetch("/api/wallets", { cache: "no-store" });
-      if (res.ok) {
-        // Garante que cada carteira tenha as propriedades id, name e type
-        const data = await res.json();
-        setWallets(
-          Array.isArray(data)
-            ? data.map((w) => ({
-                id: w.id,
-                name: w.name,
-                type: w.type || "Outros",
-              }))
-            : []
-        );
-      }
-    };
-    fetchWallets();
-  }, [selectedWallet]);
+    fetchDashboard();
+  }, [selectedWallet, currentDate]);
 
   // Carregar dados dos últimos 12 meses para gráfico de barras empilhadas
   useEffect(() => {
@@ -267,7 +182,7 @@ export function DashboardContent() {
           return { expense, income, balance };
         })
       );
-      setSummary((prev) => ({
+  setSummary((prev: typeof summary) => ({
         ...prev,
         monthlyData: months.map((m, i) => ({ month: m.label, ...results[i] })),
       }));
@@ -448,7 +363,7 @@ export function DashboardContent() {
         diff: c.amount - (prevAmounts[c.category] || 0),
       }));
 
-      setSummary((prev) => ({
+  setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome,
         totalExpenses,
@@ -552,10 +467,10 @@ export function DashboardContent() {
           <select
             className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
-            onChange={e => setSelectedWallet(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedWallet(e.target.value)}
           >
             <option value="">Todas as carteiras</option>
-            {wallets.map((w) => (
+            {wallets.map((w: { id: string; name: string; type: string }) => (
               <option key={w.id} value={w.id}>
                 {w.name}
               </option>
