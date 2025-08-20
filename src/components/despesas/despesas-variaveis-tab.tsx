@@ -174,17 +174,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
   }, [currentDate]);
 
   // Remapeia o nome da carteira sempre que as carteiras mudam
-  useEffect(() => {
-    console.log('Carteiras carregadas:', wallets);
-    setDespesas(prev => prev.map(d => {
-      const carteiraId = d.walletId ? String(d.walletId) : '';
-      const carteira = carteiraId ? wallets.find(w => String(w.id) === carteiraId) : undefined;
-      return {
-        ...d,
-        walletName: carteira ? carteira.name : (carteiraId ? '(Carteira não encontrada)' : 'Sem carteira'),
-      };
-    }));
-  }, [wallets]);
+  // (Removido: nome da carteira será resolvido dinamicamente no render)
 
   return (
     <div className="space-y-4 px-2 sm:px-0">
@@ -284,7 +274,13 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
                   <td className="px-3 py-2 text-right text-red-600 font-semibold">{formatCurrency(despesa.amount)}</td>
                   <td className="px-3 py-2 text-center">{formatDate(despesa.date)}</td>
                   <td className="px-3 py-2 text-center">{despesa.categoryName}</td>
-                  <td className="px-3 py-2 text-center">{despesa.walletName || 'Sem carteira'}</td>
+                  <td className="px-3 py-2 text-center">{
+                    (() => {
+                      if (!despesa.walletId) return 'Sem carteira';
+                      const carteira = wallets.find(w => String(w.id) === String(despesa.walletId));
+                      return carteira ? carteira.name : '(Carteira não encontrada)';
+                    })()
+                  }</td>
                   <td className="px-3 py-2 text-center">
                     <Button size="icon" variant="ghost" onClick={() => handleEdit(despesa.id)}>
                       <Edit className="h-4 w-4" />
