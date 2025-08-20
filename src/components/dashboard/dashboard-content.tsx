@@ -200,7 +200,7 @@ export function DashboardContent() {
       }
     };
     fetchWallets();
-  }, []);
+  }, [selectedWallet]);
 
   // Carregar dados dos últimos 12 meses para gráfico de barras empilhadas
   useEffect(() => {
