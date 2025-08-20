@@ -6,7 +6,6 @@ function sugerirCategoria(descricaoSimplificada: string): string {
   if (desc.includes('ifood')) return 'Ifood';
   if (desc.includes('mercado') || desc.includes('carrefour') || desc.includes('pao de acucar') || desc.includes('supermercado')) return 'Supermercado';
   if (desc.includes('spotify') || desc.includes('netflix') || desc.includes('prime video')) return 'Assinaturas';
-  if (desc.includes('fatura') || desc.includes('pagamento fatura')) return 'Pagamento fatura';
   if (desc.includes('nubank') || desc.includes('itau') || desc.includes('santander') || desc.includes('banco do brasil') || desc.includes('caixa')) return 'PIX/TRANSF';
   if (desc.includes('pagseguro') || desc.includes('pag*')) return 'Pagamentos';
   if (desc.includes('google') || desc.includes('apple')) return 'Tecnologia';
@@ -17,6 +16,21 @@ function sugerirCategoria(descricaoSimplificada: string): string {
   if (desc.includes('educac') || desc.includes('Educac')) return 'Educação';
   if (desc.includes('Fatura') || desc.includes('fatura')) return 'Fatura Cartão';
   if (desc.includes('FGTS') || desc.includes('Fgts') || desc.includes('fgts')) return 'FGTS';
+  // Investimentos
+  if (
+    desc.includes('cdb') ||
+    desc.includes('tesouro') ||
+    desc.includes('lci') ||
+    desc.includes('lca') ||
+    desc.includes('fundo') ||
+    desc.includes('ações') || desc.includes('acao') || desc.includes('ações') ||
+    desc.includes('renda fixa') ||
+    desc.includes('renda variável') || desc.includes('renda variavel') ||
+    desc.includes('investimento') || desc.includes('investimentos') ||
+    desc.includes('b3') ||
+    desc.includes('fiis') || desc.includes('fii') ||
+    desc.includes('debênture') || desc.includes('debenture')
+  ) return 'Investimentos';
   if (desc.includes('pix') || desc.includes('transf')) return 'PIX/TRANSF';
   // fallback
   return 'PIX/TRANSF';
