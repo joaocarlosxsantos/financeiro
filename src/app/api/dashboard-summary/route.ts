@@ -5,12 +5,12 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id || (session as any)?.user?.sub || null;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
-  const userId = session.user.id;
   const year = Number(searchParams.get('year'));
   const month = Number(searchParams.get('month'));
   const walletId = searchParams.get('walletId') || undefined;
