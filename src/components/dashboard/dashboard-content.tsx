@@ -1,5 +1,3 @@
-  // Categoria selecionada pelo clique no gráfico
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string | null>(null);
 "use client";
 
 import { useDailyExpenseData } from "@/hooks/use-dashboard-data";
@@ -609,22 +607,11 @@ export function DashboardContent() {
         </Card>
   <Card onClick={() => setModal("expense")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-sm font-medium">
-              Saídas Totais
-              {categoriaSelecionada && (
-                <span className="ml-2 text-xs text-primary">({categoriaSelecionada})</span>
-              )}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Saídas Totais</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent className="pt-1 pb-2">
-            <div className="text-xl font-bold text-red-600">
-              {formatCurrency(
-                categoriaSelecionada
-                  ? summary.expensesByCategory.find(c => c.category === categoriaSelecionada)?.amount || 0
-                  : summary.totalExpenses
-              )}
-            </div>
+            <div className="text-xl font-bold text-red-600">{formatCurrency(summary.totalExpenses)}</div>
           </CardContent>
         </Card>
   <Card className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
@@ -873,11 +860,7 @@ export function DashboardContent() {
             {isLoading ? (
               <Loader text="Carregando saídas..." />
             ) : summary.expensesByCategory.length > 0 ? (
-              <ExpenseChart
-                data={summary.expensesByCategory}
-                onCategoryClick={setCategoriaSelecionada}
-                categoriaSelecionada={categoriaSelecionada}
-              />
+              <ExpenseChart data={summary.expensesByCategory} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
