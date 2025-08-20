@@ -134,6 +134,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
     });
     if (res.ok) {
       const saved = await res.json();
+      console.log('Resposta do backend:', saved);
       setRendas(prev => {
         const item: RendaVariavel = {
           id: saved.id,
