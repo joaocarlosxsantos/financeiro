@@ -511,54 +511,54 @@ export function DashboardContent() {
 
       {/* Cards de Resumo */}
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
-  <Card onClick={() => setModal("income")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-sm font-medium">Entradas Totais</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent className="pt-1 pb-2">
-            <div className="text-xl font-bold text-green-600">{formatCurrency(summary.totalIncome)}</div>
-          </CardContent>
-        </Card>
-  <Card onClick={() => setModal("expense")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-sm font-medium">Saídas Totais</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent className="pt-1 pb-2">
-            <div className="text-xl font-bold text-red-600">{formatCurrency(summary.totalExpenses)}</div>
-          </CardContent>
-        </Card>
-  <Card className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-sm font-medium">Saldo do mês</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent className="pt-1 pb-2">
-            <div className="text-xl font-bold text-blue-600">{formatCurrency(saldoDoMes)}</div>
-            <p className="text-xs text-muted-foreground">Entradas - Saídas do mês selecionado</p>
-          </CardContent>
-        </Card>
-  <Card onClick={() => setModal("balance")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-sm font-medium">Saldo acumulado</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent className="pt-1 pb-2">
-            <div className="text-xl font-bold text-blue-600">{formatCurrency(saldoAcumulado)}</div>
-            <p className="text-xs text-muted-foreground">Entradas - Saídas de todos os meses até o selecionado</p>
-          </CardContent>
-        </Card>
-  <Card className="min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-0">
-            <CardTitle className="text-sm font-medium">Limite Diário</CardTitle>
-            <span className="h-4 w-4 text-orange-500">💸</span>
-          </CardHeader>
-          <CardContent className="pt-0 pb-0">
-            <div className="text-xl font-bold text-orange-500">{formatCurrency(limiteDiario)}</div>
-            <p className="text-xs text-muted-foreground">Para não ficar com saldo ≤ 0 até o fim do mês</p>
-          </CardContent>
-        </Card>
+    <Card onClick={() => setModal("income")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+        <CardTitle className="text-xs sm:text-sm font-medium">Entradas Totais</CardTitle>
+        <TrendingUp className="h-4 w-4 text-green-600" />
+      </CardHeader>
+      <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
+        <div className="font-bold text-green-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(summary.totalIncome)}</div>
+      </CardContent>
+    </Card>
+    <Card onClick={() => setModal("expense")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+        <CardTitle className="text-xs sm:text-sm font-medium">Saídas Totais</CardTitle>
+        <TrendingDown className="h-4 w-4 text-red-600" />
+      </CardHeader>
+      <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
+        <div className="font-bold text-red-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(summary.totalExpenses)}</div>
+      </CardContent>
+    </Card>
+    <Card className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+        <CardTitle className="text-xs sm:text-sm font-medium">Saldo do mês</CardTitle>
+        <DollarSign className="h-4 w-4 text-blue-600" />
+      </CardHeader>
+      <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
+        <div className="font-bold text-blue-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(saldoDoMes)}</div>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Entradas - Saídas do mês selecionado</p>
+      </CardContent>
+    </Card>
+    <Card onClick={() => setModal("balance")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+        <CardTitle className="text-xs sm:text-sm font-medium">Saldo acumulado</CardTitle>
+        <DollarSign className="h-4 w-4 text-blue-600" />
+      </CardHeader>
+      <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
+        <div className="font-bold text-blue-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(saldoAcumulado)}</div>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Entradas - Saídas de todos os meses até o selecionado</p>
+      </CardContent>
+    </Card>
+    <Card className="flex flex-col justify-between h-full min-h-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+        <CardTitle className="text-xs sm:text-sm font-medium">Limite Diário</CardTitle>
+        <span className="h-4 w-4 text-orange-500">💸</span>
+      </CardHeader>
+      <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
+        <div className="font-bold text-orange-500 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(limiteDiario)}</div>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Para não ficar com saldo ≤ 0 até o fim do mês</p>
+      </CardContent>
+    </Card>
         {/* Modal de detalhes de entradas/saídas/saldo */}
         {/* Quick Add FAB */}
         <Fab
