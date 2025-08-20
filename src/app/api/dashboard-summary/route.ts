@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       include: { category: true, wallet: true },
     }),
     prisma.wallet.findMany({ where: { ...userFilter } }),
-    prisma.tag.findMany({ where: { ...userFilter } }),
+  prisma.tag.findMany(),
   ]);
 
   // Resumo
