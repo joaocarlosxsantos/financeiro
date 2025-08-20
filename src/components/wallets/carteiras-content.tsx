@@ -16,31 +16,39 @@ interface Wallet {
   incomes: { amount: number | string }[]
 }
 
+
 export function CarteirasContent() {
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [type, setType] = useState('Banco')
 
-  // Carrega carteiras
-  useEffect(() => {
-    const load = async () => {
-      setIsLoading(true)
-      try {
-        const res = await fetch('/api/wallets', { cache: 'no-store' })
-        if (res.ok) {
-          const data = await res.json()
-          setWallets(data)
-        }
-      } finally {
-        setIsLoading(false)
+  // Função para carregar carteiras (pode ser chamada manualmente)
+  const load = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/wallets', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setWallets(data);
+      } else {
+        setError('Erro ao carregar carteiras');
       }
+    } catch {
+      setError('Erro ao carregar carteiras');
+    } finally {
+      setIsLoading(false);
     }
-    load()
-  }, [])
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const handleEdit = (id: string) => {
     const wallet = wallets.find(w => w.id === id)
@@ -140,43 +148,49 @@ export function CarteirasContent() {
         </Card>
       )}
 
-      {/* Lista de carteiras */}
-      {isLoading ? (
-        <Loader text="Carregando carteiras..." />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-6">
-            {wallets.map(wallet => {
-                const saldo =
-                (wallet.incomes?.reduce((acc, i) => acc + Number(i.amount), 0) || 0) -
-                (wallet.expenses?.reduce((acc, e) => acc + Number(e.amount), 0) || 0)
 
-                return (
-                <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
-                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                        <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
-                        <div className="min-w-0">
-                        <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
-                        <p className="text-sm text-gray-500 dark:text-foreground">{wallet.type}</p>
-                        </div>
+      {/* Lista de carteiras com tratamento de erro e recarregar */}
+      {isLoading && <Loader text="Carregando carteiras..." />}
+      {error && (
+        <div className="text-red-500 text-center">
+          {error}
+          <Button className="ml-2" size="sm" onClick={load}>Tentar novamente</Button>
+        </div>
+      )}
+      {!isLoading && !error && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-6">
+          {wallets.map(wallet => {
+            const saldo =
+              (wallet.incomes?.reduce((acc, i) => acc + Number(i.amount), 0) || 0) -
+              (wallet.expenses?.reduce((acc, e) => acc + Number(e.amount), 0) || 0)
+
+            return (
+              <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
+                <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-foreground">{wallet.type}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                        <span className={saldo >= 0 ? 'text-green-600 font-bold text-lg' : 'text-red-600 font-bold text-lg'}>
-                        {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                        <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
-                            <Edit className="h-5 w-5" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
-                            <Trash2 className="h-5 w-5" />
-                        </Button>
-                        </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={saldo >= 0 ? 'text-green-600 font-bold text-lg' : 'text-red-600 font-bold text-lg'}>
+                      {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
+                        <Edit className="h-5 w-5" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
                     </div>
-                    </CardContent>
-                </Card>
-                )
-            })}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       )}
 

@@ -144,44 +144,43 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
       dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
       categoryId: form.categoryId || undefined,
       walletId: form.walletId || undefined,
-      tags: form.tags,
-    }
+    };
     let res;
     if (editingId) {
       res = await fetch(`/api/expenses/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      })
+      });
     } else {
       res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      })
+      });
     }
     if (res.ok) {
-      const saved = await res.json()
+      const saved = await res.json();
       const item = {
         id: saved.id,
         description: saved.description,
         amount: Number(saved.amount),
         dayOfMonth: saved.dayOfMonth ?? 1,
-  categoryName: categories.find(c => c.id === saved.categoryId)?.name,
+        categoryName: categories.find(c => c.id === saved.categoryId)?.name,
         categoryId: saved.categoryId,
         walletId: saved.walletId,
         walletName: wallets.find(w => w.id === saved.walletId)?.name,
         startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
         endDate: saved.endDate ? new Date(saved.endDate) : undefined,
         tags: saved.tags || [],
-      }
-      if (editingId) setDespesas(prev => prev.map(x => x.id === saved.id ? item : x))
-      else setDespesas(prev => [item, ...prev])
-      setShowForm(false)
-      setEditingId(null)
-  setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] })
+      };
+      if (editingId) setDespesas(prev => prev.map(x => x.id === saved.id ? item : x));
+      else setDespesas(prev => [item, ...prev]);
+      setShowForm(false);
+      setEditingId(null);
+      setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -225,9 +224,9 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                   <Label htmlFor="wallet">Carteira</Label>
                   <select
                     id="wallet"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={form.walletId}
                     onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                    className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
                   >
                     <option value="">Selecione</option>
                     {wallets.map(w => (
@@ -239,9 +238,9 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                   <Label htmlFor="category">Categoria</Label>
                   <select
                     id="category"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={form.categoryId}
                     onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                    className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
                   >
                     <option value="">Sem categoria</option>
                     {categories.filter(c => c.type === 'EXPENSE' || c.type === 'BOTH').map(c => (
@@ -269,10 +268,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setShowForm(false)
-                    setEditingId(null)
-                  }}
+                  onClick={() => setShowForm(false)}
                 >
                   Cancelar
                 </Button>
@@ -281,92 +277,49 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
           </CardContent>
         </Card>
       )}
-
-      {/* Botão para adicionar */}
-      {!showForm && (
-        <Button onClick={() => {
-          setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
-          setEditingId(null);
-          setShowForm(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Despesa Fixa
-        </Button>
-      )}
-
-      {/* Lista de despesas */}
+      {/* Lista estilo planilha moderna */}
       {isLoading ? (
         <Loader text="Carregando despesas..." />
       ) : (
-      <div className="space-y-4">
-        {filteredDespesas.map((despesa) => (
-          <Card key={despesa.id}>
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div>
-                    <h3 className="font-semibold text-lg truncate">{despesa.description}</h3>
-                    <p className="text-sm text-gray-600 break-words">
-                      Dia {despesa.dayOfMonth} de cada mês • {despesa.categoryName}
-                    </p>
-                    <p className="text-xs text-gray-500 break-words">
-                      Início: {formatDate(despesa.startDate)}
-                      {despesa.endDate && ` • Fim: ${formatDate(despesa.endDate)}`}
-                      {despesa.walletName && ` • Carteira: ${despesa.walletName}`}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-red-600">
-                      {formatCurrency(despesa.amount)}
-                    </p>
-                    <p className="text-sm text-gray-500">por mês</p>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(despesa.id)}
-                    >
+        <div className="overflow-x-auto rounded-lg border border-muted bg-background">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-muted text-muted-foreground">
+                <th className="px-3 py-2 text-left font-semibold">Descrição</th>
+                <th className="px-3 py-2 text-right font-semibold">Valor</th>
+                <th className="px-3 py-2 text-center font-semibold">Dia do mês</th>
+                <th className="px-3 py-2 text-center font-semibold">Categoria</th>
+                <th className="px-3 py-2 text-center font-semibold">Carteira</th>
+                <th className="px-3 py-2 text-center">Início</th>
+                <th className="px-3 py-2 text-center">Fim</th>
+                <th className="px-3 py-2 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDespesas.map((despesa) => (
+                <tr key={despesa.id} className="border-b hover:bg-accent transition-colors">
+                  <td className="px-3 py-2 max-w-xs truncate">{despesa.description}</td>
+                  <td className="px-3 py-2 text-right text-red-600 font-semibold">{formatCurrency(despesa.amount)}</td>
+                  <td className="px-3 py-2 text-center">{despesa.dayOfMonth}</td>
+                  <td className="px-3 py-2 text-center">{despesa.categoryName}</td>
+                  <td className="px-3 py-2 text-center">{despesa.walletName || 'Sem carteira'}</td>
+                  <td className="px-3 py-2 text-center">{formatDate(despesa.startDate)}</td>
+                  <td className="px-3 py-2 text-center">{despesa.endDate ? formatDate(despesa.endDate) : '-'}</td>
+                  <td className="px-3 py-2 text-center">
+                    <Button size="icon" variant="ghost" onClick={() => handleEdit(despesa.id)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(despesa.id)}
-                    >
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(despesa.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      )}
-
-      {filteredDespesas.length === 0 && !showForm && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <p className="text-gray-500">Nenhuma despesa fixa cadastrada</p>
-            <Button 
-              className="mt-4"
-              onClick={() => {
-                setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
-                setEditingId(null);
-                setShowForm(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Primeira Despesa
-            </Button>
-          </CardContent>
-        </Card>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
-  )
+  );
 }
+

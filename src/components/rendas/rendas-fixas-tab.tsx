@@ -163,6 +163,11 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Fixas</h1>
+        <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas fixas</p>
+      </div>
       {/* Busca */}
       <div className="mb-2">
         <Input
@@ -198,9 +203,9 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
                   <Label htmlFor="category">Categoria</Label>
                   <select
                     id="category"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={form.categoryId}
                     onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                    className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
                   >
                     <option value="">Sem categoria</option>
                     {categories
@@ -214,9 +219,9 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
                   <Label htmlFor="wallet">Carteira</Label>
                   <select
                     id="wallet"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={form.walletId}
                     onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                    className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
                   >
                     <option value="">Selecione</option>
                     {wallets.map(w => (
@@ -256,7 +261,6 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           </CardContent>
         </Card>
       )}
-
       {/* Botão para adicionar */}
       {!showForm && (
         <Button onClick={() => {
@@ -268,78 +272,47 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           Adicionar Renda Fixa
         </Button>
       )}
-
-      {/* Lista de rendas */}
+      {/* Lista estilo planilha moderna */}
       {isLoading ? (
         <Loader text="Carregando rendas..." />
       ) : (
-        <div className="space-y-4">
-          {filteredRendas.map((renda) => (
-            <Card key={renda.id}>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div>
-                      <h3 className="font-semibold text-lg truncate">{renda.description}</h3>
-                      <p className="text-sm text-gray-600 break-words">
-                        Dia {renda.dayOfMonth} de cada mês • {renda.categoryName}
-                      </p>
-                      <p className="text-xs text-gray-500 break-words">
-                        Início: {formatDate(renda.startDate)}
-                        {renda.endDate && ` • Fim: ${formatDate(renda.endDate)}`}
-                        <br />
-                        Carteira: {renda.walletName || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">
-                        {formatCurrency(renda.amount)}
-                      </p>
-                      <p className="text-sm text-gray-500">por mês</p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(renda.id)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(renda.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="overflow-x-auto rounded-lg border border-muted bg-background">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-muted text-muted-foreground">
+                <th className="px-3 py-2 text-left font-semibold">Descrição</th>
+                <th className="px-3 py-2 text-right font-semibold">Valor</th>
+                <th className="px-3 py-2 text-center font-semibold">Dia do mês</th>
+                <th className="px-3 py-2 text-center font-semibold">Categoria</th>
+                <th className="px-3 py-2 text-center font-semibold">Carteira</th>
+                <th className="px-3 py-2 text-center">Início</th>
+                <th className="px-3 py-2 text-center">Fim</th>
+                <th className="px-3 py-2 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRendas.map((renda) => (
+                <tr key={renda.id} className="border-b hover:bg-accent transition-colors">
+                  <td className="px-3 py-2 max-w-xs truncate">{renda.description}</td>
+                  <td className="px-3 py-2 text-right text-green-600 font-semibold">{formatCurrency(renda.amount)}</td>
+                  <td className="px-3 py-2 text-center">{renda.dayOfMonth}</td>
+                  <td className="px-3 py-2 text-center">{renda.categoryName}</td>
+                  <td className="px-3 py-2 text-center">{renda.walletName || 'Sem carteira'}</td>
+                  <td className="px-3 py-2 text-center">{formatDate(renda.startDate)}</td>
+                  <td className="px-3 py-2 text-center">{renda.endDate ? formatDate(renda.endDate) : '-'}</td>
+                  <td className="px-3 py-2 text-center">
+                    <Button size="icon" variant="ghost" onClick={() => handleEdit(renda.id)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(renda.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      {filteredRendas.length === 0 && !showForm && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <p className="text-gray-500">Nenhuma renda fixa cadastrada</p>
-            <Button
-              className="mt-4"
-              onClick={() => {
-                setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
-                setEditingId(null);
-                setShowForm(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Primeira Renda
-            </Button>
-          </CardContent>
-        </Card>
       )}
     </div>
   );
