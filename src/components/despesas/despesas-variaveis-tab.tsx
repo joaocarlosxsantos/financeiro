@@ -175,10 +175,14 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
 
   // Remapeia o nome da carteira sempre que as carteiras mudam
   useEffect(() => {
-    setDespesas(prev => prev.map(d => ({
-      ...d,
-      walletName: d.walletId ? (wallets.find(w => w.id === d.walletId)?.name || 'N/A') : 'N/A',
-    })));
+    setDespesas(prev => prev.map(d => {
+      const carteiraId = d.walletId ? String(d.walletId) : '';
+      const carteira = carteiraId ? wallets.find(w => String(w.id) === carteiraId) : undefined;
+      return {
+        ...d,
+        walletName: carteira ? carteira.name : (carteiraId ? '(Carteira não encontrada)' : 'Sem carteira'),
+      };
+    }));
   }, [wallets]);
 
   return (
