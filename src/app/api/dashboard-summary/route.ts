@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const [expenses, incomes, wallets, tags] = await Promise.all([
     prisma.expense.findMany({
       where: { ...userFilter, ...walletFilter, date: dateFilter },
-      include: { category: true, tags: true, wallet: true },
+      include: { category: true, wallet: true },
     }),
     prisma.income.findMany({
       where: { ...userFilter, ...walletFilter, date: dateFilter },
