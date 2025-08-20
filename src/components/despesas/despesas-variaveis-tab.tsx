@@ -176,7 +176,6 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
   // Remapeia o nome da carteira sempre que as carteiras mudam
   useEffect(() => {
     console.log('Carteiras carregadas:', wallets);
-    console.log('Despesas antes do mapeamento:', prev);
     setDespesas(prev => prev.map(d => {
       const carteiraId = d.walletId ? String(d.walletId) : '';
       const carteira = carteiraId ? wallets.find(w => String(w.id) === carteiraId) : undefined;
