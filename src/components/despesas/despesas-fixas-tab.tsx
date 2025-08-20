@@ -143,7 +143,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
       startDate: form.startDate || undefined,
       endDate: form.endDate || undefined,
       dayOfMonth: form.dayOfMonth ? Number(form.dayOfMonth) : undefined,
-      categoryId: form.categoryId || undefined,
+      categoryId: form.categoryId ? form.categoryId : null,
       walletId: form.walletId || undefined,
     };
     let res;
@@ -162,7 +162,6 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
     }
     if (res.ok) {
       const saved = await res.json();
-      console.log('Resposta do backend:', saved);
       const item = {
         id: saved.id,
         description: saved.description,

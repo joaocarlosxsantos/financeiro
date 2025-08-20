@@ -123,7 +123,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
       date: form.date,
       type: 'VARIABLE',
       isFixed: false,
-      categoryId: form.categoryId || undefined,
+      categoryId: form.categoryId ? form.categoryId : null,
       walletId: form.walletId || undefined,
       tags: form.tags,
     };
@@ -134,7 +134,6 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
     });
     if (res.ok) {
       const saved = await res.json();
-      console.log('Resposta do backend:', saved);
       setRendas(prev => {
         const item: RendaVariavel = {
           id: saved.id,

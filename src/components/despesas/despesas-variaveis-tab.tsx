@@ -100,7 +100,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       amount: Number(form.amount),
       type: 'VARIABLE',
       date: form.date,
-      categoryId: form.categoryId || undefined,
+      categoryId: form.categoryId ? form.categoryId : null,
       walletId: form.walletId || undefined,
       tags: form.tags,
     };
