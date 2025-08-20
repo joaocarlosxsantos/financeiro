@@ -402,35 +402,7 @@ export function DashboardContent() {
     setCurrentDate(next);
   };
 
-  // Cálculo do limite diário seguro
-  const hoje = new Date();
-  const fim = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth() + 1,
-    0
-  );
-  let diasRestantes = 0;
-  let limiteDiario = 0;
-  // Se o mês já passou, limite é 0
-  if (
-    currentDate.getFullYear() < hoje.getFullYear() ||
-    (currentDate.getFullYear() === hoje.getFullYear() &&
-      currentDate.getMonth() < hoje.getMonth())
-  ) {
-    diasRestantes = 0;
-    limiteDiario = 0;
-  } else {
-    diasRestantes = Math.max(
-      1,
-      fim.getDate() -
-        (currentDate.getFullYear() === hoje.getFullYear() &&
-        currentDate.getMonth() === hoje.getMonth()
-          ? hoje.getDate()
-          : 1) +
-        1
-    );
-  limiteDiario = diasRestantes > 0 ? saldoAcumulado / diasRestantes : 0;
-  }
+  // Limite diário agora vem da API agregadora
 
   // Dados diários para os novos gráficos
   const {
