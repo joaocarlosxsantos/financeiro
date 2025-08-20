@@ -83,7 +83,7 @@ export function DashboardContent() {
   const [wallets, setWallets] = useState<
     Array<{ id: string; name: string; type: string }>
   >([]);
-  const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
+  const [selectedWallet, setSelectedWallet] = useState<string>("");
   const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
   const isAtCurrentMonth =
@@ -100,7 +100,7 @@ export function DashboardContent() {
         cache: "no-store",
         credentials: "same-origin",
       };
-  const walletParam = selectedWallets.length > 0 ? selectedWallets.map(id => `&walletId=${id}`).join("") : "";
+  const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
       // Saldo acumulado até o fim do mês selecionado
       const { end: endAcumulado } = getMonthRange(year, month);
       const endAcumuladoStr = toYmd(endAcumulado);
@@ -222,7 +222,7 @@ export function DashboardContent() {
         cache: "no-store",
         credentials: "same-origin",
       };
-  const walletParam = selectedWallets.length > 0 ? selectedWallets.map((id: string) => `&walletId=${id}`).join("") : "";
+  const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
       const results = await Promise.all(
         months.map(async ({ year, month }) => {
           const { start, end } = getMonthRange(year, month);
@@ -273,7 +273,7 @@ export function DashboardContent() {
       }));
     };
     fetchMonthlyData();
-  }, [selectedWallets]);
+  }, [selectedWallet]);
 
   // Carregar dados do mês atual e anterior para top 5 categorias
   useEffect(() => {
@@ -290,7 +290,7 @@ export function DashboardContent() {
         cache: "no-store",
         credentials: "same-origin",
       };
-  const walletParam = selectedWallets.length > 0 ? selectedWallets.map((id: string) => `&walletId=${id}`).join("") : "";
+  const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
       const [expVarRes, expFixRes, incVarRes, incFixRes, tagsRes] =
         await Promise.all([
           fetch(
@@ -410,13 +410,13 @@ export function DashboardContent() {
       try {
         const prevExpVarRes = await fetch(
           `/api/expenses?type=VARIABLE&start=${prevStartStr}&end=${prevEndStr}${
-            selectedWallets.length > 0 ? selectedWallets.map((id: string) => `&walletId=${id}`).join("") : ""
+            selectedWallet ? `&walletId=${selectedWallet}` : ""
           }&_=${Date.now()}`,
           { cache: "no-store", credentials: "same-origin" }
         );
         const prevExpFixRes = await fetch(
           `/api/expenses?type=FIXED&start=${prevStartStr}&end=${prevEndStr}${
-            selectedWallets.length > 0 ? selectedWallets.map((id: string) => `&walletId=${id}`).join("") : ""
+            selectedWallet ? `&walletId=${selectedWallet}` : ""
           }&_=${Date.now()}`,
           { cache: "no-store", credentials: "same-origin" }
         );
@@ -462,7 +462,7 @@ export function DashboardContent() {
     };
 
     fetchSummary();
-  }, [currentDate, selectedWallets]);
+  }, [currentDate, selectedWallet]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(
@@ -525,7 +525,7 @@ export function DashboardContent() {
   } = useDailyExpenseData({
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
-  walletId: selectedWallets.length === 1 ? selectedWallets[0] : undefined,
+  walletId: selectedWallet || undefined,
   });
 
   // Função para fechar o modal e recarregar o dashboard
@@ -552,16 +552,9 @@ export function DashboardContent() {
           <select
             multiple
             className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-            value={selectedWallets}
-            onChange={e => {
-              const options = Array.from(e.target.selectedOptions).map(opt => opt.value);
-              setSelectedWallets(options);
-            }}
-            size={Math.min(4, wallets.length)}
+            value={selectedWallet}
+            onChange={e => setSelectedWallet(e.target.value)}
           >
-            {wallets.length > 1 && (
-              <option value="" disabled={selectedWallets.length > 0}>Todas as carteiras</option>
-            )}
             {wallets.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
