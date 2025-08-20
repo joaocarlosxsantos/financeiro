@@ -513,7 +513,7 @@ export function DashboardContent() {
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
     <Card onClick={() => setModal("income")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-        <CardTitle className="text-xs sm:text-sm font-medium">Entradas Totais</CardTitle>
+  <CardTitle className="text-base sm:text-lg font-semibold">Entradas Totais</CardTitle>
         <TrendingUp className="h-4 w-4 text-green-600" />
       </CardHeader>
       <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
@@ -522,7 +522,7 @@ export function DashboardContent() {
     </Card>
     <Card onClick={() => setModal("expense")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-        <CardTitle className="text-xs sm:text-sm font-medium">Saídas Totais</CardTitle>
+  <CardTitle className="text-base sm:text-lg font-semibold">Saídas Totais</CardTitle>
         <TrendingDown className="h-4 w-4 text-red-600" />
       </CardHeader>
       <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
@@ -531,7 +531,7 @@ export function DashboardContent() {
     </Card>
     <Card className="cursor-pointer flex flex-col justify-between h-full min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-        <CardTitle className="text-xs sm:text-sm font-medium">Saldo do mês</CardTitle>
+  <CardTitle className="text-base sm:text-lg font-semibold">Saldo do mês</CardTitle>
         <DollarSign className="h-4 w-4 text-blue-600" />
       </CardHeader>
       <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
@@ -541,7 +541,7 @@ export function DashboardContent() {
     </Card>
     <Card onClick={() => setModal("balance")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-        <CardTitle className="text-xs sm:text-sm font-medium">Saldo acumulado</CardTitle>
+  <CardTitle className="text-base sm:text-lg font-semibold">Saldo acumulado</CardTitle>
         <DollarSign className="h-4 w-4 text-blue-600" />
       </CardHeader>
       <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
@@ -551,7 +551,7 @@ export function DashboardContent() {
     </Card>
     <Card className="flex flex-col justify-between h-full min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-        <CardTitle className="text-xs sm:text-sm font-medium">Limite Diário</CardTitle>
+  <CardTitle className="text-base sm:text-lg font-semibold">Limite Diário</CardTitle>
         <span className="h-4 w-4 text-orange-500">💸</span>
       </CardHeader>
       <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
