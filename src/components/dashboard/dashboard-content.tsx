@@ -84,6 +84,7 @@ export function DashboardContent() {
     Array<{ id: string; name: string; type: string }>
   >([]);
   const [selectedWallet, setSelectedWallet] = useState<string>("");
+  const [limiteDiario, setLimiteDiario] = useState<number>(0);
   const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
   const isAtCurrentMonth =
@@ -102,7 +103,7 @@ export function DashboardContent() {
       const res = await fetch(`/api/dashboard-summary?${params.toString()}`);
       if (!res.ok) return;
       const data = await res.json();
-  setSummary((prev: typeof summary) => ({
+      setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome: data.totalIncome,
         totalExpenses: data.totalExpenses,
@@ -110,9 +111,10 @@ export function DashboardContent() {
         expensesByTag: data.expensesByTag,
         // Adicione outros campos conforme necessário
       }));
-      setSaldoAcumulado(data.totalIncome - data.totalExpenses);
-      setSaldoDoMes(data.totalIncome - data.totalExpenses); // ajuste se necessário
+      setSaldoAcumulado(data.saldoAcumulado ?? 0);
+      setSaldoDoMes(data.saldoDoMes ?? 0);
       setWallets(data.wallets || []);
+      setLimiteDiario(data.limiteDiario ?? 0);
     };
     fetchDashboard();
   }, [selectedWallet, currentDate]);
