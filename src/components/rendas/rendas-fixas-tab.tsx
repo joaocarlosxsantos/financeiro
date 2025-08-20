@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -177,90 +178,78 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         />
       </div>
       {/* Formulário */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {editingId ? 'Editar Renda Fixa' : 'Nova Renda Fixa'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-3" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-                <div>
-                  <Label htmlFor="description">Descrição</Label>
-                  <Input id="description" placeholder="Ex: Salário" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="amount">Valor</Label>
-                  <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="dayOfMonth">Dia do mês</Label>
-                  <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="25" value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="category">Categoria</Label>
-                  <select
-                    id="category"
-                    value={form.categoryId}
-                    onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
-                    className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
-                  >
-                    <option value="">Sem categoria</option>
-                    {categories
-                      .filter(c => c.type === 'INCOME' || c.type === 'BOTH')
-                      .map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="wallet">Carteira</Label>
-                  <select
-                    id="wallet"
-                    value={form.walletId}
-                    onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
-                    className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
-                  >
-                    <option value="">Selecione</option>
-                    {wallets.map(w => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="tag">Tag</Label>
-                  <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
-                </div>
-                <div>
-                  <Label htmlFor="startDate">Data de Início</Label>
-                  <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="endDate">Data de Fim (Opcional)</Label>
-                  <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
-                </div>
-              </div>
-              <div className="flex space-x-1 sm:space-x-2">
-                <Button type="submit">
-                  {editingId ? 'Atualizar' : 'Cadastrar'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Renda Fixa' : 'Nova Renda Fixa'}>
+        <form className="space-y-3" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+            <div>
+              <Label htmlFor="description">Descrição</Label>
+              <Input id="description" placeholder="Ex: Salário" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="amount">Valor</Label>
+              <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="dayOfMonth">Dia do mês</Label>
+              <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="25" value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="category">Categoria</Label>
+              <select
+                id="category"
+                value={form.categoryId}
+                onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
+              >
+                <option value="">Sem categoria</option>
+                {categories
+                  .filter(c => c.type === 'INCOME' || c.type === 'BOTH')
+                  .map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="wallet">Carteira</Label>
+              <select
+                id="wallet"
+                value={form.walletId}
+                onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
+              >
+                <option value="">Selecione</option>
+                {wallets.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="tag">Tag</Label>
+              <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
+            </div>
+            <div>
+              <Label htmlFor="startDate">Data de Início</Label>
+              <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="endDate">Data de Fim (Opcional)</Label>
+              <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex space-x-1 sm:space-x-2">
+            <Button type="submit">
+              {editingId ? 'Atualizar' : 'Cadastrar'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setShowForm(false); setEditingId(null); }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
       {/* Botão para adicionar */}
       {!showForm && (
         <Button onClick={() => {

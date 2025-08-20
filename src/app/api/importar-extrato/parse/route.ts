@@ -57,6 +57,7 @@ function simplificarDescricao(descricao: string): string {
   if (desc.includes('google')) return 'Google';
   if (desc.includes('apple')) return 'Apple';
   if (desc.includes('Pagamento Fatura') || desc.includes('fatura')) return 'Fatura';
+  if (desc.includes('Compra no débito') || (desc.includes('Compra') && (desc.includes('débito') || desc.includes('debito')))) return 'Compra Débito';
   if (desc.includes('FGTS') || desc.includes('Fgts') || desc.includes('fgts')) return 'FGTS';
   // Se for nome de pessoa (muitas palavras, sem palavras-chave conhecidas)
   const palavras = descricao.replace(/\*/g, '').trim().split(/\s+/);
