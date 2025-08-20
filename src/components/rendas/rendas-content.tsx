@@ -11,7 +11,7 @@ import { RendasFixasTab } from './rendas-fixas-tab'
 import { RendasVariaveisTab } from './rendas-variaveis-tab'
 
 export default function RendasContent() {
-  const [activeTab, setActiveTab] = useState('fixas')
+  const [activeTab, setActiveTab] = useState('variaveis')
   const { currentDate, setCurrentDate } = useMonth();
 
   // Navegação de mês global
@@ -55,16 +55,16 @@ export default function RendasContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 gap-2 bg-transparent p-0">
           <TabsTrigger 
-            value="fixas"
-            className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
-          >
-            Entradas Fixas
-          </TabsTrigger>
-          <TabsTrigger 
             value="variaveis"
             className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
           >
             Entradas Variáveis
+          </TabsTrigger>
+          <TabsTrigger 
+            value="fixas"
+            className="border border-border bg-background text-white rounded-md py-2 data-[state=active]:bg-background data-[state=active]:text-white data-[state=active]:border-primary"
+          >
+            Entradas Fixas
           </TabsTrigger>
         </TabsList>
         
