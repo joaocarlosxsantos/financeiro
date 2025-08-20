@@ -155,7 +155,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Variáveis</h1>
@@ -178,8 +178,8 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                 <div>
                   <Label htmlFor="description">Descrição</Label>
                   <Input id="description" placeholder="Ex: Freelancer" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
@@ -227,7 +227,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                   <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 <Button type="submit">
                   {editingId ? 'Atualizar' : 'Cadastrar'}
                 </Button>

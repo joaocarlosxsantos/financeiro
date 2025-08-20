@@ -183,7 +183,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas Fixas</h1>
@@ -206,8 +206,8 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                 <div>
                   <Label htmlFor="description">Descrição</Label>
                   <Input id="description" placeholder="Ex: Aluguel" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
@@ -261,7 +261,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                   <Input id="endDate" type="date" lang="pt-BR" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 <Button type="submit">
                   {editingId ? 'Atualizar' : 'Cadastrar'}
                 </Button>

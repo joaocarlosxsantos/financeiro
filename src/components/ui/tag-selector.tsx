@@ -17,10 +17,10 @@ type TagSelectorProps = {
 export const TagSelector: React.FC<TagSelectorProps> = ({ tags, value, onChange, label, disabled }) => {
   return (
     <div>
-      {label && <label className="block mb-1 text-sm font-medium">{label}</label>}
+      {label && <label className="block mb-1 text-xs sm:text-sm font-medium">{label}</label>}
       <select
         id="tags"
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+        className="flex h-9 sm:h-10 w-full rounded-md border border-input bg-background px-2 sm:px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
         value={value}
         onChange={e => onChange(e.target.value)}
         disabled={disabled}

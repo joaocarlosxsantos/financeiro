@@ -175,7 +175,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
   }, [currentDate]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -199,8 +199,8 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
 
       {/* Modal de formulário */}
       <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Despesa' : 'Nova Despesa'}>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form className="space-y-3" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <Label htmlFor="description">Descrição</Label>
               <Input id="description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
@@ -242,7 +242,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
               <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2">
             <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
             <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>Cancelar</Button>
           </div>

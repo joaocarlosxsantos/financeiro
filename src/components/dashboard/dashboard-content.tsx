@@ -80,7 +80,9 @@ export function DashboardContent() {
     }>,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [wallets, setWallets] = useState<
+    Array<{ id: string; name: string; type: string }>
+  >([]);
   const [selectedWallet, setSelectedWallet] = useState<string>("");
   const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
@@ -188,7 +190,11 @@ export function DashboardContent() {
         const data = await res.json();
         setWallets(
           Array.isArray(data)
-            ? data.map((w) => ({ id: w.id, name: w.name, type: w.type || "Outros" }))
+            ? data.map((w) => ({
+                id: w.id,
+                name: w.name,
+                type: w.type || "Outros",
+              }))
             : []
         );
       }
@@ -508,7 +514,7 @@ export function DashboardContent() {
           : 1) +
         1
     );
-    limiteDiario = diasRestantes > 0 ? summary.balance / diasRestantes : 0;
+  limiteDiario = diasRestantes > 0 ? saldoAcumulado / diasRestantes : 0;
   }
 
   // Dados diários para os novos gráficos
@@ -530,11 +536,11 @@ export function DashboardContent() {
   };
 
   return (
-    <div className="space-y-6 flex-1 min-h-screen flex flex-col">
+    <div className="space-y-4 flex-1 min-h-screen flex flex-col px-2 sm:px-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             Dashboard
           </h1>
           <p className="text-gray-600 dark:text-foreground">
@@ -542,9 +548,9 @@ export function DashboardContent() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-2 w-full">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:space-x-2 w-full">
           <select
-            className="border border-border rounded px-3 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
             onChange={(e) => setSelectedWallet(e.target.value)}
           >
@@ -555,7 +561,7 @@ export function DashboardContent() {
               </option>
             ))}
           </select>
-          <div className="flex w-full sm:w-auto items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -564,7 +570,7 @@ export function DashboardContent() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="flex items-center space-x-2 px-3 py-2 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
+            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
               <Calendar className="h-4 w-4 text-foreground" />
               <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">
                 {(() => {
@@ -589,67 +595,55 @@ export function DashboardContent() {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full">
-        <Card onClick={() => setModal("income")} className="cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Entradas Totais
-            </CardTitle>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
+  <Card onClick={() => setModal("income")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <CardTitle className="text-sm font-medium">Entradas Totais</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summary.totalIncome)}
-            </div>
+          <CardContent className="pt-1 pb-2">
+            <div className="text-xl font-bold text-green-600">{formatCurrency(summary.totalIncome)}</div>
           </CardContent>
         </Card>
-
-        <Card onClick={() => setModal("expense")} className="cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+  <Card onClick={() => setModal("expense")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
             <CardTitle className="text-sm font-medium">Saídas Totais</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summary.totalExpenses)}
-            </div>
+          <CardContent className="pt-1 pb-2">
+            <div className="text-xl font-bold text-red-600">{formatCurrency(summary.totalExpenses)}</div>
           </CardContent>
         </Card>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Saldo do mês
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(saldoDoMes)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Entradas - Saídas do mês selecionado
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card onClick={() => setModal("balance")} className="cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Saldo acumulado
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(saldoAcumulado)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Entradas - Saídas de todos os meses até o selecionado
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+  <Card className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <CardTitle className="text-sm font-medium">Saldo do mês</CardTitle>
+            <DollarSign className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent className="pt-1 pb-2">
+            <div className="text-xl font-bold text-blue-600">{formatCurrency(saldoDoMes)}</div>
+            <p className="text-xs text-muted-foreground">Entradas - Saídas do mês selecionado</p>
+          </CardContent>
+        </Card>
+  <Card onClick={() => setModal("balance")} className="cursor-pointer min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <CardTitle className="text-sm font-medium">Saldo acumulado</CardTitle>
+            <DollarSign className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent className="pt-1 pb-2">
+            <div className="text-xl font-bold text-blue-600">{formatCurrency(saldoAcumulado)}</div>
+            <p className="text-xs text-muted-foreground">Entradas - Saídas de todos os meses até o selecionado</p>
+          </CardContent>
+        </Card>
+  <Card className="min-h-[32px] lg:min-h-[24px] flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-0">
+            <CardTitle className="text-sm font-medium">Limite Diário</CardTitle>
+            <span className="h-4 w-4 text-orange-500">💸</span>
+          </CardHeader>
+          <CardContent className="pt-0 pb-0">
+            <div className="text-xl font-bold text-orange-500">{formatCurrency(limiteDiario)}</div>
+            <p className="text-xs text-muted-foreground">Para não ficar com saldo ≤ 0 até o fim do mês</p>
+          </CardContent>
+        </Card>
         {/* Modal de detalhes de entradas/saídas/saldo */}
         {/* Quick Add FAB */}
         <Fab
@@ -837,24 +831,6 @@ export function DashboardContent() {
             </div>
           )}
         </Modal>
-
-        {/* Card Limite Diário */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Limite Diário Seguro
-            </CardTitle>
-            <span className="h-4 w-4 text-orange-500">💸</span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {formatCurrency(limiteDiario)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Para não ficar com saldo ≤ 0 até o fim do mês
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Gráficos */}
@@ -923,7 +899,9 @@ export function DashboardContent() {
             ) : dailyByCategory.length > 0 ? (
               <DailyCategoryChart
                 data={dailyByCategory}
-                categoryColors={Object.fromEntries(summary.expensesByCategory.map(c => [c.category, c.color]))}
+                categoryColors={Object.fromEntries(
+                  summary.expensesByCategory.map((c) => [c.category, c.color])
+                )}
               />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">

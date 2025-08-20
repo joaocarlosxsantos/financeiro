@@ -98,11 +98,11 @@ export function CarteirasContent() {
   }
 
   return (
-    <div className="space-y-6">
+  <div className="space-y-4 px-2 sm:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Carteiras</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Carteiras</h1>
           <p className="text-gray-600 dark:text-foreground">Gerencie suas carteiras e saldos</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
@@ -118,8 +118,8 @@ export function CarteirasContent() {
             <CardTitle>{editingId ? 'Editar Carteira' : 'Nova Carteira'}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                 <div>
                   <Label htmlFor="name">Nome</Label>
                   <Input id="name" placeholder="Ex: Carteira Principal" value={name} onChange={e => setName(e.target.value)} />
@@ -128,7 +128,7 @@ export function CarteirasContent() {
                   <Label htmlFor="type">Tipo</Label>
                   <select
                     id="type"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-2 sm:px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     value={type}
                     onChange={e => setType(e.target.value)}
                   >
@@ -139,7 +139,7 @@ export function CarteirasContent() {
                   </select>
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
                 <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancelar</Button>
               </div>
@@ -158,7 +158,7 @@ export function CarteirasContent() {
         </div>
       )}
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-6">
+  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-2 sm:gap-6 overflow-x-auto">
           {wallets.map(wallet => {
             const saldo =
               (wallet.incomes?.reduce((acc, i) => acc + Number(i.amount), 0) || 0) -
@@ -166,8 +166,8 @@ export function CarteirasContent() {
 
             return (
               <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
-                <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
+                <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                     <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
                     <div className="min-w-0">
                       <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
