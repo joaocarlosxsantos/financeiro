@@ -164,10 +164,20 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
 
   return (
     <div className="space-y-4 px-2 sm:px-0">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Fixas</h1>
-        <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas fixas</p>
+      {/* Header com botão adicionar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Fixas</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas fixas</p>
+        </div>
+        <Button onClick={() => {
+          setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+          setEditingId(null);
+          setShowForm(true);
+        }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Renda Fixa
+        </Button>
       </div>
       {/* Busca */}
       <div className="mb-2">
@@ -250,17 +260,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           </div>
         </form>
       </Modal>
-      {/* Botão para adicionar */}
-      {!showForm && (
-        <Button onClick={() => {
-          setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
-          setEditingId(null);
-          setShowForm(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Renda Fixa
-        </Button>
-      )}
+  {/* Botão para adicionar removido, agora está no header */}
       {/* Lista estilo planilha moderna */}
       {isLoading ? (
         <Loader text="Carregando rendas..." />

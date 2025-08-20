@@ -185,10 +185,15 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
 
   return (
     <div className="space-y-4 px-2 sm:px-0">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas Fixas</h1>
-        <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas fixas</p>
+      {/* Header com botão adicionar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Despesas Fixas</h1>
+          <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas fixas</p>
+        </div>
+        <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] }); }}>
+          <Plus className="w-4 h-4 mr-1" /> Adicionar Saída Fixa
+        </Button>
       </div>
       {/* Busca */}
       <div className="mb-2">

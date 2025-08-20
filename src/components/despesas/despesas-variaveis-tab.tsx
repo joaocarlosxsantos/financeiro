@@ -186,7 +186,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
         </div>
         <Button onClick={() => { setShowForm(true); setEditingId(null); setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] }); }}>
           <Plus className="h-4 w-4 mr-2" />
-          Nova Despesa
+          Adicionar Saída Variável
         </Button>
       </div>
 
