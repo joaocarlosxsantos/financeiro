@@ -19,16 +19,17 @@ export function TagsContent() {
   const [name, setName] = useState('');
     const [errors, setErrors] = useState<{ name?: string }>({});
 
+  // Função de carregamento extraída para uso em outros pontos
+  const load = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/tags', { cache: 'no-store' });
+      if (res.ok) setTags(await res.json());
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch('/api/tags', { cache: 'no-store' });
-        if (res.ok) setTags(await res.json());
-      } finally {
-        setIsLoading(false);
-      }
-    };
     load();
   }, []);
 
@@ -67,7 +68,7 @@ export function TagsContent() {
           body: JSON.stringify({ name }),
         });
       }
-      mutate();
+  await load();
       setShowForm(false);
       setEditingId(null);
       setName('');
