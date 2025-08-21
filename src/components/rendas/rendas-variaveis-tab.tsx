@@ -51,6 +51,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] as string[] });
   const [isLoading, setIsLoading] = useState(false);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string }>({});
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -117,13 +118,20 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: { description?: string; amount?: string; date?: string } = {};
+    if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
+    if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
+    if (!form.date) newErrors.date = 'Data é obrigatória.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+    setIsLoading(true);
     const payload = {
       description: form.description,
       amount: Number(form.amount),
-      date: form.date,
       type: 'VARIABLE',
       isFixed: false,
-      categoryId: form.categoryId ? form.categoryId : null,
+      date: form.date || undefined,
+      categoryId: form.categoryId || undefined,
       walletId: form.walletId || undefined,
       tags: form.tags,
     };
@@ -139,7 +147,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           id: saved.id,
           description: saved.description,
           amount: Number(saved.amount),
-          date: new Date(saved.date),
+          date: saved.date ? new Date(saved.date) : new Date(),
           categoryName: categories.find(c => c.id === saved.categoryId)?.name,
           categoryId: saved.categoryId,
           walletId: saved.walletId,
@@ -152,6 +160,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
       setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
       setEditingId(null);
       setShowForm(false);
+      setErrors({});
     }
   };
 
@@ -167,18 +176,21 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
           setEditingId(null);
           setShowForm(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Entrada Variável
-        </Button>
-      </div>
-      {/* Busca */}
-      <div className="mb-2">
-        <Input
-          placeholder="Buscar por descrição ou data (dd/mm/yyyy ou dd/mm)"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+            <div>
+              <Label htmlFor="description">Descrição</Label>
+              <Input id="description" placeholder="Ex: Freelancer" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              {errors.description && <span className="text-red-600 text-xs">{errors.description}</span>}
+            </div>
+            <div>
+              <Label htmlFor="amount">Valor</Label>
+              <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              {errors.amount && <span className="text-red-600 text-xs">{errors.amount}</span>}
+            </div>
+            <div>
+              <Label htmlFor="date">Data</Label>
+              <Input id="date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+              {errors.date && <span className="text-red-600 text-xs">{errors.date}</span>}
+            </div>
       </div>
       {/* Formulário */}
       <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Renda Variável' : 'Nova Renda Variável'}>

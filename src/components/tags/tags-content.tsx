@@ -17,6 +17,7 @@ export function TagsContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
+    const [errors, setErrors] = useState<{ name?: string }>({});
 
   useEffect(() => {
     const load = async () => {
@@ -47,30 +48,33 @@ export function TagsContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      const res = await fetch(`/api/tags/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setTags(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+    const newErrors: { name?: string } = {};
+    if (!name.trim()) newErrors.name = 'Nome é obrigatório.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+    setIsLoading(true);
+    try {
+      if (editingId) {
+        await fetch(`/api/tags/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+      } else {
+        await fetch('/api/tags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
       }
-    } else {
-      const res = await fetch('/api/tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-      });
-      if (res.ok) {
-        const created = await res.json();
-        setTags(prev => [created, ...prev]);
-      }
+      mutate();
+      setShowForm(false);
+      setEditingId(null);
+      setName('');
+      setErrors({});
+    } finally {
+      setIsLoading(false);
     }
-    setShowForm(false);
-    setEditingId(null);
-    setName('');
   };
 
   return (
@@ -98,6 +102,7 @@ export function TagsContent() {
               <div>
                 <Label htmlFor="name">Nome</Label>
                 <Input id="name" placeholder="Ex: Viagem" value={name} onChange={e => setName(e.target.value)} />
+                {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
               </div>
               <div className="flex space-x-2">
                 <Button type="submit">

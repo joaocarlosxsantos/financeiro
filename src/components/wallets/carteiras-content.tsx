@@ -26,6 +26,7 @@ export function CarteirasContent() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [type, setType] = useState('Banco')
+  const [errors, setErrors] = useState<{ name?: string; type?: string }>({})
 
   // Função para carregar carteiras (pode ser chamada manualmente)
   const load = async () => {
@@ -66,36 +67,41 @@ export function CarteirasContent() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name) return
+    e.preventDefault();
+    const newErrors: { name?: string; type?: string } = {};
+    if (!name.trim()) newErrors.name = 'Nome é obrigatório.';
+    if (!type.trim()) newErrors.type = 'Tipo é obrigatório.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     if (editingId) {
       const res = await fetch(`/api/wallets/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type })
-      })
+      });
       if (res.ok) {
-        const updated = await res.json()
-        setWallets(prev => prev.map(w => (w.id === updated.id ? updated : w)))
+        const updated = await res.json();
+        setWallets(prev => prev.map(w => (w.id === updated.id ? updated : w)));
       }
     } else {
       const res = await fetch('/api/wallets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type })
-      })
+      });
       if (res.ok) {
-        const created = await res.json()
-        setWallets(prev => [created, ...prev])
+        const created = await res.json();
+        setWallets(prev => [created, ...prev]);
       }
     }
 
-    setShowForm(false)
-    setEditingId(null)
-    setName('')
-  setType('Banco')
-  }
+    setShowForm(false);
+    setEditingId(null);
+    setName('');
+    setType('Banco');
+    setErrors({});
+  };
 
   return (
   <div className="space-y-4 px-2 sm:px-0">
@@ -123,6 +129,7 @@ export function CarteirasContent() {
                 <div>
                   <Label htmlFor="name">Nome</Label>
                   <Input id="name" placeholder="Ex: Carteira Principal" value={name} onChange={e => setName(e.target.value)} />
+                  {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
                 </div>
                 <div>
                   <Label htmlFor="type">Tipo</Label>
@@ -137,6 +144,7 @@ export function CarteirasContent() {
                     <option value="Dinheiro">Dinheiro</option>
                     <option value="Outros">Outros</option>
                   </select>
+                  {errors.type && <span className="text-red-600 text-xs">{errors.type}</span>}
                 </div>
               </div>
               <div className="flex space-x-1 sm:space-x-2">

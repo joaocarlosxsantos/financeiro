@@ -6,6 +6,7 @@ import { TagSelector } from '@/components/ui/tag-selector';
 
 export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }) {
   const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] as string[] });
+  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string }>({});
   const [categories, setCategories] = useState<any[]>([]);
   const [wallets, setWallets] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
@@ -27,6 +28,12 @@ export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const newErrors: { description?: string; amount?: string; date?: string } = {};
+    if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
+    if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
+    if (!form.date) newErrors.date = 'Data é obrigatória.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     setLoading(true);
     const payload: any = { ...form, amount: Number(form.amount), type: 'VARIABLE', isFixed: false };
     if (!payload.categoryId) delete payload.categoryId;
@@ -38,6 +45,7 @@ export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }
     });
     setLoading(false);
     setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
+    setErrors({});
     if (onSuccess) onSuccess();
   }
 
@@ -47,14 +55,17 @@ export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }
         <div>
           <Label htmlFor="description">Descrição</Label>
           <Input id="description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+          {errors.description && <span className="text-red-600 text-xs">{errors.description}</span>}
         </div>
         <div>
           <Label htmlFor="amount">Valor</Label>
           <Input id="amount" type="number" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+          {errors.amount && <span className="text-red-600 text-xs">{errors.amount}</span>}
         </div>
         <div>
           <Label htmlFor="date">Data</Label>
           <Input id="date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+          {errors.date && <span className="text-red-600 text-xs">{errors.date}</span>}
         </div>
         <div>
           <Label htmlFor="category">Categoria</Label>

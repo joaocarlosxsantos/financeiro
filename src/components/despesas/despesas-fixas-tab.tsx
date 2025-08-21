@@ -35,6 +35,7 @@ interface DespesasFixasTabProps {
 export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
   const [despesas, setDespesas] = useState<DespesaFixa[]>([])
   const [search, setSearch] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   // Filtro de busca
   const filteredDespesas = despesas.filter(despesa => {
     if (!search.trim()) return true;
@@ -134,7 +135,16 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    const newErrors: { [key: string]: string } = {};
+    if (!form.description) newErrors.description = 'Descrição é obrigatória.';
+    if (!form.amount) newErrors.amount = 'Valor é obrigatório.';
+    if (!form.dayOfMonth) newErrors.dayOfMonth = 'Dia do mês é obrigatório.';
+    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
+    if (!form.categoryId) newErrors.categoryId = 'Categoria é obrigatória.';
+    if (!form.startDate) newErrors.startDate = 'Data de início é obrigatória.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     const payload = {
       description: form.description,
       amount: Number(form.amount),
@@ -180,6 +190,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
       setShowForm(false);
       setEditingId(null);
       setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
+      setErrors({});
     }
   };
 
@@ -210,14 +221,17 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
             <div>
               <Label htmlFor="description">Descrição</Label>
               <Input id="description" placeholder="Ex: Aluguel" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
             <div>
               <Label htmlFor="amount">Valor</Label>
               <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
             </div>
             <div>
               <Label htmlFor="dayOfMonth">Dia do mês</Label>
               <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="5" value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
+              {errors.dayOfMonth && <p className="text-red-500 text-xs mt-1">{errors.dayOfMonth}</p>}
             </div>
             <div>
               <Label htmlFor="wallet">Carteira</Label>
@@ -232,6 +246,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                   <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
               </select>
+              {errors.walletId && <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>}
             </div>
             <div>
               <Label htmlFor="category">Categoria</Label>
@@ -246,6 +261,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId}</p>}
             </div>
             <div>
               <Label htmlFor="tag">Tag</Label>
@@ -254,6 +270,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
             <div>
               <Label htmlFor="startDate">Data de início</Label>
               <Input id="startDate" type="date" lang="pt-BR" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+              {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
             </div>
             <div>
               <Label htmlFor="endDate">Data de fim (opcional)</Label>

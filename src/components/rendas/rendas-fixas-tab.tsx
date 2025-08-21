@@ -54,6 +54,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] as string[] });
+  const [errors, setErrors] = useState<{ description?: string; amount?: string; dayOfMonth?: string }>({});
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -120,6 +121,12 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: { description?: string; amount?: string; dayOfMonth?: string } = {};
+    if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
+    if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
+    if (!form.dayOfMonth || isNaN(Number(form.dayOfMonth))) newErrors.dayOfMonth = 'Dia do mês é obrigatório.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     const payload = {
       description: form.description,
       amount: Number(form.amount),
@@ -159,6 +166,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
       setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
       setEditingId(null);
       setShowForm(false);
+      setErrors({});
     }
   };
 
@@ -194,14 +202,17 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
             <div>
               <Label htmlFor="description">Descrição</Label>
               <Input id="description" placeholder="Ex: Salário" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              {errors.description && <span className="text-red-600 text-xs">{errors.description}</span>}
             </div>
             <div>
               <Label htmlFor="amount">Valor</Label>
               <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              {errors.amount && <span className="text-red-600 text-xs">{errors.amount}</span>}
             </div>
             <div>
               <Label htmlFor="dayOfMonth">Dia do mês</Label>
               <Input id="dayOfMonth" type="number" min="1" max="31" placeholder="25" value={form.dayOfMonth} onChange={e => setForm(f => ({ ...f, dayOfMonth: e.target.value }))} />
+              {errors.dayOfMonth && <span className="text-red-600 text-xs">{errors.dayOfMonth}</span>}
             </div>
             <div>
               <Label htmlFor="category">Categoria</Label>

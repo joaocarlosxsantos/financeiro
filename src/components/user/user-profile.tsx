@@ -15,6 +15,7 @@ export function UserProfile({ className }: UserProfileProps) {
   const [user, setUser] = useState({ name: "", email: "", phone: "" });
   const [edit, setEdit] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
   const [loading, setLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwords, setPasswords] = useState({ password: "", confirm: "" });
@@ -38,6 +39,11 @@ export function UserProfile({ className }: UserProfileProps) {
     setMessage("");
   };
   const handleSave = async () => {
+    const newErrors: { name?: string; email?: string } = {};
+    if (!form.name.trim()) newErrors.name = 'Nome é obrigatório.';
+    if (!form.email.trim()) newErrors.email = 'Email é obrigatório.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     setLoading(true);
     setMessage("");
     const res = await fetch("/api/user", {
@@ -50,6 +56,7 @@ export function UserProfile({ className }: UserProfileProps) {
       setUser(data.user);
       setEdit(false);
       setMessage("Dados atualizados!");
+      setErrors({});
     } else {
       setMessage("Erro ao atualizar dados");
     }
@@ -98,6 +105,7 @@ export function UserProfile({ className }: UserProfileProps) {
               disabled={!edit}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             />
+            {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
           </div>
           <div>
             <Label htmlFor="email">Email</Label>
@@ -107,6 +115,7 @@ export function UserProfile({ className }: UserProfileProps) {
               disabled={!edit}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
             />
+            {errors.email && <span className="text-red-600 text-xs">{errors.email}</span>}
           </div>
           <div>
             <Label htmlFor="phone">Telefone</Label>

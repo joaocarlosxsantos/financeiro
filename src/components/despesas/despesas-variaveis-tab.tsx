@@ -49,6 +49,7 @@ interface DespesasVariaveisTabProps {
 export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisTabProps) {
   const [despesas, setDespesas] = useState<DespesaVariavel[]>([]);
   const [search, setSearch] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const filteredDespesas = despesas.filter(despesa => {
     if (!search.trim()) return true;
     const s = search.trim().toLowerCase();
@@ -95,6 +96,14 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: { [key: string]: string } = {};
+    if (!form.description) newErrors.description = 'Descrição é obrigatória.';
+    if (!form.amount) newErrors.amount = 'Valor é obrigatório.';
+    if (!form.date) newErrors.date = 'Data é obrigatória.';
+    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
+    if (!form.categoryId) newErrors.categoryId = 'Categoria é obrigatória.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     const payload = {
       description: form.description,
       amount: Number(form.amount),
@@ -136,6 +145,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       setShowForm(false);
       setEditingId(null);
       setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
+      setErrors({});
     }
   };
   // Carrega categorias, carteiras, tags e despesas
@@ -206,14 +216,17 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
             <div>
               <Label htmlFor="description">Descrição</Label>
               <Input id="description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
             <div>
               <Label htmlFor="amount">Valor</Label>
               <Input id="amount" type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
             </div>
             <div>
               <Label htmlFor="date">Data</Label>
               <Input id="date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+              {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
             </div>
             <div>
               <Label htmlFor="categoryId">Categoria</Label>
@@ -226,6 +239,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
                 <option value="">Selecione</option>
                 {categories.filter(c => c.type === 'EXPENSE' || c.type === 'BOTH').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId}</p>}
             </div>
             <div>
               <Label htmlFor="walletId">Carteira</Label>
@@ -238,6 +252,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
                 <option value="">Selecione</option>
                 {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
+              {errors.walletId && <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>}
             </div>
             <div>
               <Label>Tags</Label>

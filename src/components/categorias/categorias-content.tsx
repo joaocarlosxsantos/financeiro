@@ -23,6 +23,7 @@ export function CategoriasContent() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
+  const [errors, setErrors] = useState<{ name?: string }>({})
   const [color, setColor] = useState('#3b82f6')
 
   // (Removido useEffect de sincronização de cor, pois resetForm já garante o valor correto)
@@ -69,35 +70,40 @@ export function CategoriasContent() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    const newErrors: { name?: string } = {};
+    if (!name.trim()) newErrors.name = 'Nome é obrigatório.';
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
     if (editingId) {
       const res = await fetch(`/api/categories/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, color, type, icon: icon || undefined })
-      })
+      });
       if (res.ok) {
-        const updated = await res.json()
-        setCategories(prev => prev.map(c => (c.id === updated.id ? updated : c)))
+        const updated = await res.json();
+        setCategories(prev => prev.map(c => (c.id === updated.id ? updated : c)));
       }
     } else {
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, color, type, icon: icon || undefined })
-      })
+      });
       if (res.ok) {
-        const created = await res.json()
-        setCategories(prev => [created, ...prev])
+        const created = await res.json();
+        setCategories(prev => [created, ...prev]);
       }
     }
-    setShowForm(false)
-    setEditingId(null)
-    setName('')
-    setColor('#3b82f6')
-    setType('EXPENSE')
-    setIcon('')
-  }
+    setShowForm(false);
+    setEditingId(null);
+    setName('');
+    setColor('#3b82f6');
+    setType('EXPENSE');
+    setIcon('');
+    setErrors({});
+  };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -141,6 +147,7 @@ export function CategoriasContent() {
                 <div>
                   <Label htmlFor="name">Nome</Label>
                   <Input id="name" placeholder="Ex: Alimentação" value={name} onChange={(e) => setName(e.target.value)} />
+                  {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
                 </div>
                 <div>
                   <Label htmlFor="color">Cor</Label>
