@@ -176,22 +176,11 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
           setEditingId(null);
           setShowForm(true);
-            <div>
-              <Label htmlFor="description">Descrição</Label>
-              <Input id="description" placeholder="Ex: Freelancer" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-              {errors.description && <span className="text-red-600 text-xs">{errors.description}</span>}
-            </div>
-            <div>
-              <Label htmlFor="amount">Valor</Label>
-              <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
-              {errors.amount && <span className="text-red-600 text-xs">{errors.amount}</span>}
-            </div>
-            <div>
-              <Label htmlFor="date">Data</Label>
-              <Input id="date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-              {errors.date && <span className="text-red-600 text-xs">{errors.date}</span>}
-            </div>
+        }}>
+          <Plus className="w-4 h-4 mr-1" /> Adicionar Renda Variável
+        </Button>
       </div>
+      {/* Formulário */}
       {/* Formulário */}
       <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Renda Variável' : 'Nova Renda Variável'}>
         <form className="space-y-3" onSubmit={handleSubmit}>
