@@ -613,9 +613,11 @@ export function DashboardContent() {
           <div className="space-y-4">
             <div className="flex gap-2 mb-2">
               <button
-                className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${
-                  quickTab === "despesa" ? "border-primary" : ""
-                }`}
+                className={`border rounded-md py-2 px-4 flex-1 transition-colors
+                  ${quickTab === "despesa"
+                    ? "bg-primary text-white border-primary shadow"
+                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
+                `}
                 onClick={() => {
                   setQuickTab("despesa");
                   setTipoTab("variavel");
@@ -625,9 +627,11 @@ export function DashboardContent() {
                 Saída
               </button>
               <button
-                className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${
-                  quickTab === "renda" ? "border-primary" : ""
-                }`}
+                className={`border rounded-md py-2 px-4 flex-1 transition-colors
+                  ${quickTab === "renda"
+                    ? "bg-primary text-white border-primary shadow"
+                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
+                `}
                 onClick={() => {
                   setQuickTab("renda");
                   setTipoTab("variavel");
@@ -639,18 +643,22 @@ export function DashboardContent() {
             </div>
             <div className="flex gap-2 mb-4">
               <button
-                className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${
-                  tipoTab === "variavel" ? "border-primary" : ""
-                }`}
+                className={`border rounded-md py-2 px-4 flex-1 transition-colors
+                  ${tipoTab === "variavel"
+                    ? "bg-primary text-white border-primary shadow"
+                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
+                `}
                 onClick={() => setTipoTab("variavel")}
                 type="button"
               >
                 Variável
               </button>
               <button
-                className={`border border-border bg-background text-white rounded-md py-2 px-4 flex-1 ${
-                  tipoTab === "fixa" ? "border-primary" : ""
-                }`}
+                className={`border rounded-md py-2 px-4 flex-1 transition-colors
+                  ${tipoTab === "fixa"
+                    ? "bg-primary text-white border-primary shadow"
+                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
+                `}
                 onClick={() => setTipoTab("fixa")}
                 type="button"
               >
