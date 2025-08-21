@@ -1,7 +1,7 @@
 // import { toTitleCase } from '@/lib/camelcase';
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, ChangeEvent } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
@@ -27,13 +27,16 @@ interface RendaFixa {
 }
 
 import { TagSelector } from '@/components/ui/tag-selector'
+import { CategoryCreateModal } from '@/components/ui/category-create-modal'
+import { WalletCreateModal } from '@/components/ui/wallet-create-modal'
+import { TagCreateModal } from '@/components/ui/tag-create-modal'
 
 
 export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   const [rendas, setRendas] = useState<RendaFixa[]>([]);
   const [search, setSearch] = useState('');
   // Filtro de busca
-  const filteredRendas = rendas.filter(renda => {
+  const filteredRendas = rendas.filter((renda: RendaFixa) => {
     if (!search.trim()) return true;
     const s = search.trim().toLowerCase();
     // Busca por descrição
@@ -52,6 +55,9 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: 'EXPENSE' | 'INCOME' | 'BOTH' }>>([]);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string }>>([]);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] as string[] });
   const [errors, setErrors] = useState<{ description?: string; amount?: string; dayOfMonth?: string }>({});
@@ -97,7 +103,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   }, [currentDate]);
 
   const handleEdit = (id: string) => {
-    const r = rendas.find(x => x.id === id);
+    const r = rendas.find((x: RendaFixa) => x.id === id);
     if (r) {
       setEditingId(id);
       setForm({
@@ -116,10 +122,10 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/incomes/${id}`, { method: 'DELETE' });
-    if (res.ok) setRendas(rendas.filter(r => r.id !== id));
+    if (res.ok) setRendas(rendas.filter((r: RendaFixa) => r.id !== id));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newErrors: { description?: string; amount?: string; dayOfMonth?: string } = {};
     if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
@@ -146,22 +152,22 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
     });
     if (res.ok) {
       const saved = await res.json();
-      setRendas(prev => {
+      setRendas((prev: RendaFixa[]) => {
         const item: RendaFixa = {
           id: saved.id,
           description: saved.description,
           amount: Number(saved.amount),
           dayOfMonth: saved.dayOfMonth ?? 1,
-          categoryName: categories.find(c => c.id === saved.categoryId)?.name,
+          categoryName: categories.find((c) => c.id === saved.categoryId)?.name,
           categoryId: saved.categoryId,
           walletId: saved.walletId,
-          walletName: wallets.find(w => w.id === saved.walletId)?.name,
+          walletName: wallets.find((w) => w.id === saved.walletId)?.name,
           startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
           endDate: saved.endDate ? new Date(saved.endDate) : undefined,
           tags: saved.tags || [],
         };
-        if (editingId) return prev.map(x => x.id === saved.id ? item : x);
-        return [item, ...prev];
+  if (editingId) return prev.map((x) => x.id === saved.id ? item : x);
+  return [item, ...prev];
       });
       setForm({ description: '', amount: '', dayOfMonth: '', categoryId: '', walletId: '', startDate: '', endDate: '', tags: [] });
       setEditingId(null);
@@ -192,7 +198,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         <Input
           placeholder="Buscar por descrição ou data (dd/mm/yyyy ou dd/mm)"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
         />
       </div>
       {/* Formulário */}
@@ -219,9 +225,16 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
               <select
                 id="category"
                 value={form.categoryId}
-                onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                onChange={e => {
+                  if (e.target.value === '__create__') {
+                    setShowCategoryModal(true);
+                  } else {
+                    setForm(f => ({ ...f, categoryId: e.target.value }));
+                  }
+                }}
                 className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
               >
+                <option value="__create__">➕ Criar categoria</option>
                 <option value="">Sem categoria</option>
                 {categories
                   .filter(c => c.type === 'INCOME' || c.type === 'BOTH')
@@ -235,9 +248,16 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
               <select
                 id="wallet"
                 value={form.walletId}
-                onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                onChange={e => {
+                  if (e.target.value === '__create__') {
+                    setShowWalletModal(true);
+                  } else {
+                    setForm(f => ({ ...f, walletId: e.target.value }));
+                  }
+                }}
                 className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
               >
+                <option value="__create__">➕ Criar carteira</option>
                 <option value="">Selecione</option>
                 {wallets.map(w => (
                   <option key={w.id} value={w.id}>{w.name}</option>
@@ -246,7 +266,26 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
             </div>
             <div>
               <Label htmlFor="tag">Tag</Label>
-              <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
+              <div className="flex gap-2">
+                <select
+                  id="tag"
+                  value={form.tags[0] || ''}
+                  onChange={e => {
+                    if (e.target.value === '__create__') {
+                      setShowTagModal(true);
+                    } else {
+                      setForm(f => ({ ...f, tags: e.target.value ? [e.target.value] : [] }));
+                    }
+                  }}
+                  className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
+                >
+                  <option value="__create__">➕ Criar tag</option>
+                  <option value="">Sem tag</option>
+                  {tags.map(tag => (
+                    <option key={tag.id} value={tag.id}>{tag.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div>
               <Label htmlFor="startDate">Data de Início</Label>
@@ -271,6 +310,25 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           </div>
         </form>
       </Modal>
+      {/* Modais de criação */}
+      <CategoryCreateModal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} onCreated={() => {
+        setShowCategoryModal(false);
+        fetch('/api/categories', { cache: 'no-store' }).then(async res => {
+          if (res.ok) setCategories(await res.json());
+        });
+      }} />
+      <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={() => {
+        setShowWalletModal(false);
+        fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
+          if (res.ok) setWallets(await res.json());
+        });
+      }} />
+      <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={() => {
+        setShowTagModal(false);
+        fetch('/api/tags', { cache: 'no-store' }).then(async res => {
+          if (res.ok) setTags(await res.json());
+        });
+      }} />
   {/* Botão para adicionar removido, agora está no header */}
       {/* Lista estilo planilha moderna */}
       {isLoading ? (

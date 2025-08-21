@@ -1,7 +1,10 @@
 // import { toTitleCase } from '@/lib/camelcase';
 'use client'
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, ChangeEvent } from 'react';
+import { CategoryCreateModal } from '@/components/ui/category-create-modal';
+import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
+import { TagCreateModal } from '@/components/ui/tag-create-modal';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +50,9 @@ interface DespesasVariaveisTabProps {
 }
 
 export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisTabProps) {
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
   const [despesas, setDespesas] = useState<DespesaVariavel[]>([]);
   const [search, setSearch] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -233,9 +239,16 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
               <select
                 id="categoryId"
                 value={form.categoryId}
-                onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                onChange={e => {
+                  if (e.target.value === '__create__') {
+                    setShowCategoryModal(true);
+                  } else {
+                    setForm(f => ({ ...f, categoryId: e.target.value }));
+                  }
+                }}
                 className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
               >
+                <option value="__create__">➕ Criar categoria</option>
                 <option value="">Selecione</option>
                 {categories.filter(c => c.type === 'EXPENSE' || c.type === 'BOTH').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -246,9 +259,16 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
               <select
                 id="walletId"
                 value={form.walletId}
-                onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
+                onChange={e => {
+                  if (e.target.value === '__create__') {
+                    setShowWalletModal(true);
+                  } else {
+                    setForm(f => ({ ...f, walletId: e.target.value }));
+                  }
+                }}
                 className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
               >
+                <option value="__create__">➕ Criar carteira</option>
                 <option value="">Selecione</option>
                 {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
@@ -256,7 +276,45 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
             </div>
             <div>
               <Label>Tags</Label>
-              <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
+              <div className="flex gap-2">
+                <select
+                  id="tag"
+                  value={form.tags[0] || ''}
+                  onChange={e => {
+                    if (e.target.value === '__create__') {
+                      setShowTagModal(true);
+                    } else {
+                      setForm(f => ({ ...f, tags: e.target.value ? [e.target.value] : [] }));
+                    }
+                  }}
+                  className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
+                >
+                  <option value="__create__">➕ Criar tag</option>
+                  <option value="">Sem tag</option>
+                  {tags.map(tag => (
+                    <option key={tag.id} value={tag.id}>{tag.name}</option>
+                  ))}
+                </select>
+              </div>
+      {/* Modais de criação */}
+      <CategoryCreateModal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} onCreated={() => {
+        setShowCategoryModal(false);
+        fetch('/api/categories', { cache: 'no-store' }).then(async res => {
+          if (res.ok) setCategories(await res.json());
+        });
+      }} />
+      <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={() => {
+        setShowWalletModal(false);
+        fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
+          if (res.ok) setWallets(await res.json());
+        });
+      }} />
+      <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={() => {
+        setShowTagModal(false);
+        fetch('/api/tags', { cache: 'no-store' }).then(async res => {
+          if (res.ok) setTags(await res.json());
+        });
+      }} />
             </div>
           </div>
           <div className="flex space-x-1 sm:space-x-2">
