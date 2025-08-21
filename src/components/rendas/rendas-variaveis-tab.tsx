@@ -51,7 +51,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] as string[] });
   const [isLoading, setIsLoading] = useState(false);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
-  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string }>({});
+  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string; categoryId?: string; walletId?: string }>({});
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -118,10 +118,12 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newErrors: { description?: string; amount?: string; date?: string } = {};
+    const newErrors: { description?: string; amount?: string; date?: string; categoryId?: string; walletId?: string } = {};
     if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
+    if (!form.categoryId) newErrors.categoryId = 'Categoria é obrigatória.';
+    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     setIsLoading(true);
@@ -188,14 +190,17 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
             <div>
               <Label htmlFor="description">Descrição</Label>
               <Input id="description" placeholder="Ex: Freelancer" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              {errors.description && <span className="text-red-600 text-xs">{errors.description}</span>}
             </div>
             <div>
               <Label htmlFor="amount">Valor</Label>
               <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              {errors.amount && <span className="text-red-600 text-xs">{errors.amount}</span>}
             </div>
             <div>
               <Label htmlFor="date">Data</Label>
               <Input id="date" type="date" lang="pt-BR" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+              {errors.date && <span className="text-red-600 text-xs">{errors.date}</span>}
             </div>
             <div>
               <Label htmlFor="category">Categoria</Label>
@@ -205,13 +210,14 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                 onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
                 className="w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
               >
-                <option value="">Sem categoria</option>
+                <option value="">Selecione</option>
                 {categories
                   .filter(c => c.type === 'INCOME' || c.type === 'BOTH')
                   .map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
               </select>
+              {errors.categoryId && <span className="text-red-600 text-xs">{errors.categoryId}</span>}
             </div>
             <div>
               <Label htmlFor="wallet">Carteira</Label>
@@ -226,6 +232,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                   <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
               </select>
+              {errors.walletId && <span className="text-red-600 text-xs">{errors.walletId}</span>}
             </div>
             <div>
               <Label htmlFor="tag">Tag</Label>
