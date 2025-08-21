@@ -6,7 +6,7 @@ import { TagSelector } from '@/components/ui/tag-selector';
 
 export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }) {
   const [form, setForm] = useState({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] as string[] });
-  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string }>({});
+  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string; categoryId?: string; walletId?: string }>({});
   const [categories, setCategories] = useState<any[]>([]);
   const [wallets, setWallets] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
@@ -28,16 +28,16 @@ export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const newErrors: { description?: string; amount?: string; date?: string } = {};
+    const newErrors: { description?: string; amount?: string; date?: string; categoryId?: string; walletId?: string } = {};
     if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
+    if (!form.categoryId) newErrors.categoryId = 'Categoria é obrigatória.';
+    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     setLoading(true);
     const payload: any = { ...form, amount: Number(form.amount), type: 'VARIABLE', isFixed: false };
-    if (!payload.categoryId) delete payload.categoryId;
-    if (!payload.walletId) delete payload.walletId;
     await fetch('/api/incomes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -70,11 +70,12 @@ export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }
         <div>
           <Label htmlFor="category">Categoria</Label>
           <select id="category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}>
-            <option value="">Sem categoria</option>
+            <option value="">Selecione</option>
             {categories.filter(c => c.type === 'INCOME' || c.type === 'BOTH').map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+          {errors.categoryId && <span className="text-red-600 text-xs">{errors.categoryId}</span>}
         </div>
         <div>
           <Label htmlFor="wallet">Carteira</Label>
@@ -84,13 +85,20 @@ export function QuickRendaVariavelForm({ onSuccess }: { onSuccess?: () => void }
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>
+          {errors.walletId && <span className="text-red-600 text-xs">{errors.walletId}</span>}
         </div>
         <div>
           <Label htmlFor="tag">Tag</Label>
           <TagSelector tags={tags} value={form.tags[0] || ''} onChange={tagId => setForm(f => ({ ...f, tags: tagId ? [tagId] : [] }))} />
         </div>
       </div>
-      <Button type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Cadastrar'}</Button>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Cadastrar'}</Button>
+        <Button type="button" variant="outline" onClick={() => {
+          setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
+          setErrors({});
+        }}>Cancelar</Button>
+      </div>
     </form>
   );
 }
