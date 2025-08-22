@@ -35,10 +35,9 @@ import { Modal } from "@/components/ui/modal";
 import { Fab } from "@/components/ui/fab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { QuickDespesaVariavelForm } from "../quick-add/quick-despesa-variavel-form";
-import { QuickDespesaFixaForm } from "../quick-add/quick-despesa-fixa-form";
-import { QuickRendaVariavelForm } from "../quick-add/quick-renda-variavel-form";
-import { QuickRendaFixaForm } from "../quick-add/quick-renda-fixa-form";
+
+import QuickDespesaForm from '../quick-add/quick-despesa-form';
+import QuickRendaForm from '../quick-add/quick-renda-form';
 
 import React from "react";
 
@@ -48,7 +47,6 @@ export function DashboardContent() {
   // Estado para modal de adição rápida e tabs
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickTab, setQuickTab] = useState<"despesa" | "renda">("despesa");
-  const [tipoTab, setTipoTab] = useState<"variavel" | "fixa">("variavel");
   const [modal, setModal] = useState<null | "income" | "expense" | "balance">(
     null
   );
@@ -599,7 +597,6 @@ export function DashboardContent() {
           onClick={() => {
             setQuickAddOpen(true);
             setQuickTab("despesa");
-            setTipoTab("variavel");
           }}
           label="Quick Add"
         />
@@ -618,10 +615,7 @@ export function DashboardContent() {
                     ? "bg-primary text-white border-primary shadow"
                     : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
                 `}
-                onClick={() => {
-                  setQuickTab("despesa");
-                  setTipoTab("variavel");
-                }}
+                onClick={() => setQuickTab("despesa")}
                 type="button"
               >
                 Saída
@@ -632,52 +626,15 @@ export function DashboardContent() {
                     ? "bg-primary text-white border-primary shadow"
                     : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
                 `}
-                onClick={() => {
-                  setQuickTab("renda");
-                  setTipoTab("variavel");
-                }}
+                onClick={() => setQuickTab("renda")}
                 type="button"
               >
                 Entrada
               </button>
             </div>
-            <div className="flex gap-2 mb-4">
-              <button
-                className={`border rounded-md py-2 px-4 flex-1 transition-colors
-                  ${tipoTab === "variavel"
-                    ? "bg-primary text-white border-primary shadow"
-                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
-                `}
-                onClick={() => setTipoTab("variavel")}
-                type="button"
-              >
-                Variável
-              </button>
-              <button
-                className={`border rounded-md py-2 px-4 flex-1 transition-colors
-                  ${tipoTab === "fixa"
-                    ? "bg-primary text-white border-primary shadow"
-                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
-                `}
-                onClick={() => setTipoTab("fixa")}
-                type="button"
-              >
-                Fixa
-              </button>
+            <div className="mt-4">
+              {quickTab === "despesa" ? <QuickDespesaForm /> : <QuickRendaForm />}
             </div>
-            {/* Renderiza apenas o formulário correspondente */}
-            {quickTab === "despesa" && tipoTab === "variavel" && (
-              <QuickDespesaVariavelForm onSuccess={handleQuickAddSuccess} />
-            )}
-            {quickTab === "despesa" && tipoTab === "fixa" && (
-              <QuickDespesaFixaForm onSuccess={handleQuickAddSuccess} />
-            )}
-            {quickTab === "renda" && tipoTab === "variavel" && (
-              <QuickRendaVariavelForm onSuccess={handleQuickAddSuccess} />
-            )}
-            {quickTab === "renda" && tipoTab === "fixa" && (
-              <QuickRendaFixaForm onSuccess={handleQuickAddSuccess} />
-            )}
           </div>
         </Modal>
         <Modal

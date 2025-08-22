@@ -11,7 +11,11 @@ interface Tag {
   name: string;
 }
 
-export function TagsContent() {
+interface TagsContentProps {
+  onCreated?: (id: string) => void;
+}
+
+export function TagsContent({ onCreated }: TagsContentProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -62,13 +66,17 @@ export function TagsContent() {
           body: JSON.stringify({ name }),
         });
       } else {
-        await fetch('/api/tags', {
+        const res = await fetch('/api/tags', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name }),
         });
+        if (res.ok) {
+          const created = await res.json();
+          if (onCreated) onCreated(created.id);
+        }
       }
-  await load();
+      await load();
       setShowForm(false);
       setEditingId(null);
       setName('');

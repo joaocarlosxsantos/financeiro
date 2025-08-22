@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Edit, Trash2, Plus, Wallet as WalletIcon } from 'lucide-react'
 import { Loader } from '@/components/ui/loader'
 
+
 interface Wallet {
   id: string
   name: string
@@ -16,8 +17,12 @@ interface Wallet {
   incomes: { amount: number | string }[]
 }
 
+interface CarteirasContentProps {
+  onCreated?: (id: string) => void;
+}
 
-export function CarteirasContent() {
+
+export function CarteirasContent({ onCreated }: CarteirasContentProps) {
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +89,7 @@ export function CarteirasContent() {
         const updated = await res.json();
         setWallets(prev => prev.map(w => (w.id === updated.id ? updated : w)));
       }
+
     } else {
       const res = await fetch('/api/wallets', {
         method: 'POST',
@@ -93,6 +99,7 @@ export function CarteirasContent() {
       if (res.ok) {
         const created = await res.json();
         setWallets(prev => [created, ...prev]);
+        if (onCreated) onCreated(created.id);
       }
     }
 

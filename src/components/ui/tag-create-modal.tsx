@@ -4,7 +4,7 @@ import { Input } from './input';
 import { Label } from './label';
 import { Button } from './button';
 
-export function TagCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+export function TagCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,15 +17,18 @@ export function TagCreateModal({ open, onClose, onCreated }: { open: boolean; on
     }
     setLoading(true);
     setError('');
-    await fetch('/api/tags', {
+    const res = await fetch('/api/tags', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     setLoading(false);
-    setName('');
-    onCreated();
-    onClose();
+    if (res.ok) {
+      const data = await res.json();
+      onCreated(data.id);
+    } else {
+      onCreated('');
+    }
   }
 
   return (

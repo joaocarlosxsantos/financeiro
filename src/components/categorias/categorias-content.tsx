@@ -16,7 +16,11 @@ interface Category {
   icon?: string
 }
 
-export function CategoriasContent() {
+interface CategoriasContentProps {
+  onCreated?: (id: string) => void;
+}
+
+export function CategoriasContent({ onCreated }: CategoriasContentProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -94,6 +98,7 @@ export function CategoriasContent() {
       if (res.ok) {
         const created = await res.json();
         setCategories(prev => [created, ...prev]);
+        if (onCreated) onCreated(created.id);
       }
     }
     setShowForm(false);

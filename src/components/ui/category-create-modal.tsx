@@ -24,14 +24,12 @@ export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolea
       body: JSON.stringify({ name, type }),
     });
     setLoading(false);
-    setName('');
     if (res.ok) {
       const data = await res.json();
       onCreated(data.id);
     } else {
       onCreated('');
     }
-    onClose();
   }
 
   return (

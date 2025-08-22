@@ -311,23 +311,26 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         </form>
       </Modal>
       {/* Modais de criação */}
-      <CategoryCreateModal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} onCreated={() => {
+      <CategoryCreateModal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} onCreated={id => {
         setShowCategoryModal(false);
         fetch('/api/categories', { cache: 'no-store' }).then(async res => {
           if (res.ok) setCategories(await res.json());
         });
+        if (id) setForm(f => ({ ...f, categoryId: id }));
       }} />
-      <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={() => {
+      <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={id => {
         setShowWalletModal(false);
         fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
           if (res.ok) setWallets(await res.json());
         });
+        if (id) setForm(f => ({ ...f, walletId: id }));
       }} />
-      <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={() => {
+      <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={id => {
         setShowTagModal(false);
         fetch('/api/tags', { cache: 'no-store' }).then(async res => {
           if (res.ok) setTags(await res.json());
         });
+        if (id) setForm(f => ({ ...f, tags: id ? [id] : [] }));
       }} />
   {/* Botão para adicionar removido, agora está no header */}
       {/* Lista estilo planilha moderna */}

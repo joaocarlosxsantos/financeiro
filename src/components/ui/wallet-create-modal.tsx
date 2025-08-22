@@ -4,7 +4,7 @@ import { Input } from './input';
 import { Label } from './label';
 import { Button } from './button';
 
-export function WalletCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+export function WalletCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
   const [name, setName] = useState('');
   const [type, setType] = useState('Banco');
   const [loading, setLoading] = useState(false);
@@ -18,15 +18,18 @@ export function WalletCreateModal({ open, onClose, onCreated }: { open: boolean;
     }
     setLoading(true);
     setError('');
-    await fetch('/api/wallets', {
+    const res = await fetch('/api/wallets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, type }),
     });
     setLoading(false);
-    setName('');
-    onCreated();
-    onClose();
+    if (res.ok) {
+      const data = await res.json();
+      onCreated(data.id);
+    } else {
+      onCreated('');
+    }
   }
 
   return (
