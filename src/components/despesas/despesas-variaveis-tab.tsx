@@ -227,7 +227,11 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
             </div>
             <div>
               <Label htmlFor="amount">Valor</Label>
-              <Input id="amount" type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              <Input id="amount" type="number" value={form.amount} onChange={e => {
+                // Garante que não seja string vazia, pois input type=number vazio pode causar submit nativo
+                const value = e.target.value;
+                setForm(f => ({ ...f, amount: value.replace(/[^0-9.,-]/g, '') }));
+              }} min="0" step="0.01" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" />
               {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
             </div>
             <div>
