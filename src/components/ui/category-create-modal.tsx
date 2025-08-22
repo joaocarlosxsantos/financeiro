@@ -4,7 +4,7 @@ import { Input } from './input';
 import { Label } from './label';
 import { Button } from './button';
 
-export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'INCOME' | 'EXPENSE' | 'BOTH'>('INCOME');
   const [loading, setLoading] = useState(false);
@@ -18,14 +18,19 @@ export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolea
     }
     setLoading(true);
     setError('');
-    await fetch('/api/categories', {
+    const res = await fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, type }),
     });
     setLoading(false);
     setName('');
-    onCreated();
+    if (res.ok) {
+      const data = await res.json();
+      onCreated(data.id);
+    } else {
+      onCreated('');
+    }
     onClose();
   }
 

@@ -300,16 +300,14 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       <CategoryCreateModal 
         open={showCategoryModal} 
         onClose={() => setShowCategoryModal(false)} 
-        onCreated={async () => {
+        onCreated={async (newCategoryId: string) => {
           setShowCategoryModal(false);
           const res = await fetch('/api/categories', { cache: 'no-store' });
           if (res.ok) {
             const cats = await res.json();
             setCategories(cats);
-            // Seleciona a última categoria criada (assumindo que é a última da lista)
-            if (cats.length > 0) {
-              const novaCategoria = cats[cats.length - 1];
-              setForm(f => ({ ...f, categoryId: novaCategoria.id }));
+            if (newCategoryId) {
+              setForm(f => ({ ...f, categoryId: newCategoryId }));
             }
           }
         }} 
