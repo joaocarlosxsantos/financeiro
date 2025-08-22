@@ -217,7 +217,13 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       </div>
 
       {/* Modal de formulário */}
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Despesa' : 'Nova Despesa'}>
+      {showForm && (
+        <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Despesa' : 'Nova Despesa'}>
+          <></>
+        </Modal>
+      )}
+      {/* Formulário sempre montado, só exibe quando showForm for true */}
+      <div style={{ display: showForm ? 'block' : 'none' }}>
         <form className="space-y-3" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             <div>
@@ -228,7 +234,6 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
             <div>
               <Label htmlFor="amount">Valor</Label>
               <Input id="amount" type="number" value={form.amount} onChange={e => {
-                // Garante que não seja string vazia, pois input type=number vazio pode causar submit nativo
                 const value = e.target.value;
                 setForm(f => ({ ...f, amount: value.replace(/[^0-9.,-]/g, '') }));
               }} min="0" step="0.01" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" />
@@ -301,42 +306,42 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
                   ))}
                 </select>
               </div>
-      {/* Modais de criação */}
-      <CategoryCreateModal 
-        open={showCategoryModal} 
-        onClose={() => setShowCategoryModal(false)} 
-        onCreated={async (newCategoryId: string) => {
-          setShowCategoryModal(false);
-          const res = await fetch('/api/categories', { cache: 'no-store' });
-          if (res.ok) {
-            const cats = await res.json();
-            setCategories(cats);
-            if (newCategoryId) {
-              setForm(f => ({ ...f, categoryId: newCategoryId }));
-            }
-          }
-        }} 
-      />
-      <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={() => {
-        setShowWalletModal(false);
-        fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
-          if (res.ok) setWallets(await res.json());
-        });
-      }} />
-      <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={() => {
-        setShowTagModal(false);
-        fetch('/api/tags', { cache: 'no-store' }).then(async res => {
-          if (res.ok) setTags(await res.json());
-        });
-      }} />
             </div>
           </div>
+          {/* Modais de criação */}
+          <CategoryCreateModal 
+            open={showCategoryModal} 
+            onClose={() => setShowCategoryModal(false)} 
+            onCreated={async (newCategoryId: string) => {
+              setShowCategoryModal(false);
+              const res = await fetch('/api/categories', { cache: 'no-store' });
+              if (res.ok) {
+                const cats = await res.json();
+                setCategories(cats);
+                if (newCategoryId) {
+                  setForm(f => ({ ...f, categoryId: newCategoryId }));
+                }
+              }
+            }} 
+          />
+          <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={() => {
+            setShowWalletModal(false);
+            fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
+              if (res.ok) setWallets(await res.json());
+            });
+          }} />
+          <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={() => {
+            setShowTagModal(false);
+            fetch('/api/tags', { cache: 'no-store' }).then(async res => {
+              if (res.ok) setTags(await res.json());
+            });
+          }} />
           <div className="flex space-x-1 sm:space-x-2">
             <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
             <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>Cancelar</Button>
           </div>
         </form>
-      </Modal>
+      </div>
 
       {/* Lista estilo planilha moderna */}
       {isLoading ? (
