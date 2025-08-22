@@ -101,6 +101,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('handleSubmit chamado');
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
     if (!form.description) newErrors.description = 'Descrição é obrigatória.';
