@@ -217,13 +217,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
       </div>
 
       {/* Modal de formulário */}
-      {showForm && (
-        <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Despesa' : 'Nova Despesa'}>
-          <></>
-        </Modal>
-      )}
-      {/* Formulário sempre montado, só exibe quando showForm for true */}
-      <div style={{ display: showForm ? 'block' : 'none' }}>
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Despesa' : 'Nova Despesa'}>
         <form className="space-y-3" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             <div>
@@ -341,7 +335,7 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
             <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>Cancelar</Button>
           </div>
         </form>
-      </div>
+      </Modal>
 
       {/* Lista estilo planilha moderna */}
       {isLoading ? (
