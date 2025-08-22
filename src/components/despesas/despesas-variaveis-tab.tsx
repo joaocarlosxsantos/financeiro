@@ -297,12 +297,23 @@ export default function DespesasVariaveisTab({ currentDate }: DespesasVariaveisT
                 </select>
               </div>
       {/* Modais de criação */}
-      <CategoryCreateModal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} onCreated={() => {
-        setShowCategoryModal(false);
-        fetch('/api/categories', { cache: 'no-store' }).then(async res => {
-          if (res.ok) setCategories(await res.json());
-        });
-      }} />
+      <CategoryCreateModal 
+        open={showCategoryModal} 
+        onClose={() => setShowCategoryModal(false)} 
+        onCreated={async () => {
+          setShowCategoryModal(false);
+          const res = await fetch('/api/categories', { cache: 'no-store' });
+          if (res.ok) {
+            const cats = await res.json();
+            setCategories(cats);
+            // Seleciona a última categoria criada (assumindo que é a última da lista)
+            if (cats.length > 0) {
+              const novaCategoria = cats[cats.length - 1];
+              setForm(f => ({ ...f, categoryId: novaCategoria.id }));
+            }
+          }
+        }} 
+      />
       <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={() => {
         setShowWalletModal(false);
         fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
