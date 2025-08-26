@@ -3,7 +3,7 @@
 # 💸 Controle Financeiro
 
 <div align="center">
-   <a href="https://financeiro-seven-zeta.vercel.app/dashboard" target="_blank"><img src="https://img.shields.io/badge/ACESSAR%20DEMO-00C7B7?style=for-the-badge&logo=vercel&logoColor=white" alt="Acessar Demo" /></a>
+   <a href="https://financeiro-seven-zeta.vercel.app" target="_blank"><img src="https://img.shields.io/badge/ACESSAR%20DEMO-00C7B7?style=for-the-badge&logo=vercel&logoColor=white" alt="Acessar Demo" /></a>
    <br />
    <b>Teste agora mesmo:</b><br />
    <code>Usuário: <b>teste@email.com</b></code><br />
