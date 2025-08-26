@@ -1,6 +1,7 @@
 'use client'
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { useIsMobile } from '@/hooks/use-is-mobile'
 import { formatCurrency } from '@/lib/utils'
 // import { toTitleCase } from '@/lib/camelcase'
 
@@ -13,6 +14,7 @@ interface IncomeChartProps {
 }
 
 export function IncomeChart({ data }: IncomeChartProps) {
+  const isMobile = useIsMobile()
   const total = data.reduce((sum, item) => sum + item.amount, 0)
 
   const chartData = data.map(item => ({
@@ -33,7 +35,7 @@ export function IncomeChart({ data }: IncomeChartProps) {
             cy="50%"
             label={false}
             labelLine={false}
-            outerRadius={120}
+            outerRadius={isMobile ? 100 : 120}
             fill="#8884d8"
             dataKey="value"
           >

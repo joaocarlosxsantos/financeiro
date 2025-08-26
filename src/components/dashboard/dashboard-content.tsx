@@ -495,7 +495,7 @@ export function DashboardContent() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:space-x-2 w-full">
+  <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:space-x-2 w-full">
           <select
             className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
@@ -514,10 +514,11 @@ export function DashboardContent() {
               size="sm"
               onClick={handlePreviousMonth}
               aria-label="Mês anterior"
+              className="h-10"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
+            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
               <Calendar className="h-4 w-4 text-foreground" />
               <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">
                 {(() => {
@@ -534,6 +535,7 @@ export function DashboardContent() {
               disabled={isAtCurrentMonth}
               aria-disabled={isAtCurrentMonth}
               aria-label="Próximo mês"
+              className="h-10"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -541,9 +543,9 @@ export function DashboardContent() {
         </div>
       </div>
 
-      {/* Cards de Resumo */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
-    <Card onClick={() => setModal("income")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+    {/* Cards de Resumo */}
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
+  <Card onClick={() => setModal("income")} className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
   <CardTitle className="text-base sm:text-lg font-semibold">Entradas Totais</CardTitle>
         <TrendingUp className="h-4 w-4 text-green-600" />
@@ -552,7 +554,7 @@ export function DashboardContent() {
         <div className="font-bold text-green-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(summary.totalIncome)}</div>
       </CardContent>
     </Card>
-    <Card onClick={() => setModal("expense")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+  <Card onClick={() => setModal("expense")} className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
   <CardTitle className="text-base sm:text-lg font-semibold">Saídas Totais</CardTitle>
         <TrendingDown className="h-4 w-4 text-red-600" />
@@ -561,7 +563,7 @@ export function DashboardContent() {
         <div className="font-bold text-red-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(summary.totalExpenses)}</div>
       </CardContent>
     </Card>
-    <Card className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+  <Card className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
   <CardTitle className="text-base sm:text-lg font-semibold">Saldo do mês</CardTitle>
         <DollarSign className="h-4 w-4 text-blue-600" />
@@ -571,7 +573,7 @@ export function DashboardContent() {
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Entradas - Saídas do mês selecionado</p>
       </CardContent>
     </Card>
-    <Card onClick={() => setModal("balance")} className="cursor-pointer flex flex-col justify-between h-full min-h-0">
+  <Card onClick={() => setModal("balance")} className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
   <CardTitle className="text-base sm:text-lg font-semibold">Saldo acumulado</CardTitle>
         <DollarSign className="h-4 w-4 text-blue-600" />
@@ -581,7 +583,7 @@ export function DashboardContent() {
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Entradas - Saídas de todos os meses até o selecionado</p>
       </CardContent>
     </Card>
-    <Card className="flex flex-col justify-between h-full min-h-0">
+  <Card className="flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
   <CardTitle className="text-base sm:text-lg font-semibold">Limite Diário</CardTitle>
         <span className="h-4 w-4 text-orange-500">💸</span>

@@ -190,7 +190,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className={saldo >= 0 ? 'text-green-600 font-bold text-lg' : 'text-red-600 font-bold text-lg'}>
+                    <span className={saldo >= 0 ? 'text-green-600 font-bold text-2xl sm:text-3xl' : 'text-red-600 font-bold text-2xl sm:text-3xl'}>
                       {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
                     <div className="flex space-x-2">
