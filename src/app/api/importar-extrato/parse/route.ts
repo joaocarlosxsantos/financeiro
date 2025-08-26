@@ -107,7 +107,7 @@ function simplificarDescricao(descricao: string): string {
 }
 
 import { NextRequest, NextResponse } from 'next/server';
-import Papa from 'papaparse';
+// import Papa from 'papaparse';
 // @ts-ignore
 import * as ofxParser from 'ofx-parser';
 import { prisma } from '@/lib/prisma';
@@ -193,47 +193,6 @@ async function handler(req: NextRequest) {
         { status: 400 },
       );
     }
-  } else {
-    // Parse CSV
-    const { data, errors } = Papa.parse(text, { header: true, skipEmptyLines: true });
-    if (errors.length > 0) {
-      return NextResponse.json(
-        { error: 'Erro ao processar CSV', details: errors, debug: text.slice(0, 200) },
-        { status: 400 },
-      );
-    }
-    // Normalizar campos: data, valor, descrição
-    preview = (data as any[]).map((row) => {
-      let dataStr = row.data || row.date || row.Data || '';
-      if (dataStr && typeof dataStr === 'string') {
-        const match = dataStr.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (match) {
-          dataStr = `${match[3]}/${match[2]}/${match[1]}`;
-        }
-      }
-      const descricao = String(
-        row.descricao || row.description || row.Descricao || row.Description || '',
-      ).trim();
-      const descricaoSimplificada = simplificarDescricao(descricao);
-      // Sugerir/pre-selecionar categoria existente se similar
-      let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-      if (categoriaSugerida && categoriasUsuario.length > 0) {
-        const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-        const match = categoriasUsuario.find(
-          (cat) =>
-            removeAcentos(cat.name.toLowerCase()) ===
-            removeAcentos(categoriaSugerida.toLowerCase()),
-        );
-        if (match) categoriaSugerida = match.name;
-      }
-      return {
-        data: dataStr,
-        valor: Number(row.valor || row.value || row.Valor || row.Amount || 0),
-        descricao,
-        descricaoSimplificada,
-        categoriaSugerida,
-      };
-    });
   }
   if (!preview || preview.length === 0) {
     return NextResponse.json(

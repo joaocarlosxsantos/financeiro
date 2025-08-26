@@ -23,11 +23,11 @@ export function ExtratoUpload({ onFileChange, onSubmit, file, disabled }: Extrat
           <span className="font-semibold text-primary text-lg md:text-xl">
             Clique para selecionar o arquivo
           </span>
-          <span className="text-sm text-muted-foreground mt-2">CSV, OFX ou Excel</span>
+          <span className="text-sm text-muted-foreground mt-2">OFX</span>
           <input
             ref={inputRef}
             type="file"
-            accept=".csv,.ofx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            accept=".ofx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) onFileChange(f);

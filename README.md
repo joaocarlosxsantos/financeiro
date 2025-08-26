@@ -20,7 +20,7 @@ Desenvolvida com <b>Next.js 14</b>, <b>TypeScript</b>, <b>Tailwind CSS</b>, <b>P
 
 - **Dashboard interativo** com gráficos dinâmicos (Recharts) e resumos financeiros
 - **Gestão completa de despesas e rendas** (fixas e variáveis), com categorias, tags e carteiras
-- **Importação de extratos bancários** (OFX/CSV) com sugestão automática de categorias/tags
+- **Importação de extratos bancários** (OFX) com sugestão automática de categorias/tags
 - **Transferências entre carteiras** e controle multi-carteira
 - **Filtros avançados** por período, carteira, categoria e tags
 - **Edição e exclusão em massa** de dados do usuário
