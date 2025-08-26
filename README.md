@@ -1,8 +1,17 @@
 
+
 # 💸 Controle Financeiro
 
-Aplicação web moderna e responsiva para controle de despesas, rendas e organização financeira pessoal.
-Desenvolvida com **Next.js 14**, **TypeScript**, **Tailwind CSS**, **Prisma** e arquitetura de componentes reutilizáveis.
+<div align="center">
+   <a href="https://financeiro-seven-zeta.vercel.app/dashboard" target="_blank"><img src="https://img.shields.io/badge/ACESSAR%20DEMO-00C7B7?style=for-the-badge&logo=vercel&logoColor=white" alt="Acessar Demo" /></a>
+   <br />
+   <b>Teste agora mesmo:</b><br />
+   <code>Usuário: <b>teste@email.com</b></code><br />
+   <code>Senha: <b>teste1</b></code>
+</div>
+
+Aplicação web moderna e responsiva para controle de despesas, rendas e organização financeira pessoal.<br>
+Desenvolvida com <b>Next.js 14</b>, <b>TypeScript</b>, <b>Tailwind CSS</b>, <b>Prisma</b> e arquitetura de componentes reutilizáveis.
 
 ---
 
