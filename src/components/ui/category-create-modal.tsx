@@ -4,7 +4,15 @@ import { Input } from './input';
 import { Label } from './label';
 import { Button } from './button';
 
-export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
+export function CategoryCreateModal({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'INCOME' | 'EXPENSE' | 'BOTH'>('INCOME');
   const [loading, setLoading] = useState(false);
@@ -37,20 +45,29 @@ export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolea
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <Label htmlFor="category-name">Nome</Label>
-          <Input id="category-name" value={name} onChange={e => setName(e.target.value)} />
+          <Input id="category-name" value={name} onChange={(e) => setName(e.target.value)} />
           {error && <span className="text-red-600 text-xs">{error}</span>}
         </div>
         <div>
           <Label htmlFor="category-type">Tipo</Label>
-          <select id="category-type" value={type} onChange={e => setType(e.target.value as 'INCOME' | 'EXPENSE' | 'BOTH')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+          <select
+            id="category-type"
+            value={type}
+            onChange={(e) => setType(e.target.value as 'INCOME' | 'EXPENSE' | 'BOTH')}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
             <option value="INCOME">Renda</option>
             <option value="EXPENSE">Despesa</option>
             <option value="BOTH">Ambos</option>
           </select>
         </div>
         <div className="flex gap-2">
-          <Button type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
-          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
         </div>
       </form>
     </Modal>

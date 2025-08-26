@@ -1,6 +1,6 @@
-"use client";
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { UserProfile } from '@/components/user/user-profile'
+'use client';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { UserProfile } from '@/components/user/user-profile';
 
 export default function UserPage() {
   return (
@@ -9,5 +9,5 @@ export default function UserPage() {
         <UserProfile />
       </div>
     </DashboardLayout>
-  )
+  );
 }

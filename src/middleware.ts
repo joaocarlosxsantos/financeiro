@@ -1,4 +1,4 @@
-import { withAuth } from 'next-auth/middleware'
+import { withAuth } from 'next-auth/middleware';
 
 export default withAuth(
   function middleware(req) {
@@ -8,14 +8,9 @@ export default withAuth(
     callbacks: {
       authorized: ({ token }) => !!token,
     },
-  }
-)
+  },
+);
 
 export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/despesas/:path*',
-    '/rendas/:path*',
-    '/categorias/:path*',
-  ],
-}
+  matcher: ['/dashboard/:path*', '/despesas/:path*', '/rendas/:path*', '/categorias/:path*'],
+};

@@ -1,11 +1,11 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import AuthProvider from '@/components/providers/session-provider'
-import { ThemeProvider } from '@/components/providers/theme-provider'
-import { MonthProvider } from '@/components/providers/month-provider'
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import AuthProvider from '@/components/providers/session-provider';
+import { ThemeProvider } from '@/components/providers/theme-provider';
+import { MonthProvider } from '@/components/providers/month-provider';
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Controle Financeiro',
@@ -15,16 +15,12 @@ export const metadata: Metadata = {
     shortcut: '/favicon.svg',
     apple: '/favicon.svg',
   },
-}
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className + " bg-background text-foreground min-h-screen"}>
+      <body className={inter.className + ' bg-background text-foreground min-h-screen'}>
         <ThemeProvider>
           <MonthProvider>
             <AuthProvider>{children}</AuthProvider>
@@ -32,5 +28,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

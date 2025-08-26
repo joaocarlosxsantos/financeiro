@@ -1,22 +1,14 @@
-import Image from "next/image";
-'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/use-auth'
-import { Button } from '@/components/ui/button'
-import { ThemeSwitch } from '@/components/ui/theme-switch'
-import { 
-  BarChart3, 
-  CreditCard, 
-  DollarSign, 
-  Home, 
-  Tag,
-  User,
-  LogOut,
-  Wallet
-} from 'lucide-react'
+"use client";
+import Image from 'next/image';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@/components/ui/button';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
+import { BarChart3, CreditCard, DollarSign, Home, Tag, User, LogOut, Wallet } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -26,11 +18,11 @@ const navigation = [
   { name: 'Categorias', href: '/categorias', icon: Tag },
   { name: 'Tags', href: '/tags', icon: BarChart3 },
   { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
-]
+];
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
-  const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
     <div className="flex h-full w-64 flex-col bg-gray-900 dark:bg-slate-900 text-white">
@@ -44,13 +36,22 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             onClick={onClose}
           >
             <span className="sr-only">Fechar menu</span>
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         )}
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
@@ -59,19 +60,21 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
                 isActive
                   ? 'bg-white text-gray-900 dark:bg-white dark:text-blue-900'
-                  : 'text-white/80 hover:bg-white hover:text-gray-900 dark:hover:bg-white dark:hover:text-blue-900 dark:text-white/80'
+                  : 'text-white/80 hover:bg-white hover:text-gray-900 dark:hover:bg-white dark:hover:text-blue-900 dark:text-white/80',
               )}
               onClick={onClose}
             >
               <item.icon
                 className={cn(
                   'mr-3 h-5 w-5 flex-shrink-0',
-                  isActive ? 'text-gray-900 dark:text-blue-900' : 'text-white/80 group-hover:text-gray-900 group-hover:bg-white dark:text-white/80 dark:group-hover:text-blue-900 dark:group-hover:bg-white'
+                  isActive
+                    ? 'text-gray-900 dark:text-blue-900'
+                    : 'text-white/80 group-hover:text-gray-900 group-hover:bg-white dark:text-white/80 dark:group-hover:text-blue-900 dark:group-hover:bg-white',
                 )}
               />
               {item.name}
             </Link>
-          )
+          );
         })}
       </nav>
       <div className="border-t border-border p-4">
@@ -114,5 +117,5 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

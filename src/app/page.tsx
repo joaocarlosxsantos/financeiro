@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useAuth } from '@/hooks/use-auth'
-import { useEffect } from 'react'
+import { useAuth } from '@/hooks/use-auth';
+import { useEffect } from 'react';
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        window.location.href = '/dashboard'
+        window.location.href = '/dashboard';
       } else {
-        window.location.href = '/auth/signin'
+        window.location.href = '/auth/signin';
       }
     }
-  }, [isAuthenticated, isLoading])
+  }, [isAuthenticated, isLoading]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -23,5 +23,5 @@ export default function Home() {
         <p className="mt-2 text-gray-600">Carregando...</p>
       </div>
     </div>
-  )
+  );
 }

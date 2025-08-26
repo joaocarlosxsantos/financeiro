@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   let userId: string | null = null;
   if (session && session.user) {
-    userId = (session.user as Session["user"] & { id?: string }).id || null;
+    userId = (session.user as Session['user'] & { id?: string }).id || null;
   }
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       include: { category: true, wallet: true },
     }),
     prisma.wallet.findMany({ where: { ...userFilter } }),
-  prisma.tag.findMany(),
+    prisma.tag.findMany(),
   ]);
 
   // Resumo do mês atual
@@ -66,14 +66,23 @@ export async function GET(req: NextRequest) {
       date: { lte: endStr },
     },
   });
-  const totalExpensesAcumulado = acumuladoExpenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
-  const totalIncomeAcumulado = acumuladoIncomes.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+  const totalExpensesAcumulado = acumuladoExpenses.reduce(
+    (sum: number, e: any) => sum + Number(e.amount),
+    0,
+  );
+  const totalIncomeAcumulado = acumuladoIncomes.reduce(
+    (sum: number, i: any) => sum + Number(i.amount),
+    0,
+  );
   const saldoAcumulado = totalIncomeAcumulado - totalExpensesAcumulado;
 
   // Limite diário (quanto pode gastar por dia até o fim do mês para não ficar negativo)
   const today = new Date();
   const lastDay = new Date(year, month, 0);
-  const diasRestantes = Math.max(1, Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+  const diasRestantes = Math.max(
+    1,
+    Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+  );
   const limiteDiario = saldoAcumulado > 0 ? saldoAcumulado / diasRestantes : 0;
 
   // Por categoria
@@ -84,7 +93,9 @@ export async function GET(req: NextRequest) {
     if (!expensesByCategory[cat]) expensesByCategory[cat] = { amount: 0, color };
     expensesByCategory[cat].amount += Number(e.amount);
   }
-  const expensesByCategoryArr = Object.entries(expensesByCategory).map(([category, v]: [string, any]) => ({ category, amount: v.amount, color: v.color }));
+  const expensesByCategoryArr = Object.entries(expensesByCategory).map(
+    ([category, v]: [string, any]) => ({ category, amount: v.amount, color: v.color }),
+  );
 
   // Por tag
   const expensesByTag: Record<string, { amount: number; color: string }> = {};
@@ -97,7 +108,11 @@ export async function GET(req: NextRequest) {
       }
     }
   }
-  const expensesByTagArr = Object.entries(expensesByTag).map(([tag, v]: [string, any]) => ({ tag, amount: v.amount, color: v.color }));
+  const expensesByTagArr = Object.entries(expensesByTag).map(([tag, v]: [string, any]) => ({
+    tag,
+    amount: v.amount,
+    color: v.color,
+  }));
 
   // Por carteira
   const expensesByWallet: Record<string, number> = {};
@@ -106,7 +121,9 @@ export async function GET(req: NextRequest) {
     if (!expensesByWallet[wallet]) expensesByWallet[wallet] = 0;
     expensesByWallet[wallet] += Number(e.amount);
   }
-  const expensesByWalletArr = Object.entries(expensesByWallet).map(([wallet, amount]: [string, any]) => ({ wallet, amount }));
+  const expensesByWalletArr = Object.entries(expensesByWallet).map(
+    ([wallet, amount]: [string, any]) => ({ wallet, amount }),
+  );
 
   return NextResponse.json({
     totalExpenses,

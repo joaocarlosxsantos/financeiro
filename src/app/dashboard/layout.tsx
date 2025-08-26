@@ -1,10 +1,10 @@
-"use client"
-import { Sidebar } from '@/components/layout/sidebar'
-import { useState } from 'react'
-import { Menu } from 'lucide-react'
+'use client';
+import { Sidebar } from '@/components/layout/sidebar';
+import { useState } from 'react';
+import { Menu } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar desktop */}
@@ -40,5 +40,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </main>
     </div>
-  )
+  );
 }

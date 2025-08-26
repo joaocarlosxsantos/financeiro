@@ -27,25 +27,28 @@ Uma aplicação web completa para controle de despesas e rendas pessoais, desenv
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL
 - npm ou yarn
 
 ## 🔧 Instalação
 
 1. **Clone o repositório**
+
 ```bash
 git clone <url-do-repositorio>
 cd financeiro
 ```
 
 2. **Instale as dependências**
+
 ```bash
 npm install
 ```
 
 3. **Configure as variáveis de ambiente**
-Crie um arquivo `.env.local` na raiz do projeto:
+   Crie um arquivo `.env.local` na raiz do projeto:
+
 ```env
 DATABASE_URL="postgresql://usuario:senha@localhost:5432/financeiro"
 NEXTAUTH_SECRET="sua-chave-secreta-aqui"
@@ -53,6 +56,7 @@ NEXTAUTH_URL="http://localhost:3000"
 ```
 
 4. **Configure o banco de dados**
+
 ```bash
 # Gere o cliente Prisma
 npm run db:generate
@@ -62,6 +66,7 @@ npm run db:push
 ```
 
 5. **Inicie o servidor de desenvolvimento**
+
 ```bash
 npm run dev
 ```

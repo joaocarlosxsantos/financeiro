@@ -1,38 +1,38 @@
-"use client";
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+'use client';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
 
 const tipos = [
-  { value: "carteira", label: "Carteira" },
-  { value: "banco", label: "Banco" },
-  { value: "cartao", label: "Cartão" },
+  { value: 'carteira', label: 'Carteira' },
+  { value: 'banco', label: 'Banco' },
+  { value: 'cartao', label: 'Cartão' },
 ];
 
 export default function NovaCarteiraPage() {
-  const [form, setForm] = useState({ name: "", type: "carteira" });
+  const [form, setForm] = useState({ name: '', type: 'carteira' });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
-    const res = await fetch("/api/wallets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    setMessage('');
+    const res = await fetch('/api/wallets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      setMessage("Carteira cadastrada com sucesso!");
-      setForm({ name: "", type: "carteira" });
-      setTimeout(() => router.push("/wallets"), 1000);
+      setMessage('Carteira cadastrada com sucesso!');
+      setForm({ name: '', type: 'carteira' });
+      setTimeout(() => router.push('/wallets'), 1000);
     } else {
       const data = await res.json();
-      setMessage(data.error || "Erro ao cadastrar carteira");
+      setMessage(data.error || 'Erro ao cadastrar carteira');
     }
     setLoading(false);
   };
@@ -50,7 +50,7 @@ export default function NovaCarteiraPage() {
               <label className="block mb-1">Nome</label>
               <Input
                 value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
                 placeholder="Ex: Carteira, Nubank, PicPay, Cartão XP..."
               />
@@ -60,16 +60,18 @@ export default function NovaCarteiraPage() {
               <select
                 className="w-full border rounded p-2"
                 value={form.type}
-                onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                 required
               >
-                {tipos.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                {tipos.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
                 ))}
               </select>
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? "Cadastrando..." : "Cadastrar"}
+              {loading ? 'Cadastrando...' : 'Cadastrar'}
             </Button>
             {message && <div className="mt-2 text-sm text-center">{message}</div>}
           </form>

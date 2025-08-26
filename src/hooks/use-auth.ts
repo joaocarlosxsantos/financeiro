@@ -1,16 +1,15 @@
-'use client'
+'use client';
 
-import { useSession, signIn, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-
+import { useSession, signIn, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export function useAuth() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  const login = (email: string, password: string) => signIn('credentials', { email, password })
-  const logout = () => signOut({ callbackUrl: '/auth/signin' })
+  const login = (email: string, password: string) => signIn('credentials', { email, password });
+  const logout = () => signOut({ callbackUrl: '/auth/signin' });
 
   return {
     user: session?.user,
@@ -21,21 +20,21 @@ export function useAuth() {
     session,
     status,
     router,
-  }
+  };
 }
 
 export function useRequireAuth(callback?: () => void) {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    if (status === 'loading') return
+    if (status === 'loading') return;
 
     if (!session) {
-      router.push('/auth/signin')
-      return
+      router.push('/auth/signin');
+      return;
     }
 
-    if (callback) callback()
-  }, [session, status, router, callback])
+    if (callback) callback();
+  }, [session, status, router, callback]);
 }

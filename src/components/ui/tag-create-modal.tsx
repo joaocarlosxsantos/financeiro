@@ -4,7 +4,15 @@ import { Input } from './input';
 import { Label } from './label';
 import { Button } from './button';
 
-export function TagCreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
+export function TagCreateModal({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,12 +44,16 @@ export function TagCreateModal({ open, onClose, onCreated }: { open: boolean; on
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <Label htmlFor="tag-name">Nome</Label>
-          <Input id="tag-name" value={name} onChange={e => setName(e.target.value)} />
+          <Input id="tag-name" value={name} onChange={(e) => setName(e.target.value)} />
           {error && <span className="text-red-600 text-xs">{error}</span>}
         </div>
         <div className="flex gap-2">
-          <Button type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
-          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
         </div>
       </form>
     </Modal>

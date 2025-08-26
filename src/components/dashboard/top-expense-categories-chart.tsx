@@ -1,4 +1,13 @@
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  LabelList,
+} from 'recharts';
 
 interface TopExpenseCategoriesChartProps {
   data: Array<{
@@ -15,9 +24,23 @@ export function TopExpenseCategoriesChart({ data }: TopExpenseCategoriesChartPro
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis type="number" />
         <YAxis dataKey="category" type="category" width={120} />
-        <Tooltip formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+        <Tooltip
+          formatter={(value: number) =>
+            value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+          }
+        />
         <Bar dataKey="amount" fill="#ef4444" name="Despesas">
-          <LabelList dataKey="diff" position="right" formatter={(diff: number) => diff > 0 ? `+${diff.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : diff < 0 ? `${diff.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''} />
+          <LabelList
+            dataKey="diff"
+            position="right"
+            formatter={(diff: number) =>
+              diff > 0
+                ? `+${diff.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+                : diff < 0
+                  ? `${diff.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+                  : ''
+            }
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>

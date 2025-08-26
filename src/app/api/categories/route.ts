@@ -1,42 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } })
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const categories = await prisma.category.findMany({
     where: { userId: user.id },
     orderBy: { name: 'asc' },
-  })
-  return NextResponse.json(categories)
+  });
+
+  return NextResponse.json(categories);
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } })
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { name, color = '#3B82F6', type = 'EXPENSE', icon } = await req.json()
-  if (!name || !type) {
-    return NextResponse.json({ error: 'Nome e tipo são obrigatórios' }, { status: 400 })
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user || !session.user.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const user = await prisma.user.findUnique({ where: { email: session.user.email || undefined } });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const categorySchema = z.object({
+    name: z.string().min(1, 'Nome é obrigatório'),
+    color: z.string().optional().default('#3B82F6'),
+    type: z.enum(['EXPENSE', 'INCOME', 'BOTH']),
+    icon: z.string().optional().nullable(),
+  });
+  const parse = categorySchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json(
+      { error: parse.error.issues.map((e) => e.message).join(', ') },
+      { status: 400 },
+    );
+  }
+  const { name, color, type, icon } = parse.data;
 
   try {
     const category = await prisma.category.create({
       data: { name, color, type, icon, userId: user.id },
-    })
-    return NextResponse.json(category, { status: 201 })
+    });
+    return NextResponse.json(category, { status: 201 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Erro ao criar categoria' }, { status: 500 })
+    return NextResponse.json({ error: e.message || 'Erro ao criar categoria' }, { status: 500 });
   }
 }
-
-

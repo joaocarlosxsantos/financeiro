@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
-import React, { useEffect, useState } from "react";
-import { Select } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
+import React, { useEffect, useState } from 'react';
+import { Select } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ExtratoPreviewProps {
   preview: any[];
@@ -15,59 +15,77 @@ interface ExtratoPreviewProps {
   success: boolean;
 }
 
-
-export function ExtratoPreview({ preview, wallets, selectedWallet, onWalletChange, onSave, saving, error, success }: ExtratoPreviewProps) {
+export function ExtratoPreview({
+  preview,
+  wallets,
+  selectedWallet,
+  onWalletChange,
+  onSave,
+  saving,
+  error,
+  success,
+}: ExtratoPreviewProps) {
   const [registros, setRegistros] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
-  const [saldoAnterior, setSaldoAnterior] = useState<string>("");
+  const [saldoAnterior, setSaldoAnterior] = useState<string>('');
   // Descobre a data do primeiro lançamento do extrato
   const dataPrimeiroLancamento = React.useMemo(() => {
     if (!registros.length) return null;
     // Considera que o campo 'data' está no formato 'dd/mm/yyyy' ou 'yyyy-mm-dd'
-    const datas = registros.map(r => {
-      if (r.data && r.data.includes('/')) {
-        const [d, m, y] = r.data.split('/');
-        return new Date(Number(y), Number(m) - 1, Number(d));
-      } else if (r.data && r.data.includes('-')) {
-        return new Date(r.data);
-      }
-      return null;
-    }).filter(Boolean) as Date[];
+    const datas = registros
+      .map((r) => {
+        if (r.data && r.data.includes('/')) {
+          const [d, m, y] = r.data.split('/');
+          return new Date(Number(y), Number(m) - 1, Number(d));
+        } else if (r.data && r.data.includes('-')) {
+          return new Date(r.data);
+        }
+        return null;
+      })
+      .filter(Boolean) as Date[];
     if (!datas.length) return null;
-    return new Date(Math.min(...datas.map(d => d.getTime())));
+    return new Date(Math.min(...datas.map((d) => d.getTime())));
   }, [registros]);
 
   useEffect(() => {
-    setRegistros(preview.map((r) => {
-      // Se a categoria sugerida já existe, preenche com o id dela
-      let categoriaId: string | undefined = undefined;
-      if (r.categoriaSugerida && categorias.length > 0) {
-        const match = categorias.find((c: any) => c.name.toLowerCase() === r.categoriaSugerida.toLowerCase());
-        if (match) categoriaId = match.id;
-        else categoriaId = r.categoriaSugerida;
-      } else if (r.categoriaSugerida) {
-        categoriaId = r.categoriaSugerida;
-      }
-      // Se categoriaId for string vazia, deixa como undefined
-      if (categoriaId === '') categoriaId = undefined;
-      return {
-        ...r,
-        categoriaId,
-        tagId: '',
-        categoriaSugerida: r.categoriaSugerida || '',
-      };
-    }));
+    setRegistros(
+      preview.map((r) => {
+        // Se a categoria sugerida já existe, preenche com o id dela
+        let categoriaId: string | undefined = undefined;
+        if (r.categoriaSugerida && categorias.length > 0) {
+          const match = categorias.find(
+            (c: any) => c.name.toLowerCase() === r.categoriaSugerida.toLowerCase(),
+          );
+          if (match) categoriaId = match.id;
+          else categoriaId = r.categoriaSugerida;
+        } else if (r.categoriaSugerida) {
+          categoriaId = r.categoriaSugerida;
+        }
+        // Se categoriaId for string vazia, deixa como undefined
+        if (categoriaId === '') categoriaId = undefined;
+        return {
+          ...r,
+          categoriaId,
+          tagId: '',
+          categoriaSugerida: r.categoriaSugerida || '',
+        };
+      }),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preview, categorias]);
 
   useEffect(() => {
-    fetch('/api/categories').then(r => r.json()).then(setCategorias);
-    fetch('/api/tags').then(r => r.json()).then(setTags);
+    fetch('/api/categories')
+      .then((r) => r.json())
+      .then(setCategorias);
+    fetch('/api/tags')
+      .then((r) => r.json())
+      .then(setTags);
   }, []);
 
   function handleEdit(index: number, field: string, value: string) {
-    setRegistros((prev) => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+    setRegistros((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
   }
 
   function handleSaveComSaldo() {
@@ -95,7 +113,7 @@ export function ExtratoPreview({ preview, wallets, selectedWallet, onWalletChang
           tipo: 'RENDA_VARIAVEL',
           isSaldoInicial: true,
         },
-        ...novosRegistros
+        ...novosRegistros,
       ];
     }
     onSave(novosRegistros);
@@ -125,35 +143,40 @@ export function ExtratoPreview({ preview, wallets, selectedWallet, onWalletChang
                 <td className="border px-2 py-1 min-w-[180px]">
                   <Input
                     value={row.descricaoSimplificada || ''}
-                    onChange={e => handleEdit(i, 'descricaoSimplificada', e.target.value)}
+                    onChange={(e) => handleEdit(i, 'descricaoSimplificada', e.target.value)}
                     className="text-xs"
                   />
                 </td>
                 <td className="border px-2 py-1 min-w-[200px]">
                   <Select
                     value={row.categoriaId || ''}
-                    onChange={e => handleEdit(i, 'categoriaId', e.target.value)}
+                    onChange={(e) => handleEdit(i, 'categoriaId', e.target.value)}
                   >
                     <option value="">Nenhuma</option>
                     {/* Sugestão de categoria */}
-                    {row.categoriaSugerida && !categorias.some((c: any) => c.name === row.categoriaSugerida) && (
-                      <option value={row.categoriaSugerida} style={{ fontStyle: 'italic' }}>
-                        Sugerida: {row.categoriaSugerida}
-                      </option>
-                    )}
+                    {row.categoriaSugerida &&
+                      !categorias.some((c: any) => c.name === row.categoriaSugerida) && (
+                        <option value={row.categoriaSugerida} style={{ fontStyle: 'italic' }}>
+                          Sugerida: {row.categoriaSugerida}
+                        </option>
+                      )}
                     {categorias.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
                     ))}
                   </Select>
                 </td>
                 <td className="border px-2 py-1 min-w-[160px]">
                   <Select
                     value={row.tagId || ''}
-                    onChange={e => handleEdit(i, 'tagId', e.target.value)}
+                    onChange={(e) => handleEdit(i, 'tagId', e.target.value)}
                   >
                     <option value="">Nenhuma</option>
                     {tags.map((t: any) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </Select>
                 </td>
@@ -164,32 +187,35 @@ export function ExtratoPreview({ preview, wallets, selectedWallet, onWalletChang
       </div>
       <div className="flex flex-col gap-2">
         <Label className="font-medium">Selecione a carteira para vincular os lançamentos:</Label>
-        <Select
-          value={selectedWallet}
-          onChange={e => onWalletChange(e.target.value)}
-        >
+        <Select value={selectedWallet} onChange={(e) => onWalletChange(e.target.value)}>
           <option value="">Selecione...</option>
           {wallets.map((w: any) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
+            <option key={w.id} value={w.id}>
+              {w.name}
+            </option>
           ))}
         </Select>
         {/* Campo de saldo anterior */}
         {selectedWallet && dataPrimeiroLancamento && (
           <div className="flex flex-col gap-1 mt-2">
-            <Label>Saldo do dia anterior a {dataPrimeiroLancamento.toLocaleDateString('pt-BR')}:</Label>
+            <Label>
+              Saldo do dia anterior a {dataPrimeiroLancamento.toLocaleDateString('pt-BR')}:
+            </Label>
             <Input
               type="number"
               step="0.01"
               placeholder="Informe o saldo anterior"
               value={saldoAnterior}
-              onChange={e => setSaldoAnterior(e.target.value)}
+              onChange={(e) => setSaldoAnterior(e.target.value)}
               className="max-w-xs"
             />
-            <span className="text-xs text-gray-500">Esse valor será lançado como renda variável na data do primeiro dia do extrato.</span>
+            <span className="text-xs text-gray-500">
+              Esse valor será lançado como renda variável na data do primeiro dia do extrato.
+            </span>
           </div>
         )}
         <Button onClick={handleSaveComSaldo} disabled={!selectedWallet || saving}>
-          {saving ? "Salvando..." : "Salvar lançamentos"}
+          {saving ? 'Salvando...' : 'Salvar lançamentos'}
         </Button>
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {success && <div className="text-green-600 text-sm">Importação realizada com sucesso!</div>}

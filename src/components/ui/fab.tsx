@@ -1,9 +1,9 @@
-import { Plus } from 'lucide-react'
-import React from 'react'
+import { Plus } from 'lucide-react';
+import React from 'react';
 
 interface FabProps {
-  onClick: () => void
-  label?: string
+  onClick: () => void;
+  label?: string;
 }
 
 export function Fab({ onClick, label }: FabProps) {
@@ -17,5 +17,5 @@ export function Fab({ onClick, label }: FabProps) {
       <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
       {label && <span className="font-semibold text-xs sm:text-base">{label}</span>}
     </button>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 export function Loader({ text = 'Carregando...' }: { text?: string }) {
   return (
@@ -8,11 +8,9 @@ export function Loader({ text = 'Carregando...' }: { text?: string }) {
         <span className="text-xs sm:text-sm">{text}</span>
       </div>
     </div>
-  )
+  );
 }
 
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />;
 }
-
-

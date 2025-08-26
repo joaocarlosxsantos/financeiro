@@ -10,22 +10,22 @@
 }
 
 .animate-slide-in-mobile {
-  animation: slide-in-mobile 0.25s cubic-bezier(0.4,0,0.2,1);
+  animation: slide-in-mobile 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Corrige ícone do input type=date no modo escuro */
-input[type="date"]::-webkit-calendar-picker-indicator {
+input[type='date']::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 
 @media (prefers-color-scheme: light) {
-  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+  .dark input[type='date']::-webkit-calendar-picker-indicator {
     filter: none;
   }
   .tabs-list {
     background-color: hsl(var(--muted));
     color: hsl(var(--foreground));
   }
-  .tabs-list [data-state="active"] {
+  .tabs-list [data-state='active'] {
     color: hsl(var(--foreground));
   }
 }
@@ -35,7 +35,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     background-color: hsl(var(--muted));
     color: hsl(var(--muted-foreground));
   }
-  .tabs-list [data-state="active"] {
+  .tabs-list [data-state='active'] {
     color: hsl(var(--foreground));
   }
 }

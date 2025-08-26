@@ -1,22 +1,28 @@
-"use client";
+'use client';
 
-import { useDailyExpenseData } from "@/hooks/use-dashboard-data";
-import dynamic from "next/dynamic";
-const DailyCategoryChart = dynamic(() => import("./daily-category-chart").then(mod => mod.DailyCategoryChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-const DailyWalletChart = dynamic(() => import("./daily-wallet-chart").then(mod => mod.DailyWalletChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-import { useEffect, useState, useMemo, ChangeEvent } from "react";
-import { useMonth } from "@/components/providers/month-provider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useDailyExpenseData } from '@/hooks/use-dashboard-data';
+import dynamic from 'next/dynamic';
+const DailyCategoryChart = dynamic(
+  () => import('./daily-category-chart').then((mod) => mod.DailyCategoryChart),
+  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
+);
+const DailyWalletChart = dynamic(
+  () => import('./daily-wallet-chart').then((mod) => mod.DailyWalletChart),
+  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
+);
+import { useEffect, useState, useMemo, ChangeEvent } from 'react';
+import { useMonth } from '@/components/providers/month-provider';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 // Função utilitária local para formatar data yyyy-MM-dd
 function toYmd(d: Date) {
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-import { formatCurrency, getMonthRange, getMonthYear } from "@/lib/utils";
+import { formatCurrency, getMonthRange, getMonthYear } from '@/lib/utils';
 import {
   TrendingUp,
   TrendingDown,
@@ -24,33 +30,48 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
-const ExpenseChart = dynamic(() => import("./expense-chart").then(mod => mod.ExpenseChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-const IncomeChart = dynamic(() => import("./income-chart").then(mod => mod.IncomeChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-import { Loader } from "@/components/ui/loader";
-const SummaryRatioChart = dynamic(() => import("./summary-ratio-chart").then(mod => mod.SummaryRatioChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-const TagChart = dynamic(() => import("./tag-chart").then(mod => mod.TagChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-const MonthlyBarChart = dynamic(() => import("./monthly-bar-chart").then(mod => mod.MonthlyBarChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-const TopExpenseCategoriesChart = dynamic(() => import("./top-expense-categories-chart").then(mod => mod.TopExpenseCategoriesChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
-import { Modal } from "@/components/ui/modal";
-import { Fab } from "@/components/ui/fab";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+} from 'lucide-react';
+const ExpenseChart = dynamic(() => import('./expense-chart').then((mod) => mod.ExpenseChart), {
+  ssr: false,
+  loading: () => <div>Carregando gráfico...</div>,
+});
+const IncomeChart = dynamic(() => import('./income-chart').then((mod) => mod.IncomeChart), {
+  ssr: false,
+  loading: () => <div>Carregando gráfico...</div>,
+});
+import { Loader } from '@/components/ui/loader';
+const SummaryRatioChart = dynamic(
+  () => import('./summary-ratio-chart').then((mod) => mod.SummaryRatioChart),
+  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
+);
+const TagChart = dynamic(() => import('./tag-chart').then((mod) => mod.TagChart), {
+  ssr: false,
+  loading: () => <div>Carregando gráfico...</div>,
+});
+const MonthlyBarChart = dynamic(
+  () => import('./monthly-bar-chart').then((mod) => mod.MonthlyBarChart),
+  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
+);
+const TopExpenseCategoriesChart = dynamic(
+  () => import('./top-expense-categories-chart').then((mod) => mod.TopExpenseCategoriesChart),
+  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
+);
+import { Modal } from '@/components/ui/modal';
+import { Fab } from '@/components/ui/fab';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import QuickDespesaForm from '../quick-add/quick-despesa-form';
 import QuickRendaForm from '../quick-add/quick-renda-form';
 
-import React from "react";
+import React from 'react';
 
 export function DashboardContent() {
   const [saldoDoMes, setSaldoDoMes] = useState<number>(0);
   const [saldoAcumulado, setSaldoAcumulado] = useState<number>(0);
   // Estado para modal de adição rápida e tabs
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [quickTab, setQuickTab] = useState<"despesa" | "renda">("despesa");
-  const [modal, setModal] = useState<null | "income" | "expense" | "balance">(
-    null
-  );
+  const [quickTab, setQuickTab] = useState<'despesa' | 'renda'>('despesa');
+  const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance'>(null);
   type Summary = {
     totalIncome: number;
     totalExpenses: number;
@@ -72,10 +93,8 @@ export function DashboardContent() {
     topExpenseCategories: [],
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [wallets, setWallets] = useState<
-    Array<{ id: string; name: string; type: string }>
-  >([]);
-  const [selectedWallet, setSelectedWallet] = useState<string>("");
+  const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [limiteDiario, setLimiteDiario] = useState<number>(0);
   const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
@@ -92,16 +111,28 @@ export function DashboardContent() {
       const startStr = toYmd(start);
       const endStr = toYmd(end);
       const fetchOpts: RequestInit = {
-        cache: "no-store",
-        credentials: "same-origin",
+        cache: 'no-store',
+        credentials: 'same-origin',
       };
-      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
       // Entradas e saídas do mês
       const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
-        fetch(`/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+        fetch(
+          `/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+          fetchOpts,
+        ),
       ]);
       const [expVar, expFix, incVar, incFix] = await Promise.all([
         expVarRes.ok ? expVarRes.json() : [],
@@ -109,10 +140,10 @@ export function DashboardContent() {
         incVarRes.ok ? incVarRes.json() : [],
         incFixRes.ok ? incFixRes.json() : [],
       ]);
-  const allExpenses: any[] = [...expVar, ...expFix];
-  const allIncomes: any[] = [...incVar, ...incFix];
-  const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+      const allExpenses: any[] = [...expVar, ...expFix];
+      const allIncomes: any[] = [...incVar, ...incFix];
+      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
       setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome,
@@ -122,10 +153,22 @@ export function DashboardContent() {
 
       // Saldo acumulado até o fim do mês
       const [expVarResA, expFixResA, incVarResA, incFixResA] = await Promise.all([
-        fetch(`/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
-        fetch(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+        fetch(
+          `/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+          fetchOpts,
+        ),
       ]);
       const [expVarA, expFixA, incVarA, incFixA] = await Promise.all([
         expVarResA.ok ? expVarResA.json() : [],
@@ -133,10 +176,10 @@ export function DashboardContent() {
         incVarResA.ok ? incVarResA.json() : [],
         incFixResA.ok ? incFixResA.json() : [],
       ]);
-  const allExpensesA: any[] = [...expVarA, ...expFixA];
-  const allIncomesA: any[] = [...incVarA, ...incFixA];
-  const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalIncomeA = allIncomesA.reduce((sum, i) => sum + Number(i.amount), 0);
+      const allExpensesA: any[] = [...expVarA, ...expFixA];
+      const allIncomesA: any[] = [...incVarA, ...incFixA];
+      const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncomeA = allIncomesA.reduce((sum, i) => sum + Number(i.amount), 0);
       setSaldoAcumulado(totalIncomeA - totalExpensesA);
 
       // Limite diário
@@ -152,17 +195,15 @@ export function DashboardContent() {
         diasRestantes = Math.max(
           1,
           fim.getDate() -
-            (year === hoje.getFullYear() && month - 1 === hoje.getMonth()
-              ? hoje.getDate()
-              : 1) +
-            1
+            (year === hoje.getFullYear() && month - 1 === hoje.getMonth() ? hoje.getDate() : 1) +
+            1,
         );
       }
-  const limite = diasRestantes > 0 ? (totalIncomeA - totalExpensesA) / diasRestantes : 0;
-  setLimiteDiario(limite);
+      const limite = diasRestantes > 0 ? (totalIncomeA - totalExpensesA) / diasRestantes : 0;
+      setLimiteDiario(limite);
 
       // Buscar carteiras
-      const resWallets = await fetch("/api/wallets", { cache: "no-store" });
+      const resWallets = await fetch('/api/wallets', { cache: 'no-store' });
       if (resWallets.ok) {
         const data = await resWallets.json();
         setWallets(Array.isArray(data) ? data : []);
@@ -182,41 +223,40 @@ export function DashboardContent() {
         months.push({
           year: d.getFullYear(),
           month: d.getMonth() + 1,
-          label: `${d.toLocaleString("pt-BR", { month: "short" })}/${d
+          label: `${d.toLocaleString('pt-BR', { month: 'short' })}/${d
             .getFullYear()
             .toString()
             .slice(-2)}`,
         });
       }
       const fetchOpts: RequestInit = {
-        cache: "no-store",
-        credentials: "same-origin",
+        cache: 'no-store',
+        credentials: 'same-origin',
       };
-  const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
       const results = await Promise.all(
         months.map(async ({ year, month }) => {
           const { start, end } = getMonthRange(year, month);
           const startStr = toYmd(start);
           const endStr = toYmd(end);
-          const [expVarRes, expFixRes, incVarRes, incFixRes] =
-            await Promise.all([
-              fetch(
-                `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-                fetchOpts
-              ),
-              fetch(
-                `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-                fetchOpts
-              ),
-              fetch(
-                `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-                fetchOpts
-              ),
-              fetch(
-                `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-                fetchOpts
-              ),
-            ]);
+          const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
+            fetch(
+              `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              fetchOpts,
+            ),
+            fetch(
+              `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              fetchOpts,
+            ),
+            fetch(
+              `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              fetchOpts,
+            ),
+            fetch(
+              `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              fetchOpts,
+            ),
+          ]);
           const [expVar, expFix, incVar, incFix] = await Promise.all([
             expVarRes.ok ? expVarRes.json() : [],
             expFixRes.ok ? expFixRes.json() : [],
@@ -225,19 +265,13 @@ export function DashboardContent() {
           ]);
           const allExpenses: any[] = [...expVar, ...expFix];
           const allIncomes: any[] = [...incVar, ...incFix];
-          const expense = allExpenses.reduce(
-            (sum, e) => sum + Number(e.amount),
-            0
-          );
-          const income = allIncomes.reduce(
-            (sum, i) => sum + Number(i.amount),
-            0
-          );
+          const expense = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+          const income = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
           const balance = income - expense;
           return { expense, income, balance };
-        })
+        }),
       );
-  setSummary((prev: typeof summary) => ({
+      setSummary((prev: typeof summary) => ({
         ...prev,
         monthlyData: months.map((m, i) => ({ month: m.label, ...results[i] })),
       }));
@@ -257,30 +291,29 @@ export function DashboardContent() {
       const endStr = toYmd(end);
 
       const fetchOpts: RequestInit = {
-        cache: "no-store",
-        credentials: "same-origin",
+        cache: 'no-store',
+        credentials: 'same-origin',
       };
-  const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : "";
-      const [expVarRes, expFixRes, incVarRes, incFixRes, tagsRes] =
-        await Promise.all([
-          fetch(
-            `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch(
-            `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetch("/api/tags", { cache: "no-store" }),
-        ]);
+      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
+      const [expVarRes, expFixRes, incVarRes, incFixRes, tagsRes] = await Promise.all([
+        fetch(
+          `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch(
+          `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+          fetchOpts,
+        ),
+        fetch('/api/tags', { cache: 'no-store' }),
+      ]);
 
       const [expVar, expFix, incVar, incFix, tagsList] = await Promise.all([
         expVarRes.ok ? expVarRes.json() : [],
@@ -298,40 +331,38 @@ export function DashboardContent() {
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
 
-      const totalExpenses = allExpenses.reduce(
-        (sum, e) => sum + Number(e.amount),
-        0
-      );
-      const totalIncome = allIncomes.reduce(
-        (sum, i) => sum + Number(i.amount),
-        0
-      );
+      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
 
       const expenseMap = new Map<string, { amount: number; color: string }>();
       for (const e of allExpenses) {
-        const key = e.category?.name || "Sem categoria";
-        const color = e.category?.color || "#94a3b8";
+        const key = e.category?.name || 'Sem categoria';
+        const color = e.category?.color || '#94a3b8';
         const cur = expenseMap.get(key) || { amount: 0, color };
         cur.amount += Number(e.amount);
         cur.color = color;
         expenseMap.set(key, cur);
       }
-      const expensesByCategory = Array.from(expenseMap.entries()).map(
-        ([category, v]) => ({ category, amount: v.amount, color: v.color })
-      );
+      const expensesByCategory = Array.from(expenseMap.entries()).map(([category, v]) => ({
+        category,
+        amount: v.amount,
+        color: v.color,
+      }));
 
       const incomeMap = new Map<string, { amount: number; color: string }>();
       for (const i of allIncomes) {
-        const key = i.category?.name || "Sem categoria";
-        const color = i.category?.color || "#10b981";
+        const key = i.category?.name || 'Sem categoria';
+        const color = i.category?.color || '#10b981';
         const cur = incomeMap.get(key) || { amount: 0, color };
         cur.amount += Number(i.amount);
         cur.color = color;
         incomeMap.set(key, cur);
       }
-      const incomesByCategory = Array.from(incomeMap.entries()).map(
-        ([category, v]) => ({ category, amount: v.amount, color: v.color })
-      );
+      const incomesByCategory = Array.from(incomeMap.entries()).map(([category, v]) => ({
+        category,
+        amount: v.amount,
+        color: v.color,
+      }));
 
       // Agrupar despesas por tag
       const tagMap = new Map<string, { amount: number; color: string }>();
@@ -339,13 +370,12 @@ export function DashboardContent() {
         if (Array.isArray(e.tags) && e.tags.length > 0 && e.tags[0]) {
           for (const tag of e.tags) {
             // cor baseada no hash do nome da tag
-            let color = "#6366f1";
+            let color = '#6366f1';
             if (e.tagColors && e.tagColors[tag]) color = e.tagColors[tag];
             else {
               // fallback: cor baseada no hash
               let hash = 0;
-              for (let i = 0; i < tag.length; i++)
-                hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+              for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
               color = `hsl(${hash % 360}, 70%, 60%)`;
             }
             const cur = tagMap.get(tag) || { amount: 0, color };
@@ -362,33 +392,30 @@ export function DashboardContent() {
       }));
 
       // Top 5 categorias de despesa do mês atual
-      const topCategories = [...expensesByCategory]
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 5);
+      const topCategories = [...expensesByCategory].sort((a, b) => b.amount - a.amount).slice(0, 5);
 
       // Buscar dados do mês anterior para variação
       const prevMonth = new Date(currentDate);
       prevMonth.setMonth(currentDate.getMonth() - 1);
       const { start: prevStart, end: prevEnd } = getMonthRange(
         prevMonth.getFullYear(),
-        prevMonth.getMonth() + 1
+        prevMonth.getMonth() + 1,
       );
       const prevStartStr = toYmd(prevStart);
       const prevEndStr = toYmd(prevEnd);
-      let prevExpensesByCategory: Array<{ category: string; amount: number }> =
-        [];
+      let prevExpensesByCategory: Array<{ category: string; amount: number }> = [];
       try {
         const prevExpVarRes = await fetch(
           `/api/expenses?type=VARIABLE&start=${prevStartStr}&end=${prevEndStr}${
-            selectedWallet ? `&walletId=${selectedWallet}` : ""
+            selectedWallet ? `&walletId=${selectedWallet}` : ''
           }&_=${Date.now()}`,
-          { cache: "no-store", credentials: "same-origin" }
+          { cache: 'no-store', credentials: 'same-origin' },
         );
         const prevExpFixRes = await fetch(
           `/api/expenses?type=FIXED&start=${prevStartStr}&end=${prevEndStr}${
-            selectedWallet ? `&walletId=${selectedWallet}` : ""
+            selectedWallet ? `&walletId=${selectedWallet}` : ''
           }&_=${Date.now()}`,
-          { cache: "no-store", credentials: "same-origin" }
+          { cache: 'no-store', credentials: 'same-origin' },
         );
         const [prevExpVar, prevExpFix] = await Promise.all([
           prevExpVarRes.ok ? prevExpVarRes.json() : [],
@@ -397,20 +424,17 @@ export function DashboardContent() {
         const allPrevExpenses: any[] = [...prevExpVar, ...prevExpFix];
         const prevExpenseMap = new Map<string, number>();
         for (const e of allPrevExpenses) {
-          const key = e.category?.name || "Sem categoria";
-          prevExpenseMap.set(
-            key,
-            (prevExpenseMap.get(key) || 0) + Number(e.amount)
-          );
+          const key = e.category?.name || 'Sem categoria';
+          prevExpenseMap.set(key, (prevExpenseMap.get(key) || 0) + Number(e.amount));
         }
-        prevExpensesByCategory = Array.from(prevExpenseMap.entries()).map(
-          ([category, amount]) => ({ category, amount })
-        );
+        prevExpensesByCategory = Array.from(prevExpenseMap.entries()).map(([category, amount]) => ({
+          category,
+          amount,
+        }));
       } catch {}
 
       const prevAmounts: Record<string, number> = {};
-      for (const c of prevExpensesByCategory)
-        prevAmounts[c.category] = c.amount;
+      for (const c of prevExpensesByCategory) prevAmounts[c.category] = c.amount;
 
       const topExpenseCategories = topCategories.map((c) => ({
         category: c.category,
@@ -418,7 +442,7 @@ export function DashboardContent() {
         diff: c.amount - (prevAmounts[c.category] || 0),
       }));
 
-  setSummary((prev: typeof summary) => ({
+      setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome,
         totalExpenses,
@@ -435,22 +459,15 @@ export function DashboardContent() {
   }, [currentDate, selectedWallet]);
 
   const handlePreviousMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
     const today = new Date();
-    const next = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      1
-    );
+    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     if (
       next.getFullYear() > today.getFullYear() ||
-      (next.getFullYear() === today.getFullYear() &&
-        next.getMonth() > today.getMonth())
+      (next.getFullYear() === today.getFullYear() && next.getMonth() > today.getMonth())
     ) {
       return;
     }
@@ -467,7 +484,7 @@ export function DashboardContent() {
   } = useDailyExpenseData({
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
-  walletId: selectedWallet || undefined,
+    walletId: selectedWallet || undefined,
   });
 
   // Função para fechar o modal e recarregar o dashboard
@@ -482,15 +499,11 @@ export function DashboardContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-foreground">
-            Visão geral das suas finanças
-          </p>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-foreground">Visão geral das suas finanças</p>
         </div>
 
-  <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:space-x-2 w-full">
+        <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:space-x-2 w-full">
           <select
             className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             value={selectedWallet}
@@ -538,99 +551,124 @@ export function DashboardContent() {
         </div>
       </div>
 
-    {/* Cards de Resumo */}
-  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
-  <Card onClick={() => setModal("income")} className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-  <CardTitle className="text-base sm:text-lg font-semibold">Entradas Totais</CardTitle>
-        <TrendingUp className="h-4 w-4 text-green-600" />
-      </CardHeader>
-      <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
-        <div className="font-bold text-green-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(summary.totalIncome)}</div>
-      </CardContent>
-    </Card>
-  <Card onClick={() => setModal("expense")} className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-  <CardTitle className="text-base sm:text-lg font-semibold">Saídas Totais</CardTitle>
-        <TrendingDown className="h-4 w-4 text-red-600" />
-      </CardHeader>
-      <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
-        <div className="font-bold text-red-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(summary.totalExpenses)}</div>
-      </CardContent>
-    </Card>
-  <Card className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-  <CardTitle className="text-base sm:text-lg font-semibold">Saldo do mês</CardTitle>
-        <DollarSign className="h-4 w-4 text-blue-600" />
-      </CardHeader>
-      <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
-        <div className="font-bold text-blue-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(saldoDoMes)}</div>
-        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Entradas - Saídas do mês selecionado</p>
-      </CardContent>
-    </Card>
-  <Card onClick={() => setModal("balance")} className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-  <CardTitle className="text-base sm:text-lg font-semibold">Saldo acumulado</CardTitle>
-        <DollarSign className="h-4 w-4 text-blue-600" />
-      </CardHeader>
-      <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
-        <div className="font-bold text-blue-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(saldoAcumulado)}</div>
-        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Entradas - Saídas de todos os meses até o selecionado</p>
-      </CardContent>
-    </Card>
-  <Card className="flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
-  <CardTitle className="text-base sm:text-lg font-semibold">Limite Diário</CardTitle>
-        <span className="h-4 w-4 text-orange-500">💸</span>
-      </CardHeader>
-      <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
-        <div className="font-bold text-orange-500 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">{formatCurrency(limiteDiario)}</div>
-        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Para não ficar com saldo ≤ 0 até o fim do mês</p>
-      </CardContent>
-    </Card>
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
+        <Card
+          onClick={() => setModal('income')}
+          className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+            <CardTitle className="text-base sm:text-lg font-semibold">Entradas Totais</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
+            <div className="font-bold text-green-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
+              {formatCurrency(summary.totalIncome)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          onClick={() => setModal('expense')}
+          className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+            <CardTitle className="text-base sm:text-lg font-semibold">Saídas Totais</CardTitle>
+            <TrendingDown className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
+            <div className="font-bold text-red-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
+              {formatCurrency(summary.totalExpenses)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+            <CardTitle className="text-base sm:text-lg font-semibold">Saldo do mês</CardTitle>
+            <DollarSign className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
+            <div className="font-bold text-blue-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
+              {formatCurrency(saldoDoMes)}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+              Entradas - Saídas do mês selecionado
+            </p>
+          </CardContent>
+        </Card>
+        <Card
+          onClick={() => setModal('balance')}
+          className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0"
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+            <CardTitle className="text-base sm:text-lg font-semibold">Saldo acumulado</CardTitle>
+            <DollarSign className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
+            <div className="font-bold text-blue-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
+              {formatCurrency(saldoAcumulado)}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+              Entradas - Saídas de todos os meses até o selecionado
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
+            <CardTitle className="text-base sm:text-lg font-semibold">Limite Diário</CardTitle>
+            <span className="h-4 w-4 text-orange-500">💸</span>
+          </CardHeader>
+          <CardContent className="pt-0 pb-2 flex-1 flex flex-col items-center justify-center">
+            <div className="font-bold text-orange-500 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
+              {formatCurrency(limiteDiario)}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+              Para não ficar com saldo ≤ 0 até o fim do mês
+            </p>
+          </CardContent>
+        </Card>
         {/* Modal de detalhes de entradas/saídas/saldo */}
         {/* Quick Add FAB */}
         <Fab
           onClick={() => {
             setQuickAddOpen(true);
-            setQuickTab("despesa");
+            setQuickTab('despesa');
           }}
           label="Quick Add"
         />
 
         {/* Quick Add Modal */}
-        <Modal
-          open={quickAddOpen}
-          onClose={() => setQuickAddOpen(false)}
-          title="Adicionar rápido"
-        >
+        <Modal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Adicionar rápido">
           <div className="space-y-4">
             <div className="flex gap-2 mb-2">
               <button
                 className={`border rounded-md py-2 px-4 flex-1 transition-colors
-                  ${quickTab === "despesa"
-                    ? "bg-primary text-white border-primary shadow"
-                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
+                  ${
+                    quickTab === 'despesa'
+                      ? 'bg-primary text-white border-primary shadow'
+                      : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                  }
                 `}
-                onClick={() => setQuickTab("despesa")}
+                onClick={() => setQuickTab('despesa')}
                 type="button"
               >
                 Saída
               </button>
               <button
                 className={`border rounded-md py-2 px-4 flex-1 transition-colors
-                  ${quickTab === "renda"
-                    ? "bg-primary text-white border-primary shadow"
-                    : "bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground"}
+                  ${
+                    quickTab === 'renda'
+                      ? 'bg-primary text-white border-primary shadow'
+                      : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                  }
                 `}
-                onClick={() => setQuickTab("renda")}
+                onClick={() => setQuickTab('renda')}
                 type="button"
               >
                 Entrada
               </button>
             </div>
             <div className="mt-4">
-              {quickTab === "despesa" ? <QuickDespesaForm /> : <QuickRendaForm />}
+              {quickTab === 'despesa' ? <QuickDespesaForm /> : <QuickRendaForm />}
             </div>
           </div>
         </Modal>
@@ -638,28 +676,23 @@ export function DashboardContent() {
           open={modal !== null}
           onClose={() => setModal(null)}
           title={
-            modal === "income"
-              ? "Entradas do mês"
-              : modal === "expense"
-              ? "Saídas do mês"
-              : modal === "balance"
-              ? "Entradas e Saídas do mês"
-              : ""
+            modal === 'income'
+              ? 'Entradas do mês'
+              : modal === 'expense'
+                ? 'Saídas do mês'
+                : modal === 'balance'
+                  ? 'Entradas e Saídas do mês'
+                  : ''
           }
         >
-          {modal === "income" && (
+          {modal === 'income' && (
             <div className="mt-4">
               {summary.incomesByCategory.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Nenhuma entrada encontrada.
-                </div>
+                <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
               ) : (
                 <ul className="space-y-2">
                   {summary.incomesByCategory.map((item) => (
-                    <li
-                      key={item.category}
-                      className="flex justify-between items-center"
-                    >
+                    <li key={item.category} className="flex justify-between items-center">
                       <span>{item.category}</span>
                       <span className="font-semibold text-green-600">
                         {formatCurrency(item.amount)}
@@ -670,19 +703,14 @@ export function DashboardContent() {
               )}
             </div>
           )}
-          {modal === "expense" && (
+          {modal === 'expense' && (
             <div className="mt-4">
               {summary.expensesByCategory.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Nenhuma saída encontrada.
-                </div>
+                <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
               ) : (
                 <ul className="space-y-2">
                   {summary.expensesByCategory.map((item) => (
-                    <li
-                      key={item.category}
-                      className="flex justify-between items-center"
-                    >
+                    <li key={item.category} className="flex justify-between items-center">
                       <span>{item.category}</span>
                       <span className="font-semibold text-red-600">
                         {formatCurrency(item.amount)}
@@ -693,21 +721,16 @@ export function DashboardContent() {
               )}
             </div>
           )}
-          {modal === "balance" && (
+          {modal === 'balance' && (
             <div className="space-y-6 mt-4">
               <div>
                 <div className="font-semibold mb-2"></div>
                 {summary.incomesByCategory.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    Nenhuma entrada encontrada.
-                  </div>
+                  <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
                 ) : (
                   <ul className="space-y-2">
                     {summary.incomesByCategory.map((item) => (
-                      <li
-                        key={item.category}
-                        className="flex justify-between items-center"
-                      >
+                      <li key={item.category} className="flex justify-between items-center">
                         <span>{item.category}</span>
                         <span className="font-semibold text-green-600">
                           {formatCurrency(item.amount)}
@@ -720,16 +743,11 @@ export function DashboardContent() {
               <div>
                 <div className="font-semibold mb-2"></div>
                 {summary.expensesByCategory.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    Nenhuma saída encontrada.
-                  </div>
+                  <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
                 ) : (
                   <ul className="space-y-2">
                     {summary.expensesByCategory.map((item) => (
-                      <li
-                        key={item.category}
-                        className="flex justify-between items-center"
-                      >
+                      <li key={item.category} className="flex justify-between items-center">
                         <span>{item.category}</span>
                         <span className="font-semibold text-red-600">
                           {formatCurrency(item.amount)}
@@ -811,7 +829,7 @@ export function DashboardContent() {
               <DailyCategoryChart
                 data={dailyByCategory}
                 categoryColors={Object.fromEntries(
-                  summary.expensesByCategory.map((c) => [c.category, c.color])
+                  summary.expensesByCategory.map((c) => [c.category, c.color]),
                 )}
               />
             ) : (
@@ -865,11 +883,11 @@ export function DashboardContent() {
                 summary.topExpenseCategories.length > 0
                   ? summary.topExpenseCategories
                   : [
-                      { category: "Sem categoria", amount: 0, diff: 0 },
-                      { category: "---", amount: 0, diff: 0 },
-                      { category: "---", amount: 0, diff: 0 },
-                      { category: "---", amount: 0, diff: 0 },
-                      { category: "---", amount: 0, diff: 0 },
+                      { category: 'Sem categoria', amount: 0, diff: 0 },
+                      { category: '---', amount: 0, diff: 0 },
+                      { category: '---', amount: 0, diff: 0 },
+                      { category: '---', amount: 0, diff: 0 },
+                      { category: '---', amount: 0, diff: 0 },
                     ]
               }
             />

@@ -1,14 +1,14 @@
-"use client"
-import { Sidebar } from './sidebar'
-import { useState } from 'react'
-import { Menu } from 'lucide-react'
+'use client';
+import { Sidebar } from './sidebar';
+import { useState } from 'react';
+import { Menu } from 'lucide-react';
 
 interface DashboardLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar desktop */}
@@ -39,10 +39,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
           <span className="text-lg font-bold">Controle Financeiro</span>
         </div>
-        <div className="w-full max-w-5xl mx-auto p-4 sm:p-8">
-          {children}
-        </div>
+        <div className="w-full max-w-5xl mx-auto p-4 sm:p-8">{children}</div>
       </main>
     </div>
-  )
+  );
 }

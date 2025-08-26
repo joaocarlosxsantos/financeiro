@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,27 +61,50 @@ function TransferForm({ wallets }: { wallets: any[] }) {
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block mb-1">De</label>
-            <select className="w-full border rounded p-2" value={fromWalletId} onChange={e => setFromWalletId(e.target.value)} required>
+            <select
+              className="w-full border rounded p-2"
+              value={fromWalletId}
+              onChange={(e) => setFromWalletId(e.target.value)}
+              required
+            >
               <option value="">Selecione a carteira de origem</option>
-              {wallets.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
+              {wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
               ))}
             </select>
           </div>
           <div>
             <label className="block mb-1">Para</label>
-            <select className="w-full border rounded p-2" value={toWalletId} onChange={e => setToWalletId(e.target.value)} required>
+            <select
+              className="w-full border rounded p-2"
+              value={toWalletId}
+              onChange={(e) => setToWalletId(e.target.value)}
+              required
+            >
               <option value="">Selecione a carteira de destino</option>
-              {wallets.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
+              {wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
               ))}
             </select>
           </div>
           <div>
             <label className="block mb-1">Valor</label>
-            <Input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required />
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
           </div>
-          <Button type="submit" disabled={loading}>{loading ? 'Transferindo...' : 'Transferir'}</Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Transferindo...' : 'Transferir'}
+          </Button>
           {message && <div className="mt-2 text-sm text-center">{message}</div>}
         </form>
       </CardContent>

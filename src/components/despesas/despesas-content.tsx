@@ -1,16 +1,15 @@
+'use client';
 
-'use client'
+import { useState } from 'react';
+import { useMonth } from '@/components/providers/month-provider';
 
-import { useState } from 'react'
-import { useMonth } from '@/components/providers/month-provider'
+import DespesasUnificadas from './despesas-unificadas';
 
-import DespesasUnificadas from './despesas-unificadas'
-
-import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 export default function DespesasContent() {
-  const [activeTab, setActiveTab] = useState('variaveis')
+  const [activeTab, setActiveTab] = useState('variaveis');
   const { currentDate, setCurrentDate } = useMonth();
 
   // Navegação de mês global
@@ -47,5 +46,5 @@ export default function DespesasContent() {
       </div>
       <DespesasUnificadas currentDate={currentDate} />
     </div>
-  )
+  );
 }

@@ -1,4 +1,13 @@
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from 'recharts';
 
 // Função para determinar cor da carteira pelo nome e tipo
 function getWalletColor(walletName: string, walletType?: string) {
@@ -27,22 +36,25 @@ function getWalletColor(walletName: string, walletType?: string) {
   return '#a3a3a3'; // fallback cinza
 }
 
-
 interface DailyWalletChartProps {
-  data: Array<{ date: string; [wallet: string]: number | string }>
-  walletsMeta?: Array<{ name: string; type: string }>
+  data: Array<{ date: string; [wallet: string]: number | string }>;
+  walletsMeta?: Array<{ name: string; type: string }>;
 }
 
 export function DailyWalletChart({ data, walletsMeta }: DailyWalletChartProps) {
   // Extrai as carteiras dinamicamente (exceto a coluna 'date')
-  const wallets = data.length > 0 ? Object.keys(data[0]).filter(k => k !== 'date') : [];
+  const wallets = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== 'date') : [];
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" tickFormatter={d => String(Number(d.split('-')[2]))} />
+        <XAxis dataKey="date" tickFormatter={(d) => String(Number(d.split('-')[2]))} />
         <YAxis />
-        <Tooltip formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+        <Tooltip
+          formatter={(value: number) =>
+            value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+          }
+        />
         <Legend />
         {wallets.map((w) => {
           const meta = walletsMeta?.find((wm) => wm.name === w);

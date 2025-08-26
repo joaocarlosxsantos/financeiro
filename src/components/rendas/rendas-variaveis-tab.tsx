@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import React, { useEffect, useState, ChangeEvent } from 'react'
+import React, { useEffect, useState, ChangeEvent } from 'react';
 // import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Modal } from '@/components/ui/modal'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils'
-import { Edit, Trash2, Plus } from 'lucide-react'
-import { Loader } from '@/components/ui/loader'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
+import { Edit, Trash2, Plus } from 'lucide-react';
+import { Loader } from '@/components/ui/loader';
 
 interface RendaVariavel {
   id: string;
@@ -22,11 +22,10 @@ interface RendaVariavel {
   walletName?: string;
   tags: string[];
 }
-import { TagSelector } from '@/components/ui/tag-selector'
-import { CategoryCreateModal } from '@/components/ui/category-create-modal'
-import { WalletCreateModal } from '@/components/ui/wallet-create-modal'
-import { TagCreateModal } from '@/components/ui/tag-create-modal'
-
+import { TagSelector } from '@/components/ui/tag-selector';
+import { CategoryCreateModal } from '@/components/ui/category-create-modal';
+import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
+import { TagCreateModal } from '@/components/ui/tag-create-modal';
 
 export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   const [rendas, setRendas] = useState<RendaVariavel[]>([]);
@@ -54,13 +53,33 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
-  type FormState = { description: string; amount: string; date: string; categoryId: string; walletId: string; tags: string[] };
-  const [form, setForm] = useState<FormState>({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
+  type FormState = {
+    description: string;
+    amount: string;
+    date: string;
+    categoryId: string;
+    walletId: string;
+    tags: string[];
+  };
+  const [form, setForm] = useState<FormState>({
+    description: '',
+    amount: '',
+    date: '',
+    categoryId: '',
+    walletId: '',
+    tags: [],
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [errors, setErrors] = useState<{ description?: string; amount?: string; date?: string; categoryId?: string; walletId?: string }>({});
+  const [errors, setErrors] = useState<{
+    description?: string;
+    amount?: string;
+    date?: string;
+    categoryId?: string;
+    walletId?: string;
+  }>({});
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -127,7 +146,13 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const newErrors: { description?: string; amount?: string; date?: string; categoryId?: string; walletId?: string } = {};
+    const newErrors: {
+      description?: string;
+      amount?: string;
+      date?: string;
+      categoryId?: string;
+      walletId?: string;
+    } = {};
     if (!form.description.trim()) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
@@ -165,7 +190,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           walletName: wallets.find((w: Wallet) => w.id === saved.walletId)?.name,
           tags: saved.tags || [],
         };
-        if (editingId) return prev.map((x: RendaVariavel) => x.id === saved.id ? item : x);
+        if (editingId) return prev.map((x: RendaVariavel) => (x.id === saved.id ? item : x));
         return [item, ...prev];
       });
       setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
@@ -183,32 +208,74 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Rendas Variáveis</h1>
           <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas variáveis</p>
         </div>
-        <Button onClick={() => {
-          setForm({ description: '', amount: '', date: '', categoryId: '', walletId: '', tags: [] });
-          setEditingId(null);
-          setShowForm(true);
-        }}>
+        <Button
+          onClick={() => {
+            setForm({
+              description: '',
+              amount: '',
+              date: '',
+              categoryId: '',
+              walletId: '',
+              tags: [],
+            });
+            setEditingId(null);
+            setShowForm(true);
+          }}
+        >
           <Plus className="w-4 h-4 mr-1" /> Adicionar Renda Variável
         </Button>
       </div>
       {/* Formulário */}
       {/* Formulário */}
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Renda Variável' : 'Nova Renda Variável'}>
+      <Modal
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingId(null);
+        }}
+        title={editingId ? 'Editar Renda Variável' : 'Nova Renda Variável'}
+      >
         <form className="space-y-3" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <Label htmlFor="description">Descrição</Label>
-              <Input id="description" placeholder="Ex: Freelancer" value={form.description} onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((f: FormState) => ({ ...f, description: e.target.value }))} />
-              {errors.description && <span className="text-red-600 text-xs">{errors.description}</span>}
+              <Input
+                id="description"
+                placeholder="Ex: Freelancer"
+                value={form.description}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setForm((f: FormState) => ({ ...f, description: e.target.value }))
+                }
+              />
+              {errors.description && (
+                <span className="text-red-600 text-xs">{errors.description}</span>
+              )}
             </div>
             <div>
               <Label htmlFor="amount">Valor</Label>
-              <Input id="amount" type="number" step="0.01" placeholder="0,00" value={form.amount} onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((f: FormState) => ({ ...f, amount: e.target.value }))} />
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={form.amount}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setForm((f: FormState) => ({ ...f, amount: e.target.value }))
+                }
+              />
               {errors.amount && <span className="text-red-600 text-xs">{errors.amount}</span>}
             </div>
             <div>
               <Label htmlFor="date">Data</Label>
-              <Input id="date" type="date" lang="pt-BR" value={form.date} onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((f: FormState) => ({ ...f, date: e.target.value }))} />
+              <Input
+                id="date"
+                type="date"
+                lang="pt-BR"
+                value={form.date}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setForm((f: FormState) => ({ ...f, date: e.target.value }))
+                }
+              />
               {errors.date && <span className="text-red-600 text-xs">{errors.date}</span>}
             </div>
             <div>
@@ -230,10 +297,14 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                 {categories
                   .filter((c: Category) => c.type === 'INCOME' || c.type === 'BOTH')
                   .map((c: Category) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
               </select>
-              {errors.categoryId && <span className="text-red-600 text-xs">{errors.categoryId}</span>}
+              {errors.categoryId && (
+                <span className="text-red-600 text-xs">{errors.categoryId}</span>
+              )}
             </div>
             <div>
               <Label htmlFor="wallet">Carteira</Label>
@@ -252,7 +323,9 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                 <option value="__create__">➕ Criar carteira</option>
                 <option value="">Selecione</option>
                 {wallets.map((w: Wallet) => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
                 ))}
               </select>
               {errors.walletId && <span className="text-red-600 text-xs">{errors.walletId}</span>}
@@ -267,7 +340,10 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                     if (e.target.value === '__create__') {
                       setShowTagModal(true);
                     } else {
-                      setForm((f: FormState) => ({ ...f, tags: e.target.value ? [e.target.value] : [] }));
+                      setForm((f: FormState) => ({
+                        ...f,
+                        tags: e.target.value ? [e.target.value] : [],
+                      }));
                     }
                   }}
                   className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-background dark:text-foreground"
@@ -275,20 +351,23 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                   <option value="__create__">➕ Criar tag</option>
                   <option value="">Sem tag</option>
                   {tags.map((tag: Tag) => (
-                    <option key={tag.id} value={tag.id}>{tag.name}</option>
+                    <option key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
           </div>
           <div className="flex space-x-1 sm:space-x-2">
-            <Button type="submit">
-              {editingId ? 'Atualizar' : 'Cadastrar'}
-            </Button>
+            <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
             <Button
               type="button"
               variant="outline"
-              onClick={() => { setShowForm(false); setEditingId(null); }}
+              onClick={() => {
+                setShowForm(false);
+                setEditingId(null);
+              }}
             >
               Cancelar
             </Button>
@@ -296,28 +375,40 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
         </form>
       </Modal>
       {/* Modais de criação */}
-      <CategoryCreateModal open={showCategoryModal} onClose={() => setShowCategoryModal(false)} onCreated={id => {
-        setShowCategoryModal(false);
-        fetch('/api/categories', { cache: 'no-store' }).then(async res => {
-          if (res.ok) setCategories(await res.json());
-        });
-        if (id) setForm(f => ({ ...f, categoryId: id }));
-      }} />
-      <WalletCreateModal open={showWalletModal} onClose={() => setShowWalletModal(false)} onCreated={id => {
-        setShowWalletModal(false);
-        fetch('/api/wallets', { cache: 'no-store' }).then(async res => {
-          if (res.ok) setWallets(await res.json());
-        });
-        if (id) setForm(f => ({ ...f, walletId: id }));
-      }} />
-      <TagCreateModal open={showTagModal} onClose={() => setShowTagModal(false)} onCreated={id => {
-        setShowTagModal(false);
-        fetch('/api/tags', { cache: 'no-store' }).then(async res => {
-          if (res.ok) setTags(await res.json());
-        });
-        if (id) setForm(f => ({ ...f, tags: id ? [id] : [] }));
-      }} />
-  {/* Botão para adicionar removido, agora está no header */}
+      <CategoryCreateModal
+        open={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onCreated={(id) => {
+          setShowCategoryModal(false);
+          fetch('/api/categories', { cache: 'no-store' }).then(async (res) => {
+            if (res.ok) setCategories(await res.json());
+          });
+          if (id) setForm((f) => ({ ...f, categoryId: id }));
+        }}
+      />
+      <WalletCreateModal
+        open={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        onCreated={(id) => {
+          setShowWalletModal(false);
+          fetch('/api/wallets', { cache: 'no-store' }).then(async (res) => {
+            if (res.ok) setWallets(await res.json());
+          });
+          if (id) setForm((f) => ({ ...f, walletId: id }));
+        }}
+      />
+      <TagCreateModal
+        open={showTagModal}
+        onClose={() => setShowTagModal(false)}
+        onCreated={(id) => {
+          setShowTagModal(false);
+          fetch('/api/tags', { cache: 'no-store' }).then(async (res) => {
+            if (res.ok) setTags(await res.json());
+          });
+          if (id) setForm((f) => ({ ...f, tags: id ? [id] : [] }));
+        }}
+      />
+      {/* Botão para adicionar removido, agora está no header */}
       {/* Lista estilo planilha moderna */}
       {isLoading ? (
         <Loader text="Carregando rendas..." />
@@ -338,7 +429,9 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
               {filteredRendas.map((renda: RendaVariavel) => (
                 <tr key={renda.id} className="border-b hover:bg-accent transition-colors">
                   <td className="px-3 py-2 max-w-xs truncate">{renda.description}</td>
-                  <td className="px-3 py-2 text-right text-green-600 font-semibold">{formatCurrency(renda.amount)}</td>
+                  <td className="px-3 py-2 text-right text-green-600 font-semibold">
+                    {formatCurrency(renda.amount)}
+                  </td>
                   <td className="px-3 py-2 text-center">{formatDate(renda.date)}</td>
                   <td className="px-3 py-2 text-center">{renda.categoryName}</td>
                   <td className="px-3 py-2 text-center">{renda.walletName || 'Sem carteira'}</td>

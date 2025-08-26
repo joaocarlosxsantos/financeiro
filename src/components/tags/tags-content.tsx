@@ -21,7 +21,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-    const [errors, setErrors] = useState<{ name?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string }>({});
 
   // Função de carregamento extraída para uso em outros pontos
   const load = async () => {
@@ -38,7 +38,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
   }, []);
 
   const handleEdit = (id: string) => {
-    const tag = tags.find(t => t.id === id);
+    const tag = tags.find((t) => t.id === id);
     if (tag) {
       setEditingId(id);
       setName(tag.name);
@@ -48,7 +48,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/tags/${id}`, { method: 'DELETE' });
-    if (res.ok) setTags(tags.filter(t => t.id !== id));
+    if (res.ok) setTags(tags.filter((t) => t.id !== id));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +92,9 @@ export function TagsContent({ onCreated }: TagsContentProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Tags</h1>
-          <p className="text-gray-600 dark:text-foreground">Gerencie suas tags para organizar melhor suas despesas e rendas</p>
+          <p className="text-gray-600 dark:text-foreground">
+            Gerencie suas tags para organizar melhor suas despesas e rendas
+          </p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -110,13 +112,16 @@ export function TagsContent({ onCreated }: TagsContentProps) {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
                 <Label htmlFor="name">Nome</Label>
-                <Input id="name" placeholder="Ex: Viagem" value={name} onChange={e => setName(e.target.value)} />
+                <Input
+                  id="name"
+                  placeholder="Ex: Viagem"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
                 {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
               </div>
               <div className="flex space-x-2">
-                <Button type="submit">
-                  {editingId ? 'Atualizar' : 'Cadastrar'}
-                </Button>
+                <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -138,7 +143,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
         <Loader text="Carregando tags..." />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {tags.map(tag => (
+          {tags.map((tag) => (
             <Card key={tag.id}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between gap-4">

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface MonthContextType {
   currentDate: Date;
@@ -25,7 +25,7 @@ export function MonthProvider({ children }: { children: ReactNode }) {
 export function useMonth() {
   const context = useContext(MonthContext);
   if (!context) {
-    throw new Error("useMonth must be used within a MonthProvider");
+    throw new Error('useMonth must be used within a MonthProvider');
   }
   return context;
 }
