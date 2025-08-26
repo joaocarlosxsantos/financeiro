@@ -135,7 +135,6 @@ export async function POST(req: NextRequest) {
       });
       categoriasCache[key] = cat;
       criadas.push(cat);
-      // Atualiza todos os registrosAtualizados que usam essa categoria para já receberem o id correto
       for (const reg of registrosAtualizados) {
         let categoriaNome = '';
         if (reg.categoriaSugerida) {

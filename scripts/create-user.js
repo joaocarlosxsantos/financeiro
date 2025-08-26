@@ -15,9 +15,6 @@ async function createUser() {
       },
     })
 
-    console.log('Usuário criado com sucesso:', user)
-    console.log('Email: teste@email.com')
-    console.log('Senha: 123456')
   } catch (error) {
     console.error('Erro ao criar usuário:', error)
   } finally {

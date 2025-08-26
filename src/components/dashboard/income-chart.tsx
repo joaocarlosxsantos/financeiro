@@ -3,7 +3,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { formatCurrency } from '@/lib/utils'
-// import { toTitleCase } from '@/lib/camelcase'
 
 interface IncomeChartProps {
   data: Array<{

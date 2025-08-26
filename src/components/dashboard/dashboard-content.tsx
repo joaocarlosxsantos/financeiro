@@ -1,9 +1,10 @@
 "use client";
 
 import { useDailyExpenseData } from "@/hooks/use-dashboard-data";
-import { DailyCategoryChart } from "./daily-category-chart";
-import { DailyWalletChart } from "./daily-wallet-chart";
-import { useEffect, useState, ChangeEvent } from "react";
+import dynamic from "next/dynamic";
+const DailyCategoryChart = dynamic(() => import("./daily-category-chart").then(mod => mod.DailyCategoryChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
+const DailyWalletChart = dynamic(() => import("./daily-wallet-chart").then(mod => mod.DailyWalletChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
+import { useEffect, useState, useMemo, ChangeEvent } from "react";
 import { useMonth } from "@/components/providers/month-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,13 +25,13 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { ExpenseChart } from "./expense-chart";
-import { IncomeChart } from "./income-chart";
+const ExpenseChart = dynamic(() => import("./expense-chart").then(mod => mod.ExpenseChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
+const IncomeChart = dynamic(() => import("./income-chart").then(mod => mod.IncomeChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
 import { Loader } from "@/components/ui/loader";
-import { SummaryRatioChart } from "./summary-ratio-chart";
-import { TagChart } from "./tag-chart";
-import { MonthlyBarChart } from "./monthly-bar-chart";
-import { TopExpenseCategoriesChart } from "./top-expense-categories-chart";
+const SummaryRatioChart = dynamic(() => import("./summary-ratio-chart").then(mod => mod.SummaryRatioChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
+const TagChart = dynamic(() => import("./tag-chart").then(mod => mod.TagChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
+const MonthlyBarChart = dynamic(() => import("./monthly-bar-chart").then(mod => mod.MonthlyBarChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
+const TopExpenseCategoriesChart = dynamic(() => import("./top-expense-categories-chart").then(mod => mod.TopExpenseCategoriesChart), { ssr: false, loading: () => <div>Carregando gráfico...</div> });
 import { Modal } from "@/components/ui/modal";
 import { Fab } from "@/components/ui/fab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,32 +51,25 @@ export function DashboardContent() {
   const [modal, setModal] = useState<null | "income" | "expense" | "balance">(
     null
   );
-  const [summary, setSummary] = useState({
+  type Summary = {
+    totalIncome: number;
+    totalExpenses: number;
+    balance: number;
+    expensesByCategory: Array<{ category: string; amount: number; color: string }>;
+    incomesByCategory: Array<{ category: string; amount: number; color: string }>;
+    expensesByTag: Array<{ tag: string; amount: number; color: string }>;
+    monthlyData: Array<{ month: string; income: number; expense: number; balance: number }>;
+    topExpenseCategories: Array<{ category: string; amount: number; diff: number }>;
+  };
+  const [summary, setSummary] = useState<Summary>({
     totalIncome: 0,
     totalExpenses: 0,
     balance: 0,
-    expensesByCategory: [] as Array<{
-      category: string;
-      amount: number;
-      color: string;
-    }>,
-    incomesByCategory: [] as Array<{
-      category: string;
-      amount: number;
-      color: string;
-    }>,
-    expensesByTag: [] as Array<{ tag: string; amount: number; color: string }>,
-    monthlyData: [] as Array<{
-      month: string;
-      income: number;
-      expense: number;
-      balance: number;
-    }>,
-    topExpenseCategories: [] as Array<{
-      category: string;
-      amount: number;
-      diff: number;
-    }>,
+    expensesByCategory: [],
+    incomesByCategory: [],
+    expensesByTag: [],
+    monthlyData: [],
+    topExpenseCategories: [],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [wallets, setWallets] = useState<
@@ -115,10 +109,10 @@ export function DashboardContent() {
         incVarRes.ok ? incVarRes.json() : [],
         incFixRes.ok ? incFixRes.json() : [],
       ]);
-      const allExpenses: any[] = [...expVar, ...expFix];
-      const allIncomes: any[] = [...incVar, ...incFix];
-      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+  const allExpenses: any[] = [...expVar, ...expFix];
+  const allIncomes: any[] = [...incVar, ...incFix];
+  const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
       setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome,
@@ -139,10 +133,10 @@ export function DashboardContent() {
         incVarResA.ok ? incVarResA.json() : [],
         incFixResA.ok ? incFixResA.json() : [],
       ]);
-      const allExpensesA: any[] = [...expVarA, ...expFixA];
-      const allIncomesA: any[] = [...incVarA, ...incFixA];
-      const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalIncomeA = allIncomesA.reduce((sum, i) => sum + Number(i.amount), 0);
+  const allExpensesA: any[] = [...expVarA, ...expFixA];
+  const allIncomesA: any[] = [...incVarA, ...incFixA];
+  const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalIncomeA = allIncomesA.reduce((sum, i) => sum + Number(i.amount), 0);
       setSaldoAcumulado(totalIncomeA - totalExpensesA);
 
       // Limite diário
@@ -164,8 +158,8 @@ export function DashboardContent() {
             1
         );
       }
-      const limite = diasRestantes > 0 ? (totalIncomeA - totalExpensesA) / diasRestantes : 0;
-      setLimiteDiario(limite);
+  const limite = diasRestantes > 0 ? (totalIncomeA - totalExpensesA) / diasRestantes : 0;
+  setLimiteDiario(limite);
 
       // Buscar carteiras
       const resWallets = await fetch("/api/wallets", { cache: "no-store" });
@@ -175,6 +169,7 @@ export function DashboardContent() {
       }
     };
     fetchCards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWallet, currentDate]);
 
   // Carregar dados dos últimos 12 meses para gráfico de barras empilhadas

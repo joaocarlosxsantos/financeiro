@@ -69,7 +69,16 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       let despesasFix: Despesa[] = [];
       if (variaveisRes.ok) {
         const data = await variaveisRes.json();
-        despesasVar = data.map((e: any) => ({
+        despesasVar = data.map((e: {
+          id: string;
+          description: string;
+          amount: number | string;
+          date: string;
+          category?: { name: string };
+          categoryId?: string;
+          walletId?: string;
+          tags?: string[];
+        }) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),
@@ -83,7 +92,17 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       }
       if (fixasRes.ok) {
         const data = await fixasRes.json();
-        despesasFix = data.map((e: any) => ({
+        despesasFix = data.map((e: {
+          id: string;
+          description: string;
+          amount: number | string;
+          startDate?: string;
+          dayOfMonth?: number;
+          category?: { name: string };
+          categoryId?: string;
+          walletId?: string;
+          tags?: string[];
+        }) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),
@@ -153,7 +172,17 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
     if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-    const payload: any = {
+    interface ExpensePayload {
+      description: string;
+      amount: number;
+      date: string;
+      type: 'FIXED' | 'VARIABLE';
+      isFixed: boolean;
+      categoryId: string | null;
+      walletId: string | null;
+      tags: string[];
+    }
+    const payload: ExpensePayload = {
       description: form.description,
       amount: Number(form.amount),
       date: form.date,
@@ -195,7 +224,16 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       let despesasFix: Despesa[] = [];
       if (variaveisRes.ok) {
         const data = await variaveisRes.json();
-        despesasVar = data.map((e: any) => ({
+        despesasVar = data.map((e: {
+          id: string;
+          description: string;
+          amount: number | string;
+          date: string;
+          category?: { name: string };
+          categoryId?: string;
+          walletId?: string;
+          tags?: string[];
+        }) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),
@@ -209,7 +247,17 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       }
       if (fixasRes.ok) {
         const data = await fixasRes.json();
-        despesasFix = data.map((e: any) => ({
+        despesasFix = data.map((e: {
+          id: string;
+          description: string;
+          amount: number | string;
+          startDate?: string;
+          dayOfMonth?: number;
+          category?: { name: string };
+          categoryId?: string;
+          walletId?: string;
+          tags?: string[];
+        }) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),

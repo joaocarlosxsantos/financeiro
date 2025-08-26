@@ -1,5 +1,4 @@
 
-// import { toTitleCase } from '@/lib/camelcase';
 'use client'
 
 import React, { useEffect, useState, ChangeEvent } from 'react';
@@ -51,7 +50,6 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
 
   // Função stub para deletar (implemente conforme necessário)
   const handleDelete = (id: string) => {
-    // TODO: implementar remoção de despesa
     // Exemplo: setDespesas(despesas.filter(d => d.id !== id));
   };
   const [despesas, setDespesas] = useState<DespesaVariavel[]>([]);

@@ -42,7 +42,7 @@ export function CategoryCreateModal({ open, onClose, onCreated }: { open: boolea
         </div>
         <div>
           <Label htmlFor="category-type">Tipo</Label>
-          <select id="category-type" value={type} onChange={e => setType(e.target.value as any)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+          <select id="category-type" value={type} onChange={e => setType(e.target.value as 'INCOME' | 'EXPENSE' | 'BOTH')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
             <option value="INCOME">Renda</option>
             <option value="EXPENSE">Despesa</option>
             <option value="BOTH">Ambos</option>

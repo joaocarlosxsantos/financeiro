@@ -1,4 +1,4 @@
-import { NextAuthOptions } from 'next-auth'
+import { NextAuthOptions, Session } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from './prisma'
@@ -45,9 +45,9 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     session: async ({ session, token }) => {
       if (session?.user) {
-        (session.user as any).id = token.sub
+        (session.user as Session["user"] & { id?: string }).id = token.sub as string;
       }
-      return session
+      return session;
     },
     jwt: async ({ token, user }) => {
       if (user) {

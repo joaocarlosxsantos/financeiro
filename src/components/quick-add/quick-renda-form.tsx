@@ -19,7 +19,6 @@ export default function QuickRendaForm() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // TODO: Carregar categorias, carteiras e tags via API se necessário
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +29,6 @@ export default function QuickRendaForm() {
     if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-    // TODO: Submissão do formulário (POST/PUT)
   };
 
   return (

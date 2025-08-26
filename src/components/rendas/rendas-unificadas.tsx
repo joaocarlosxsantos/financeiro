@@ -153,11 +153,11 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
     if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-    const payload: any = {
+    const payload = {
       description: form.description,
       amount: Number(form.amount),
       date: form.date,
-      type: form.isFixed ? 'FIXED' : 'VARIABLE',
+      type: form.isFixed ? 'FIXED' as 'FIXED' | 'VARIABLE' : 'VARIABLE' as 'FIXED' | 'VARIABLE',
       isFixed: form.isFixed,
       categoryId: form.categoryId || null,
       walletId: form.walletId || null,

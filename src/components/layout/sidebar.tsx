@@ -1,3 +1,4 @@
+import Image from "next/image";
 'use client'
 
 import Link from 'next/link'
@@ -79,10 +80,13 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <Link href="/user" className="flex items-center group cursor-pointer" onClick={onClose}>
               <div className="flex-shrink-0">
                 {user?.image ? (
-                  <img 
-                    src={user.image} 
-                    alt={user.name || 'User'} 
+                  <Image
+                    src={user.image}
+                    alt={user.name || 'User'}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 rounded-full"
+                    style={{ objectFit: 'cover' }}
                   />
                 ) : (
                   <User className="h-8 w-8 text-white/80 dark:text-white/80 group-hover:text-blue-500" />

@@ -57,7 +57,6 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
     setColor(cat ? cat.color : '#3b82f6')
     setType(cat ? cat.type : 'EXPENSE')
     setIcon(cat && cat.icon ? cat.icon : '')
-    // Só abre o formulário após garantir que todos os states foram atualizados
     setTimeout(() => setShowForm(true), 0);
   }
 
@@ -164,7 +163,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
                     id="type" 
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     value={type}
-                    onChange={(e) => setType(e.target.value as any)}
+                    onChange={(e) => setType(e.target.value as 'EXPENSE' | 'INCOME' | 'BOTH')}
                   >
                     <option value="EXPENSE">Despesa</option>
                     <option value="INCOME">Renda</option>

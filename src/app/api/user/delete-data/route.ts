@@ -12,7 +12,6 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
   }
-  // Exclui todos os dados relacionados ao usuário, exceto o próprio usuário
   await prisma.expense.deleteMany({ where: { userId: user.id } });
   await prisma.income.deleteMany({ where: { userId: user.id } });
   await prisma.transfer.deleteMany({ where: { userId: user.id } });
