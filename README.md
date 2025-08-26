@@ -88,7 +88,7 @@ Desenvolvida com **Next.js 14**, **TypeScript**, **Tailwind CSS**, **Prisma** e 
 ## � Estrutura do Projeto
 
 ```
-financeiro-1/
+financeiro/
 ├── src/
 │   ├── app/            # Páginas, rotas e API (Next.js App Router)
 │   ├── components/     # Componentes React (UI, dashboard, forms, etc)
@@ -152,5 +152,5 @@ Contribuições são super bem-vindas! Abra uma issue ou pull request para suger
 ---
 
 <div align="center">
-   <b>Feito com 💙 por João Carlos e colaboradores</b>
+   <b>Feito por João Carlos</b>
 </div>
