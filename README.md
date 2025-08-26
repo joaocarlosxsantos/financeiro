@@ -1,131 +1,156 @@
-# Controle Financeiro
 
-Uma aplicação web completa para controle de despesas e rendas pessoais, desenvolvida com Next.js, TypeScript, Tailwind CSS e Prisma.
+# 💸 Controle Financeiro
+
+Aplicação web moderna e responsiva para controle de despesas, rendas e organização financeira pessoal.
+Desenvolvida com **Next.js 14**, **TypeScript**, **Tailwind CSS**, **Prisma** e arquitetura de componentes reutilizáveis.
+
+---
+
 
 ## 🚀 Funcionalidades
 
-- **Dashboard** com gráficos e resumos financeiros
-- **Gestão de despesas** (fixas e variáveis) e **rendas** (fixas e variáveis), com categorias e tags
-- **Importação de extrato bancário** (OFX/CSV), com sugestão automática de categorias e criação de categorias/tags durante a importação
-- **Sistema de carteiras** (wallets) e transferências entre carteiras
-- **Filtros por período e por carteira**
-- **Edição e exclusão em massa de dados do usuário**
-- **Interface moderna e responsiva**, com modo escuro
-- **Autenticação com NextAuth.js**
-- **Notificações (toasts)**
-- **Sistema de tags** para despesas/rendas
-- **Exportação de relatórios** (em desenvolvimento)
-- **Validação de dados com Zod** (em desenvolvimento)
+- **Dashboard interativo** com gráficos dinâmicos (Recharts) e resumos financeiros
+- **Gestão completa de despesas e rendas** (fixas e variáveis), com categorias, tags e carteiras
+- **Importação de extratos bancários** (OFX/CSV) com sugestão automática de categorias/tags
+- **Transferências entre carteiras** e controle multi-carteira
+- **Filtros avançados** por período, carteira, categoria e tags
+- **Edição e exclusão em massa** de dados do usuário
+- **Interface moderna, responsiva e com modo escuro** (Dark Mode)
+- **Autenticação segura** com NextAuth.js (Credentials e OAuth)
+- **Notificações (toasts) integradas**
+- **Validação robusta de dados** em todas as rotas de API usando [Zod](https://zod.dev/)
+- **Lazy loading** e otimizações de performance (useMemo, useCallback, dynamic imports)
+- **Imagens otimizadas** com next/image
+- **Padrão de código garantido** com ESLint e Prettier
+- **Exportação de relatórios** _(em breve)_
 
-## 🛠️ Tecnologias
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
-- **Backend**: Next.js API Routes (serverless functions)
-- **Banco de Dados**: PostgreSQL com Prisma ORM
-- **Gráficos**: Recharts
-- **Deploy**: Vercel (compatível)
+## 🛠️ Tecnologias & Arquitetura
+
+- **Frontend:** Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
+- **Backend:** Next.js API Routes (serverless functions)
+- **Banco de Dados:** PostgreSQL + Prisma ORM
+- **Gráficos:** Recharts
+- **Autenticação:** NextAuth.js (Credentials + OAuth)
+- **Validação:** Zod
+- **Padrão de código:** ESLint, Prettier
+- **Deploy:** Vercel (compatível)
+
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+
-- PostgreSQL
+- [Node.js 18+](https://nodejs.org/)
+- [PostgreSQL](https://www.postgresql.org/)
 - npm ou yarn
 
-## 🔧 Instalação
+
+## 🏁 Como rodar o projeto
 
 1. **Clone o repositório**
-
-```bash
-git clone <url-do-repositorio>
-cd financeiro
-```
+   ```bash
+   git clone <url-do-repositorio>
+   cd financeiro-1
+   ```
 
 2. **Instale as dependências**
-
-```bash
-npm install
-```
+   ```bash
+   npm install
+   # ou yarn
+   ```
 
 3. **Configure as variáveis de ambiente**
-   Crie um arquivo `.env.local` na raiz do projeto:
-
-```env
-DATABASE_URL="postgresql://usuario:senha@localhost:5432/financeiro"
-NEXTAUTH_SECRET="sua-chave-secreta-aqui"
-NEXTAUTH_URL="http://localhost:3000"
-```
+   - Copie o arquivo `.env.example` para `.env.local` e preencha os dados:
+   ```bash
+   cp env.example .env.local
+   ```
+   - Configure:
+     - `DATABASE_URL` (PostgreSQL)
+     - `NEXTAUTH_SECRET` (chave aleatória)
+     - `NEXTAUTH_URL` (ex: http://localhost:3000)
+     - (Opcional) Google OAuth
 
 4. **Configure o banco de dados**
-
-```bash
-# Gere o cliente Prisma
-npm run db:generate
-
-# Execute as migrações
-npm run db:push
-```
+   ```bash
+   npm run db:generate   # Gera o client Prisma
+   npm run db:push       # Aplica o schema no banco
+   npm run db:studio     # (opcional) Abre o Prisma Studio
+   ```
 
 5. **Inicie o servidor de desenvolvimento**
+   ```bash
+   npm run dev
+   ```
+   Acesse: [http://localhost:3000](http://localhost:3000)
 
-```bash
-npm run dev
+---
+
+
+## � Estrutura do Projeto
+
 ```
-
-A aplicação estará disponível em `http://localhost:3000`
-
-## 📁 Estrutura do Projeto
-
-```
-financeiro/
+financeiro-1/
 ├── src/
-│   ├── app/                    # Páginas da aplicação
-│   │   ├── dashboard/          # Dashboard principal
-│   │   ├── despesas/           # Gerenciamento de despesas
-│   │   ├── rendas/             # Gerenciamento de rendas
-│   │   ├── categorias/         # Gerenciamento de categorias
-│   │   └── api/                # API Routes
-│   ├── components/             # Componentes React
-│   │   ├── ui/                 # Componentes base (shadcn/ui)
-│   │   ├── dashboard/          # Componentes do dashboard
-│   │   ├── despesas/           # Componentes de despesas
-│   │   ├── rendas/             # Componentes de rendas
-│   │   ├── categorias/         # Componentes de categorias
-│   │   └── layout/             # Componentes de layout
-│   ├── lib/                    # Utilitários e configurações
-│   └── types/                  # Tipos TypeScript
-├── prisma/                     # Schema e migrações do banco
-└── public/                     # Arquivos estáticos
+│   ├── app/            # Páginas, rotas e API (Next.js App Router)
+│   ├── components/     # Componentes React (UI, dashboard, forms, etc)
+│   ├── hooks/          # React hooks customizados
+│   ├── lib/            # Utilitários, autenticação, helpers
+│   └── types/          # Tipos TypeScript globais
+├── prisma/             # Schema e migrações do banco
+├── public/             # Arquivos estáticos
+├── scripts/            # Scripts utilitários
+├── .prettierrc         # Configuração do Prettier
+├── tailwind.config.js  # Configuração do Tailwind
+└── ...
 ```
+
 
 ## 🗄️ Banco de Dados
 
-O projeto utiliza PostgreSQL com Prisma ORM. As principais tabelas são:
-
-- **User**: Usuários do sistema
+O projeto utiliza **PostgreSQL** com **Prisma ORM**. Principais entidades:
+- **User**: Usuários
 - **Category**: Categorias de despesas/rendas
-- **Expense**: Despesas (fixas e variáveis)
-- **Income**: Rendas (fixas e variáveis)
+- **Expense**: Despesas (fixas/variáveis)
+- **Income**: Rendas (fixas/variáveis)
+- **Wallet**: Carteiras
+- **Tag**: Tags para organização
 
-## 🚀 Deploy no Vercel
 
-1. **Conecte seu repositório ao Vercel**
-2. **Configure as variáveis de ambiente**:
-   - `DATABASE_URL`: URL do seu banco PostgreSQL
-   - `NEXTAUTH_SECRET`: Chave secreta para autenticação
-   - `NEXTAUTH_URL`: URL da sua aplicação
+## 🚀 Deploy
 
-3. **Deploy automático** será feito a cada push para a branch principal
+Deploy recomendado na [Vercel](https://vercel.com/):
+1. Conecte o repositório
+2. Configure as variáveis de ambiente (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`)
+3. O deploy é automático a cada push na branch principal
 
-## 🔄 Próximos Passos
 
-- [ ] Adicionar testes automatizados
-- [ ] Finalizar exportação de relatórios
-- [ ] Finalizar validação de dados com Zod
+## 🔄 Novidades & Próximos Passos
+
+### Novidades recentes
+- Validação de dados com **Zod** em todas as rotas de API (mais segurança)
+- Otimização de performance: lazy loading, useMemo/useCallback, dynamic imports
+- Imagens otimizadas com **next/image**
+- ESLint e Prettier configurados para padronização de código
+- Estrutura de autenticação robusta (NextAuth.js + Prisma)
+- Interface aprimorada e responsiva
+
+### Roadmap
+- [ ] Testes automatizados (unitários e integração)
+- [ ] Exportação de relatórios
+- [ ] Novos provedores de autenticação (Google, etc)
+- [ ] Melhorias de acessibilidade
+
 
 ## 📝 Licença
 
-Este projeto está sob a licença MIT.
+Distribuído sob a licença MIT.
 
-## 🤝 Contribuição
 
-Contribuições são bem-vindas! Por favor, abra uma issue ou pull request.
+## 🤝 Contribua!
+
+Contribuições são super bem-vindas! Abra uma issue ou pull request para sugerir melhorias, reportar bugs ou propor novas funcionalidades.
+
+---
+
+<div align="center">
+   <b>Feito com 💙 por João Carlos e colaboradores</b>
+</div>
