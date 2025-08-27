@@ -17,25 +17,31 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     return 'system';
   });
   const [resolved, setResolved] = useState<'light' | 'dark'>(() => 'light');
-  const mounted = useRef(false);
+  const mounted = useRef(false); // indica se já montou para decidir persistência
+  const userChanged = useRef(false); // evita override do fetch inicial após interação
+  const hydratedInitial = useRef(false); // impedir PUT logo após hidratação inicial
 
-  // Carrega preferência do backend na primeira montagem
+  // Carrega preferência do backend na primeira montagem (sem sobrescrever escolha manual rápida)
   useEffect(() => {
     mounted.current = true;
+    let cancelled = false;
     (async () => {
       try {
         const res = await fetch('/api/user/theme');
-        if (res.ok) {
+        if (!cancelled && res.ok) {
           const data = await res.json();
-          if (data?.theme) {
+          if (data?.theme && !userChanged.current) {
             setThemeState(data.theme);
             localStorage.setItem('theme', data.theme);
           }
         }
-      } catch (e) {
+      } catch {
         // silencioso
+      } finally {
+        hydratedInitial.current = true;
       }
     })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -49,18 +55,15 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     calc();
     mql.addEventListener('change', calc);
     localStorage.setItem('theme', theme);
-    // Persistir no backend (ignora se ainda carregando inicial ou já igual)
-    if (mounted.current) {
-      fetch('/api/user/theme', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme }),
-      }).catch(() => {});
+    // Persistir no backend (ignora primeira hidratação para evitar sobrescrita redundante)
+    if (mounted.current && hydratedInitial.current) {
+      fetch('/api/user/theme', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ theme }) }).catch(() => {});
     }
     return () => mql.removeEventListener('change', calc);
   }, [theme]);
 
   const setTheme = (t: 'light' | 'dark' | 'system') => {
+    userChanged.current = true;
     setThemeState(t);
   };
 
