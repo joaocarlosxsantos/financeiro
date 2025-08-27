@@ -51,6 +51,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  theme         String?   @default("system")
   accounts      Account[]
   sessions      Session[]
   categories    Category[]

@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { BarChart3, CreditCard, DollarSign, Home, Tag, User, LogOut, Wallet } from 'lucide-react';
 
 const navigation = [
@@ -113,7 +112,6 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
-          <ThemeSwitch />
         </div>
       </div>
     </div>

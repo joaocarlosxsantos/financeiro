@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
+import ThemeSelector from '@/components/ui/theme-selector';
+import { useTheme } from '@/components/providers/theme-provider';
 
 interface UserProfileProps {
   className?: string;
@@ -21,16 +23,26 @@ export function UserProfile({ className }: UserProfileProps) {
   const [passwords, setPasswords] = useState({ password: '', confirm: '' });
   const [passwordError, setPasswordError] = useState('');
   const [message, setMessage] = useState('');
+  const { setTheme } = useTheme();
 
   useEffect(() => {
-    fetch('/api/user').then(async (res) => {
-      if (res.ok) {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/user');
+      if (!cancelled && res.ok) {
         const data = await res.json();
         setUser(data);
         setForm(data);
+        if ((data as any)?.theme) {
+          setTheme((data as any).theme);
+        }
       }
-    });
-  }, []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // setTheme é estável, mas incluído para satisfazer regra eslint-react-hooks
+  }, [setTheme]);
 
   const handleEdit = () => setEdit(true);
   const handleCancel = () => {
@@ -126,6 +138,10 @@ export function UserProfile({ className }: UserProfileProps) {
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               placeholder="(99) 99999-9999"
             />
+          </div>
+          {/* Seletor de Tema */}
+          <div className="pt-2">
+            <ThemeSelector />
           </div>
           {message && <div className="text-center text-sm text-green-600">{message}</div>}
           <div className="flex gap-2 mt-4">

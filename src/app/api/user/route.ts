@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { id: true, name: true, email: true, phone: true },
+    select: { id: true, name: true, email: true, phone: true, theme: true },
   });
   if (!user) {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
@@ -29,9 +29,10 @@ export async function PUT(req: NextRequest) {
   const user = await prisma.user.update({
     where: { email: session.user.email },
     data: { name, email, phone },
+    select: { id: true, name: true, email: true, phone: true, theme: true },
   });
   return NextResponse.json({
     message: 'Usuário atualizado',
-    user: { id: user.id, name: user.name, email: user.email, phone: user.phone },
+    user,
   });
 }
