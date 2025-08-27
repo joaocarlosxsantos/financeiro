@@ -35,8 +35,8 @@ import {
   TrendingDown,
   DollarSign,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 const ExpenseChart = dynamic(() => import('./expense-chart').then((mod) => mod.ExpenseChart), {
   ssr: false,
@@ -584,16 +584,16 @@ export function DashboardContent() {
           <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={handlePreviousMonth}
               aria-label="Mês anterior"
-              className="h-10"
+              className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
             </Button>
-            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 rounded-md w-full sm:w-auto justify-center border border-white/15 bg-white/5 backdrop-blur-sm shadow-sm">
-              <Calendar className="h-4 w-4 text-foreground/80" />
-              <span className="font-medium text-sm sm:text-base text-foreground">
+            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 rounded-md w-full sm:w-auto justify-center border bg-white/90 border-slate-300/70 text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100">
+              <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+              <span className="font-medium text-sm sm:text-base">
                 {(() => {
                   const label = getMonthYear(currentDate);
                   // Capitaliza o mês
@@ -603,14 +603,14 @@ export function DashboardContent() {
             </div>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={handleNextMonth}
               disabled={isAtCurrentMonth}
               aria-disabled={isAtCurrentMonth}
               aria-label="Próximo mês"
-              className="h-10"
+              className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm disabled:opacity-50"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
             </Button>
           </div>
         </div>
@@ -707,28 +707,28 @@ export function DashboardContent() {
         <div className="space-y-4">
           <div className="flex gap-2 mb-2">
             <button
-              className={`border rounded-md py-2 px-4 flex-1 transition-colors
+              type="button"
+              onClick={() => setQuickTab('despesa')}
+              className={`border rounded-md py-2 px-4 flex-1 transition-colors text-sm font-medium
                 ${
                   quickTab === 'despesa'
                     ? 'bg-primary text-white border-primary shadow'
                     : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
                 }
               `}
-              onClick={() => setQuickTab('despesa')}
-              type="button"
             >
               Saída
             </button>
             <button
-              className={`border rounded-md py-2 px-4 flex-1 transition-colors
+              type="button"
+              onClick={() => setQuickTab('renda')}
+              className={`border rounded-md py-2 px-4 flex-1 transition-colors text-sm font-medium
                 ${
                   quickTab === 'renda'
                     ? 'bg-primary text-white border-primary shadow'
                     : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
                 }
               `}
-              onClick={() => setQuickTab('renda')}
-              type="button"
             >
               Entrada
             </button>

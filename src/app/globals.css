@@ -45,7 +45,8 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+  /* Fundo claro azul um pouco mais escuro para melhor contraste */
+  --background: 218 50% 95%; /* Ajustado de 97% -> 95% de lightness */
     --foreground: 220 15% 10%; /* Preto suave */
     --card: 0 0% 100%;
     --card-foreground: 220 15% 10%;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, ChangeEvent } from 'react';
-// import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+// Navegação de mês globalizada - ícones de setas padronizados no dashboard
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';

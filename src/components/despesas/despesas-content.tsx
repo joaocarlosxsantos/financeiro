@@ -6,7 +6,7 @@ import { useMonth } from '@/components/providers/month-provider';
 import DespesasUnificadas from './despesas-unificadas';
 
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
 
 export default function DespesasContent() {
   const [activeTab, setActiveTab] = useState('variaveis');
@@ -32,15 +32,27 @@ export default function DespesasContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handlePrevMonth} aria-label="Mês anterior">
-            <ChevronLeft className="w-4 h-4" />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePrevMonth}
+            aria-label="Mês anterior"
+            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+          >
+            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
           </Button>
-          <div className="flex items-center px-2 py-1 border rounded bg-background text-foreground">
-            <Calendar className="w-4 h-4 mr-1" />
-            {monthLabelCapitalized} {yearLabel}
+          <div className="flex items-center space-x-2 px-3 h-10 rounded-md border bg-white/90 border-slate-300/70 text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100">
+            <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+            <span className="font-medium text-sm sm:text-base">{monthLabelCapitalized} {yearLabel}</span>
           </div>
-          <Button variant="outline" size="sm" onClick={handleNextMonth} aria-label="Próximo mês">
-            <ChevronRight className="w-4 h-4" />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNextMonth}
+            aria-label="Próximo mês"
+            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+          >
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
           </Button>
         </div>
       </div>

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
 import { TagSelector } from '@/components/ui/tag-selector';
-import { Edit, Trash2, Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Edit, Trash2, Plus, Calendar } from 'lucide-react';
 
 import { Loader } from '@/components/ui/loader';
 
