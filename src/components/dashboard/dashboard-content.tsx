@@ -81,7 +81,12 @@ export function DashboardContent() {
     monthlyData: Array<{ month: string; income: number; expense: number; balance: number }>;
     topExpenseCategories: Array<{ category: string; amount: number; diff: number }>;
     dailyBalanceData: Array<{ date: string; balance: number }>;
-  balanceProjectionData: Array<{ day: number; real: number; baselineLinear: number; baselineRecent: number }>;
+    balanceProjectionData: Array<{
+      day: number;
+      real: number;
+      baselineLinear: number;
+      baselineRecent: number;
+    }>;
   };
   const [summary, setSummary] = useState<Summary>({
     expensesByCategory: [],
@@ -90,7 +95,7 @@ export function DashboardContent() {
     monthlyData: [],
     topExpenseCategories: [],
     dailyBalanceData: [],
-  balanceProjectionData: [],
+    balanceProjectionData: [],
   });
   // Totais desacoplados do Summary (antes usados pelo gráfico removido)
   const [totalIncome, setTotalIncome] = useState(0);
@@ -146,8 +151,8 @@ export function DashboardContent() {
       ]);
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
-  const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+      const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
       // Construir evolução diária do saldo (cumulativo)
       const dateKey = (dStr: string) => {
         try {
@@ -174,12 +179,24 @@ export function DashboardContent() {
       let previousBalance = 0;
       {
         const prevEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0); // último dia mês anterior
-        const prevEndStr = prevEnd.toISOString().slice(0,10);
+        const prevEndStr = prevEnd.toISOString().slice(0, 10);
         const [pExpVarRes, pExpFixRes, pIncVarRes, pIncFixRes] = await Promise.all([
-          fetch(`/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
-          fetch(`/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
-          fetch(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
-          fetch(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+          fetch(
+            `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            fetchOpts,
+          ),
+          fetch(
+            `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            fetchOpts,
+          ),
+          fetch(
+            `/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            fetchOpts,
+          ),
+          fetch(
+            `/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            fetchOpts,
+          ),
         ]);
         const [pExpVar, pExpFix, pIncVar, pIncFix] = await Promise.all([
           pExpVarRes.ok ? pExpVarRes.json() : [],
@@ -189,7 +206,9 @@ export function DashboardContent() {
         ]);
         const prevExpenses: any[] = [...pExpVar, ...pExpFix];
         const prevIncomes: any[] = [...pIncVar, ...pIncFix];
-        previousBalance = prevIncomes.reduce((s,i)=>s+Number(i.amount),0) - prevExpenses.reduce((s,e)=>s+Number(e.amount),0);
+        previousBalance =
+          prevIncomes.reduce((s, i) => s + Number(i.amount), 0) -
+          prevExpenses.reduce((s, e) => s + Number(e.amount), 0);
       }
       let running = previousBalance;
       const dailyBalanceData: Array<{ date: string; balance: number }> = [];
@@ -206,20 +225,25 @@ export function DashboardContent() {
         currentDate.getMonth() + 1,
         0,
       ).getDate();
-  const currentNet = running - previousBalance; // variação do mês
-  const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
-  const projectedFinal = previousBalance + avgPerDay * totalDaysInMonth;
-  const balanceProjectionData: Array<{ day: number; real: number; baselineLinear: number; baselineRecent: number }> = [];
+      const currentNet = running - previousBalance; // variação do mês
+      const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
+      const projectedFinal = previousBalance + avgPerDay * totalDaysInMonth;
+      const balanceProjectionData: Array<{
+        day: number;
+        real: number;
+        baselineLinear: number;
+        baselineRecent: number;
+      }> = [];
       // Projeção linear global já calculada (projectedFinal)
       // Projeção recente: média dos últimos N dias com movimento (ex: 7 ou menor se menos dias)
       const N = 7;
       const daysWithMovement = dailyBalanceData
-        .filter(p => p.date !== undefined)
-        .map(p => Number(p.date))
-        .filter(n => !isNaN(n));
+        .filter((p) => p.date !== undefined)
+        .map((p) => Number(p.date))
+        .filter((n) => !isNaN(n));
       const effectiveDays = daysWithMovement.length;
       const lastDays = dailyBalanceData
-        .filter(p => p.date !== undefined && p.date !== '0')
+        .filter((p) => p.date !== undefined && p.date !== '0')
         .slice(-N);
       const recentVariation = (() => {
         if (lastDays.length <= 1) return currentNet; // fallback
@@ -227,22 +251,25 @@ export function DashboardContent() {
         const last = lastDays[lastDays.length - 1].balance;
         return last - first;
       })();
-      const recentAvgPerDay = lastDays.length > 1 ? recentVariation / (lastDays.length - 1) : avgPerDay;
+      const recentAvgPerDay =
+        lastDays.length > 1 ? recentVariation / (lastDays.length - 1) : avgPerDay;
       const projectedRecentFinal = previousBalance + recentAvgPerDay * totalDaysInMonth;
 
       for (let d = 1; d <= totalDaysInMonth; d++) {
         const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
         const real = realEntry ? realEntry.balance : running;
-        const baselineLinear = previousBalance + (projectedFinal - previousBalance) * (d / totalDaysInMonth);
-        const baselineRecent = previousBalance + (projectedRecentFinal - previousBalance) * (d / totalDaysInMonth);
+        const baselineLinear =
+          previousBalance + (projectedFinal - previousBalance) * (d / totalDaysInMonth);
+        const baselineRecent =
+          previousBalance + (projectedRecentFinal - previousBalance) * (d / totalDaysInMonth);
         balanceProjectionData.push({ day: d, real, baselineLinear, baselineRecent });
       }
-  setSummary((prev: typeof summary) => ({
-    ...prev,
-    dailyBalanceData,
-  balanceProjectionData,
-  }));
-  // Totais e saldo do mês serão definidos no fetchSummary para evitar cálculo duplicado
+      setSummary((prev: typeof summary) => ({
+        ...prev,
+        dailyBalanceData,
+        balanceProjectionData,
+      }));
+      // Totais e saldo do mês serão definidos no fetchSummary para evitar cálculo duplicado
 
       // Saldo acumulado até o fim do mês
       const [expVarResA, expFixResA, incVarResA, incFixResA] = await Promise.all([
@@ -423,8 +450,8 @@ export function DashboardContent() {
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
 
-  const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+      const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
 
       const expenseMap = new Map<string, { amount: number; color: string }>();
       for (const e of allExpenses) {
@@ -562,7 +589,7 @@ export function DashboardContent() {
   };
 
   return (
-  <div className="space-y-4 flex-1 min-h-screen flex flex-col px-2 sm:px-4 pb-24">
+    <div className="space-y-4 flex-1 min-h-screen flex flex-col px-2 sm:px-4 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
@@ -578,7 +605,9 @@ export function DashboardContent() {
           >
             <option value="">Todas as carteiras</option>
             {wallets.map((w: { id: string; name: string; type: string }) => (
-              <option key={w.id} value={w.id}>{w.name}</option>
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
             ))}
           </Select>
           <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
@@ -620,7 +649,7 @@ export function DashboardContent() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
         <Card
           onClick={() => setModal('income')}
-          className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0"
+          className="cursor-pointer flex flex-col justify-between h-full min-h-[100px] sm:min-h-0"
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
             <CardTitle className="text-base sm:text-lg font-semibold">Entradas Totais</CardTitle>
@@ -634,7 +663,7 @@ export function DashboardContent() {
         </Card>
         <Card
           onClick={() => setModal('expense')}
-          className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0"
+          className="cursor-pointer flex flex-col justify-between h-full min-h-[100px] sm:min-h-0"
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
             <CardTitle className="text-base sm:text-lg font-semibold">Saídas Totais</CardTitle>
@@ -646,7 +675,7 @@ export function DashboardContent() {
             </div>
           </CardContent>
         </Card>
-        <Card className="flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
+        <Card onClick={() => setModal('balance')} className="cursor-pointer flex flex-col justify-between h-full min-h-[100px] sm:min-h-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
             <CardTitle className="text-base sm:text-lg font-semibold">Saldo do mês</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -660,10 +689,7 @@ export function DashboardContent() {
             </p>
           </CardContent>
         </Card>
-        <Card
-          onClick={() => setModal('balance')}
-          className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0"
-        >
+        <Card className="flex flex-col justify-between h-full min-h-[100px] sm:min-h-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
             <CardTitle className="text-base sm:text-lg font-semibold">Saldo acumulado</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -677,7 +703,7 @@ export function DashboardContent() {
             </p>
           </CardContent>
         </Card>
-        <Card className="flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
+        <Card className="flex flex-col justify-between h-full min-h-[100px] sm:min-h-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
             <CardTitle className="text-base sm:text-lg font-semibold">Limite Diário</CardTitle>
             <span className="h-4 w-4 text-orange-500">💸</span>
@@ -950,7 +976,6 @@ export function DashboardContent() {
         </Card>
       </div>
 
-
       {/* Projeção e evolução diária lado a lado (substitui Entradas x Saídas) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
         <Card className="w-full">
@@ -978,7 +1003,6 @@ export function DashboardContent() {
           </CardContent>
         </Card>
       </div>
-
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
         {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
@@ -1017,8 +1041,8 @@ export function DashboardContent() {
           </CardContent>
         </Card>
       </div>
-  {/* Espaçador para afastar do rodapé */}
-  <div className="h-24 sm:h-32" aria-hidden="true" />
+      {/* Espaçador para afastar do rodapé */}
+      <div className="h-24 sm:h-32" aria-hidden="true" />
     </div>
   );
 }
