@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -18,6 +18,8 @@ export default function QuickDespesaForm() {
     tags: [] as string[],
     isFixed: false,
   });
+  const amountRef = useRef<HTMLInputElement | null>(null);
+  const categorySelectRef = useRef<HTMLSelectElement | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
@@ -26,6 +28,47 @@ export default function QuickDespesaForm() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const RECENTS_KEY = 'recent_expense_categories';
+  const [recentCategories, setRecentCategories] = useState<string[]>([]); // ids
+
+  // Carregar metadados básicos (categorias / carteiras / tags)
+  useEffect(() => {
+    (async () => {
+      try {
+        const [catRes, walRes, tagRes] = await Promise.all([
+          fetch('/api/categories?&_=' + Date.now()),
+          fetch('/api/wallets?&_=' + Date.now()),
+          fetch('/api/tags?&_=' + Date.now()),
+        ]);
+        if (catRes.ok) setCategories(await catRes.json());
+        if (walRes.ok) setWallets(await walRes.json());
+        if (tagRes.ok) setTags(await tagRes.json());
+      } catch {}
+    })();
+  }, []);
+
+  // Carregar categorias recentes do localStorage
+  useEffect(() => {
+    try {
+      const data = localStorage.getItem(RECENTS_KEY);
+      if (data) setRecentCategories(JSON.parse(data));
+    } catch {}
+  }, []);
+
+  const persistRecents = useCallback((next: string[]) => {
+    setRecentCategories(next);
+    try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch {}
+  }, []);
+
+  // Autofocus no campo valor ao abrir
+  useEffect(() => {
+    amountRef.current?.focus();
+  }, []);
+
+  const updateRecents = (categoryId: string) => {
+    if (!categoryId) return;
+    persistRecents([categoryId, ...recentCategories.filter((c) => c !== categoryId)].slice(0, 10));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +79,39 @@ export default function QuickDespesaForm() {
     if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
+
+    // Aqui poderia chamar a API /api/expenses (omitido se já existir em outro lugar)
+    updateRecents(form.categoryId);
+
+    const keptCategory = form.categoryId; // manter categoria
+    setForm((f) => ({
+      ...f,
+      description: '',
+      amount: '',
+      date: '',
+      categoryId: keptCategory,
+      // mantém wallet para rapidez
+    }));
+    // Refoca valor para lançamento rápido
+    requestAnimationFrame(() => amountRef.current?.focus());
+  };
+
+  // Navegação pelas categorias recentes com setas ↑ ↓ quando focado o select de categoria
+  const handleCategoryKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
+    if (recentCategories.length === 0) return;
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const current = form.categoryId;
+    const list = recentCategories.filter((id) => categories.find((c) => c.id === id));
+    if (list.length === 0) return;
+    const idx = list.indexOf(current);
+    let nextId = list[0];
+    if (e.key === 'ArrowDown') {
+      nextId = idx === -1 ? list[0] : list[(idx + 1) % list.length];
+    } else if (e.key === 'ArrowUp') {
+      nextId = idx === -1 ? list[list.length - 1] : list[(idx - 1 + list.length) % list.length];
+    }
+    setForm((f) => ({ ...f, categoryId: nextId }));
   };
 
   return (
@@ -59,10 +135,17 @@ export default function QuickDespesaForm() {
             id="amount"
             type="number"
             step="0.01"
+            ref={amountRef}
             value={form.amount}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setForm((f) => ({ ...f, amount: e.target.value }))
             }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                // força submit rápido
+                handleSubmit(e as any);
+              }
+            }}
           />
           {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
         </div>
@@ -82,6 +165,8 @@ export default function QuickDespesaForm() {
           <Label htmlFor="category">Categoria</Label>
           <select
             id="category"
+            ref={categorySelectRef}
+            onKeyDown={handleCategoryKeyDown}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             value={form.categoryId}
             onChange={(e) => {
@@ -96,6 +181,13 @@ export default function QuickDespesaForm() {
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                </option>
+              ))}
+            {recentCategories
+              .filter((id) => !categories.find((c) => c.id === id))
+              .map((id) => (
+                <option key={id} value={id}>
+                  (Recente) {id}
                 </option>
               ))}
           </select>
@@ -155,7 +247,7 @@ export default function QuickDespesaForm() {
         </div>
       </div>
       <div className="flex justify-end gap-2 mt-4">
-        <Button type="submit">Cadastrar</Button>
+  <Button type="submit">Cadastrar</Button>
       </div>
     </form>
   );
