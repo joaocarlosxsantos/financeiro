@@ -86,7 +86,7 @@ export function DashboardContent() {
     monthlyData: Array<{ month: string; income: number; expense: number; balance: number }>;
     topExpenseCategories: Array<{ category: string; amount: number; diff: number }>;
     dailyBalanceData: Array<{ date: string; balance: number }>;
-    balanceProjectionData: Array<{ day: number; real: number; baseline: number }>;
+  balanceProjectionData: Array<{ day: number; real: number; baselineLinear: number; baselineRecent: number }>;
   };
   const [summary, setSummary] = useState<Summary>({
     totalIncome: 0,
@@ -98,7 +98,7 @@ export function DashboardContent() {
     monthlyData: [],
     topExpenseCategories: [],
     dailyBalanceData: [],
-    balanceProjectionData: [],
+  balanceProjectionData: [],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
@@ -214,19 +214,40 @@ export function DashboardContent() {
   const currentNet = running - previousBalance; // variação do mês
   const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
   const projectedFinal = previousBalance + avgPerDay * totalDaysInMonth;
-      const balanceProjectionData: Array<{ day: number; real: number; baseline: number }> = [];
+  const balanceProjectionData: Array<{ day: number; real: number; baselineLinear: number; baselineRecent: number }> = [];
+      // Projeção linear global já calculada (projectedFinal)
+      // Projeção recente: média dos últimos N dias com movimento (ex: 7 ou menor se menos dias)
+      const N = 7;
+      const daysWithMovement = dailyBalanceData
+        .filter(p => p.date !== undefined)
+        .map(p => Number(p.date))
+        .filter(n => !isNaN(n));
+      const effectiveDays = daysWithMovement.length;
+      const lastDays = dailyBalanceData
+        .filter(p => p.date !== undefined && p.date !== '0')
+        .slice(-N);
+      const recentVariation = (() => {
+        if (lastDays.length <= 1) return currentNet; // fallback
+        const first = lastDays[0].balance;
+        const last = lastDays[lastDays.length - 1].balance;
+        return last - first;
+      })();
+      const recentAvgPerDay = lastDays.length > 1 ? recentVariation / (lastDays.length - 1) : avgPerDay;
+      const projectedRecentFinal = previousBalance + recentAvgPerDay * totalDaysInMonth;
+
       for (let d = 1; d <= totalDaysInMonth; d++) {
-  const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
-  const real = realEntry ? realEntry.balance : running; // se dia ainda sem movimento, mantém último
-  const baseline = previousBalance + (projectedFinal - previousBalance) * (d / totalDaysInMonth);
-        balanceProjectionData.push({ day: d, real, baseline });
+        const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
+        const real = realEntry ? realEntry.balance : running;
+        const baselineLinear = previousBalance + (projectedFinal - previousBalance) * (d / totalDaysInMonth);
+        const baselineRecent = previousBalance + (projectedRecentFinal - previousBalance) * (d / totalDaysInMonth);
+        balanceProjectionData.push({ day: d, real, baselineLinear, baselineRecent });
       }
       setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome,
         totalExpenses,
         dailyBalanceData,
-        balanceProjectionData,
+  balanceProjectionData,
       }));
       setSaldoDoMes(totalIncome - totalExpenses);
 
