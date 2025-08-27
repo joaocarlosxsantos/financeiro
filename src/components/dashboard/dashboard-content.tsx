@@ -20,6 +20,7 @@ import { BalanceProjectionChart } from '@/components/dashboard/balance-projectio
 import { useMonth } from '@/components/providers/month-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 
 // Função utilitária local para formatar data yyyy-MM-dd
 function toYmd(d: Date) {
@@ -570,18 +571,16 @@ export function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:space-x-2 w-full">
-          <select
-            className="border border-border rounded px-2 py-2 w-full sm:w-auto text-sm bg-background text-foreground dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+          <Select
+            className="w-full sm:w-auto h-10 px-3 py-2 text-sm"
             value={selectedWallet}
             onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedWallet(e.target.value)}
           >
             <option value="">Todas as carteiras</option>
             {wallets.map((w: { id: string; name: string; type: string }) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
+              <option key={w.id} value={w.id}>{w.name}</option>
             ))}
-          </select>
+          </Select>
           <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
@@ -592,9 +591,9 @@ export function DashboardContent() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
-              <Calendar className="h-4 w-4 text-foreground" />
-              <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">
+            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 rounded-md w-full sm:w-auto justify-center border border-white/15 bg-white/5 backdrop-blur-sm shadow-sm">
+              <Calendar className="h-4 w-4 text-foreground/80" />
+              <span className="font-medium text-sm sm:text-base text-foreground">
                 {(() => {
                   const label = getMonthYear(currentDate);
                   // Capitaliza o mês

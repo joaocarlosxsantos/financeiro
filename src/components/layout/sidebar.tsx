@@ -61,7 +61,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <div className="h-9 w-9 rounded-xl bg-primary/90 text-primary-foreground flex items-center justify-center font-bold shadow ring-1 ring-primary/40">
             CF
           </div>
-          <h1 className="text-base font-semibold tracking-wide select-none">Controle</h1>
+          <h1 className="text-base font-semibold tracking-wide select-none">Controle Financeiro</h1>
         </div>
         {onClose && (
           <button
