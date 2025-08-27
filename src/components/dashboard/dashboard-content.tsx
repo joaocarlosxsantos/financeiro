@@ -549,7 +549,38 @@ export function DashboardContent() {
               </option>
             ))}
           </select>
-          {/* (Outros filtros podem ficar aqui) */}
+          <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousMonth}
+              aria-label="Mês anterior"
+              className="h-10"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
+              <Calendar className="h-4 w-4 text-foreground" />
+              <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">
+                {(() => {
+                  const label = getMonthYear(currentDate);
+                  // Capitaliza o mês
+                  return label.charAt(0).toUpperCase() + label.slice(1);
+                })()}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextMonth}
+              disabled={isAtCurrentMonth}
+              aria-disabled={isAtCurrentMonth}
+              aria-label="Próximo mês"
+              className="h-10"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -830,7 +861,7 @@ export function DashboardContent() {
         <div className="hidden xl:block" />
       </div>
 
-            {/* Gráficos diários: categoria, carteira e tag */}
+      {/* Gráficos diários: categoria, carteira e tag */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 w-full">
         <Card>
           <CardHeader>
