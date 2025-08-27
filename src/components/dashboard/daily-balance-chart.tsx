@@ -10,11 +10,32 @@ export const DailyBalanceChart = ({ data }: { data: DailyBalancePoint[] }) => {
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
             <XAxis dataKey="date" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip formatter={(v:number)=> v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} labelFormatter={l=>`Dia ${l}`} />
-            <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2} dot={false} name="Saldo" />
+            <Line
+              type="monotone"
+              dataKey="balance"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              name="Saldo"
+              // Exibe pontos apenas nos dias que existem dados (todos os itens do array recebido)
+              dot={(props: any) => {
+                const { cx, cy } = props;
+                return (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={3.2}
+                    fill="#3b82f6"
+                    stroke="#1e40af"
+                    strokeWidth={1}
+                  />
+                );
+              }}
+              activeDot={{ r: 5 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       )}

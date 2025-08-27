@@ -561,7 +561,7 @@ export function DashboardContent() {
   };
 
   return (
-    <div className="space-y-4 flex-1 min-h-screen flex flex-col px-2 sm:px-4">
+  <div className="space-y-4 flex-1 min-h-screen flex flex-col px-2 sm:px-4 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
@@ -1018,6 +1018,8 @@ export function DashboardContent() {
           </CardContent>
         </Card>
       </div>
+  {/* Espaçador para afastar do rodapé */}
+  <div className="h-24 sm:h-32" aria-hidden="true" />
     </div>
   );
 }

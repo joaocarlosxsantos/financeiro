@@ -47,7 +47,7 @@ export function DailyWalletChart({ data, walletsMeta }: DailyWalletChartProps) {
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" />
+  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
         <XAxis dataKey="date" tickFormatter={(d) => String(Number(d.split('-')[2]))} />
         <YAxis />
         <Tooltip
