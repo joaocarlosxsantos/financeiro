@@ -9,14 +9,13 @@ import {
   CartesianGrid,
 } from 'recharts';
 
-interface DailyCategoryChartProps {
-  data: Array<{ date: string; [category: string]: number | string }>;
-  categoryColors?: Record<string, string>;
+interface DailyTagChartProps {
+  data: Array<{ date: string; [tag: string]: number | string }>;
+  tagNames?: Record<string,string>;
 }
 
-export function DailyCategoryChart({ data, categoryColors }: DailyCategoryChartProps) {
-  // Extrai as categorias dinamicamente (exceto a coluna 'date')
-  const categories = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== 'date') : [];
+export function DailyTagChart({ data, tagNames }: DailyTagChartProps) {
+  const tags = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== 'date') : [];
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
@@ -29,22 +28,16 @@ export function DailyCategoryChart({ data, categoryColors }: DailyCategoryChartP
           }
           labelFormatter={(label) => `Dia ${String(Number(label.split('-')[2]))}`}
         />
-  <Legend formatter={(value)=> value} />
-        {categories.map((cat, idx) => (
-          <Bar
-            key={cat}
-            dataKey={cat}
-            stackId="a"
-            fill={categoryColors?.[cat] || getColor(idx)}
-            name={cat}
-          />
-        ))}
+        <Legend formatter={(value) => value} />
+        {tags.map((tag, idx) => {
+          const display = tagNames?.[tag] || tag;
+          return <Bar key={tag} dataKey={tag} stackId="a" fill={getColor(idx)} name={display} />;
+        })}
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-// Função simples para gerar cores distintas
 function getColor(idx: number) {
   const palette = [
     '#6366f1',
@@ -62,3 +55,5 @@ function getColor(idx: number) {
   ];
   return palette[idx % palette.length];
 }
+
+export default DailyTagChart;

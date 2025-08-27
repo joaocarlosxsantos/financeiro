@@ -54,8 +54,9 @@ export function DailyWalletChart({ data, walletsMeta }: DailyWalletChartProps) {
           formatter={(value: number) =>
             value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
           }
+          labelFormatter={(label) => `Dia ${String(Number(label.split('-')[2]))}`}
         />
-        <Legend />
+  <Legend formatter={(value)=> value} />
         {wallets.map((w) => {
           const meta = walletsMeta?.find((wm) => wm.name === w);
           const walletType = meta?.type;

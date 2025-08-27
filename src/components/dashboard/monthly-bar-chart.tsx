@@ -31,7 +31,7 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
             value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
           }
         />
-        <Legend />
+  <Legend formatter={(value)=> value === 'income' ? 'Entradas' : value === 'expense' ? 'Saídas' : value === 'balance' ? 'Saldo' : value} />
         <Bar dataKey="income" fill="#10b981" name="Entradas" />
         <Bar dataKey="expense" fill="#ef4444" name="Saídas" />
         <Line

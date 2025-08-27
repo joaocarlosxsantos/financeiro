@@ -10,18 +10,24 @@ interface ExpenseChartProps {
     amount: number;
     color: string;
   }>;
+  maxItems?: number;
 }
 
-export function ExpenseChart({ data }: ExpenseChartProps) {
+export function ExpenseChart({ data, maxItems }: ExpenseChartProps) {
   const isMobile = useIsMobile();
   const total = data.reduce((sum, item) => sum + item.amount, 0);
 
-  const chartData = data.map((item) => ({
-    name: item.category,
-    value: item.amount,
-    color: item.color,
-    percentage: ((item.amount / total) * 100).toFixed(1),
-  }));
+  let chartData = data
+    .map((item) => ({
+      name: item.category, // categoria em português
+      value: item.amount,
+      color: item.color,
+      percentage: ((item.amount / total) * 100).toFixed(1),
+    }))
+    .sort((a, b) => b.value - a.value); // ordena decrescente
+  if (maxItems && chartData.length > maxItems) {
+    chartData = chartData.slice(0, maxItems);
+  }
 
   return (
     <div className="w-full">
@@ -34,7 +40,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
               cy="50%"
               label={false}
               labelLine={false}
-              outerRadius={isMobile ? 100 : 120}
+              outerRadius={isMobile ? 100 : 150}
               fill="#8884d8"
               dataKey="value"
             >
@@ -43,7 +49,10 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) => [formatCurrency(value), 'Valor']}
+              formatter={(value: number, _name: any, props: any) => {
+                const pct = props?.payload?.percentage;
+                return [formatCurrency(value) + (pct ? ` (${pct}%)` : ''), 'Valor'];
+              }}
               labelFormatter={(label) => `Categoria: ${label}`}
             />
           </PieChart>

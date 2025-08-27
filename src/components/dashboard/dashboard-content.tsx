@@ -10,7 +10,13 @@ const DailyWalletChart = dynamic(
   () => import('./daily-wallet-chart').then((mod) => mod.DailyWalletChart),
   { ssr: false, loading: () => <div>Carregando gráfico...</div> },
 );
+const DynamicDailyTagChart = dynamic(
+  () => import('./daily-tag-chart').then((mod) => mod.DailyTagChart),
+  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
+);
 import { useEffect, useState, useMemo, ChangeEvent } from 'react';
+import { DailyBalanceChart } from '@/components/dashboard/daily-balance-chart';
+import { BalanceProjectionChart } from '@/components/dashboard/balance-projection-chart';
 import { useMonth } from '@/components/providers/month-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,10 +50,7 @@ const SummaryRatioChart = dynamic(
   () => import('./summary-ratio-chart').then((mod) => mod.SummaryRatioChart),
   { ssr: false, loading: () => <div>Carregando gráfico...</div> },
 );
-const TagChart = dynamic(() => import('./tag-chart').then((mod) => mod.TagChart), {
-  ssr: false,
-  loading: () => <div>Carregando gráfico...</div>,
-});
+// Removido gráfico de Saídas por Tag (pizza) substituído por gráfico diário por Tag
 const MonthlyBarChart = dynamic(
   () => import('./monthly-bar-chart').then((mod) => mod.MonthlyBarChart),
   { ssr: false, loading: () => <div>Carregando gráfico...</div> },
@@ -72,15 +75,18 @@ export function DashboardContent() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickTab, setQuickTab] = useState<'despesa' | 'renda'>('despesa');
   const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance'>(null);
+  // Estados removidos: modal agora sempre mostra todas as categorias ordenadas.
   type Summary = {
     totalIncome: number;
     totalExpenses: number;
     balance: number;
     expensesByCategory: Array<{ category: string; amount: number; color: string }>;
     incomesByCategory: Array<{ category: string; amount: number; color: string }>;
-    expensesByTag: Array<{ tag: string; amount: number; color: string }>;
+    // removido: expensesByTag
     monthlyData: Array<{ month: string; income: number; expense: number; balance: number }>;
     topExpenseCategories: Array<{ category: string; amount: number; diff: number }>;
+    dailyBalanceData: Array<{ date: string; balance: number }>;
+    balanceProjectionData: Array<{ day: number; real: number; baseline: number }>;
   };
   const [summary, setSummary] = useState<Summary>({
     totalIncome: 0,
@@ -88,14 +94,17 @@ export function DashboardContent() {
     balance: 0,
     expensesByCategory: [],
     incomesByCategory: [],
-    expensesByTag: [],
+    // expensesByTag removido
     monthlyData: [],
     topExpenseCategories: [],
+    dailyBalanceData: [],
+    balanceProjectionData: [],
   });
   const [isLoading, setIsLoading] = useState(false);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [limiteDiario, setLimiteDiario] = useState<number>(0);
+  const [tagNames, setTagNames] = useState<Record<string, string>>({});
   const { currentDate, setCurrentDate } = useMonth();
   const today = new Date();
   const isAtCurrentMonth =
@@ -144,10 +153,60 @@ export function DashboardContent() {
       const allIncomes: any[] = [...incVar, ...incFix];
       const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
       const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+      // Construir evolução diária do saldo (cumulativo)
+      const dateKey = (dStr: string) => {
+        try {
+          return new Date(dStr);
+        } catch {
+          return new Date();
+        }
+      };
+      const dayMap: Record<string, { income: number; expense: number }> = {};
+      const pushItem = (arr: any[], type: 'income' | 'expense') => {
+        for (const it of arr) {
+          const rawDate = it.date || it.paidAt || it.createdAt || it.updatedAt;
+          if (!rawDate) continue;
+          const d = dateKey(rawDate);
+          const key = d.toISOString().slice(0, 10);
+          if (!dayMap[key]) dayMap[key] = { income: 0, expense: 0 };
+          dayMap[key][type] += Number(it.amount) || 0;
+        }
+      };
+      pushItem(allIncomes, 'income');
+      pushItem(allExpenses, 'expense');
+      const dayKeysSorted = Object.keys(dayMap).sort();
+      let running = 0;
+      const dailyBalanceData: Array<{ date: string; balance: number }> = dayKeysSorted.map((k) => {
+        running += dayMap[k].income - dayMap[k].expense;
+        return { date: k.slice(-2), balance: running };
+      });
+      // Projeção: baseline vs real
+      const daysElapsed = dayKeysSorted.length;
+      const totalDaysInMonth = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0,
+      ).getDate();
+      const currentNet = running; // saldo acumulado até última data com movimento
+      const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
+      const projectedFinal = avgPerDay * totalDaysInMonth;
+      const balanceProjectionData: Array<{ day: number; real: number; baseline: number }> = [];
+      for (let d = 1; d <= totalDaysInMonth; d++) {
+        const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
+        const real = realEntry
+          ? realEntry.balance
+          : dailyBalanceData.length
+          ? dailyBalanceData[dailyBalanceData.length - 1].balance
+          : 0;
+        const baseline = (projectedFinal / totalDaysInMonth) * d;
+        balanceProjectionData.push({ day: d, real, baseline });
+      }
       setSummary((prev: typeof summary) => ({
         ...prev,
         totalIncome,
         totalExpenses,
+        dailyBalanceData,
+        balanceProjectionData,
       }));
       setSaldoDoMes(totalIncome - totalExpenses);
 
@@ -323,10 +382,9 @@ export function DashboardContent() {
         tagsRes.ok ? tagsRes.json() : [],
       ]);
 
-      const tagIdToName: Record<string, string> = {};
-      if (Array.isArray(tagsList)) {
-        for (const t of tagsList) tagIdToName[t.id] = t.name;
-      }
+      const tagIdToNameLocal: Record<string, string> = {};
+      if (Array.isArray(tagsList)) for (const t of tagsList) tagIdToNameLocal[t.id] = t.name;
+      setTagNames(tagIdToNameLocal);
 
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
@@ -364,32 +422,7 @@ export function DashboardContent() {
         color: v.color,
       }));
 
-      // Agrupar despesas por tag
-      const tagMap = new Map<string, { amount: number; color: string }>();
-      for (const e of allExpenses) {
-        if (Array.isArray(e.tags) && e.tags.length > 0 && e.tags[0]) {
-          for (const tag of e.tags) {
-            // cor baseada no hash do nome da tag
-            let color = '#6366f1';
-            if (e.tagColors && e.tagColors[tag]) color = e.tagColors[tag];
-            else {
-              // fallback: cor baseada no hash
-              let hash = 0;
-              for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-              color = `hsl(${hash % 360}, 70%, 60%)`;
-            }
-            const cur = tagMap.get(tag) || { amount: 0, color };
-            cur.amount += Number(e.amount);
-            cur.color = color;
-            tagMap.set(tag, cur);
-          }
-        }
-      }
-      const expensesByTag = Array.from(tagMap.entries()).map(([tag, v]) => ({
-        tag: tagIdToName[tag] || tag,
-        amount: v.amount,
-        color: v.color,
-      }));
+      // (removido) agrupamento por tag para gráfico antigo
 
       // Top 5 categorias de despesa do mês atual
       const topCategories = [...expensesByCategory].sort((a, b) => b.amount - a.amount).slice(0, 5);
@@ -449,7 +482,6 @@ export function DashboardContent() {
         balance: totalIncome - totalExpenses,
         expensesByCategory,
         incomesByCategory,
-        expensesByTag,
         topExpenseCategories,
       }));
       setIsLoading(false);
@@ -480,6 +512,7 @@ export function DashboardContent() {
   const {
     byCategory: dailyByCategory,
     byWallet: dailyByWallet,
+    byTag: dailyByTag,
     loading: loadingDaily,
   } = useDailyExpenseData({
     year: currentDate.getFullYear(),
@@ -516,42 +549,11 @@ export function DashboardContent() {
               </option>
             ))}
           </select>
-          <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousMonth}
-              aria-label="Mês anterior"
-              className="h-10"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 bg-background border border-border rounded-md w-full sm:w-auto justify-center">
-              <Calendar className="h-4 w-4 text-foreground" />
-              <span className="font-medium text-sm sm:text-base text-foreground dark:text-white">
-                {(() => {
-                  const label = getMonthYear(currentDate);
-                  // Capitaliza o mês
-                  return label.charAt(0).toUpperCase() + label.slice(1);
-                })()}
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextMonth}
-              disabled={isAtCurrentMonth}
-              aria-disabled={isAtCurrentMonth}
-              aria-label="Próximo mês"
-              className="h-10"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* (Outros filtros podem ficar aqui) */}
         </div>
       </div>
 
-      {/* Cards de Resumo */}
+      {/* Cards resumo principais */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
         <Card
           onClick={() => setModal('income')}
@@ -581,7 +583,7 @@ export function DashboardContent() {
             </div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
+        <Card className="flex flex-col justify-between h-full min-h-[140px] sm:min-h-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-0">
             <CardTitle className="text-base sm:text-lg font-semibold">Saldo do mês</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -626,72 +628,77 @@ export function DashboardContent() {
             </p>
           </CardContent>
         </Card>
-        {/* Modal de detalhes de entradas/saídas/saldo */}
-        {/* Quick Add FAB */}
-        <Fab
-          onClick={() => {
-            setQuickAddOpen(true);
-            setQuickTab('despesa');
-          }}
-          label="Quick Add"
-        />
+      </div>
 
-        {/* Quick Add Modal */}
-        <Modal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Adicionar rápido">
-          <div className="space-y-4">
-            <div className="flex gap-2 mb-2">
-              <button
-                className={`border rounded-md py-2 px-4 flex-1 transition-colors
-                  ${
-                    quickTab === 'despesa'
-                      ? 'bg-primary text-white border-primary shadow'
-                      : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
-                  }
-                `}
-                onClick={() => setQuickTab('despesa')}
-                type="button"
-              >
-                Saída
-              </button>
-              <button
-                className={`border rounded-md py-2 px-4 flex-1 transition-colors
-                  ${
-                    quickTab === 'renda'
-                      ? 'bg-primary text-white border-primary shadow'
-                      : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
-                  }
-                `}
-                onClick={() => setQuickTab('renda')}
-                type="button"
-              >
-                Entrada
-              </button>
-            </div>
-            <div className="mt-4">
-              {quickTab === 'despesa' ? <QuickDespesaForm /> : <QuickRendaForm />}
-            </div>
+      {/* Quick Add FAB */}
+      <Fab
+        onClick={() => {
+          setQuickAddOpen(true);
+          setQuickTab('despesa');
+        }}
+        label="Quick Add"
+      />
+
+      {/* Quick Add Modal */}
+      <Modal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Adicionar rápido">
+        <div className="space-y-4">
+          <div className="flex gap-2 mb-2">
+            <button
+              className={`border rounded-md py-2 px-4 flex-1 transition-colors
+                ${
+                  quickTab === 'despesa'
+                    ? 'bg-primary text-white border-primary shadow'
+                    : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                }
+              `}
+              onClick={() => setQuickTab('despesa')}
+              type="button"
+            >
+              Saída
+            </button>
+            <button
+              className={`border rounded-md py-2 px-4 flex-1 transition-colors
+                ${
+                  quickTab === 'renda'
+                    ? 'bg-primary text-white border-primary shadow'
+                    : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                }
+              `}
+              onClick={() => setQuickTab('renda')}
+              type="button"
+            >
+              Entrada
+            </button>
           </div>
-        </Modal>
-        <Modal
-          open={modal !== null}
-          onClose={() => setModal(null)}
-          title={
-            modal === 'income'
-              ? 'Entradas do mês'
-              : modal === 'expense'
-                ? 'Saídas do mês'
-                : modal === 'balance'
-                  ? 'Entradas e Saídas do mês'
-                  : ''
-          }
-        >
-          {modal === 'income' && (
-            <div className="mt-4">
-              {summary.incomesByCategory.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
-              ) : (
-                <ul className="space-y-2">
-                  {summary.incomesByCategory.map((item) => (
+          <div className="mt-4">
+            {quickTab === 'despesa' ? <QuickDespesaForm /> : <QuickRendaForm />}
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        open={modal !== null}
+        onClose={() => {
+          setModal(null);
+        }}
+        title={
+          modal === 'income'
+            ? 'Entradas do mês'
+            : modal === 'expense'
+            ? 'Saídas do mês'
+            : modal === 'balance'
+            ? 'Entradas e Saídas do mês'
+            : ''
+        }
+      >
+        {modal === 'income' && (
+          <div className="mt-4">
+            {summary.incomesByCategory.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
+            ) : (
+              <ul className="space-y-2">
+                {[...summary.incomesByCategory]
+                  .sort((a, b) => b.amount - a.amount)
+                  .map((item) => (
                     <li key={item.category} className="flex justify-between items-center">
                       <span>{item.category}</span>
                       <span className="font-semibold text-green-600">
@@ -699,17 +706,19 @@ export function DashboardContent() {
                       </span>
                     </li>
                   ))}
-                </ul>
-              )}
-            </div>
-          )}
-          {modal === 'expense' && (
-            <div className="mt-4">
-              {summary.expensesByCategory.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
-              ) : (
-                <ul className="space-y-2">
-                  {summary.expensesByCategory.map((item) => (
+              </ul>
+            )}
+          </div>
+        )}
+        {modal === 'expense' && (
+          <div className="mt-4">
+            {summary.expensesByCategory.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
+            ) : (
+              <ul className="space-y-2">
+                {[...summary.expensesByCategory]
+                  .sort((a, b) => b.amount - a.amount)
+                  .map((item) => (
                     <li key={item.category} className="flex justify-between items-center">
                       <span>{item.category}</span>
                       <span className="font-semibold text-red-600">
@@ -717,19 +726,21 @@ export function DashboardContent() {
                       </span>
                     </li>
                   ))}
-                </ul>
-              )}
-            </div>
-          )}
-          {modal === 'balance' && (
-            <div className="space-y-6 mt-4">
-              <div>
-                <div className="font-semibold mb-2"></div>
-                {summary.incomesByCategory.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
-                ) : (
-                  <ul className="space-y-2">
-                    {summary.incomesByCategory.map((item) => (
+              </ul>
+            )}
+          </div>
+        )}
+        {modal === 'balance' && (
+          <div className="space-y-6 mt-4">
+            <div>
+              <div className="font-semibold mb-2">Entradas</div>
+              {summary.incomesByCategory.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {[...summary.incomesByCategory]
+                    .sort((a, b) => b.amount - a.amount)
+                    .map((item) => (
                       <li key={item.category} className="flex justify-between items-center">
                         <span>{item.category}</span>
                         <span className="font-semibold text-green-600">
@@ -737,16 +748,18 @@ export function DashboardContent() {
                         </span>
                       </li>
                     ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <div className="font-semibold mb-2"></div>
-                {summary.expensesByCategory.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
-                ) : (
-                  <ul className="space-y-2">
-                    {summary.expensesByCategory.map((item) => (
+                </ul>
+              )}
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Saídas</div>
+              {summary.expensesByCategory.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {[...summary.expensesByCategory]
+                    .sort((a, b) => b.amount - a.amount)
+                    .map((item) => (
                       <li key={item.category} className="flex justify-between items-center">
                         <span>{item.category}</span>
                         <span className="font-semibold text-red-600">
@@ -754,70 +767,71 @@ export function DashboardContent() {
                         </span>
                       </li>
                     ))}
-                  </ul>
-                )}
-              </div>
+                </ul>
+              )}
             </div>
-          )}
-        </Modal>
-      </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full">
-        <Card>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
+        <Card
+          className="cursor-pointer"
+          onClick={() => {
+            setModal('income');
+          }}
+        >
           <CardHeader>
-            <CardTitle>Entradas por Categoria</CardTitle>
+            <CardTitle>Entradas por Categoria (Top 5)</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Loader text="Carregando entradas..." />
             ) : summary.incomesByCategory.length > 0 ? (
-              <IncomeChart data={summary.incomesByCategory} />
+              <IncomeChart data={summary.incomesByCategory} maxItems={5} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
+            {summary.incomesByCategory.length > 5 && (
+              <div className="mt-2 text-[10px] text-muted-foreground">Clique para ver todas</div>
+            )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className="cursor-pointer"
+          onClick={() => {
+            setModal('expense');
+          }}
+        >
           <CardHeader>
-            <CardTitle>Saídas por Categoria</CardTitle>
+            <CardTitle>Saídas por Categoria (Top 5)</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Loader text="Carregando saídas..." />
             ) : summary.expensesByCategory.length > 0 ? (
-              <ExpenseChart data={summary.expensesByCategory} />
+              <ExpenseChart data={summary.expensesByCategory} maxItems={5} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
               </div>
+            )}
+            {summary.expensesByCategory.length > 5 && (
+              <div className="mt-2 text-[10px] text-muted-foreground">Clique para ver todas</div>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Saídas por Tag</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Loader text="Carregando tags..." />
-            ) : summary.expensesByTag.length > 0 ? (
-              <TagChart data={summary.expensesByTag} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Coluna terceira ficará vazia agora ou pode ser usada para outro futuro gráfico */}
+        <div className="hidden xl:block" />
       </div>
 
-      {/* Gráficos diários de despesas por categoria e por carteira */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
+            {/* Gráficos diários: categoria, carteira e tag */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 w-full">
         <Card>
           <CardHeader>
             <CardTitle>Gasto Diário por Categoria</CardTitle>
@@ -855,7 +869,70 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Gasto Diário por Tag</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingDaily ? (
+              <Loader text="Carregando gráfico diário..." />
+            ) : dailyByTag.length > 0 ? (
+              <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} />
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-foreground">
+                Sem dados para o período selecionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+
+      {/* Gráfico de relação (Entradas x Saídas) logo após os cards principais */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Entradas x Saídas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Calculando percentuais..." />
+            ) : (
+              <SummaryRatioChart
+                totalIncome={summary.totalIncome}
+                totalExpenses={summary.totalExpenses}
+              />
+            )}
+          </CardContent>
+        </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Evolução Diária do Saldo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Carregando evolução..." />
+            ) : (
+              <DailyBalanceChart data={summary.dailyBalanceData} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Projeção de Saldo Final do Mês */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Projeção do Saldo Final do Mês</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Loader text="Calculando projeção..." />
+          ) : (
+            <BalanceProjectionChart data={summary.balanceProjectionData} />
+          )}
+        </CardContent>
+      </Card>
+
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
         {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
@@ -894,23 +971,6 @@ export function DashboardContent() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Gráfico de relação (largura total) */}
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Entradas x Saídas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Loader text="Calculando percentuais..." />
-          ) : (
-            <SummaryRatioChart
-              totalIncome={summary.totalIncome}
-              totalExpenses={summary.totalExpenses}
-            />
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

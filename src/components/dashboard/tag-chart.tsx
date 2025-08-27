@@ -43,7 +43,10 @@ export function TagChart({ data }: TagChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) => [formatCurrency(value), 'Valor']}
+              formatter={(value: number, _name: any, props: any) => {
+                const pct = props?.payload?.percentage;
+                return [formatCurrency(value) + (pct ? ` (${pct}%)` : ''), 'Valor'];
+              }}
               labelFormatter={(label) => `Tag: ${label}`}
             />
           </PieChart>

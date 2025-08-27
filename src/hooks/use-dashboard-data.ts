@@ -20,6 +20,7 @@ interface UseDailyExpenseDataOptions {
 export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDataOptions) {
   const [byCategory, setByCategory] = useState<DailyCategoryData[]>([]);
   const [byWallet, setByWallet] = useState<DailyWalletData[]>([]);
+  const [byTag, setByTag] = useState<DailyCategoryData[]>([]); // estrutura similar (date + tags)
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -84,12 +85,37 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
         return row;
       });
 
-      setByCategory(dailyByCategory);
-      setByWallet(dailyByWallet);
+      // Agregar por tag (somando valor total da despesa para cada tag associada)
+      const tags = Array.from(
+        new Set(
+          allExpenses
+            .flatMap((e) => (Array.isArray(e.tags) ? e.tags : []))
+            .filter((t) => !!t),
+        ),
+      );
+      const dailyByTag: DailyCategoryData[] = days.map((date) => {
+        const row: DailyCategoryData = { date };
+        for (const t of tags) row[t] = 0;
+        allExpenses
+          .filter((e) => toYmd(new Date(e.date)) === date)
+          .forEach((e) => {
+            if (Array.isArray(e.tags)) {
+              for (const t of e.tags) {
+                if (!t) continue;
+                row[t] = (row[t] as number) + Number(e.amount);
+              }
+            }
+          });
+        return row;
+      });
+
+    setByCategory(dailyByCategory);
+    setByWallet(dailyByWallet);
+    setByTag(dailyByTag);
       setLoading(false);
     }
     fetchData();
   }, [year, month, walletId]);
 
-  return { byCategory, byWallet, loading };
+  return { byCategory, byWallet, byTag, loading };
 }
