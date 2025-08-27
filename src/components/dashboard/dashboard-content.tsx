@@ -46,10 +46,7 @@ const IncomeChart = dynamic(() => import('./income-chart').then((mod) => mod.Inc
   loading: () => <div>Carregando gráfico...</div>,
 });
 import { Loader } from '@/components/ui/loader';
-const SummaryRatioChart = dynamic(
-  () => import('./summary-ratio-chart').then((mod) => mod.SummaryRatioChart),
-  { ssr: false, loading: () => <div>Carregando gráfico...</div> },
-);
+// Removido SummaryRatioChart (Entradas x Saídas)
 // Removido gráfico de Saídas por Tag (pizza) substituído por gráfico diário por Tag
 const MonthlyBarChart = dynamic(
   () => import('./monthly-bar-chart').then((mod) => mod.MonthlyBarChart),
@@ -77,9 +74,6 @@ export function DashboardContent() {
   const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance'>(null);
   // Estados removidos: modal agora sempre mostra todas as categorias ordenadas.
   type Summary = {
-    totalIncome: number;
-    totalExpenses: number;
-    balance: number;
     expensesByCategory: Array<{ category: string; amount: number; color: string }>;
     incomesByCategory: Array<{ category: string; amount: number; color: string }>;
     // removido: expensesByTag
@@ -89,9 +83,6 @@ export function DashboardContent() {
   balanceProjectionData: Array<{ day: number; real: number; baselineLinear: number; baselineRecent: number }>;
   };
   const [summary, setSummary] = useState<Summary>({
-    totalIncome: 0,
-    totalExpenses: 0,
-    balance: 0,
     expensesByCategory: [],
     incomesByCategory: [],
     // expensesByTag removido
@@ -100,6 +91,9 @@ export function DashboardContent() {
     dailyBalanceData: [],
   balanceProjectionData: [],
   });
+  // Totais desacoplados do Summary (antes usados pelo gráfico removido)
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [selectedWallet, setSelectedWallet] = useState<string>('');
@@ -151,8 +145,8 @@ export function DashboardContent() {
       ]);
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
-      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+  const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
       // Construir evolução diária do saldo (cumulativo)
       const dateKey = (dStr: string) => {
         try {
@@ -242,14 +236,12 @@ export function DashboardContent() {
         const baselineRecent = previousBalance + (projectedRecentFinal - previousBalance) * (d / totalDaysInMonth);
         balanceProjectionData.push({ day: d, real, baselineLinear, baselineRecent });
       }
-      setSummary((prev: typeof summary) => ({
-        ...prev,
-        totalIncome,
-        totalExpenses,
-        dailyBalanceData,
+  setSummary((prev: typeof summary) => ({
+    ...prev,
+    dailyBalanceData,
   balanceProjectionData,
-      }));
-      setSaldoDoMes(totalIncome - totalExpenses);
+  }));
+  // Totais e saldo do mês serão definidos no fetchSummary para evitar cálculo duplicado
 
       // Saldo acumulado até o fim do mês
       const [expVarResA, expFixResA, incVarResA, incFixResA] = await Promise.all([
@@ -430,8 +422,8 @@ export function DashboardContent() {
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
 
-      const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalIncome = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
+  const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
 
       const expenseMap = new Map<string, { amount: number; color: string }>();
       for (const e of allExpenses) {
@@ -518,13 +510,13 @@ export function DashboardContent() {
 
       setSummary((prev: typeof summary) => ({
         ...prev,
-        totalIncome,
-        totalExpenses,
-        balance: totalIncome - totalExpenses,
         expensesByCategory,
         incomesByCategory,
         topExpenseCategories,
       }));
+      setTotalIncome(totalIncomeLocal);
+      setTotalExpenses(totalExpensesLocal);
+      setSaldoDoMes(totalIncomeLocal - totalExpensesLocal);
       setIsLoading(false);
     };
 
@@ -637,7 +629,7 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
             <div className="font-bold text-green-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
-              {formatCurrency(summary.totalIncome)}
+              {formatCurrency(totalIncome)}
             </div>
           </CardContent>
         </Card>
@@ -651,7 +643,7 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent className="pt-0 pb-2 flex-1 flex items-center justify-center">
             <div className="font-bold text-red-600 text-[clamp(1.3rem,4vw,2.2rem)] leading-tight w-full text-center">
-              {formatCurrency(summary.totalExpenses)}
+              {formatCurrency(totalExpenses)}
             </div>
           </CardContent>
         </Card>
@@ -960,23 +952,8 @@ export function DashboardContent() {
       </div>
 
 
-      {/* Gráfico de relação (Entradas x Saídas) logo após os cards principais */}
+      {/* Projeção e evolução diária lado a lado (substitui Entradas x Saídas) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Entradas x Saídas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Loader text="Calculando percentuais..." />
-            ) : (
-              <SummaryRatioChart
-                totalIncome={summary.totalIncome}
-                totalExpenses={summary.totalExpenses}
-              />
-            )}
-          </CardContent>
-        </Card>
         <Card className="w-full">
           <CardHeader>
             <CardTitle>Evolução Diária do Saldo</CardTitle>
@@ -989,21 +966,19 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Projeção do Saldo Final do Mês</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Calculando projeção..." />
+            ) : (
+              <BalanceProjectionChart data={summary.balanceProjectionData} />
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Projeção de Saldo Final do Mês */}
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Projeção do Saldo Final do Mês</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Loader text="Calculando projeção..." />
-          ) : (
-            <BalanceProjectionChart data={summary.balanceProjectionData} />
-          )}
-        </CardContent>
-      </Card>
 
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
