@@ -11,7 +11,7 @@ import {
 
 interface DailyTagChartProps {
   data: Array<{ date: string; [tag: string]: number | string }>;
-  tagNames?: Record<string,string>;
+  tagNames?: Record<string, string>;
 }
 
 export function DailyTagChart({ data, tagNames }: DailyTagChartProps) {
@@ -20,18 +20,33 @@ export function DailyTagChart({ data, tagNames }: DailyTagChartProps) {
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
-        <XAxis dataKey="date" tickFormatter={(d) => String(Number(d.split('-')[2]))} />
+        <XAxis dataKey="date" tickFormatter={(d) => String(Number(String(d).split('-').slice(-1)[0]))} />
         <YAxis />
         <Tooltip
-          formatter={(value: number) =>
-            value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-          }
-          labelFormatter={(label) => `Dia ${String(Number(label.split('-')[2]))}`}
+          formatter={(value: number | string, name, entry) => {
+            if (typeof value === 'number') {
+              return [
+                value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                tagNames?.[String(name)] || String(name),
+              ];
+            }
+            return [value, tagNames?.[String(name)] || String(name)];
+          }}
+          labelFormatter={(label) => `Dia ${String(Number(String(label).split('-').slice(-1)[0]))}`}
         />
-        <Legend formatter={(value) => value} />
+        <Legend formatter={(value) => tagNames?.[value] || value} />
         {tags.map((tag, idx) => {
           const display = tagNames?.[tag] || tag;
-          return <Bar key={tag} dataKey={tag} stackId="a" fill={getColor(idx)} name={display} />;
+          return (
+            <Bar
+              key={tag}
+              dataKey={tag}
+              stackId="a"
+              fill={getColor(idx)}
+              name={display}
+              isAnimationActive={false}
+            />
+          );
         })}
       </BarChart>
     </ResponsiveContainer>

@@ -73,14 +73,15 @@ export function DashboardContent() {
   // Estado para modal de adição rápida e tabs
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickTab, setQuickTab] = useState<'despesa' | 'renda'>('despesa');
-  const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance'>(null);
+  const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance' | 'diff'>(null);
   // Estados removidos: modal agora sempre mostra todas as categorias ordenadas.
   type Summary = {
     expensesByCategory: Array<{ category: string; amount: number; color: string }>;
     incomesByCategory: Array<{ category: string; amount: number; color: string }>;
     // removido: expensesByTag
     monthlyData: Array<{ month: string; income: number; expense: number; balance: number }>;
-    topExpenseCategories: Array<{ category: string; amount: number; diff: number }>;
+    topExpenseCategories: Array<{ category: string; amount: number; diff: number; prevAmount?: number }>;
+    expenseDiffAll: Array<{ category: string; amount: number; diff: number; prevAmount: number }>;
     dailyBalanceData: Array<{ date: string; balance: number }>;
     balanceProjectionData: Array<{
       day: number;
@@ -95,6 +96,7 @@ export function DashboardContent() {
     // expensesByTag removido
     monthlyData: [],
     topExpenseCategories: [],
+    expenseDiffAll: [],
     dailyBalanceData: [],
     balanceProjectionData: [],
   });
@@ -487,9 +489,9 @@ export function DashboardContent() {
       // (removido) agrupamento por tag para gráfico antigo
 
       // Top 5 categorias de despesa do mês atual
-      const topCategories = [...expensesByCategory].sort((a, b) => b.amount - a.amount).slice(0, 5);
+  const topCategoriesAll = [...expensesByCategory];
 
-      // Buscar dados do mês anterior para variação
+  // Buscar dados do mês anterior para variação
       const prevMonth = new Date(currentDate);
       prevMonth.setMonth(currentDate.getMonth() - 1);
       const { start: prevStart, end: prevEnd } = getMonthRange(
@@ -531,17 +533,24 @@ export function DashboardContent() {
       const prevAmounts: Record<string, number> = {};
       for (const c of prevExpensesByCategory) prevAmounts[c.category] = c.amount;
 
-      const topExpenseCategories = topCategories.map((c) => ({
+      // Construir lista completa com diffs
+      const categoriesWithDiff = topCategoriesAll.map((c) => ({
         category: c.category,
         amount: c.amount,
+        prevAmount: prevAmounts[c.category] || 0,
         diff: c.amount - (prevAmounts[c.category] || 0),
       }));
+      const expenseDiffAll = categoriesWithDiff
+        .filter((c) => c.diff !== 0)
+        .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+      const topExpenseCategories = expenseDiffAll.slice(0, 5);
 
       setSummary((prev: typeof summary) => ({
         ...prev,
         expensesByCategory,
         incomesByCategory,
         topExpenseCategories,
+        expenseDiffAll,
       }));
       setTotalIncome(totalIncomeLocal);
       setTotalExpenses(totalExpensesLocal);
@@ -829,6 +838,8 @@ export function DashboardContent() {
             ? 'Saídas do mês'
             : modal === 'balance'
             ? 'Entradas e Saídas do mês'
+            : modal === 'diff'
+            ? 'Variação por Categoria (vs mês anterior)'
             : ''
         }
       >
@@ -912,6 +923,44 @@ export function DashboardContent() {
                 </ul>
               )}
             </div>
+          </div>
+        )}
+        {modal === 'diff' && (
+          <div className="mt-4">
+            {summary.expenseDiffAll.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Nenhuma variação encontrada.</div>
+            ) : (
+              <ul className="space-y-2 max-h-[60vh] overflow-auto pr-1">
+                {summary.expenseDiffAll.map((item) => (
+                  <li
+                    key={item.category}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b last:border-b-0 pb-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-foreground break-words">{item.category}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs sm:text-sm font-mono whitespace-nowrap">
+                      <span className="text-muted-foreground">
+                        {formatCurrency(item.prevAmount || 0)} → {formatCurrency(item.amount)}
+                      </span>
+                      <span
+                        className={
+                          item.diff > 0
+                            ? 'font-semibold text-red-600'
+                            : 'font-semibold text-green-600'
+                        }
+                      >
+                        {item.diff > 0 ? '+' : ''}
+                        {formatCurrency(item.diff)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Mostrando somente categorias cujo valor mudou em relação ao mês anterior.
+            </p>
           </div>
         )}
       </Modal>
@@ -1072,8 +1121,12 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Top 5 categorias de despesa do período */}
-        <Card>
+        {/* Top 5 categorias de despesa do período (clicável para ver todas as variações) */}
+        <Card
+          className="cursor-pointer"
+          onClick={() => setModal('diff')}
+          aria-label="Ver todas as variações de categorias de saída"
+        >
           <CardHeader>
             <CardTitle>Top 5 Categorias de Saída (vs mês anterior)</CardTitle>
           </CardHeader>
