@@ -175,11 +175,35 @@ export function DashboardContent() {
       pushItem(allIncomes, 'income');
       pushItem(allExpenses, 'expense');
       const dayKeysSorted = Object.keys(dayMap).sort();
-      let running = 0;
-      const dailyBalanceData: Array<{ date: string; balance: number }> = dayKeysSorted.map((k) => {
-        running += dayMap[k].income - dayMap[k].expense;
-        return { date: k.slice(-2), balance: running };
-      });
+      // Calcular saldo acumulado até o último dia do mês anterior (previousBalance)
+      let previousBalance = 0;
+      {
+        const prevEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0); // último dia mês anterior
+        const prevEndStr = prevEnd.toISOString().slice(0,10);
+        const [pExpVarRes, pExpFixRes, pIncVarRes, pIncFixRes] = await Promise.all([
+          fetch(`/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
+          fetch(`/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+          fetch(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`, fetchOpts),
+          fetch(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`, fetchOpts),
+        ]);
+        const [pExpVar, pExpFix, pIncVar, pIncFix] = await Promise.all([
+          pExpVarRes.ok ? pExpVarRes.json() : [],
+          pExpFixRes.ok ? pExpFixRes.json() : [],
+          pIncVarRes.ok ? pIncVarRes.json() : [],
+          pIncFixRes.ok ? pIncFixRes.json() : [],
+        ]);
+        const prevExpenses: any[] = [...pExpVar, ...pExpFix];
+        const prevIncomes: any[] = [...pIncVar, ...pIncFix];
+        previousBalance = prevIncomes.reduce((s,i)=>s+Number(i.amount),0) - prevExpenses.reduce((s,e)=>s+Number(e.amount),0);
+      }
+      let running = previousBalance;
+      const dailyBalanceData: Array<{ date: string; balance: number }> = [];
+      for (const k of dayKeysSorted) {
+        const delta = dayMap[k].income - dayMap[k].expense;
+        running += delta;
+        // k.slice(-2) = dia, incorpora saldo acumulado anterior já somado
+        dailyBalanceData.push({ date: k.slice(-2), balance: running });
+      }
       // Projeção: baseline vs real
       const daysElapsed = dayKeysSorted.length;
       const totalDaysInMonth = new Date(
@@ -187,18 +211,14 @@ export function DashboardContent() {
         currentDate.getMonth() + 1,
         0,
       ).getDate();
-      const currentNet = running; // saldo acumulado até última data com movimento
-      const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
-      const projectedFinal = avgPerDay * totalDaysInMonth;
+  const currentNet = running - previousBalance; // variação do mês
+  const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
+  const projectedFinal = previousBalance + avgPerDay * totalDaysInMonth;
       const balanceProjectionData: Array<{ day: number; real: number; baseline: number }> = [];
       for (let d = 1; d <= totalDaysInMonth; d++) {
-        const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
-        const real = realEntry
-          ? realEntry.balance
-          : dailyBalanceData.length
-          ? dailyBalanceData[dailyBalanceData.length - 1].balance
-          : 0;
-        const baseline = (projectedFinal / totalDaysInMonth) * d;
+  const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
+  const real = realEntry ? realEntry.balance : running; // se dia ainda sem movimento, mantém último
+  const baseline = previousBalance + (projectedFinal - previousBalance) * (d / totalDaysInMonth);
         balanceProjectionData.push({ day: d, real, baseline });
       }
       setSummary((prev: typeof summary) => ({
