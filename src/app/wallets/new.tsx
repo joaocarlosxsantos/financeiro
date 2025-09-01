@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 
 const tipos = [
-  { value: 'carteira', label: 'Carteira' },
-  { value: 'banco', label: 'Banco' },
-  { value: 'cartao', label: 'Cartão' },
+  { value: 'CASH', label: 'Carteira' },
+  { value: 'BANK', label: 'Banco' },
+  { value: 'OTHER', label: 'Cartão' },
+  { value: 'VALE_BENEFICIOS', label: 'Vale Benefícios' },
 ];
 
 export default function NovaCarteiraPage() {
@@ -27,8 +28,8 @@ export default function NovaCarteiraPage() {
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      setMessage('Carteira cadastrada com sucesso!');
-      setForm({ name: '', type: 'carteira' });
+  setMessage('Carteira cadastrada com sucesso!');
+  setForm({ name: '', type: 'CASH' });
       setTimeout(() => router.push('/wallets'), 1000);
     } else {
       const data = await res.json();

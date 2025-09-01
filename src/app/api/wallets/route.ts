@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const walletSchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
-    type: z.enum(['CASH', 'BANK', 'CREDIT', 'OTHER'], { required_error: 'Tipo é obrigatório' }),
+    type: z.enum(['CASH', 'BANK', 'OTHER', 'VALE_BENEFICIOS'], { required_error: 'Tipo é obrigatório' }),
   });
   const parse = walletSchema.safeParse(body);
   if (!parse.success) {

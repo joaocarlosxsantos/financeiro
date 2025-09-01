@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, Trash2, Plus, Wallet as WalletIcon } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 import { Loader } from '@/components/ui/loader';
 
 interface Wallet {
@@ -28,8 +30,15 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [type, setType] = useState('Banco');
+  const [type, setType] = useState('BANK');
   const [errors, setErrors] = useState<{ name?: string; type?: string }>({});
+
+  const typeLabels: Record<string, string> = {
+    BANK: 'Banco',
+    VALE_BENEFICIOS: 'Vale Benefícios',
+    CASH: 'Dinheiro',
+    OTHER: 'Outros',
+  };
 
   // Função para carregar carteiras (pode ser chamada manualmente)
   const load = async () => {
@@ -65,9 +74,21 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/wallets/${id}`, { method: 'DELETE' });
-    if (res.ok) setWallets(wallets.filter((w) => w.id !== id));
+    // abrir modal de confirmação
+    setConfirmingDelete(id);
   };
+
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+
+  const confirmDelete = async () => {
+    if (!confirmingDelete) return;
+    const id = confirmingDelete;
+    setConfirmingDelete(null);
+    const res = await fetch(`/api/wallets/${id}`, { method: 'DELETE' });
+    if (res.ok) setWallets((w) => w.filter((wx) => wx.id !== id));
+  };
+
+  const deletingWallet = confirmingDelete ? wallets.find((w) => w.id === confirmingDelete) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,11 +121,11 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
       }
     }
 
-    setShowForm(false);
-    setEditingId(null);
-    setName('');
-    setType('Banco');
-    setErrors({});
+  setShowForm(false);
+  setEditingId(null);
+  setName('');
+  setType('BANK');
+  setErrors({});
   };
 
   return (
@@ -148,10 +169,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                     value={type}
                     onChange={(e) => setType(e.target.value)}
                   >
-                    <option value="Banco">Banco</option>
-                    <option value="Vale Benefícios">Vale Benefícios</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="Outros">Outros</option>
+                    <option value="BANK">Banco</option>
+                    <option value="VALE_BENEFICIOS">Vale Benefícios</option>
+                    <option value="CASH">Dinheiro</option>
+                    <option value="OTHER">Outros</option>
                   </select>
                   {errors.type && <span className="text-red-600 text-xs">{errors.type}</span>}
                 </div>
@@ -172,6 +193,40 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {/* Modal de confirmação de exclusão (melhorado) */}
+      {confirmingDelete && (
+        <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tem certeza que deseja excluir esta carteira? Esta ação é irreversível e removerá todos os
+                registros relacionados.
+              </p>
+              {deletingWallet && (
+                <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{deletingWallet.name}</p>
+              )}
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Lista de carteiras com tratamento de erro e recarregar */}
@@ -198,7 +253,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                     <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
                     <div className="min-w-0">
                       <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
-                      <p className="text-sm text-gray-500 dark:text-foreground">{wallet.type}</p>
+                      <p className="text-sm text-gray-500 dark:text-foreground">{typeLabels[wallet.type] ?? wallet.type}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -211,14 +266,14 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                     >
                       {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
-                        <Edit className="h-5 w-5" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
-                    </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
+                            <Edit className="h-5 w-5" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
                   </div>
                 </CardContent>
               </Card>
@@ -242,3 +297,5 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
     </div>
   );
 }
+
+// Nota: Modal de confirmação é renderizado dentro do componente acima via state `confirmingDelete`.

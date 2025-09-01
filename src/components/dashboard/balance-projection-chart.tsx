@@ -54,10 +54,11 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
               strokeWidth={2}
               name="Saldo Real"
               dot={(props: any) => {
-                const { cx, cy, payload } = props;
+                const { cx, cy, payload, index } = props;
                 const isReal = payload && payload.day <= lastRealDay;
                 return (
                   <circle
+                    key={index ?? `${cx}-${cy}`}
                     cx={cx}
                     cy={cy}
                     r={isReal ? 3.5 : 0}

@@ -5,17 +5,29 @@ export interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   if (!open) return null;
+  const outerSizeClass =
+    size === 'sm'
+      ? 'max-w-md min-h-[18vh] max-h-[70vh]'
+      : size === 'lg'
+      ? 'max-w-3xl min-h-[40vh] max-h-[90vh]'
+      : 'max-w-xl min-h-[30vh] max-h-[80vh]';
+
+  const contentMaxHeight = size === 'sm' ? 'calc(70vh - 48px)' : size === 'lg' ? 'calc(90vh - 80px)' : 'calc(80vh - 64px)';
+
+  const contentPaddingClass = size === 'sm' ? 'px-4 pb-4 pt-3' : 'px-4 sm:px-8 pb-6 sm:pb-8 pt-2';
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={onClose}
     >
       <div
-        className="bg-background border border-border rounded-lg shadow-lg w-full max-w-xl min-h-[30vh] max-h-[80vh] mx-2 sm:mx-4 relative animate-in fade-in zoom-in-95 p-0 flex flex-col"
+        className={`bg-background border border-border rounded-lg shadow-lg w-full mx-2 sm:mx-4 relative animate-in fade-in zoom-in-95 p-0 flex flex-col ${outerSizeClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -31,10 +43,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             {title}
           </div>
         )}
-        <div
-          className="px-4 sm:px-8 pb-6 sm:pb-8 pt-2 overflow-y-auto"
-          style={{ maxHeight: 'calc(80vh - 64px)' }}
-        >
+        <div className={`${contentPaddingClass} overflow-y-auto`} style={{ maxHeight: contentMaxHeight }}>
           {children}
         </div>
       </div>

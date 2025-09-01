@@ -22,9 +22,10 @@ export const DailyBalanceChart = ({ data }: { data: DailyBalancePoint[] }) => {
               name="Saldo"
               // Exibe pontos apenas nos dias que existem dados (todos os itens do array recebido)
               dot={(props: any) => {
-                const { cx, cy } = props;
+                const { cx, cy, index } = props;
                 return (
                   <circle
+                    key={index ?? `${cx}-${cy}`}
                     cx={cx}
                     cy={cy}
                     r={3.2}
