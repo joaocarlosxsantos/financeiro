@@ -299,6 +299,10 @@ export function DashboardContent() {
         incVarResA.ok ? incVarResA.json() : [],
         incFixResA.ok ? incFixResA.json() : [],
       ]);
+
+      // NOTE: a rota da API (`/api/expenses` e `/api/incomes`) já expande registros FIXED
+      // quando `type=FIXED` e `start`/`end` são informados. Logo, aqui não devemos
+      // expandir novamente — somamos diretamente os arrays retornados.
       const allExpensesA: any[] = [...expVarA, ...expFixA];
       const allIncomesA: any[] = [...incVarA, ...incFixA];
       const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);

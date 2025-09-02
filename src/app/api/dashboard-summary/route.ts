@@ -72,16 +72,14 @@ export async function GET(req: NextRequest) {
   function expandFixedRecords(records: any[], upto: Date) {
     const expanded: any[] = [];
     for (const r of records) {
-      // Registros já com date <= upto são incluídos
-      if (new Date(r.date) <= upto) expanded.push(r);
-      // Se registro é FIXED, gerar ocorrências mensais entre startDate/date e min(endDate, upto)
+      // Se for FIXED, NÃO incluir o registro original (evita duplicação) — gerar apenas ocorrências mensais
       if (r.isFixed) {
-        const recStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
+        const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(1900, 0, 1);
         const recEnd = r.endDate ? new Date(r.endDate) : upto;
         const from = recStart > new Date(1900, 0, 1) ? recStart : new Date(1900, 0, 1);
         const to = recEnd < upto ? recEnd : upto;
         if (from && to && from.getTime() <= to.getTime()) {
-          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : new Date(r.date).getDate();
+          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? new Date(r.date).getDate() : 1);
           let cur = new Date(from.getFullYear(), from.getMonth(), 1);
           const last = new Date(to.getFullYear(), to.getMonth(), 1);
           while (cur.getTime() <= last.getTime()) {
@@ -94,6 +92,9 @@ export async function GET(req: NextRequest) {
             cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
           }
         }
+      } else {
+        // não-FIXED: incluir o registro original se estiver até 'upto'
+        if (r.date && new Date(r.date) <= upto) expanded.push(r);
       }
     }
     return expanded;
