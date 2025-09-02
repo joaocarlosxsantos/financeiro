@@ -9,6 +9,41 @@ export interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+  const modalRef = React.useRef<HTMLDivElement | null>(null);
+  const previouslyFocused = React.useRef<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    if (open) {
+      previouslyFocused.current = document.activeElement as HTMLElement | null;
+      // focus the modal container
+      setTimeout(() => modalRef.current?.focus(), 0);
+      // trap focus
+      const handleKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+        if (e.key === 'Tab') {
+          const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+          );
+          if (!focusable || focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      document.addEventListener('keydown', handleKey);
+      return () => document.removeEventListener('keydown', handleKey);
+    } else {
+      // restore focus
+      previouslyFocused.current?.focus();
+    }
+  }, [open, onClose]);
+
   if (!open) return null;
   const outerSizeClass =
     size === 'sm'
@@ -25,8 +60,14 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={onClose}
+      aria-hidden={!open}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title ?? 'Modal'}
         className={`bg-background border border-border rounded-lg shadow-lg w-full mx-2 sm:mx-4 relative animate-in fade-in zoom-in-95 p-0 flex flex-col ${outerSizeClass}`}
         onClick={(e) => e.stopPropagation()}
       >

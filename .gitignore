@@ -109,4 +109,8 @@ pids
 .dynamodb/
 
 # TernJS port file
-.tern-port
+.tern-portdepcheck.json
+ts-unused-exports.txt
+axe-report*.json
+ts-unused-exports.json
+audits/
