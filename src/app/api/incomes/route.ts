@@ -52,6 +52,32 @@ export async function GET(req: NextRequest) {
     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     include: { category: true, wallet: true },
   });
+  // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
+  if (type === 'FIXED' && startD && endD) {
+    const expanded: any[] = [];
+    for (const i of incomes) {
+      const recStart = i.startDate ?? i.date ?? startD;
+      const recEnd = i.endDate ?? endD;
+      const from = recStart > startD ? recStart : startD;
+      const to = recEnd < endD ? recEnd : endD;
+      if (!from || !to) continue;
+      const day = typeof i.dayOfMonth === 'number' && i.dayOfMonth > 0 ? i.dayOfMonth : new Date(i.date).getDate();
+      let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+      const last = new Date(to.getFullYear(), to.getMonth(), 1);
+      while (cur.getTime() <= last.getTime()) {
+        const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+        const dayInMonth = Math.min(day, lastDayOfMonth);
+        const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+        if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
+          expanded.push({ ...i, date: occDate });
+        }
+        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+      }
+    }
+    expanded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return NextResponse.json(expanded);
+  }
+
   return NextResponse.json(incomes);
 }
 

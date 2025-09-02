@@ -56,6 +56,40 @@ export async function GET(req: NextRequest) {
     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     include: { category: true, wallet: true },
   });
+  // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
+  if (type === 'FIXED' && startD && endD) {
+    const expanded: any[] = [];
+    for (const e of expenses) {
+      // Determinar período efetivo da recorrência
+      const recStart = e.startDate ?? e.date ?? startD;
+      const recEnd = e.endDate ?? endD;
+      const from = recStart > startD ? recStart : startD;
+      const to = recEnd < endD ? recEnd : endD;
+      if (!from || !to) continue;
+
+      // dia do mês para ocorrência (fallback para dia da data original)
+      const day = typeof e.dayOfMonth === 'number' && e.dayOfMonth > 0 ? e.dayOfMonth : new Date(e.date).getDate();
+
+      // iterar meses entre from e to
+      let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+      const last = new Date(to.getFullYear(), to.getMonth(), 1);
+      while (cur.getTime() <= last.getTime()) {
+        const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+        const dayInMonth = Math.min(day, lastDayOfMonth);
+        const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+        // garantir dentro do intervalo original (from..to)
+        if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
+          // clonar objeto e ajustar data
+          expanded.push({ ...e, date: occDate });
+        }
+        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+      }
+    }
+    // ordenar por date desc para compatibilidade
+    expanded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return NextResponse.json(expanded);
+  }
+
   return NextResponse.json(expenses);
 }
 
