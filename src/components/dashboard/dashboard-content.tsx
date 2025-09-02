@@ -21,6 +21,7 @@ import { useMonth } from '@/components/providers/month-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import WalletMultiSelect from '@/components/ui/wallet-multi-select';
 import { AutoFitNumber } from '@/components/ui/auto-fit-number';
 
 // Função utilitária local para formatar data yyyy-MM-dd
@@ -106,7 +107,8 @@ export function DashboardContent() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
-  const [selectedWallet, setSelectedWallet] = useState<string>('');
+  // agora permitimos selecionar múltiplas carteiras; array vazio = todas as carteiras
+  const [selectedWallet, setSelectedWallet] = useState<string[]>([]);
   const [limiteDiario, setLimiteDiario] = useState<number>(0);
   const [tagNames, setTagNames] = useState<Record<string, string>>({});
   const { currentDate, setCurrentDate } = useMonth();
@@ -127,7 +129,7 @@ export function DashboardContent() {
         cache: 'no-store',
         credentials: 'same-origin',
       };
-      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
+  const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
       // Entradas e saídas do mês
       // Buscar todas as despesas e entradas do período (paginação automática)
       const [expVar, expFix, incVar, incFix] = await Promise.all([
@@ -318,7 +320,7 @@ export function DashboardContent() {
         cache: 'no-store',
         credentials: 'same-origin',
       };
-      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
+  const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
       const results = await Promise.all(
         months.map(async ({ year, month }) => {
           const { start, end } = getMonthRange(year, month);
@@ -373,7 +375,7 @@ export function DashboardContent() {
         cache: 'no-store',
         credentials: 'same-origin',
       };
-      const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
+  const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
       const [expVar, expFix, incVar, incFix, tagsList] = await Promise.all([
         fetchAll(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
         fetchAll(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
@@ -518,7 +520,8 @@ export function DashboardContent() {
   } = useDailyExpenseData({
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
-    walletId: selectedWallet || undefined,
+    // enviar lista como CSV ou undefined para todas
+    walletId: selectedWallet && selectedWallet.length > 0 ? selectedWallet.join(',') : undefined,
   });
 
   // Função para fechar o modal e recarregar o dashboard
@@ -538,18 +541,13 @@ export function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:space-x-2 w-full">
-          <Select
-            className="w-full sm:w-auto h-10 px-3 py-2 text-sm"
-            value={selectedWallet}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedWallet(e.target.value)}
-          >
-            <option value="">Todas as carteiras</option>
-            {wallets.map((w: { id: string; name: string; type: string }) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </Select>
+          <div className="w-full sm:w-auto">
+            <WalletMultiSelect
+              wallets={wallets}
+              value={selectedWallet}
+              onChange={(v) => setSelectedWallet(v)}
+            />
+          </div>
           <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
             <Button
               variant="outline"

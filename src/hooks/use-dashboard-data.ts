@@ -15,6 +15,7 @@ export interface DailyWalletData {
 interface UseDailyExpenseDataOptions {
   year: number;
   month: number; // 1-12
+  // walletId pode ser undefined (todas), um id(s) separado por vírgula (csv) ou string simples
   walletId?: string;
 }
 
@@ -35,7 +36,8 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const startStr = toYmd(start);
       const endStr = toYmd(end);
-      const walletParam = walletId ? `&walletId=${walletId}` : '';
+  // aceitar walletId CSV (ex: "id1,id2") ou id único
+  const walletParam = walletId ? `&walletId=${encodeURIComponent(walletId)}` : '';
       // Buscar despesas variáveis e fixas do período com paginação automática
       const [expVar, expFix] = await Promise.all([
         fetchAll(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),

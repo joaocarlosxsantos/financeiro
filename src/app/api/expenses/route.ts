@@ -52,9 +52,16 @@ export async function GET(req: NextRequest) {
       },
     ];
   }
-  // Adicionar filtro por carteira, se informado
+  // Adicionar filtro por carteira, se informado. Suporta CSV (várias carteiras)
   const walletId = url.searchParams.get('walletId');
-  if (walletId) where.walletId = walletId;
+  if (walletId) {
+    if (walletId.includes(',')) {
+      const ids = walletId.split(',').map((s) => s.trim()).filter(Boolean);
+      if (ids.length > 0) where.walletId = { in: ids } as any;
+    } else {
+      where.walletId = walletId;
+    }
+  }
   const categoryId = url.searchParams.get('categoryId');
   if (categoryId) where.categoryId = categoryId;
   const q = url.searchParams.get('q');

@@ -12,13 +12,19 @@ export async function GET(req: NextRequest) {
   const walletId = searchParams.get('walletId') || undefined;
 
   // Exemplo: total de despesas, rendas e saldo
+  const walletFilter = walletId
+    ? walletId.includes(',')
+      ? { walletId: { in: walletId.split(',').map((s) => s.trim()).filter(Boolean) } }
+      : { walletId }
+    : {};
+
   const [expenses, incomes] = await Promise.all([
     prisma.expense.findMany({
-      where: { user: { email: session.user.email }, ...(walletId ? { walletId } : {}) },
+      where: { user: { email: session.user.email }, ...walletFilter },
       select: { amount: true },
     }),
     prisma.income.findMany({
-      where: { user: { email: session.user.email }, ...(walletId ? { walletId } : {}) },
+      where: { user: { email: session.user.email }, ...walletFilter },
       select: { amount: true },
     }),
   ]);

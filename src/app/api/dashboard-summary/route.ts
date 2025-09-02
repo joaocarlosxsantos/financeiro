@@ -27,7 +27,11 @@ export async function GET(req: NextRequest) {
   const endStr = formatYmd(end);
 
   // Filtros
-  const walletFilter = walletId ? { walletId } : {};
+  const walletFilter = walletId
+    ? walletId.includes(',')
+      ? { walletId: { in: walletId.split(',').map((s) => s.trim()).filter(Boolean) } }
+      : { walletId }
+    : {};
   const userFilter = { userId };
   const dateFilter = { gte: startStr, lte: endStr };
 
