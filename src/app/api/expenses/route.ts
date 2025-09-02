@@ -79,8 +79,9 @@ export async function GET(req: NextRequest) {
         const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
         // garantir dentro do intervalo original (from..to)
         if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
-          // clonar objeto e ajustar data
-          expanded.push({ ...e, date: occDate });
+          // clonar objeto e ajustar data (string YYYY-MM-DD usando partes locais para evitar timezone issues)
+          const { formatYmd } = await import('@/lib/utils');
+          expanded.push({ ...e, date: formatYmd(occDate) });
         }
         cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
       }

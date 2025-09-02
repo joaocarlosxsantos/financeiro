@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Edit, Trash2, Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { Modal } from '@/components/ui/modal';
-import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
+import { formatCurrency, formatDate, parseApiDate, formatYmd } from '@/lib/utils';
 
 interface Tag {
   id: string;
@@ -71,8 +71,9 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       setIsLoading(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const { formatYmd } = await import('@/lib/utils');
+  const start = formatYmd(new Date(year, month, 1));
+  const end = formatYmd(new Date(year, month + 1, 0));
       const [catsRes, walletsRes, tagsRes, variaveisRes, fixasRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
@@ -87,55 +88,32 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       let despesasFix: Despesa[] = [];
       if (variaveisRes.ok) {
         const data = await variaveisRes.json();
-        despesasVar = data.map(
-          (e: {
-            id: string;
-            description: string;
-            amount: number | string;
-            date: string;
-            category?: { name: string };
-            categoryId?: string;
-            walletId?: string;
-            tags?: string[];
-          }) => ({
-            id: e.id,
-            description: e.description,
-            amount: Number(e.amount),
-            date: e.date ? parseApiDate(e.date) : new Date(),
-            categoryName: e.category?.name,
-            categoryId: e.categoryId,
-            walletId: e.walletId,
-            tags: e.tags || [],
-            isFixed: false,
-          }),
-        );
+    despesasVar = data.map((e: any) => ({
+    id: e.id,
+    description: e.description,
+    amount: Number(e.amount),
+  date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+    categoryName: e.category?.name,
+    categoryId: e.categoryId,
+    walletId: e.walletId,
+    tags: e.tags || [],
+    isFixed: false,
+      }));
       }
       if (fixasRes.ok) {
         const data = await fixasRes.json();
-        despesasFix = data.map(
-          (e: {
-            id: string;
-            description: string;
-            amount: number | string;
-            startDate?: string;
-            dayOfMonth?: number;
-            category?: { name: string };
-            categoryId?: string;
-            walletId?: string;
-            tags?: string[];
-          }) => ({
-            id: e.id,
-            description: e.description,
-            amount: Number(e.amount),
-            date: e.startDate ? parseApiDate(e.startDate) : new Date(),
-            dayOfMonth: e.dayOfMonth,
-            categoryName: e.category?.name,
-            categoryId: e.categoryId,
-            walletId: e.walletId,
-            tags: e.tags || [],
-            isFixed: true,
-          }),
-        );
+    despesasFix = data.map((e: any) => ({
+    id: e.id,
+    description: e.description,
+    amount: Number(e.amount),
+  date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+    dayOfMonth: e.dayOfMonth,
+    categoryName: e.category?.name,
+    categoryId: e.categoryId,
+    walletId: e.walletId,
+    tags: e.tags || [],
+    isFixed: true,
+      }));
       }
       setDespesas([...despesasVar, ...despesasFix]);
       setIsLoading(false);
@@ -167,7 +145,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       setForm({
         description: d.description,
         amount: String(d.amount),
-        date: d.date instanceof Date ? d.date.toISOString().slice(0, 10) : d.date,
+  date: d.date instanceof Date ? formatYmd(d.date) : d.date,
         categoryId: d.categoryId || '',
         walletId: d.walletId || '',
         tags: d.tags || [],
@@ -254,21 +232,11 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       let despesasFix: Despesa[] = [];
       if (variaveisRes.ok) {
         const data = await variaveisRes.json();
-        despesasVar = data.map(
-          (e: {
-            id: string;
-            description: string;
-            amount: number | string;
-            date: string;
-            category?: { name: string };
-            categoryId?: string;
-            walletId?: string;
-            tags?: string[];
-          }) => ({
+        despesasVar = data.map((e: any) => ({
             id: e.id,
             description: e.description,
             amount: Number(e.amount),
-            date: e.date ? parseApiDate(e.date) : new Date(),
+      date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
             categoryName: e.category?.name,
             categoryId: e.categoryId,
             walletId: e.walletId,
@@ -279,22 +247,11 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       }
       if (fixasRes.ok) {
         const data = await fixasRes.json();
-        despesasFix = data.map(
-          (e: {
-            id: string;
-            description: string;
-            amount: number | string;
-            startDate?: string;
-            dayOfMonth?: number;
-            category?: { name: string };
-            categoryId?: string;
-            walletId?: string;
-            tags?: string[];
-          }) => ({
+        despesasFix = data.map((e: any) => ({
             id: e.id,
             description: e.description,
             amount: Number(e.amount),
-            date: e.startDate ? parseApiDate(e.startDate) : new Date(),
+      date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
             dayOfMonth: e.dayOfMonth,
             categoryName: e.category?.name,
             categoryId: e.categoryId,
@@ -509,7 +466,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
                     <td className="px-3 py-2 text-right text-red-600 font-semibold">
                       {formatCurrency(despesa.amount)}
                     </td>
-                    <td className="px-3 py-2 text-center">{formatDate(despesa.date)}</td>
+                    <td className="px-3 py-2 text-center">{despesa.date ? formatDate(despesa.date) : '-'}</td>
                     <td className="px-3 py-2 text-center">{despesa.categoryName}</td>
                     <td className="px-3 py-2 text-center">
                       {!despesa.walletId

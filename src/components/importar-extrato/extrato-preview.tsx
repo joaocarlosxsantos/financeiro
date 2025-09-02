@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { formatYmd } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,8 @@ export function ExtratoPreview({
       const dataSaldo = new Date(dataPrimeiroLancamento);
       dataSaldo.setDate(dataSaldo.getDate() - 1);
       // Formata para yyyy-mm-dd
-      const dataFormatada = dataSaldo.toISOString().slice(0, 10);
+  // format YYYY-MM-DD using local date parts to avoid timezone shifts
+  const dataFormatada = formatYmd(dataSaldo);
       // Busca categoria "Saldo" (ou cria string caso não exista)
       let categoriaId = '';
       const catSaldo = categorias.find((c: any) => c.name.toLowerCase() === 'saldo');

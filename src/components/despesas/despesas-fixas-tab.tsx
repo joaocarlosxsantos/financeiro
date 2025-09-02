@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
+import { formatCurrency, formatDate, parseApiDate, formatYmd } from '@/lib/utils';
 import { TagSelector } from '@/components/ui/tag-selector';
 import { Edit, Trash2, Plus, Calendar } from 'lucide-react';
 
@@ -24,7 +24,7 @@ interface DespesaFixa {
   categoryId?: string | null;
   walletId?: string | null;
   walletName?: string;
-  startDate: Date;
+  startDate?: Date;
   endDate?: Date;
   tags: string[];
 }
@@ -80,10 +80,11 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const { formatYmd } = await import('@/lib/utils');
+  const start = formatYmd(new Date(year, month, 1));
+  const end = formatYmd(new Date(year, month + 1, 0));
       const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
@@ -104,7 +105,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
           categoryId: e.categoryId,
           walletId: e.walletId,
           walletName: e.wallet?.name || 'N/A',
-          startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
+          startDate: e.startDate ? parseApiDate(e.startDate) : undefined,
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
           tags: e.tags || [],
         }));
@@ -127,8 +128,8 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
         dayOfMonth: String(d.dayOfMonth ?? ''),
         categoryId: d.categoryId || '',
         walletId: d.walletId || '',
-        startDate: d.startDate ? new Date(d.startDate).toISOString().slice(0, 10) : '',
-        endDate: d.endDate ? new Date(d.endDate).toISOString().slice(0, 10) : '',
+  startDate: d.startDate ? (d.startDate instanceof Date ? formatYmd(d.startDate) : d.startDate) : '',
+  endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
         tags: d.tags && d.tags.length > 0 ? [d.tags[0]] : [],
       });
       setShowForm(true);
@@ -187,8 +188,8 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
         categoryId: saved.categoryId,
         walletId: saved.walletId,
         walletName: wallets.find((w) => w.id === saved.walletId)?.name,
-        startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
-        endDate: saved.endDate ? new Date(saved.endDate) : undefined,
+  startDate: saved.startDate ? parseApiDate(saved.startDate) : undefined,
+  endDate: saved.endDate ? parseApiDate(saved.endDate) : undefined,
         tags: saved.tags || [],
       };
       if (editingId) setDespesas((prev) => prev.map((x) => (x.id === saved.id ? item : x)));
@@ -463,7 +464,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
                   <td className="px-3 py-2 text-center">{despesa.dayOfMonth}</td>
                   <td className="px-3 py-2 text-center">{despesa.categoryName}</td>
                   <td className="px-3 py-2 text-center">{despesa.walletName || 'Sem carteira'}</td>
-                  <td className="px-3 py-2 text-center">{formatDate(despesa.startDate)}</td>
+                  <td className="px-3 py-2 text-center">{despesa.startDate ? formatDate(despesa.startDate) : '-'}</td>
                   <td className="px-3 py-2 text-center">
                     {despesa.endDate ? formatDate(despesa.endDate) : '-'}
                   </td>

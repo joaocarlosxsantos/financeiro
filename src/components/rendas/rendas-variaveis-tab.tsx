@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
+import { formatCurrency, formatDate, parseApiDate, formatYmd } from '@/lib/utils';
 import { Edit, Trash2, Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 
@@ -15,7 +15,7 @@ interface RendaVariavel {
   id: string;
   description: string;
   amount: number;
-  date: Date;
+  date?: Date;
   categoryName?: string;
   categoryId?: string | null;
   walletId?: string | null;
@@ -88,8 +88,9 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
       setIsLoading(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const { formatYmd } = await import('@/lib/utils');
+  const start = formatYmd(new Date(year, month, 1));
+  const end = formatYmd(new Date(year, month + 1, 0));
       const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
@@ -125,7 +126,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
     const r = rendas.find((x: RendaVariavel) => x.id === id);
     if (r) {
       const dd = r.date;
-      const yyyyMMdd = dd instanceof Date ? dd.toISOString().slice(0, 10) : '';
+  const yyyyMMdd = dd instanceof Date ? formatYmd(dd) : '';
       setEditingId(id);
       setForm({
         description: r.description,
@@ -177,13 +178,13 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
       body: JSON.stringify(payload),
     });
     if (res.ok) {
-      const saved = await res.json();
+        const saved = await res.json();
       setRendas((prev: RendaVariavel[]) => {
         const item: RendaVariavel = {
           id: saved.id,
           description: saved.description,
           amount: Number(saved.amount),
-          date: saved.date ? new Date(saved.date) : new Date(),
+          date: saved.date ? parseApiDate(saved.date) : undefined,
           categoryName: categories.find((c: Category) => c.id === saved.categoryId)?.name,
           categoryId: saved.categoryId,
           walletId: saved.walletId,
@@ -432,7 +433,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
                   <td className="px-3 py-2 text-right text-green-600 font-semibold">
                     {formatCurrency(renda.amount)}
                   </td>
-                  <td className="px-3 py-2 text-center">{formatDate(renda.date)}</td>
+                  <td className="px-3 py-2 text-center">{renda.date ? formatDate(renda.date) : '-'}</td>
                   <td className="px-3 py-2 text-center">{renda.categoryName}</td>
                   <td className="px-3 py-2 text-center">{renda.walletName || 'Sem carteira'}</td>
                   <td className="px-3 py-2 text-center">

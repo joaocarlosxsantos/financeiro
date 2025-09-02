@@ -59,3 +59,11 @@ export function parseApiDate(input: string | Date): Date {
   const dt = new Date(s);
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 }
+
+// Format Date object as YYYY-MM-DD (local date parts) without using toISOString()
+export function formatYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}

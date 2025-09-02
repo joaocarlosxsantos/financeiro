@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { parseApiDate } from '@/lib/utils';
 
 export interface DailyCategoryData {
   date: string; // yyyy-MM-dd
@@ -61,7 +62,7 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
           row[cat] = 0;
         }
         allExpenses
-          .filter((e) => toYmd(new Date(e.date)) === date)
+          .filter((e) => e.date && toYmd(parseApiDate(e.date)) === date)
           .forEach((e) => {
             const cat = e.category?.name || 'Sem categoria';
             row[cat] = (row[cat] as number) + Number(e.amount);
@@ -77,7 +78,7 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
           row[w] = 0;
         }
         allExpenses
-          .filter((e) => toYmd(new Date(e.date)) === date)
+          .filter((e) => e.date && toYmd(parseApiDate(e.date)) === date)
           .forEach((e) => {
             const w = e.wallet?.name || 'Sem carteira';
             row[w] = (row[w] as number) + Number(e.amount);
@@ -97,7 +98,7 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
         const row: DailyCategoryData = { date };
         for (const t of tags) row[t] = 0;
         allExpenses
-          .filter((e) => toYmd(new Date(e.date)) === date)
+          .filter((e) => e.date && toYmd(parseApiDate(e.date)) === date)
           .forEach((e) => {
             if (Array.isArray(e.tags)) {
               for (const t of e.tags) {

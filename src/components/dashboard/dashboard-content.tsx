@@ -30,7 +30,7 @@ function toYmd(d: Date) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-import { formatCurrency, getMonthRange, getMonthYear } from '@/lib/utils';
+import { formatCurrency, getMonthRange, getMonthYear, formatYmd } from '@/lib/utils';
 import {
   TrendingUp,
   TrendingDown,
@@ -158,6 +158,16 @@ export function DashboardContent() {
       const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
       // Construir evolução diária do saldo (cumulativo)
       const dateKey = (dStr: string) => {
+        if (!dStr) return new Date();
+        // If format is YYYY-MM-DD, parse as local date to avoid timezone shifts
+        const m = dStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) {
+          const y = Number(m[1]);
+          const mo = Number(m[2]);
+          const da = Number(m[3]);
+          return new Date(y, mo - 1, da);
+        }
+        // Fallback to Date parsing for full ISO datetimes
         try {
           return new Date(dStr);
         } catch {
@@ -170,7 +180,7 @@ export function DashboardContent() {
           const rawDate = it.date || it.paidAt || it.createdAt || it.updatedAt;
           if (!rawDate) continue;
           const d = dateKey(rawDate);
-          const key = d.toISOString().slice(0, 10);
+  const key = formatYmd(d);
           if (!dayMap[key]) dayMap[key] = { income: 0, expense: 0 };
           dayMap[key][type] += Number(it.amount) || 0;
         }
@@ -182,7 +192,7 @@ export function DashboardContent() {
       let previousBalance = 0;
       {
         const prevEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0); // último dia mês anterior
-        const prevEndStr = prevEnd.toISOString().slice(0, 10);
+  const prevEndStr = formatYmd(prevEnd);
         const [pExpVarRes, pExpFixRes, pIncVarRes, pIncFixRes] = await Promise.all([
           fetch(
             `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,

@@ -69,7 +69,9 @@ export async function GET(req: NextRequest) {
         const dayInMonth = Math.min(day, lastDayOfMonth);
         const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
         if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
-          expanded.push({ ...i, date: occDate });
+          // Serializar data como YYYY-MM-DD usando partes locais para evitar shifts de timezone no cliente
+          const { formatYmd } = await import('@/lib/utils');
+          expanded.push({ ...i, date: formatYmd(occDate) });
         }
         cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
       }

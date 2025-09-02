@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
+import { formatCurrency, formatDate, parseApiDate, formatYmd } from '@/lib/utils';
 import { Edit, Trash2, Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 
@@ -19,7 +19,7 @@ interface RendaFixa {
   categoryId?: string | null;
   walletId?: string | null;
   walletName?: string;
-  startDate: Date;
+  startDate?: Date;
   endDate?: Date;
   tagId?: string | null;
   tags: string[];
@@ -82,8 +82,9 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
       setIsLoading(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const { formatYmd } = await import('@/lib/utils');
+  const start = formatYmd(new Date(year, month, 1));
+  const end = formatYmd(new Date(year, month + 1, 0));
       const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
@@ -104,7 +105,8 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           categoryId: e.categoryId,
           walletId: e.walletId,
           walletName: e.wallet?.name,
-          startDate: e.startDate ? parseApiDate(e.startDate) : new Date(),
+          // A API expande rendas FIXED em ocorrências com campo `date`; startDate/endDate podem existir
+          startDate: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
           tags: e.tags || [],
         }));
@@ -125,8 +127,8 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         dayOfMonth: String(r.dayOfMonth ?? ''),
         categoryId: r.categoryId || '',
         walletId: r.walletId || '',
-        startDate: r.startDate ? new Date(r.startDate).toISOString().slice(0, 10) : '',
-        endDate: r.endDate ? new Date(r.endDate).toISOString().slice(0, 10) : '',
+  startDate: r.startDate ? (r.startDate instanceof Date ? formatYmd(r.startDate) : r.startDate) : '',
+  endDate: r.endDate ? (r.endDate instanceof Date ? formatYmd(r.endDate) : r.endDate) : '',
         tags: r.tags && r.tags.length > 0 ? [r.tags[0]] : [],
       });
       setShowForm(true);
@@ -176,8 +178,8 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           categoryId: saved.categoryId,
           walletId: saved.walletId,
           walletName: wallets.find((w) => w.id === saved.walletId)?.name,
-          startDate: saved.startDate ? new Date(saved.startDate) : new Date(),
-          endDate: saved.endDate ? new Date(saved.endDate) : undefined,
+          startDate: saved.startDate ? parseApiDate(saved.startDate) : undefined,
+          endDate: saved.endDate ? parseApiDate(saved.endDate) : undefined,
           tags: saved.tags || [],
         };
         if (editingId) return prev.map((x) => (x.id === saved.id ? item : x));
@@ -457,7 +459,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
                   <td className="px-3 py-2 text-center">{renda.dayOfMonth}</td>
                   <td className="px-3 py-2 text-center">{renda.categoryName}</td>
                   <td className="px-3 py-2 text-center">{renda.walletName || 'Sem carteira'}</td>
-                  <td className="px-3 py-2 text-center">{formatDate(renda.startDate)}</td>
+                  <td className="px-3 py-2 text-center">{renda.startDate ? formatDate(renda.startDate) : '-'}</td>
                   <td className="px-3 py-2 text-center">
                     {renda.endDate ? formatDate(renda.endDate) : '-'}
                   </td>

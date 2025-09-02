@@ -12,7 +12,7 @@ import { Edit, Trash2, Plus } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { Modal } from '@/components/ui/modal';
 import { TagSelector } from '@/components/ui/tag-selector';
-import { formatCurrency, formatDate, parseApiDate } from '@/lib/utils';
+import { formatCurrency, formatDate, parseApiDate, formatYmd } from '@/lib/utils';
 
 interface Tag {
   id: string;
@@ -90,7 +90,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
       setForm({
         description: d.description,
         amount: String(d.amount),
-        date: d.date instanceof Date ? d.date.toISOString().slice(0, 10) : d.date,
+        date: d.date instanceof Date ? formatYmd(d.date) : d.date,
         categoryId: d.categoryId || '',
         walletId: d.walletId || '',
         tags: d.tags || [],
@@ -105,8 +105,9 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
       setIsLoading(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+      const { formatYmd } = await import('@/lib/utils');
+      const start = formatYmd(new Date(year, month, 1));
+      const end = formatYmd(new Date(year, month + 1, 0));
       const [catsRes, walletsRes, tagsRes, despesasRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
@@ -123,7 +124,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
             id: e.id,
             description: e.description,
             amount: Number(e.amount),
-            date: e.date ? parseApiDate(e.date) : new Date(),
+            date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
             categoryName: e.category?.name,
             categoryId: e.categoryId,
             walletId: e.walletId,
@@ -200,8 +201,8 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
                   // Recarrega despesas
                   const year = currentDate.getFullYear();
                   const month = currentDate.getMonth();
-                  const start = new Date(year, month, 1).toISOString().slice(0, 10);
-                  const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+                  const start = formatYmd(new Date(year, month, 1));
+                  const end = formatYmd(new Date(year, month + 1, 0));
                   const despesasRes = await fetch(
                     `/api/expenses?type=VARIABLE&start=${start}&end=${end}`,
                     { cache: 'no-store' },
@@ -401,7 +402,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
                     <td className="px-3 py-2 text-right text-red-600 font-semibold">
                       {formatCurrency(despesa.amount)}
                     </td>
-                    <td className="px-3 py-2 text-center">{formatDate(despesa.date)}</td>
+                      <td className="px-3 py-2 text-center">{despesa.date ? formatDate(despesa.date) : '-'}</td>
                     <td className="px-3 py-2 text-center">{despesa.categoryName}</td>
                     <td className="px-3 py-2 text-center">
                       {!despesa.walletId

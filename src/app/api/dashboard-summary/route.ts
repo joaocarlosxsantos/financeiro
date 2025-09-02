@@ -22,8 +22,9 @@ export async function GET(req: NextRequest) {
   // datas do mês
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 0, 23, 59, 59, 999);
-  const startStr = start.toISOString().slice(0, 10);
-  const endStr = end.toISOString().slice(0, 10);
+  const { formatYmd } = await import('@/lib/utils');
+  const startStr = formatYmd(start);
+  const endStr = formatYmd(end);
 
   // Filtros
   const walletFilter = walletId ? { walletId } : {};
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
             const dayInMonth = Math.min(day, lastDayOfMonth);
             const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
             if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
-              expanded.push({ ...r, date: occDate });
+              expanded.push({ ...r, date: formatYmd(occDate) });
             }
             cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
           }
