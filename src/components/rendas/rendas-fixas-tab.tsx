@@ -88,7 +88,7 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
       const [catsRes, walletsRes, listRes, tagsRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
-        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}`, { cache: 'no-store' }),
+  fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());

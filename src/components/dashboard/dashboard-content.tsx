@@ -30,6 +30,7 @@ function toYmd(d: Date) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+import { fetchAll } from '@/lib/fetchAll';
 import { formatCurrency, getMonthRange, getMonthYear, formatYmd } from '@/lib/utils';
 import {
   TrendingUp,
@@ -128,29 +129,24 @@ export function DashboardContent() {
       };
       const walletParam = selectedWallet ? `&walletId=${selectedWallet}` : '';
       // Entradas e saídas do mês
-      const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
+      const [expVarRes, expFixRes] = await Promise.all([
         fetch(
-          `/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+          `/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&perPage=200&_=${Date.now()}`,
           fetchOpts,
         ),
         fetch(
-          `/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-          fetchOpts,
-        ),
-        fetch(
-          `/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-          fetchOpts,
-        ),
-        fetch(
-          `/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+          `/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&perPage=200&_=${Date.now()}`,
           fetchOpts,
         ),
       ]);
-      const [expVar, expFix, incVar, incFix] = await Promise.all([
+      const [expVar, expFix] = await Promise.all([
         expVarRes.ok ? expVarRes.json() : [],
         expFixRes.ok ? expFixRes.json() : [],
-        incVarRes.ok ? incVarRes.json() : [],
-        incFixRes.ok ? incFixRes.json() : [],
+      ]);
+      // incomes: buscar todas as páginas via fetchAll
+      const [incVar, incFix] = await Promise.all([
+        fetchAll(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&perPage=200`),
+        fetchAll(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&perPage=200`),
       ]);
       const allExpenses: any[] = [...expVar, ...expFix];
       const allIncomes: any[] = [...incVar, ...incFix];
@@ -195,21 +191,16 @@ export function DashboardContent() {
   const prevEndStr = formatYmd(prevEnd);
         const [pExpVarRes, pExpFixRes, pIncVarRes, pIncFixRes] = await Promise.all([
           fetch(
-            `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
+            `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&perPage=200&_=${Date.now()}`,
             fetchOpts,
           ),
           fetch(
-            `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`,
+            `/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&perPage=200&_=${Date.now()}`,
             fetchOpts,
           ),
-          fetch(
-            `/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-            fetchOpts,
-          ),
-          fetch(
-            `/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-            fetchOpts,
-          ),
+          // incomes com paginação automática
+          (async () => ({ ok: true, json: async () => await fetchAll(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&perPage=200`) }))(),
+          (async () => ({ ok: true, json: async () => await fetchAll(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&perPage=200`) }))(),
         ]);
         const [pExpVar, pExpFix, pIncVar, pIncFix] = await Promise.all([
           pExpVarRes.ok ? pExpVarRes.json() : [],
@@ -285,7 +276,7 @@ export function DashboardContent() {
       // Totais e saldo do mês serão definidos no fetchSummary para evitar cálculo duplicado
 
       // Saldo acumulado até o fim do mês
-      const [expVarResA, expFixResA, incVarResA, incFixResA] = await Promise.all([
+      const [expVarResA, expFixResA] = await Promise.all([
         fetch(
           `/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
           fetchOpts,
@@ -294,20 +285,14 @@ export function DashboardContent() {
           `/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
           fetchOpts,
         ),
-        fetch(
-          `/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&_=${Date.now()}`,
-          fetchOpts,
-        ),
-        fetch(
-          `/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&_=${Date.now()}`,
-          fetchOpts,
-        ),
       ]);
-      const [expVarA, expFixA, incVarA, incFixA] = await Promise.all([
+      const [expVarA, expFixA] = await Promise.all([
         expVarResA.ok ? expVarResA.json() : [],
         expFixResA.ok ? expFixResA.json() : [],
-        incVarResA.ok ? incVarResA.json() : [],
-        incFixResA.ok ? incFixResA.json() : [],
+      ]);
+      const [incVarA, incFixA] = await Promise.all([
+        fetchAll(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&perPage=200`),
+        fetchAll(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&perPage=200`),
       ]);
 
       // NOTE: a rota da API (`/api/expenses` e `/api/incomes`) já expande registros FIXED
@@ -378,19 +363,19 @@ export function DashboardContent() {
           const endStr = toYmd(end);
           const [expVarRes, expFixRes, incVarRes, incFixRes] = await Promise.all([
             fetch(
-              `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
               fetchOpts,
             ),
             fetch(
-              `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
               fetchOpts,
             ),
             fetch(
-              `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
               fetchOpts,
             ),
             fetch(
-              `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&_=${Date.now()}`,
+              `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
               fetchOpts,
             ),
           ]);

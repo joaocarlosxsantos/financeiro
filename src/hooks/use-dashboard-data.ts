@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { parseApiDate } from '@/lib/utils';
+import { fetchAll } from '@/lib/fetchAll';
 
 export interface DailyCategoryData {
   date: string; // yyyy-MM-dd
@@ -35,14 +36,10 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
       const startStr = toYmd(start);
       const endStr = toYmd(end);
       const walletParam = walletId ? `&walletId=${walletId}` : '';
-      // Buscar despesas variáveis e fixas do período
-      const [expVarRes, expFixRes] = await Promise.all([
-        fetch(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}`),
-        fetch(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}`),
-      ]);
+      // Buscar despesas variáveis e fixas do período com paginação automática
       const [expVar, expFix] = await Promise.all([
-        expVarRes.ok ? expVarRes.json() : [],
-        expFixRes.ok ? expFixRes.json() : [],
+        fetchAll(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
+        fetchAll(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
       ]);
       const allExpenses = [...expVar, ...expFix];
 

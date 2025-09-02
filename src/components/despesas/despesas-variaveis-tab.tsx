@@ -112,7 +112,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
-        fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}`, { cache: 'no-store' }),
+  fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
       if (walletsRes.ok) setWallets(await walletsRes.json());
