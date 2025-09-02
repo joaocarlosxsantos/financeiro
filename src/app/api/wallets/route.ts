@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(wallets);
+  const headers = new Headers();
+  // wallet list can be cached briefly; details are fetched elsewhere
+  headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
+  return NextResponse.json(wallets, { headers });
 }
 
 export async function POST(req: NextRequest) {

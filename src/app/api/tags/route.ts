@@ -5,7 +5,9 @@ import { z } from 'zod';
 
 export async function GET() {
   const tags = await prisma.tag.findMany({ orderBy: { name: 'asc' } });
-  return NextResponse.json(tags);
+  const headers = new Headers();
+  headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  return NextResponse.json(tags, { headers });
 }
 
 export async function POST(req: NextRequest) {

@@ -16,7 +16,10 @@ export async function GET() {
     orderBy: { name: 'asc' },
   });
 
-  return NextResponse.json(categories);
+  const headers = new Headers();
+  // categories rarely change; safe to cache for 60s (adjust as needed)
+  headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  return NextResponse.json(categories, { headers });
 }
 
 export async function POST(req: NextRequest) {

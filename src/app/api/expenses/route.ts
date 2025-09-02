@@ -26,6 +26,10 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
+  const pageParam = Number(url.searchParams.get('page') || '1');
+  const perPageParam = Number(url.searchParams.get('perPage') || '50');
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const perPage = Number.isFinite(perPageParam) && perPageParam > 0 ? Math.min(perPageParam, 200) : 50;
   const start = url.searchParams.get('start');
   const end = url.searchParams.get('end');
   const type = url.searchParams.get('type'); // FIXED | VARIABLE
@@ -51,15 +55,38 @@ export async function GET(req: NextRequest) {
   // Adicionar filtro por carteira, se informado
   const walletId = url.searchParams.get('walletId');
   if (walletId) where.walletId = walletId;
-  const expenses = await prisma.expense.findMany({
-    where,
-    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-    include: { category: true, wallet: true },
-  });
+  const categoryId = url.searchParams.get('categoryId');
+  if (categoryId) where.categoryId = categoryId;
+  const q = url.searchParams.get('q');
+  if (q) where.description = { contains: q, mode: 'insensitive' } as any;
+
+  const minAmount = url.searchParams.get('minAmount');
+  const maxAmount = url.searchParams.get('maxAmount');
+  if (minAmount || maxAmount) {
+    where.amount = {} as any;
+    if (minAmount) where.amount.gte = Number(minAmount);
+    if (maxAmount) where.amount.lte = Number(maxAmount);
+  }
+  if (!type || type === 'VARIABLE') {
+    const total = await prisma.expense.count({ where });
+    const expenses = await prisma.expense.findMany({
+      where,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      include: { category: true, wallet: true },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    });
+    const headers = new Headers();
+    headers.set('X-Total-Count', String(total));
+    headers.set('X-Page', String(page));
+    headers.set('X-Per-Page', String(perPage));
+    return NextResponse.json(expenses, { headers });
+  }
   // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
   if (type === 'FIXED' && startD && endD) {
+    const fixedRecords = await prisma.expense.findMany({ where, include: { category: true, wallet: true } });
     const expanded: any[] = [];
-    for (const e of expenses) {
+    for (const e of fixedRecords) {
       // Determinar período efetivo da recorrência
       const recStart = e.startDate ?? e.date ?? startD;
       const recEnd = e.endDate ?? endD;
@@ -87,11 +114,19 @@ export async function GET(req: NextRequest) {
       }
     }
     // ordenar por date desc para compatibilidade
-    expanded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    return NextResponse.json(expanded);
+  expanded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const total = expanded.length;
+  const startIdx = (page - 1) * perPage;
+  const paged = expanded.slice(startIdx, startIdx + perPage);
+  const headers = new Headers();
+  headers.set('X-Total-Count', String(total));
+  headers.set('X-Page', String(page));
+  headers.set('X-Per-Page', String(perPage));
+  return NextResponse.json(paged, { headers });
   }
 
-  return NextResponse.json(expenses);
+  // fallback (não deve acontecer) — retorna lista vazia
+  return NextResponse.json([]);
 }
 
 export async function POST(req: NextRequest) {

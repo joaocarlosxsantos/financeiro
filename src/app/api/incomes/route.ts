@@ -26,6 +26,10 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
+  const pageParam = Number(url.searchParams.get('page') || '1');
+  const perPageParam = Number(url.searchParams.get('perPage') || '50');
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const perPage = Number.isFinite(perPageParam) && perPageParam > 0 ? Math.min(perPageParam, 200) : 50;
   const start = url.searchParams.get('start');
   const end = url.searchParams.get('end');
   const type = url.searchParams.get('type'); // FIXED | VARIABLE
@@ -47,15 +51,41 @@ export async function GET(req: NextRequest) {
   const walletId = url.searchParams.get('walletId');
   if (walletId) where.walletId = walletId;
 
-  const incomes = await prisma.income.findMany({
-    where,
-    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-    include: { category: true, wallet: true },
-  });
+  // Optional filters
+  const categoryId = url.searchParams.get('categoryId');
+  if (categoryId) where.categoryId = categoryId;
+  const q = url.searchParams.get('q');
+  if (q) where.description = { contains: q, mode: 'insensitive' } as any;
+
+  // Amount range filters
+  const minAmount = url.searchParams.get('minAmount');
+  const maxAmount = url.searchParams.get('maxAmount');
+  if (minAmount || maxAmount) {
+    where.amount = {} as any;
+    if (minAmount) where.amount.gte = Number(minAmount);
+    if (maxAmount) where.amount.lte = Number(maxAmount);
+  }
+  // Pagination for VARIABLE or when not expanding FIXED occurrences
+  if (!type || type === 'VARIABLE') {
+    const total = await prisma.income.count({ where });
+    const incomes = await prisma.income.findMany({
+      where,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      include: { category: true, wallet: true },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    });
+    const headers = new Headers();
+    headers.set('X-Total-Count', String(total));
+    headers.set('X-Page', String(page));
+    headers.set('X-Per-Page', String(perPage));
+    return NextResponse.json(incomes, { headers });
+  }
   // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
   if (type === 'FIXED' && startD && endD) {
+    const fixedRecords = await prisma.income.findMany({ where, include: { category: true, wallet: true } });
     const expanded: any[] = [];
-    for (const i of incomes) {
+    for (const i of fixedRecords) {
       const recStart = i.startDate ?? i.date ?? startD;
       const recEnd = i.endDate ?? endD;
       const from = recStart > startD ? recStart : startD;
@@ -77,10 +107,18 @@ export async function GET(req: NextRequest) {
       }
     }
     expanded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    return NextResponse.json(expanded);
+  const total = expanded.length;
+    const startIdx = (page - 1) * perPage;
+    const paged = expanded.slice(startIdx, startIdx + perPage);
+    const headers = new Headers();
+    headers.set('X-Total-Count', String(total));
+    headers.set('X-Page', String(page));
+    headers.set('X-Per-Page', String(perPage));
+    return NextResponse.json(paged, { headers });
   }
 
-  return NextResponse.json(incomes);
+  // fallback (shouldn't reach here)
+  return NextResponse.json([]);
 }
 
 export async function POST(req: NextRequest) {
