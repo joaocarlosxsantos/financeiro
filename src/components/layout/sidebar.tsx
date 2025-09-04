@@ -58,9 +58,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Cabeçalho */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-primary/90 text-primary-foreground flex items-center justify-center font-bold shadow ring-1 ring-primary/40">
-            CF
-          </div>
+          <Image src="/financeiro.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
           <h1 className="text-base font-semibold tracking-wide select-none">Controle Financeiro</h1>
         </div>
         {onClose && (
