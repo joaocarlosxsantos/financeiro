@@ -240,7 +240,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         </div>
       )}
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-2 sm:gap-6 overflow-x-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-6 xl:gap-3 overflow-x-auto">
           {wallets.map((wallet) => {
             // If backend provided a precomputed balance (includes expanded FIXED items), prefer it.
             const saldoFromBackend = typeof (wallet as any).balance === 'number' ? (wallet as any).balance : undefined;
@@ -250,16 +250,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
             const saldo = typeof saldoFromBackend === 'number' ? saldoFromBackend : saldoFallback;
 
             return (
-              <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
-                <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                    <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
-                      <p className="text-sm text-gray-500 dark:text-foreground">{typeLabels[wallet.type] ?? wallet.type}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
+              <Card key={wallet.id} className="p-2 shadow-lg rounded-xl">
+                <CardContent className="flex flex-col gap-3">
+                  {/* Top: saldo */}
+                  <div className="flex justify-start">
                     <span
                       className={
                         saldo >= 0
@@ -269,14 +263,27 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                     >
                       {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
-                            <Edit className="h-5 w-5" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        </div>
+                  </div>
+
+                  {/* Middle: icon + name */}
+                  <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                    <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
+                    </div>
+                  </div>
+
+                  {/* Bottom: tipo e ações */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-500 dark:text-foreground">{typeLabels[wallet.type] ?? wallet.type}</p>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
+                        <Edit className="h-5 w-5" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(wallet.id)}>
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
