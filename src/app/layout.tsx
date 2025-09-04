@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   title: 'Controle Financeiro',
   description: 'Aplicação para controle de despesas e rendas pessoais',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: '/financeiro.png',
+    shortcut: '/financeiro.png',
+    apple: '/financeiro.png',
   },
 };
 
