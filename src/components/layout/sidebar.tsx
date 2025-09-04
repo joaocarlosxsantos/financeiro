@@ -7,15 +7,15 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { BarChart3, CreditCard, DollarSign, Home, Tag, User, LogOut, Wallet } from 'lucide-react';
+import { BarChart3, CreditCard, DollarSign, Home, Tag, User, LogOut, Wallet, LucideLayoutDashboard } from 'lucide-react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
   { name: 'Entradas', href: '/rendas', icon: DollarSign },
   { name: 'Saídas', href: '/despesas', icon: CreditCard },
   { name: 'Carteiras', href: '/wallets', icon: Wallet },
-  { name: 'Categorias', href: '/categorias', icon: Tag },
-  { name: 'Tags', href: '/tags', icon: BarChart3 },
+  { name: 'Categorias', href: '/categorias', icon: BarChart3 },
+  { name: 'Tags', href: '/tags', icon: Tag },
   { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
 ];
 
