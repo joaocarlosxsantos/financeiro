@@ -242,9 +242,12 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
       {!isLoading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-2 sm:gap-6 overflow-x-auto">
           {wallets.map((wallet) => {
-            const saldo =
+            // If backend provided a precomputed balance (includes expanded FIXED items), prefer it.
+            const saldoFromBackend = typeof (wallet as any).balance === 'number' ? (wallet as any).balance : undefined;
+            const saldoFallback =
               (wallet.incomes?.reduce((acc, i) => acc + Number(i.amount), 0) || 0) -
               (wallet.expenses?.reduce((acc, e) => acc + Number(e.amount), 0) || 0);
+            const saldo = typeof saldoFromBackend === 'number' ? saldoFromBackend : saldoFallback;
 
             return (
               <Card key={wallet.id} className="p-6 shadow-lg rounded-xl">
