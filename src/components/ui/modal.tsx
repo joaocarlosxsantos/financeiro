@@ -11,38 +11,54 @@ export interface ModalProps {
 export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   const modalRef = React.useRef<HTMLDivElement | null>(null);
   const previouslyFocused = React.useRef<HTMLElement | null>(null);
+  // Keep a stable ref to onClose so the effect below doesn't re-run when
+  // a parent recreates the onClose callback on every render. That was
+  // causing the effect to re-run while the modal remained open and the
+  // modal container to be focused again, making inputs lose caret/focus.
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   React.useEffect(() => {
-    if (open) {
-      previouslyFocused.current = document.activeElement as HTMLElement | null;
-      // focus the modal container
-      setTimeout(() => modalRef.current?.focus(), 0);
-      // trap focus
-      const handleKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-        if (e.key === 'Tab') {
-          const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-          );
-          if (!focusable || focusable.length === 0) return;
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      };
-      document.addEventListener('keydown', handleKey);
-      return () => document.removeEventListener('keydown', handleKey);
-    } else {
-      // restore focus
+    if (!open) {
+      // When modal is closed, restore previously focused element if any.
       previouslyFocused.current?.focus();
+      return;
     }
-  }, [open, onClose]);
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    // focus the modal container once when opened
+    const focusTimer = window.setTimeout(() => modalRef.current?.focus(), 0);
+
+    // trap focus and handle Escape using the stable ref
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseRef.current();
+      if (e.key === 'Tab') {
+        const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleKey);
+      // restore focus when modal is unmounted/closed
+      previouslyFocused.current?.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
   const outerSizeClass =
