@@ -53,9 +53,15 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
               stroke="#10b981"
               strokeWidth={2}
               name="Saldo Real"
-              dot={(props: any) => {
-                const { cx, cy, payload, index } = props;
-                const isReal = payload && payload.day <= lastRealDay;
+              dot={(props) => {
+                // Recharts passes a variety of props to custom dot renderers.
+                // We'll only extract the values we need and type them loosely enough
+                // to satisfy TypeScript without leaking `any`.
+                const p = props as { cx?: number; cy?: number; payload?: { day?: number }; index?: number };
+                const { cx, cy, payload, index } = p;
+                const isReal = payload?.day !== undefined && payload.day <= lastRealDay;
+                // If coordinates are missing, render an empty fragment to satisfy Recharts typing
+                if (cx == null || cy == null) return <></>;
                 return (
                   <circle
                     key={index ?? `${cx}-${cy}`}

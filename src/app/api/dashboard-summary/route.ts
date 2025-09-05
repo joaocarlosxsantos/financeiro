@@ -50,8 +50,10 @@ export async function GET(req: NextRequest) {
   ]);
 
   // Resumo do mês atual
-  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalIncome = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
+  type PrismaExpense = Awaited<ReturnType<typeof prisma.expense.findMany>>[number];
+  type PrismaIncome = Awaited<ReturnType<typeof prisma.income.findMany>>[number];
+  const totalExpenses = expenses.reduce((sum: number, e: PrismaExpense) => sum + Number(e.amount), 0);
+  const totalIncome = incomes.reduce((sum: number, i: PrismaIncome) => sum + Number(i.amount), 0);
 
   // Saldo do mês
   const saldoDoMes = totalIncome - totalExpenses;
@@ -74,8 +76,8 @@ export async function GET(req: NextRequest) {
   // Expandir despesas/rendas FIXED em ocorrências mensais até endStr
   const endDate = new Date(endStr);
 
-  function expandFixedRecords(records: any[], upto: Date) {
-    const expanded: any[] = [];
+  function expandFixedRecords(records: (PrismaExpense | PrismaIncome)[], upto: Date) {
+    const expanded: (PrismaExpense | PrismaIncome)[] = [];
     for (const r of records) {
       // Se for FIXED, NÃO incluir o registro original (evita duplicação) — gerar apenas ocorrências mensais
       if (r.isFixed) {
@@ -92,14 +94,14 @@ export async function GET(req: NextRequest) {
             const dayInMonth = Math.min(day, lastDayOfMonth);
             const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
             if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
-              expanded.push({ ...r, date: formatYmd(occDate) });
+              expanded.push({ ...(r as any), date: formatYmd(occDate) } as PrismaExpense | PrismaIncome);
             }
             cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
           }
         }
       } else {
-        // não-FIXED: incluir o registro original se estiver até 'upto'
-        if (r.date && new Date(r.date) <= upto) expanded.push(r);
+  // não-FIXED: incluir o registro original se estiver até 'upto'
+  if (r.date && new Date(r.date) <= upto) expanded.push(r);
       }
     }
     return expanded;
@@ -108,14 +110,8 @@ export async function GET(req: NextRequest) {
   const allExpensesExpanded = expandFixedRecords(acumuladoExpenses, endDate);
   const allIncomesExpanded = expandFixedRecords(acumuladoIncomes, endDate);
 
-  const totalExpensesAcumulado = allExpensesExpanded.reduce(
-    (sum: number, e: any) => sum + Number(e.amount),
-    0,
-  );
-  const totalIncomeAcumulado = allIncomesExpanded.reduce(
-    (sum: number, i: any) => sum + Number(i.amount),
-    0,
-  );
+  const totalExpensesAcumulado = allExpensesExpanded.reduce((sum: number, e: PrismaExpense) => sum + Number(e.amount), 0);
+  const totalIncomeAcumulado = allIncomesExpanded.reduce((sum: number, i: PrismaIncome) => sum + Number(i.amount), 0);
   const saldoAcumulado = totalIncomeAcumulado - totalExpensesAcumulado;
 
   // Limite diário (quanto pode gastar por dia até o fim do mês para não ficar negativo)
@@ -136,7 +132,7 @@ export async function GET(req: NextRequest) {
     expensesByCategory[cat].amount += Number(e.amount);
   }
   const expensesByCategoryArr = Object.entries(expensesByCategory).map(
-    ([category, v]: [string, any]) => ({ category, amount: v.amount, color: v.color }),
+    ([category, v]: [string, { amount: number; color: string }]) => ({ category, amount: v.amount, color: v.color }),
   );
 
   // Por tag
@@ -150,7 +146,7 @@ export async function GET(req: NextRequest) {
       }
     }
   }
-  const expensesByTagArr = Object.entries(expensesByTag).map(([tag, v]: [string, any]) => ({
+  const expensesByTagArr = Object.entries(expensesByTag).map(([tag, v]: [string, { amount: number; color: string }]) => ({
     tag,
     amount: v.amount,
     color: v.color,
@@ -164,7 +160,7 @@ export async function GET(req: NextRequest) {
     expensesByWallet[wallet] += Number(e.amount);
   }
   const expensesByWalletArr = Object.entries(expensesByWallet).map(
-    ([wallet, amount]: [string, any]) => ({ wallet, amount }),
+    ([wallet, amount]: [string, number]) => ({ wallet, amount }),
   );
 
   return NextResponse.json({

@@ -59,6 +59,10 @@ model User {
   incomes       Income[]
   wallets       Wallet[]
   transfers     Transfer[]
+  groups        Group[]
+  members       Member[]
+  bills         Bill[]
+  billMemberShares BillMemberShare[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -173,4 +177,65 @@ enum ExpenseType {
 enum IncomeType {
   FIXED
   VARIABLE
+}
+
+// --- Controle de Contas models ---
+
+model Group {
+  id          Int       @id @default(autoincrement())
+  name        String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  members     Member[]
+  bills       Bill[]
+
+  @@unique([userId, name])
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId   Int
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  shares    BillMemberShare[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bill {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  amount      Float
+  dueDate     DateTime
+  paid        Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId     Int
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  shares      BillMemberShare[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BillMemberShare {
+  id        Int     @id @default(autoincrement())
+  billId    Int
+  memberId  Int
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Float
+  percent   Float?
+  bill      Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([billId, memberId])
 }

@@ -1,15 +1,16 @@
 
 "use client";
+import React, { useState } from 'react';
 import Image from 'next/image';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { BarChart3, CreditCard, DollarSign, Home, Tag, User, LogOut, Wallet, LucideLayoutDashboard } from 'lucide-react';
 
-const navigation = [
+const navigationFinanceiro = [
   { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
   { name: 'Entradas', href: '/rendas', icon: DollarSign },
   { name: 'Saídas', href: '/despesas', icon: CreditCard },
@@ -19,8 +20,22 @@ const navigation = [
   { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
 ];
 
+const navigationAccounts = [
+  { name: 'Dashboard', href: '/controle-contas', icon: LucideLayoutDashboard },
+  { name: 'Contas', href: '/controle-contas/contas', icon: CreditCard },
+  { name: 'Grupos', href: '/controle-contas/grupos', icon: BarChart3 },
+];
+
+type ModuleKey = 'financeiro' | 'accounts';
+
 // Item de navegação com visual melhorado
-const NavItem = ({ item, active, onClick }: { item: typeof navigation[number]; active: boolean; onClick?: () => void }) => {
+interface NavEntry {
+  name: string;
+  href: string;
+  icon: any;
+}
+
+const NavItem = ({ item, active, onClick }: { item: NavEntry; active: boolean; onClick?: () => void }) => {
   return (
     <Link
       href={item.href}
@@ -49,9 +64,117 @@ const NavItem = ({ item, active, onClick }: { item: typeof navigation[number]; a
   );
 };
 
+// Small module selector dropdown
+function ModuleSelector({ module, onSelect }: { module: ModuleKey; onSelect: (m: ModuleKey) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    function handleDoc(e: MouseEvent) {
+      if (!ref.current) return;
+      if (e.target instanceof Node && !ref.current.contains(e.target)) setOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handleDoc);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleDoc);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide select-none"
+      >
+        <span>{module === 'financeiro' ? 'Controle Financeiro' : 'Controle de Contas'}</span>
+        <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="none" stroke="currentColor">
+          <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M6 8l4 4 4-4" />
+        </svg>
+      </button>
+      {open && (
+        <div role="menu" className="absolute left-0 mt-2 w-56 rounded-md bg-background border border-white/10 shadow-lg z-50">
+          <button
+            role="menuitem"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
+            onClick={() => { onSelect('financeiro'); setOpen(false); }}
+          >
+            <LucideLayoutDashboard className="h-4 w-4 text-white/70" />
+            <span>Controle Financeiro</span>
+          </button>
+          <button
+            role="menuitem"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
+            onClick={() => { onSelect('accounts'); setOpen(false); }}
+          >
+            <CreditCard className="h-4 w-4 text-white/70" />
+            <span>Controle de Contas</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
+
+  // initialize module: prefer localStorage, else derive from pathname
+  const readStored = () => {
+    try {
+      const v = typeof window !== 'undefined' ? window.localStorage.getItem('activeModule') : null;
+      if (v === 'accounts' || v === 'financeiro') return v as ModuleKey;
+    } catch {
+      /* noop */
+    }
+    return pathname?.startsWith('/controle-contas') ? 'accounts' : 'financeiro';
+  };
+  const [module, setModule] = useState<ModuleKey>(readStored);
+
+  const currentNavigation = module === 'financeiro' ? navigationFinanceiro : navigationAccounts;
+
+  // when module changes, redirect to the module dashboard
+  const switchModule = (m: ModuleKey) => {
+    if (m === module) return;
+    setModule(m);
+    try {
+      if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', m);
+    } catch {}
+  if (m === 'financeiro') router.push('/dashboard');
+  else if (m === 'accounts') router.push('/controle-contas');
+    if (onClose) onClose();
+  };
+
+  // sync module when pathname changes (e.g., user navigates via links)
+  React.useEffect(() => {
+    // If navigating to the user page, preserve the module stored in localStorage (origin of the click)
+    if (pathname.startsWith('/user')) {
+      try {
+        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('activeModule') : null;
+        if (stored === 'accounts' || stored === 'financeiro') {
+          if (module !== stored) setModule(stored as ModuleKey);
+          return;
+        }
+      } catch {}
+    }
+
+    if (pathname.startsWith('/controle-contas') && module !== 'accounts') {
+      setModule('accounts');
+      try { if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', 'accounts'); } catch {}
+    } else if (!pathname.startsWith('/controle-contas') && module !== 'financeiro') {
+      setModule('financeiro');
+      try { if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', 'financeiro'); } catch {}
+    }
+  }, [pathname, module]);
 
   return (
     <div className="flex h-full w-64 flex-col bg-[radial-gradient(circle_at_30%_20%,#1e293b_0%,#0f172a_60%)] dark:bg-[radial-gradient(circle_at_30%_20%,#0f172a_0%,#020617_65%)] text-white border-r border-white/10 backdrop-blur-sm">
@@ -59,7 +182,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="flex h-16 items-center justify-between px-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           <Image src="/financeiro.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
-          <h1 className="text-base font-semibold tracking-wide select-none">Controle Financeiro</h1>
+          <div className="relative">
+            <ModuleSelector
+              module={module}
+              onSelect={(m) => switchModule(m)}
+            />
+          </div>
         </div>
         {onClose && (
           <button
@@ -77,7 +205,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Navegação */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        {navigation.map(item => (
+        {currentNavigation.map((item) => (
           <NavItem key={item.href} item={item} active={pathname === item.href} onClick={onClose} />
         ))}
       </nav>
@@ -85,7 +213,16 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Usuário / Ações */}
       <div className="border-t border-white/10 p-4 mt-auto">
         <div className="flex items-center gap-3">
-          <Link href="/user" onClick={onClose} className="group flex items-center gap-3 flex-1 min-w-0">
+          <Link
+            href="/user"
+            onClick={() => {
+              try {
+                if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', module);
+              } catch {}
+              if (onClose) onClose();
+            }}
+            className="group flex items-center gap-3 flex-1 min-w-0"
+          >
             <div className="relative">
               {user?.image ? (
                 <Image

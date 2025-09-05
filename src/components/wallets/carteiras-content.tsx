@@ -16,6 +16,7 @@ interface Wallet {
   type: string;
   expenses: { amount: number | string }[];
   incomes: { amount: number | string }[];
+  balance?: number;
 }
 
 interface CarteirasContentProps {
@@ -243,10 +244,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-6 xl:gap-3 overflow-x-auto">
           {wallets.map((wallet) => {
             // If backend provided a precomputed balance (includes expanded FIXED items), prefer it.
-            const saldoFromBackend = typeof (wallet as any).balance === 'number' ? (wallet as any).balance : undefined;
+            const saldoFromBackend = typeof wallet.balance === 'number' ? wallet.balance : undefined;
             const saldoFallback =
-              (wallet.incomes?.reduce((acc, i) => acc + Number(i.amount), 0) || 0) -
-              (wallet.expenses?.reduce((acc, e) => acc + Number(e.amount), 0) || 0);
+              (wallet.incomes?.reduce((acc: number, i: { amount: number | string }) => acc + Number(i.amount), 0) || 0) -
+              (wallet.expenses?.reduce((acc: number, e: { amount: number | string }) => acc + Number(e.amount), 0) || 0);
             const saldo = typeof saldoFromBackend === 'number' ? saldoFromBackend : saldoFallback;
 
             return (

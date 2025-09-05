@@ -21,13 +21,14 @@ export const DailyBalanceChart = ({ data }: { data: DailyBalancePoint[] }) => {
               strokeWidth={2}
               name="Saldo"
               // Exibe pontos apenas nos dias que existem dados (todos os itens do array recebido)
-              dot={(props: any) => {
-                const { cx, cy, index } = props;
+              dot={(props: { cx?: number | string; cy?: number | string; index?: number | string }) => {
+                const { cx, cy, index } = props || {};
+                const key = index ?? `${cx ?? ''}-${cy ?? ''}`;
                 return (
                   <circle
-                    key={index ?? `${cx}-${cy}`}
-                    cx={cx}
-                    cy={cy}
+                    key={String(key)}
+                    cx={cx as any}
+                    cy={cy as any}
                     r={3.2}
                     fill="#3b82f6"
                     stroke="#1e40af"

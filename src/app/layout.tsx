@@ -5,6 +5,15 @@ import AuthProvider from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { MonthProvider } from '@/components/providers/month-provider';
 
+// componente dev para suprimir logs do hot-reloader
+let SuppressHotLogs: any = () => null;
+try {
+  // import dinamicamente apenas em ambiente suportado (evita erro em produção)
+  SuppressHotLogs = require('@/components/dev/suppress-hot-logs').default;
+} catch (e) {
+  // noop
+}
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -26,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <MonthProvider>
             <AuthProvider>
+              {process.env.NODE_ENV === 'development' && <SuppressHotLogs />}
               <main id="main">{children}</main>
             </AuthProvider>
           </MonthProvider>

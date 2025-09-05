@@ -28,8 +28,10 @@ export async function GET(req: NextRequest) {
       select: { amount: true },
     }),
   ]);
-  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalIncomes = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
+  type ExpSel = Awaited<ReturnType<typeof prisma.expense.findMany>>[number];
+  type IncSel = Awaited<ReturnType<typeof prisma.income.findMany>>[number];
+  const totalExpenses = expenses.reduce((sum: number, e: ExpSel) => sum + Number(e.amount), 0);
+  const totalIncomes = incomes.reduce((sum: number, i: IncSel) => sum + Number(i.amount), 0);
   const balance = totalIncomes - totalExpenses;
 
   return NextResponse.json({ totalExpenses, totalIncomes, balance });

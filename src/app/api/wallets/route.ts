@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+type WalletRecord = Awaited<ReturnType<typeof prisma.wallet.findMany>>[number];
+type ExpenseRecord = WalletRecord extends { expenses?: (infer E)[] } ? E : any;
+type IncomeRecord = WalletRecord extends { incomes?: (infer I)[] } ? I : any;
 import { z } from 'zod';
 
 export async function GET(req: NextRequest) {
@@ -26,8 +29,8 @@ export async function GET(req: NextRequest) {
   // Expand FIXED records (expenses/incomes) up to today so balance reflects recurring items
   const today = new Date();
 
-  function expandFixedRecords(records: any[], upto: Date) {
-    const expanded: any[] = [];
+  function expandFixedRecords(records: (ExpenseRecord | IncomeRecord)[], upto: Date) {
+    const expanded: (ExpenseRecord | IncomeRecord)[] = [];
     for (const r of records) {
       if (r.isFixed) {
         const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(1900, 0, 1);
@@ -43,24 +46,24 @@ export async function GET(req: NextRequest) {
             const dayInMonth = Math.min(day, lastDayOfMonth);
             const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
             if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
-              expanded.push({ ...r, date: occDate.toISOString() });
+              expanded.push({ ...(r as any), date: occDate.toISOString() } as ExpenseRecord | IncomeRecord);
             }
             cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
           }
         }
       } else {
-        if (r.date && new Date(r.date) <= upto) expanded.push(r);
+  if (r.date && new Date(r.date) <= upto) expanded.push(r);
       }
     }
     return expanded;
   }
 
-  const walletsWithBalance = wallets.map((w) => {
+  const walletsWithBalance = wallets.map((w: WalletRecord & { expenses?: ExpenseRecord[]; incomes?: IncomeRecord[] }) => {
     // expand incomes and expenses
-    const incomesExpanded = expandFixedRecords(w.incomes || [], today);
-    const expensesExpanded = expandFixedRecords(w.expenses || [], today);
-    const totalIncomes = incomesExpanded.reduce((s: number, i: any) => s + Number(i.amount), 0);
-    const totalExpenses = expensesExpanded.reduce((s: number, e: any) => s + Number(e.amount), 0);
+  const incomesExpanded = expandFixedRecords(w.incomes || [], today);
+  const expensesExpanded = expandFixedRecords(w.expenses || [], today);
+  const totalIncomes = incomesExpanded.reduce((s: number, i: ExpenseRecord | IncomeRecord) => s + Number((i as any).amount), 0);
+  const totalExpenses = expensesExpanded.reduce((s: number, e: ExpenseRecord | IncomeRecord) => s + Number((e as any).amount), 0);
     const balance = totalIncomes - totalExpenses;
     return { ...w, balance };
   });

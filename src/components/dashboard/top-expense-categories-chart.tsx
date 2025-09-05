@@ -55,7 +55,7 @@ export function TopExpenseCategoriesChart({ data }: TopExpenseCategoriesChartPro
         />
         <ReferenceLine x={0} stroke="#64748b" strokeDasharray="4 3" />
         <Tooltip
-          formatter={(value: any, name: any) => {
+          formatter={(value: number | string, name: string) => {
             if (typeof value === 'number') {
               if (name === 'diff') {
                 return [formatFullCurrency(value), value > 0 ? 'Aumento' : 'Redução'];
@@ -64,7 +64,7 @@ export function TopExpenseCategoriesChart({ data }: TopExpenseCategoriesChartPro
             }
             return [value, name];
           }}
-          labelFormatter={(label: any) => label}
+          labelFormatter={(label: string) => label}
         />
         <Bar
           dataKey="diff"
@@ -107,17 +107,26 @@ function formatFullCurrency(v: number) {
 }
 
 // Label custom para exibir diff compacto + valor anterior/atual
+type DiffLabelProps = {
+  x?: string | number;
+  y?: string | number;
+  width?: string | number;
+  height?: string | number;
+  value?: number;
+  payload?: any;
+} | null;
+
 const renderDiffLabel = (props: any) => {
   const { x = 0, y = 0, width = 0, height = 0, value, payload } = props || {};
   if (typeof value !== 'number' || !payload) return null;
-  const diff = value;
-  const prevAmount: number = payload.prevAmount ?? payload.amount - diff;
-  const currentAmount: number = payload.amount;
+  const diff = Number(value);
+  const prevAmount: number = Number(payload.prevAmount ?? (payload.amount - diff));
+  const currentAmount: number = Number(payload.amount);
   const diffCompact = `${diff > 0 ? '+' : ''}${formatCompactCurrencyNumber(diff)}`;
   const color = diff > 0 ? '#dc2626' : '#16a34a';
-  const centerY = y + height / 2 + 4;
+  const centerY = Number(y) + Number(height) / 2 + 4;
   const anchor = diff >= 0 ? 'start' : 'end';
-  const textX = diff >= 0 ? x + width + 6 : x - 6;
+  const textX = diff >= 0 ? Number(x) + Number(width) + 6 : Number(x) - 6;
   return (
     <g>
       <text

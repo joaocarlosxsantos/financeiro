@@ -9,6 +9,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
   const { registros, carteiraId } = await req.json();
+  // registros: array de lançamentos extraídos do extrato (esperamos objetos com campos definidos)
+  type ImportRow = { data: string; valor: number; categoriaId?: string; categoriaSugerida?: string; descricao?: string; descricaoSimplificada?: string; isSaldoInicial?: boolean };
   if (!Array.isArray(registros) || !carteiraId) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
   }
@@ -28,7 +30,8 @@ export async function POST(req: NextRequest) {
 
   // Busca todas as categorias do usuário uma vez (cache)
   const categoriasExistentes = await prisma.category.findMany({ where: { userId: user.id } });
-  const categoriasCache: { [key: string]: any } = {};
+  type PrismaCategory = Awaited<ReturnType<typeof prisma.category.findMany>>[number];
+  const categoriasCache: Record<string, PrismaCategory> = {};
   function normalizeNome(nome: string) {
     return nome.trim().toLowerCase();
   }
@@ -38,9 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Garante que a categoria 'Saldo' exista (type BOTH ou INCOME)
-  let saldoCategoria = categoriasExistentes.find(
-    (c) => normalizeNome(c.name) === 'saldo' && (c.type === 'BOTH' || c.type === 'INCOME'),
-  );
+  let saldoCategoria = categoriasExistentes.find((c: PrismaCategory) => normalizeNome(c.name) === 'saldo' && (c.type === 'BOTH' || c.type === 'INCOME'));
   if (!saldoCategoria) {
     saldoCategoria = await prisma.category.create({
       data: {
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Cria novas categorias em lote (evita duplicidade)
-  const criadas: any[] = [];
+  const criadas: PrismaCategory[] = [];
   // Função para cor fixa por sugestão de categoria
   function corFixaCategoria(nome: string) {
     const n = nome.trim().toLowerCase();
@@ -141,8 +142,8 @@ export async function POST(req: NextRequest) {
       const cat = await prisma.category.create({
         data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
       });
-      categoriasCache[key] = cat;
-      criadas.push(cat);
+  categoriasCache[key] = cat;
+  criadas.push(cat as any);
       for (const reg of registrosAtualizados) {
         let categoriaNome = '';
         if (reg.categoriaSugerida) {
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Atualiza os registros com os ids corretos das categorias criadas
-  const registrosFinal = registrosAtualizados.map((reg) => {
+  const registrosFinal = (registrosAtualizados as ImportRow[]).map((reg) => {
     let categoriaId = reg.categoriaId;
     // Normaliza nome para busca
     let categoriaNome = '';
@@ -224,10 +225,8 @@ export async function POST(req: NextRequest) {
       await prisma.$transaction(queries);
     }
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || 'Erro ao salvar lançamentos' },
-      { status: 500 },
-    );
+  } catch (err: unknown) {
+    const msg = err && typeof err === 'object' && 'message' in err ? (err as any).message : String(err);
+    return NextResponse.json({ error: msg || 'Erro ao salvar lançamentos' }, { status: 500 });
   }
 }
