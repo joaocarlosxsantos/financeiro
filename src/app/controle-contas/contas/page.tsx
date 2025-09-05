@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Toast } from "@/components/ui/toast";
 import { Modal } from "@/components/controle-contas/modal";
+import { WhatsAppIcon } from '@/components/controle-contas/icons';
 import { BillCard } from '@/components/controle-contas/cards';
 
 type Member = { id: number; name: string; phone?: string };
@@ -11,10 +12,34 @@ type Bill = { id: number; name: string; value: number; shares?: BillShare[] };
 type Group = { id: number; name: string };
 
 export default function Page() {
-  function getEqualShares(type: "value" | "percent", value: string, members: number[]) {
+  function parseLocaleNumber(v: string | number) {
+    if (typeof v === 'number') return v;
+    let s = String(v || '').trim();
+    if (s === '') return 0;
+    const hasDot = s.indexOf('.') !== -1;
+    const hasComma = s.indexOf(',') !== -1;
+    if (hasDot && hasComma) {
+      // assume dot as thousands sep, comma as decimal
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (hasComma) {
+      // only comma -> decimal
+      s = s.replace(',', '.');
+    } else if (hasDot) {
+      // only dot -> could be decimal or thousands. If more than one dot, remove dots, else keep single dot as decimal
+      const dotCount = (s.match(/\./g) || []).length;
+      if (dotCount > 1) s = s.replace(/\./g, '');
+      // else keep single dot as decimal separator
+    }
+    // remove any non numeric chars except minus and decimal point
+    s = s.replace(/[^\d.-]/g, '');
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  const getEqualShares = useCallback((type: "value" | "percent", value: string, members: number[]) => {
     if (!members.length) return [];
     if (type === "value") {
-      const v = parseFloat(value) || 0;
+      const v = parseLocaleNumber(value) || 0;
       const base = Math.floor((v / members.length) * 100) / 100;
       const rest = v - base * members.length;
       return members.map((id, i) => ({ memberId: id, amount: (base + (i === 0 ? rest : 0)).toFixed(2) }));
@@ -23,7 +48,7 @@ export default function Page() {
       const rest = 100 - base * members.length;
       return members.map((id, i) => ({ memberId: id, amount: (base + (i === 0 ? rest : 0)).toFixed(1) }));
     }
-  }
+  }, []);
 
   function handleOpenAddModal() {
     setAddModalOpen(true);
@@ -56,7 +81,7 @@ export default function Page() {
   useEffect(() => {
     const ids = editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers;
     setEditShares(getEqualShares(editShareType, editValue, ids));
-  }, [editValue, editSelectedMembers, editShareType, members]);
+  }, [editValue, editSelectedMembers, editShareType, members, getEqualShares]);
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [validationError, setValidationError] = useState('');
@@ -85,7 +110,7 @@ export default function Page() {
   useEffect(() => {
     const ids = selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers;
     setShares(getEqualShares(shareType, value, ids));
-  }, [selectedMembers, value, shareType, members.length, members]);
+  }, [selectedMembers, value, shareType, members.length, members, getEqualShares]);
 
 
   useEffect(() => {
@@ -159,25 +184,33 @@ export default function Page() {
     setLoading(true);
     setError("");
     function normalizeValue(v: string | number) {
-      if (typeof v === 'number') return v;
-      const s = String(v || '').trim();
-      const cleaned = s.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-      const n = Number(cleaned);
-      return Number.isFinite(n) ? n : 0;
+      return parseLocaleNumber(v);
     }
     const ids = selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers;
+    function parseInputToNumber(v: string | number) {
+      return parseLocaleNumber(v);
+    }
     if (shareType === "value") {
-      const soma = ids.reduce((acc, id) => acc + (parseFloat(shares.find((s) => s.memberId === id)?.amount ?? "0") || 0), 0);
-      const total = normalizeValue(value) || 0;
-      if (Math.abs(soma - total) > 0.01) {
-        setValidationError("A soma dos valores dos participantes deve ser igual ao valor total da conta.");
+  const soma = ids.reduce((acc, id) => acc + parseInputToNumber(shares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+  const total = normalizeValue(value) || 0;
+      // comparar em centavos para evitar erros de ponto flutuante
+      const somaCents = Math.round(soma * 100);
+      const totalCents = Math.round(total * 100);
+      if (somaCents !== totalCents) {
+        const msg = `A soma dos valores dos participantes (${(somaCents/100).toFixed(2)}) difere do total (${(totalCents/100).toFixed(2)}). (somaCents=${somaCents}, totalCents=${totalCents})`;
+        console.debug('validation failed (value)', { soma, total, somaCents, totalCents, shares });
+        setValidationError(msg);
         setLoading(false);
         return;
       }
     } else {
-      const soma = ids.reduce((acc, id) => acc + (parseFloat(shares.find((s) => s.memberId === id)?.amount ?? "0") || 0), 0);
-      if (Math.abs(soma - 100) > 0.01) {
-        setValidationError("A soma das porcentagens dos participantes deve ser igual a 100%.");
+      const soma = ids.reduce((acc, id) => acc + parseInputToNumber(shares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+      // work in tenths of percent to avoid float issues (one decimal precision expected)
+      const somaTenths = Math.round(soma * 10);
+      if (somaTenths !== 1000) {
+        const msg = `A soma das porcentagens dos participantes (${(somaTenths/10).toFixed(1)}%) deve ser 100.0%. (somaTenths=${somaTenths})`;
+        console.debug('validation failed (percent)', { soma, somaTenths, shares });
+        setValidationError(msg);
         setLoading(false);
         return;
       }
@@ -185,7 +218,7 @@ export default function Page() {
     try {
       if (!selectedGroup) return;
       const allIds = selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers;
-      const sharesPayload = allIds.map((memberId) => ({ memberId, type: shareType, amount: parseFloat(shares.find((s) => s.memberId === memberId)?.amount ?? "0") }));
+  const sharesPayload = allIds.map((memberId) => ({ memberId, type: shareType, amount: parseInputToNumber(shares.find((s) => s.memberId === memberId)?.amount ?? "0") }));
       const res = await fetch("/api/controle-contas/contas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -266,33 +299,35 @@ export default function Page() {
                     if (!selectedBill) return;
                     setLoading(true);
                     setError("");
-                    function normalizeValue(v: string | number) {
-                      if (typeof v === 'number') return v;
-                      const s = String(v || '').trim();
-                      const cleaned = s.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-                      const n = Number(cleaned);
-                      return Number.isFinite(n) ? n : 0;
-                    }
+                    function normalizeValue(v: string | number) { return parseLocaleNumber(v); }
+                    function parseInputToNumber(v: string | number) { return parseLocaleNumber(v); }
                     const ids = editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers;
                     if (editShareType === "value") {
-                      const soma = ids.reduce((acc, id) => acc + (parseFloat(editShares.find((s) => s.memberId === id)?.amount ?? "0") || 0), 0);
+                      const soma = ids.reduce((acc, id) => acc + parseInputToNumber(editShares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
                       const total = normalizeValue(editValue) || 0;
-                      if (Math.abs(soma - total) > 0.01) {
-                        setValidationError("A soma dos valores dos participantes deve ser igual ao valor total da conta.");
+                      const somaCents = Math.round(soma * 100);
+                      const totalCents = Math.round(total * 100);
+                      if (somaCents !== totalCents) {
+                        const msg = `A soma dos valores dos participantes (${(somaCents/100).toFixed(2)}) difere do total (${(totalCents/100).toFixed(2)}). (somaCents=${somaCents}, totalCents=${totalCents})`;
+                        console.debug('validation failed (edit value)', { soma, total, somaCents, totalCents, editShares });
+                        setValidationError(msg);
                         setLoading(false);
                         return;
                       }
                     } else {
-                      const soma = ids.reduce((acc, id) => acc + (parseFloat(editShares.find((s) => s.memberId === id)?.amount ?? "0") || 0), 0);
-                      if (Math.abs(soma - 100) > 0.01) {
-                        setValidationError("A soma das porcentagens dos participantes deve ser igual a 100%.");
+                      const soma = ids.reduce((acc, id) => acc + parseInputToNumber(editShares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+                      const somaTenths = Math.round(soma * 10);
+                      if (somaTenths !== 1000) {
+                        const msg = `A soma das porcentagens dos participantes (${(somaTenths/10).toFixed(1)}%) deve ser 100.0%. (somaTenths=${somaTenths})`;
+                        console.debug('validation failed (edit percent)', { soma, somaTenths, editShares });
+                        setValidationError(msg);
                         setLoading(false);
                         return;
                       }
                     }
                     try {
                       const allIds = editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers;
-                      const sharesPayload = allIds.map((memberId) => ({ memberId, type: editShareType, amount: parseFloat(editShares.find((s) => s.memberId === memberId)?.amount ?? "0") }));
+                      const sharesPayload = allIds.map((memberId) => ({ memberId, type: editShareType, amount: parseLocaleNumber(editShares.find((s) => s.memberId === memberId)?.amount ?? "0") }));
                       const res = await fetch(`/api/controle-contas/contas`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
@@ -341,13 +376,13 @@ export default function Page() {
                             <div key={memberId} className="flex items-center gap-2">
                               <span className="min-w-0 w-28 md:w-32 truncate">{member?.name}</span>
                               <input type="number" min={editShareType === "percent" ? "0" : undefined} step="0.01" value={share?.amount ?? ""} onChange={(e) => { const val = e.target.value; setEditShares((prev) => prev.map((s) => s.memberId === memberId ? { ...s, amount: val } : s)); }} className="w-20 md:w-28 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-neutral-900 dark:text-neutral-100" placeholder={editShareType === "value" ? "Valor" : "%"} />
-                              {editShareType === "value" && editValue && (<span className="text-sm text-neutral-500">({(((parseFloat(share?.amount ?? "0") || 0) / parseFloat(editValue)) * 100).toFixed(1)}%)</span>)}
-                              {editShareType === "percent" && editValue && (<span className="text-sm text-neutral-500">(R$ {(((parseFloat(share?.amount ?? "0") || 0) * parseFloat(editValue)) / 100).toFixed(2)})</span>)}
+                              {editShareType === "value" && editValue && (<span className="text-sm text-neutral-500">({(((parseLocaleNumber(share?.amount ?? "0") || 0) / parseLocaleNumber(editValue)) * 100).toFixed(1)}%)</span>)}
+                              {editShareType === "percent" && editValue && (<span className="text-sm text-neutral-500">(R$ {(((parseLocaleNumber(share?.amount ?? "0") || 0) * parseLocaleNumber(editValue)) / 100).toFixed(2)})</span>)}
                             </div>
                           );
                         })}
                       </div>
-                      <div className="text-sm mt-2">Soma total: {editShareType === "value" ? `R$ ${editShares.reduce((acc, s) => acc + ((editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers).includes(s.memberId) ? (parseFloat(s.amount || "0") || 0) : 0), 0).toFixed(2)}` : `${editShares.reduce((acc, s) => acc + ((editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers).includes(s.memberId) ? (parseFloat(s.amount || "0") || 0) : 0), 0).toFixed(2)}%`}</div>
+                      <div className="text-sm mt-2">Soma total: {editShareType === "value" ? `R$ ${editShares.reduce((acc, s) => acc + ((editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers).includes(s.memberId) ? (parseLocaleNumber(s.amount || "0") || 0) : 0), 0).toFixed(2)}` : `${editShares.reduce((acc, s) => acc + ((editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers).includes(s.memberId) ? (parseLocaleNumber(s.amount || "0") || 0) : 0), 0).toFixed(2)}%`}</div>
                     </>
                   )}
                   <div className="flex justify-end gap-2 mt-2">
@@ -391,26 +426,65 @@ export default function Page() {
                 <div className="mt-4">
                   <div className="text-emerald-900 dark:text-emerald-200 text-lg font-bold mb-2">Total individual por membro:</div>
                   <div className="flex flex-col gap-1">
-                    {members.map((member) => {
-                      let total = 0;
-                      bills.forEach((bill) => {
-                        if (bill.shares && bill.shares.length > 0) {
-                          const share = bill.shares.find((s) => s.memberId === member.id);
-                          if (share) {
-                            if (share.type === "value") total += share.amount;
-                            if (share.type === "percent") total += (share.amount * bill.value) / 100;
-                          }
-                        } else {
-                          total += bill.value / members.length;
-                        }
-                      });
-                      return (
-                        <div key={member.id} className="flex gap-2 items-center text-base">
-                          <span className="font-semibold">{member.name}:</span>
-                          <span>R$ {total.toFixed(2)}</span>
-                        </div>
-                      );
-                    })}
+                                {members.map((member) => {
+                                  let total = 0;
+                                  const lines: string[] = [];
+                                  bills.forEach((bill) => {
+                                    let amountForMember = 0;
+                                    if (bill.shares && bill.shares.length > 0) {
+                                      const share = bill.shares.find((s) => s.memberId === member.id);
+                                      if (share) {
+                                        if (share.type === "value") amountForMember = share.amount;
+                                        if (share.type === "percent") amountForMember = (share.amount * bill.value) / 100;
+                                        lines.push(`${bill.name}: R$ ${amountForMember.toFixed(2)}`);
+                                        total += amountForMember;
+                                      }
+                                    } else {
+                                      amountForMember = bill.value / members.length;
+                                      lines.push(`${bill.name}: R$ ${amountForMember.toFixed(2)}`);
+                                      total += amountForMember;
+                                    }
+                                  });
+
+                                  const message = () => {
+                                    const header = `Olá ${member.name}, segue sua parte nas contas do grupo:`;
+                                    const body = lines.join('\n');
+                                    const footer = `Total: R$ ${total.toFixed(2)}`;
+                                    return `${header}\n${body}\n${footer}`;
+                                  };
+
+                                  const handleCopy = async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(message());
+                                      setToastMsg('Mensagem copiada');
+                                    } catch (err) {
+                                      setToastMsg('Não foi possível copiar');
+                                    }
+                                  };
+
+                                  const handleWhatsapp = (phone?: string) => {
+                                    if (!phone) return;
+                                    const cleaned = phone.replace(/\D/g, '');
+                                    const phoneForWa = (cleaned.length === 10 || cleaned.length === 11) ? `55${cleaned}` : cleaned;
+                                    const url = `https://wa.me/${phoneForWa}?text=${encodeURIComponent(message())}`;
+                                    window.open(url, '_blank');
+                                  };
+
+                                  return (
+                                    <div key={member.id} className="flex gap-2 items-center text-base">
+                                      <span className="font-semibold">{member.name}:</span>
+                                      <span>R$ {total.toFixed(2)}</span>
+                                      <div className="ml-auto flex gap-2">
+                                        <button onClick={() => handleCopy()} className="inline-flex items-center rounded px-2 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-sm" aria-label={`Copiar mensagem para ${member.name}`}>Copiar</button>
+                                        {member.phone && (
+                                          <button onClick={() => handleWhatsapp(member.phone)} className="inline-flex items-center rounded px-2 py-1 bg-green-600 text-white text-sm" aria-label={`Enviar WhatsApp para ${member.name}`}>
+                                            <WhatsAppIcon className="h-4 w-4" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                   </div>
                 </div>
               )}
@@ -478,13 +552,13 @@ export default function Page() {
                         <div key={memberId} className="flex items-center gap-2">
                           <span className="min-w-0 w-28 md:w-32 truncate">{member?.name}</span>
                           <input type="number" min={shareType === "percent" ? "0" : undefined} step="0.01" value={share?.amount ?? ""} onChange={(e) => { const val = e.target.value; setShares((prev) => prev.map((s) => s.memberId === memberId ? { ...s, amount: val } : s)); }} className="w-20 md:w-28 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-neutral-900 dark:text-neutral-100" placeholder={shareType === "value" ? "Valor" : "%"} />
-                          {shareType === "value" && value && (<span className="text-sm text-neutral-500">({(((parseFloat(share?.amount ?? "0") || 0) / parseFloat(value)) * 100).toFixed(1)}%)</span>)}
-                          {shareType === "percent" && value && (<span className="text-sm text-neutral-500">(R$ {(((parseFloat(share?.amount ?? "0") || 0) * parseFloat(value)) / 100).toFixed(2)})</span>)}
+                          {shareType === "value" && value && (<span className="text-sm text-neutral-500">({(((parseLocaleNumber(share?.amount ?? "0") || 0) / parseLocaleNumber(value)) * 100).toFixed(1)}%)</span>)}
+                          {shareType === "percent" && value && (<span className="text-sm text-neutral-500">(R$ {(((parseLocaleNumber(share?.amount ?? "0") || 0) * parseLocaleNumber(value)) / 100).toFixed(2)})</span>)}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="text-sm mt-2">Soma total: {shareType === "value" ? `R$ ${shares.reduce((acc, s) => acc + ((selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers).includes(s.memberId) ? (parseFloat(s.amount || "0") || 0) : 0), 0).toFixed(2)}` : `${shares.reduce((acc, s) => acc + ((selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers).includes(s.memberId) ? (parseFloat(s.amount || "0") || 0) : 0), 0).toFixed(2)}%`}</div>
+                  <div className="text-sm mt-2">Soma total: {shareType === "value" ? `R$ ${shares.reduce((acc, s) => acc + ((selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers).includes(s.memberId) ? (parseLocaleNumber(s.amount || "0") || 0) : 0), 0).toFixed(2)}` : `${shares.reduce((acc, s) => acc + ((selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers).includes(s.memberId) ? (parseLocaleNumber(s.amount || "0") || 0) : 0), 0).toFixed(2)}%`}</div>
                 </>
               )}
               <div className="flex justify-end gap-2 mt-2">
