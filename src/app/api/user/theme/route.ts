@@ -9,7 +9,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
   const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { theme: true } });
-  return NextResponse.json({ theme: user?.theme || 'system' });
+  if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+  return NextResponse.json({ theme: user.theme || 'system' });
 }
 
 export async function PUT(req: NextRequest) {
@@ -21,6 +22,9 @@ export async function PUT(req: NextRequest) {
   if (!['light','dark','system'].includes(theme)) {
     return NextResponse.json({ error: 'Tema inválido' }, { status: 400 });
   }
-  await prisma.user.update({ where: { email: session.user.email }, data: { theme } });
+  const updated = await prisma.user.updateMany({ where: { email: session.user.email }, data: { theme } });
+  if (updated.count === 0) {
+    return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }

@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       include: { category: true, wallet: true },
     }),
     prisma.wallet.findMany({ where: { ...userFilter } }),
-    prisma.tag.findMany(),
+    prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } }),
   ]);
 
   // Resumo do mês atual
