@@ -92,16 +92,16 @@ export default function Home() {
           </div>
           <div className="flex gap-4">
             <a
-              href="/groups"
-              className="group rounded-2xl border border-blue-200/60 bg-blue-50 px-6 py-3 text-lg font-semibold text-blue-700 shadow-md transition hover:bg-blue-100 hover:shadow-lg dark:border-blue-800/50 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/40"
-            >
-              Gerenciar Grupos
-            </a>
-            <a
               href="/controle-contas/contas"
               className="group rounded-2xl border border-emerald-200/60 bg-emerald-50 px-6 py-3 text-lg font-semibold text-emerald-700 shadow-md transition hover:bg-emerald-100 hover:shadow-lg dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
             >
               Adicionar Contas
+            </a>
+            <a
+              href="/controle-contas/grupos"
+              className="group rounded-2xl border border-blue-200/60 bg-blue-50 px-6 py-3 text-lg font-semibold text-blue-700 shadow-md transition hover:bg-blue-100 hover:shadow-lg dark:border-blue-800/50 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/40"
+            >
+              Gerenciar Grupos
             </a>
           </div>
         </div>
