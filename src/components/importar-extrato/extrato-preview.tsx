@@ -85,7 +85,8 @@ export function ExtratoPreview({
     fetch('/api/categories')
       .then((r) => r.json())
       .then(setCategorias);
-    fetch('/api/tags')
+    // Busca tags sem cache para garantir que novas tags apareçam imediatamente
+    fetch('/api/tags', { cache: 'no-store' })
       .then((r) => r.json())
       .then(setTags);
   }, []);
