@@ -32,40 +32,140 @@ export async function GET(req: NextRequest) {
     endDateObj = new Date(year, month, 0);
   }
 
+  const today = new Date();
+  const isCurrentMonth = year && month && today.getFullYear() === year && today.getMonth() + 1 === month;
+  const effectiveEnd = isCurrentMonth && startDateObj ? new Date(year, month - 1, today.getDate()) : endDateObj;
+
   // Helper to include date filter
   const dateWhere = startDateObj && endDateObj ? { AND: [{ date: { gte: startDateObj } }, { date: { lte: endDateObj } }] } : {};
 
-  // Fetch totals (simplified: sum amounts using prisma aggregate)
+  // Fetch totals including FIXED items expanded for the period.
+  // VARIABLE items can be aggregated directly; FIXED items need to be expanded
+  // across months that intersect the requested period.
   const whereBase = { user: { email: session.user.email }, ...walletFilter };
 
   // For monthly totals we restrict by date
   const expensesWhere = { ...whereBase, ...(dateWhere as any) };
   const incomesWhere = { ...whereBase, ...(dateWhere as any) };
 
-  const [expAgg, incAgg] = await Promise.all([
-    prisma.expense.aggregate({ where: expensesWhere, _sum: { amount: true } }),
-    prisma.income.aggregate({ where: incomesWhere, _sum: { amount: true } }),
+  // Aggregate VARIABLE amounts
+  const [expVarAgg, incVarAgg] = await Promise.all([
+    prisma.expense.aggregate({ where: { ...expensesWhere, type: 'VARIABLE' }, _sum: { amount: true } }),
+    prisma.income.aggregate({ where: { ...incomesWhere, type: 'VARIABLE' }, _sum: { amount: true } }),
   ]);
 
-  const totalExpenses = Number(expAgg._sum.amount || 0);
-  const totalIncomes = Number(incAgg._sum.amount || 0);
+  let fixedExpensesSum = 0;
+  let fixedIncomesSum = 0;
+
+  // Precise occurrences count for a FIXED record within a period.
+  // Considers dayOfMonth (if present) or fallback to record date's day.
+  const countFixedOccurrences = (
+    recStart?: Date | null,
+    recEnd?: Date | null,
+    recordDay?: number | null,
+    periodStart?: Date,
+    periodEnd?: Date,
+  ) => {
+    if (!periodStart || !periodEnd) return 0;
+    const start = recStart && recStart > periodStart ? recStart : periodStart;
+    const end = recEnd && recEnd < periodEnd ? recEnd : periodEnd;
+    if (!start || !end) return 0;
+    if (start.getTime() > end.getTime()) return 0;
+    // iterate month by month from start's month to end's month
+    let count = 0;
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const last = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (cursor.getTime() <= last.getTime()) {
+      const year = cursor.getFullYear();
+      const monthIndex = cursor.getMonth();
+      const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+      const day = recordDay && recordDay > 0 ? Math.min(recordDay, lastDay) : Math.min((recStart ? new Date(recStart).getDate() : 1), lastDay);
+      const occDate = new Date(year, monthIndex, day);
+      if (occDate.getTime() >= +periodStart && occDate.getTime() <= +periodEnd) count += 1;
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return count;
+  };
+
+  // Only compute FIXED contributions if we have a date range
+  if (startDateObj && effectiveEnd) {
+    const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    for (const fe of fixedExpenses) {
+      const recStart = (fe.startDate ?? fe.date) as Date | null;
+      const recEnd = (fe.endDate ?? null) as Date | null;
+      const day = typeof (fe as any).dayOfMonth === 'number' ? (fe as any).dayOfMonth : undefined;
+      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, startDateObj, effectiveEnd);
+      if (occurs > 0) fixedExpensesSum += Number(fe.amount || 0) * occurs;
+    }
+
+    const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    for (const fi of fixedIncomes) {
+      const recStart = (fi.startDate ?? fi.date) as Date | null;
+      const recEnd = (fi.endDate ?? null) as Date | null;
+      const day = typeof (fi as any).dayOfMonth === 'number' ? (fi as any).dayOfMonth : undefined;
+      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, startDateObj, effectiveEnd);
+      if (occurs > 0) fixedIncomesSum += Number(fi.amount || 0) * occurs;
+    }
+  }
+
+  const totalExpenses = Number(expVarAgg._sum.amount || 0) + fixedExpensesSum;
+  const totalIncomes = Number(incVarAgg._sum.amount || 0) + fixedIncomesSum;
   const balance = totalIncomes - totalExpenses;
 
   // Saldo acumulado até endDate (if provided) or all time
   let saldoAcumulado = 0;
   if (endDateObj) {
-    const prevWhere = { ...whereBase, date: { lte: endDateObj } } as any;
-    const [prevExp, prevInc] = await Promise.all([
-      prisma.expense.aggregate({ where: prevWhere, _sum: { amount: true } }),
-      prisma.income.aggregate({ where: prevWhere, _sum: { amount: true } }),
+    // saldo acumulado até endDate: include VARIABLE aggregates and FIXED expanded until endDate
+    const prevWhere = { ...whereBase, date: { lte: effectiveEnd || endDateObj } } as any;
+    const [prevVarExpAgg, prevVarIncAgg] = await Promise.all([
+      prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE', date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
+      prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE', date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
     ]);
-    saldoAcumulado = Number(prevInc._sum.amount || 0) - Number(prevExp._sum.amount || 0);
+    let prevFixedExp = 0;
+    let prevFixedInc = 0;
+    // count fixed occurrences from earliest possible to endDateObj
+    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    for (const fe of fixedExpensesAll) {
+      const recStart = (fe.startDate ?? fe.date) as Date | null;
+      const recEnd = (fe.endDate ?? null) as Date | null;
+      const day = typeof (fe as any).dayOfMonth === 'number' ? (fe as any).dayOfMonth : undefined;
+      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), effectiveEnd || endDateObj);
+      if (occurs > 0) prevFixedExp += Number(fe.amount || 0) * occurs;
+    }
+    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    for (const fi of fixedIncomesAll) {
+      const recStart = (fi.startDate ?? fi.date) as Date | null;
+      const recEnd = (fi.endDate ?? null) as Date | null;
+      const day = typeof (fi as any).dayOfMonth === 'number' ? (fi as any).dayOfMonth : undefined;
+      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), effectiveEnd || endDateObj);
+      if (occurs > 0) prevFixedInc += Number(fi.amount || 0) * occurs;
+    }
+    saldoAcumulado = (Number(prevVarIncAgg._sum.amount || 0) + prevFixedInc) - (Number(prevVarExpAgg._sum.amount || 0) + prevFixedExp);
   } else {
-    const [allExp, allInc] = await Promise.all([
-      prisma.expense.aggregate({ where: whereBase, _sum: { amount: true } }),
-      prisma.income.aggregate({ where: whereBase, _sum: { amount: true } }),
+    // all time: aggregate VARIABLE and include full FIXED series
+    const [allVarExpAgg, allVarIncAgg] = await Promise.all([
+      prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE' }, _sum: { amount: true } }),
+      prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE' }, _sum: { amount: true } }),
     ]);
-    saldoAcumulado = Number(allInc._sum.amount || 0) - Number(allExp._sum.amount || 0);
+    let allFixedExp = 0;
+    let allFixedInc = 0;
+    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    for (const fe of fixedExpensesAll) {
+      const recStart = (fe.startDate ?? fe.date) as Date | null;
+      const recEnd = (fe.endDate ?? null) as Date | null;
+      const day = typeof (fe as any).dayOfMonth === 'number' ? (fe as any).dayOfMonth : undefined;
+      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), new Date());
+      if (occurs > 0) allFixedExp += Number(fe.amount || 0) * occurs;
+    }
+    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    for (const fi of fixedIncomesAll) {
+      const recStart = (fi.startDate ?? fi.date) as Date | null;
+      const recEnd = (fi.endDate ?? null) as Date | null;
+      const day = typeof (fi as any).dayOfMonth === 'number' ? (fi as any).dayOfMonth : undefined;
+      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), new Date());
+      if (occurs > 0) allFixedInc += Number(fi.amount || 0) * occurs;
+    }
+    saldoAcumulado = (Number(allVarIncAgg._sum.amount || 0) + allFixedInc) - (Number(allVarExpAgg._sum.amount || 0) + allFixedExp);
   }
 
   // Limite diário: simple heuristic similar to frontend logic
