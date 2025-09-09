@@ -40,6 +40,7 @@ interface Renda {
   walletName?: string;
   tags: string[];
   isFixed: boolean;
+  endDate?: Date | null;
 }
 
 export default function RendasUnificadas({ currentDate }: { currentDate: Date }) {
@@ -60,6 +61,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
     walletId: '',
     tags: [] as string[],
     isFixed: false,
+  endDate: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -94,6 +96,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
           amount: Number(e.amount),
           // Preferir a data da ocorrência retornada pela API (e.date). Se ausente, usar date/string original.
           date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+          endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
@@ -109,6 +112,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
           amount: Number(e.amount),
           // Quando a API expande FIXED ela retorna cada ocorrência com `date` — prefira isso.
           date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+          endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
           dayOfMonth: e.dayOfMonth,
           categoryName: e.category?.name,
           categoryId: e.categoryId,
@@ -147,11 +151,12 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
       setForm({
         description: d.description,
         amount: String(d.amount),
-  date: d.date ? (d.date instanceof Date ? formatYmd(d.date) : d.date) : '',
+        date: d.date ? (d.date instanceof Date ? formatYmd(d.date) : d.date) : '',
         categoryId: d.categoryId || '',
         walletId: d.walletId || '',
         tags: d.tags || [],
         isFixed: d.isFixed,
+        endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
       });
       setErrors({});
       setShowForm(true);
@@ -180,6 +185,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
       date: form.date,
       type: form.isFixed ? ('FIXED' as 'FIXED' | 'VARIABLE') : ('VARIABLE' as 'FIXED' | 'VARIABLE'),
       isFixed: form.isFixed,
+      endDate: form.endDate || null,
       categoryId: form.categoryId || null,
       walletId: form.walletId || null,
       tags: form.tags,
@@ -209,6 +215,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
         walletId: '',
         tags: [],
         isFixed: false,
+        endDate: '',
       });
       setErrors({});
       // Recarrega rendas
@@ -380,6 +387,17 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
                     Renda Fixa?
                   </Label>
                 </div>
+                {form.isFixed && (
+                  <div>
+                    <Label htmlFor="endDate">Data final (opcional)</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2 mt-4">
                 <Button
@@ -408,19 +426,20 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
             </p>
           </div>
           <Button
-            onClick={() => {
-              setShowForm(true);
-              setEditingId(null);
-              setForm({
-                description: '',
-                amount: '',
-                date: '',
-                categoryId: '',
-                walletId: '',
-                tags: [],
-                isFixed: false,
-              });
-            }}
+              onClick={() => {
+                setShowForm(true);
+                setEditingId(null);
+                setForm({
+                  description: '',
+                  amount: '',
+                  date: '',
+                  categoryId: '',
+                  walletId: '',
+                  tags: [],
+                  isFixed: false,
+                  endDate: '',
+                });
+              }}
           >
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Entrada
@@ -523,6 +542,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
                     walletId: '',
                     tags: [],
                     isFixed: false,
+                    endDate: '',
                   });
                   setEditingId(null);
                   setShowForm(true);

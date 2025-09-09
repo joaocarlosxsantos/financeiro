@@ -40,6 +40,7 @@ interface Despesa {
   walletName?: string;
   tags: string[];
   isFixed: boolean;
+  endDate?: Date | null;
 }
 
 export default function DespesasUnificadas({ currentDate }: { currentDate: Date }) {
@@ -60,6 +61,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
     walletId: '',
     tags: [] as string[],
     isFixed: false,
+  endDate: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -150,6 +152,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
         walletId: d.walletId || '',
         tags: d.tags || [],
         isFixed: d.isFixed,
+        endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
       });
       setErrors({});
       setShowForm(true);
@@ -178,6 +181,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       date: string;
       type: 'FIXED' | 'VARIABLE';
       isFixed: boolean;
+      endDate?: string | null;
       categoryId: string | null;
       walletId: string | null;
       tags: string[];
@@ -188,6 +192,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
       date: form.date,
       type: form.isFixed ? 'FIXED' : 'VARIABLE',
       isFixed: form.isFixed,
+      endDate: form.endDate || null,
       categoryId: form.categoryId || null,
       walletId: form.walletId || null,
       tags: form.tags,
@@ -217,6 +222,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
         walletId: '',
         tags: [],
         isFixed: false,
+  endDate: '',
       });
       setErrors({});
       // Recarrega despesas
@@ -237,6 +243,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
             description: e.description,
             amount: Number(e.amount),
       date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+            endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
             categoryName: e.category?.name,
             categoryId: e.categoryId,
             walletId: e.walletId,
@@ -252,6 +259,7 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
             description: e.description,
             amount: Number(e.amount),
       date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+            endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
             dayOfMonth: e.dayOfMonth,
             categoryName: e.category?.name,
             categoryId: e.categoryId,
@@ -390,6 +398,17 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
                     Despesa Fixa?
                   </Label>
                 </div>
+                {form.isFixed && (
+                  <div>
+                    <Label htmlFor="endDate">Data final (opcional)</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2 mt-4">
                 <Button
@@ -425,8 +444,9 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
                 date: '',
                 categoryId: '',
                 walletId: '',
-                tags: [],
-                isFixed: false,
+          tags: [],
+          isFixed: false,
+          endDate: '',
               });
             }}
           >
@@ -523,15 +543,16 @@ export default function DespesasUnificadas({ currentDate }: { currentDate: Date 
               <Button
                 className="mt-4"
                 onClick={() => {
-                  setForm({
-                    description: '',
-                    amount: '',
-                    date: '',
-                    categoryId: '',
-                    walletId: '',
-                    tags: [],
-                    isFixed: false,
-                  });
+                      setForm({
+                        description: '',
+                        amount: '',
+                        date: '',
+                        categoryId: '',
+                        walletId: '',
+                        tags: [],
+                        isFixed: false,
+                        endDate: '',
+                      });
                   setEditingId(null);
                   setShowForm(true);
                 }}
