@@ -102,67 +102,143 @@ financeiro/
 │   ├── app/            # Páginas, rotas e API (Next.js App Router)
 │   ├── components/     # Componentes React (UI, dashboard, forms, etc)
 │   ├── hooks/          # React hooks customizados
-│   ├── lib/            # Utilitários, autenticação, helpers
-│   └── types/          # Tipos TypeScript globais
-├── prisma/             # Schema e migrações do banco
-├── public/             # Arquivos estáticos
-├── scripts/            # Scripts utilitários
-├── .prettierrc         # Configuração do Prettier
-├── tailwind.config.js  # Configuração do Tailwind
-└── ...
-```
+```md
+# 💸 Financeiro — Controle financeiro pessoal
 
+[Demo (Vercel)](https://financeiro-seven-zeta.vercel.app) • Usuário: `teste@email.com` • Senha: `teste1`
 
-## 🗄️ Banco de Dados
+Aplicação web moderna para controlar despesas, rendas, transferências e organização por carteiras, categorias e tags.
 
-O projeto utiliza **PostgreSQL** com **Prisma ORM**. Principais entidades:
-- **User**: Usuários
-- **Category**: Categorias de despesas/rendas
-- **Expense**: Despesas (fixas/variáveis)
-- **Income**: Rendas (fixas/variáveis)
-- **Wallet**: Carteiras
-- **Tag**: Tags para organização
+Stack principal: Next.js 14, TypeScript, Tailwind CSS, Prisma (PostgreSQL), NextAuth, Recharts.
 
+## Índice
+- Sobre
+- Principais recursos
+- Tecnologias
+- Requisitos
+- Instalação rápida
+- Variáveis de ambiente
+- Banco de dados (Prisma)
+- Scripts úteis
+- Deploy
+- Estrutura do projeto
+- Contribuição
+- Licença
 
-## 🚀 Deploy
+## Sobre
 
-Deploy recomendado na [Vercel](https://vercel.com/):
-1. Conecte o repositório
-2. Configure as variáveis de ambiente (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`)
-3. O deploy é automático a cada push na branch principal
+Esta é uma interface para gerenciamento financeiro pessoal com painéis e gráficos interativos, importação de extratos e filtragem por período/carteira/categoria/tags.
 
+## Principais recursos
+- Dashboard com gráficos e projeções
+- Registro de despesas e rendas (fixas/variáveis)
+- Tags, categorias e carteiras
+- Importador de extratos (OFX/CSV)
+- Transferências entre carteiras
+- Autenticação com NextAuth
+- Validação com Zod
 
-## 🔄 Novidades & Próximos Passos
+## Tecnologias
+- Next.js 14 + App Router
+- TypeScript
+- Tailwind CSS
+- Prisma (PostgreSQL)
+- Recharts (gráficos)
+- NextAuth (autenticação)
 
-### Novidades recentes
-- Validação de dados com **Zod** em todas as rotas de API (mais segurança)
-- Otimização de performance: lazy loading, useMemo/useCallback, dynamic imports
-- Imagens otimizadas com **next/image**
-- ESLint e Prettier configurados para padronização de código
-- Estrutura de autenticação robusta (NextAuth.js + Prisma)
-- Interface aprimorada e responsiva
+## Requisitos
+- Node.js 18+
+- PostgreSQL (ou conexão compatível)
+- npm ou yarn
 
-### Roadmap
-- [ ] Testes automatizados (unitários e integração)
-- [ ] Exportação de relatórios
-- [ ] Novos provedores de autenticação (Google, etc)
-- [ ] Melhorias de acessibilidade
+## Instalação rápida
 
+1. Clone o repositório
 
-## 📝 Licença
+   git clone <url-do-repositorio>
+   cd financeiro
 
-Distribuído sob a licença MIT.
+2. Instale dependências
 
+   npm install
+   # ou
+   yarn
 
-## 🤝 Contribua!
+3. Crie o arquivo de ambiente
 
-Contribuições são super bem-vindas! Abra uma issue ou pull request para sugerir melhorias, reportar bugs ou propor novas funcionalidades.
+   # Unix / WSL
+   cp env.example .env.local
+
+   # Windows PowerShell
+   Copy-Item .\env.example .\env.local
+
+   Preencha as variáveis no `.env.local` (veja seção abaixo).
+
+4. Prepare o banco de dados (Prisma)
+
+   npm run db:generate   # gera @prisma/client
+   npm run db:push       # aplica o schema (sem migrações)
+   npm run db:studio     # (opcional) abre o Prisma Studio
+
+5. Execute em modo de desenvolvimento
+
+   npm run dev
+
+Abra http://localhost:3000
+
+## Variáveis de ambiente
+
+Copie `env.example` e preencha, os principais valores esperados são:
+- DATABASE_URL — string de conexão PostgreSQL
+- NEXTAUTH_SECRET — segredo para NextAuth
+- NEXTAUTH_URL — URL base (ex: http://localhost:3000)
+
+Outras variáveis podem estar presentes para provedores OAuth e integrações.
+
+## Scripts úteis (package.json)
+
+- npm run dev — modo desenvolvimento
+- npm run build — build de produção
+- npm run start — inicia o servidor de produção (após build)
+- npm run lint — executa ESLint
+- npm run db:generate — prisma generate
+- npm run db:push — prisma db push
+- npm run db:studio — prisma studio
+- npm run vercel-build — comando usado no build da Vercel
+
+## Deploy
+
+Recomendado: Vercel. Conecte o repositório e defina as variáveis de ambiente (DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL).
+
+Observação: o script `vercel-build` já executa `prisma generate` antes do build.
+
+## Estrutura (resumida)
+
+src/
+├─ app/           # páginas e rotas (App Router)
+├─ components/    # componentes React reutilizáveis
+├─ hooks/         # hooks customizados
+├─ lib/           # utilitários e helpers
+└─ types/         # tipos TypeScript
+
+prisma/           # schema.prisma
+public/           # assets estáticos
+
+## Boas práticas e sugestões
+- Use um banco PostgreSQL separado para desenvolvimento/testing
+- Proteja `NEXTAUTH_SECRET` e credenciais no CI/hosting
+- Para mudanças no schema, prefira usar migrações (prisma migrate) em vez de `db:push` para produção
+
+## Contribuição
+
+Pull requests são bem-vindos. Prefira pequenos PRs com descrições claras e, quando possível, inclua testes.
+
+## Licença
+
+MIT — veja o arquivo LICENSE (se presente).
 
 ---
 
-<div align="center">
-   <b>Feito por João Carlos</b>
-</div>
+Feito por João Carlos
 
-<!-- Nota de alteração -->
-**Nota:** As páginas de `Despesas` e `Rendas` agora exibem uma coluna adicional chamada **Tags** nas tabelas de listagem. As tags são mostradas como badges e dependem do campo `tags` retornado pelos endpoints (`/api/expenses` e `/api/incomes`) e das tags carregadas em `/api/tags`.
+```
