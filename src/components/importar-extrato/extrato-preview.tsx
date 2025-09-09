@@ -14,7 +14,10 @@ interface ExtratoPreviewProps {
   saving: boolean;
   error: string | null;
   success: boolean;
+  fetchWallets?: () => Promise<void>;
 }
+import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
+import { Plus } from 'lucide-react';
 
 export function ExtratoPreview({
   preview,
@@ -25,11 +28,13 @@ export function ExtratoPreview({
   saving,
   error,
   success,
+  fetchWallets,
 }: ExtratoPreviewProps) {
   const [registros, setRegistros] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [saldoAnterior, setSaldoAnterior] = useState<string>('');
+  const [createOpen, setCreateOpen] = useState(false);
   // Descobre a data do primeiro lançamento do extrato
   const dataPrimeiroLancamento = React.useMemo(() => {
     if (!registros.length) return null;
@@ -84,6 +89,16 @@ export function ExtratoPreview({
       .then((r) => r.json())
       .then(setTags);
   }, []);
+
+  // Trunca uma string sem cortar no meio da palavra
+  function truncateByWord(text: string | undefined, max = 60) {
+    if (!text) return '';
+    if (text.length <= max) return text;
+    const sub = text.slice(0, max);
+    const lastSpace = sub.lastIndexOf(' ');
+    if (lastSpace === -1) return sub + '...';
+    return sub.slice(0, lastSpace) + '...';
+  }
 
   function handleEdit(index: number, field: string, value: string) {
     setRegistros((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
@@ -141,7 +156,12 @@ export function ExtratoPreview({
               <tr key={i}>
                 <td className="border px-2 py-1 whitespace-nowrap">{row.data}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{row.valor}</td>
-                <td className="border px-2 py-1 min-w-[180px]">{row.descricao}</td>
+                <td
+                  className="border px-2 py-1 min-w-[180px]"
+                  title={row.descricao}
+                >
+                  {truncateByWord(row.descricao)}
+                </td>
                 <td className="border px-2 py-1 min-w-[180px]">
                   <Input
                     value={row.descricaoSimplificada || ''}
@@ -189,14 +209,20 @@ export function ExtratoPreview({
       </div>
       <div className="flex flex-col gap-2">
         <Label className="font-medium">Selecione a carteira para vincular os lançamentos:</Label>
-        <Select value={selectedWallet} onChange={(e) => onWalletChange(e.target.value)}>
-          <option value="">Selecione...</option>
-          {wallets.map((w: any) => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </Select>
+        <div className="flex gap-2 items-center">
+          <Select value={selectedWallet} onChange={(e) => onWalletChange(e.target.value)}>
+            <option value="">Selecione...</option>
+            {wallets.map((w: any) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </Select>
+          <Button variant="default" size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Criar carteira
+          </Button>
+        </div>
         {/* Campo de saldo anterior */}
         {selectedWallet && dataPrimeiroLancamento && (
           <div className="flex flex-col gap-1 mt-2">
@@ -219,6 +245,18 @@ export function ExtratoPreview({
         <Button onClick={handleSaveComSaldo} disabled={!selectedWallet || saving}>
           {saving ? 'Salvando...' : 'Salvar lançamentos'}
         </Button>
+        <WalletCreateModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={async (id: string) => {
+            setCreateOpen(false);
+            if (id && typeof id === 'string' && id.length) {
+              // recarrega carteiras se função disponível e seleciona a criada
+              if (fetchWallets) await fetchWallets();
+              onWalletChange(id);
+            }
+          }}
+        />
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {success && <div className="text-green-600 text-sm">Importação realizada com sucesso!</div>}
       </div>

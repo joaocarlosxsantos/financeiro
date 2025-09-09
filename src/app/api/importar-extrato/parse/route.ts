@@ -2,7 +2,12 @@
 function sugerirCategoria(descricaoSimplificada: string): string {
   if (!descricaoSimplificada) return 'PIX/TRANSF';
   const desc = descricaoSimplificada.toLowerCase();
-  if (desc.includes('uber') || desc.includes('99 pop') || desc.includes('99')) return 'Uber/99';
+  // Se for referência ao 'uber' manter associação específica
+  if (desc.includes('uber')) return 'Uber/99';
+  // Se for apenas número (ex: '99') ou conter 99 pop, mapear para Compras Cartão
+  if (desc === '99' || desc.includes('99 pop')) return 'Compras Cartão';
+  // Se for uma string numérica mascarada (ex: '99* 99*' -> '99'), tratar como compra cartão
+  if (/^\d+$/.test(desc)) return 'Compras Cartão';
   if (desc.includes('ifood')) return 'Ifood';
   if (
     desc.includes('mercado') ||
@@ -32,7 +37,17 @@ function sugerirCategoria(descricaoSimplificada: string): string {
   )
     return 'Alimentação';
   if (desc.includes('cinema') || desc.includes('lazer') || desc.includes('parque')) return 'Lazer';
-  if (desc.includes('compra') || desc.includes('compras') || desc.includes('Compra'))
+  // Tentativa de capturar compras no cartão/débito
+  if (
+    desc.includes('compra') ||
+    desc.includes('compras') ||
+    desc.includes('compra débito') ||
+    desc.includes('compra debito') ||
+    desc.includes('compra crédito') ||
+    desc.includes('compra credito') ||
+    desc.includes('cartao') ||
+    desc.includes('cartão')
+  )
     return 'Compras Cartão';
   if (desc.includes('educac') || desc.includes('Educac')) return 'Educação';
   if (desc.includes('Fatura') || desc.includes('fatura')) return 'Fatura Cartão';
@@ -66,8 +81,34 @@ function sugerirCategoria(descricaoSimplificada: string): string {
 
 function simplificarDescricao(descricao: string): string {
   if (!descricao) return '';
-  const desc = descricao.toLowerCase();
-  // Dicionário de padrões comuns
+  const raw = descricao.trim();
+  const desc = raw.toLowerCase();
+
+  // Primeiro: detectar transações de compra no débito/crédito e tentar extrair o merchant
+  const isCompraCard =
+    desc.includes('compra') &&
+    (desc.includes('débito') || desc.includes('debito') || desc.includes('cr[ée]dito') || desc.includes('credito') || desc.includes('cartao') || desc.includes('cartão'));
+  if (isCompraCard) {
+    // tenta extrair texto após um separador comum ( - , : , — )
+    const parts = raw.split(/[-:–—]/);
+    let merchant = parts.length > 1 ? parts.slice(1).join('-').trim() : '';
+    if (!merchant) {
+      // tenta capturar texto logo após a palavra débito/crédito/cartão
+      const m = raw.match(/(?:d[eé]bito|cr[ée]dito|credito|cart[aã]o|cartao)\s*[:\-–—]?\s*(.+)$/i);
+      if (m && m[1]) merchant = m[1].trim();
+    }
+    if (merchant) {
+      // Se merchant é algo como "99* 99*" extrai o primeiro grupo numérico
+      const num = merchant.match(/(\d{2,})/);
+      if (num) return num[1];
+      // Remove estrelas e excesso de espaços/pontuação
+      return merchant.replace(/\*/g, '').replace(/[\s]{2,}/g, ' ').replace(/[,.]\s*$/g, '').trim();
+    }
+    // Se não encontrou merchant, retornar a descrição completa (não cortar para 'Compra')
+    return raw;
+  }
+
+  // Dicionário de padrões comuns (não sobrescrever casos específicos acima)
   if (desc.includes('uber')) return 'Uber';
   if (desc.includes('99*') || desc.includes('99 pop')) return '99 Pop';
   if (desc.includes('ifd') || desc.includes('ifood')) return 'Ifood';
@@ -85,25 +126,18 @@ function simplificarDescricao(descricao: string): string {
   if (desc.includes('google')) return 'Google';
   if (desc.includes('apple')) return 'Apple';
   if (desc.includes('Pagamento Fatura') || desc.includes('fatura')) return 'Fatura';
-  if (
-    desc.includes('Compra no débito') ||
-    (desc.includes('Compra') && (desc.includes('débito') || desc.includes('debito')))
-  )
-    return 'Compra Débito';
   if (desc.includes('FGTS') || desc.includes('Fgts') || desc.includes('fgts')) return 'FGTS';
+
   // Se for nome de pessoa (muitas palavras, sem palavras-chave conhecidas)
-  const palavras = descricao.replace(/\*/g, '').trim().split(/\s+/);
-  if (
-    palavras.length >= 2 &&
-    palavras.length <= 4 &&
-    palavras.every((p) => /^[A-Za-zÀ-ÿ]+$/.test(p))
-  ) {
+  const palavras = raw.replace(/\*/g, '').trim().split(/\s+/);
+  if (palavras.length >= 2 && palavras.length <= 4 && palavras.every((p) => /^[A-Za-zÀ-ÿ]+$/.test(p))) {
     return palavras.slice(0, 2).join(' ');
   }
-  // Heurística: pega a primeira palavra relevante
-  const match = descricao.match(/([A-Za-z0-9]+[\s\*]*){1,2}/);
+
+  // Heurística: pega a primeira 1-2 tokens relevantes (mantendo números e letras)
+  const match = raw.match(/([A-Za-z0-9]+[\s\*]*){1,2}/);
   if (match) return match[0].replace(/\*/g, '').trim();
-  return descricao.split(' ')[0];
+  return raw.split(' ')[0];
 }
 
 import { NextRequest, NextResponse } from 'next/server';

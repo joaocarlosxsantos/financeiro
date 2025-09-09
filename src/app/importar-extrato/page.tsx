@@ -71,11 +71,22 @@ export default function ImportarExtratoPage() {
 
   useEffect(() => {
     if (step === 'preview') {
-      fetch('/api/wallets')
-        .then((r) => r.json())
-        .then((data) => setWallets(data));
+      // carregar carteiras ao entrar no passo de preview
+      loadWallets();
     }
   }, [step]);
+
+  async function loadWallets() {
+    try {
+      const r = await fetch('/api/wallets');
+      if (r.ok) {
+        const data = await r.json();
+        setWallets(data);
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -100,6 +111,7 @@ export default function ImportarExtratoPage() {
             saving={saving}
             error={error}
             success={success}
+            fetchWallets={loadWallets}
           />
         )}
         <Toast
