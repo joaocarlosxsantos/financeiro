@@ -1,6 +1,5 @@
 'use client';
 
-import { useDailyExpenseData } from '@/hooks/use-dashboard-data';
 import dynamic from 'next/dynamic';
 const DailyCategoryChart = dynamic(
   () => import('./daily-category-chart').then((mod) => mod.DailyCategoryChart),
@@ -125,310 +124,83 @@ export function DashboardContent() {
     currentDate.getFullYear() === today.getFullYear() &&
     currentDate.getMonth() === today.getMonth();
 
-  // Carregar dados dos cards do dashboard usando múltiplas APIs (lógica antiga)
+  // Agora: carregar cartões via API agregadora (/api/dashboard/cards)
   useEffect(() => {
+    const controller = new AbortController();
     const fetchCards = async () => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
-      const { start, end } = getMonthRange(year, month);
-      const startStr = toYmd(start);
-      const endStr = toYmd(end);
-      const fetchOpts: RequestInit = {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      };
-  const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
-      // Entradas e saídas do mês
-      // Buscar todas as despesas e entradas do período (paginação automática)
-      const [expVar, expFix, incVar, incFix] = await Promise.all([
-        fetchAll(`/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&perPage=200`, fetchOpts),
-        fetchAll(`/api/expenses?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&perPage=200`, fetchOpts),
-        fetchAll(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=VARIABLE&perPage=200`, fetchOpts),
-        fetchAll(`/api/incomes?start=${startStr}&end=${endStr}${walletParam}&type=FIXED&perPage=200`, fetchOpts),
-      ]);
-      const allExpenses: any[] = [...expVar, ...expFix];
-      const allIncomes: any[] = [...incVar, ...incFix];
-      const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
-      // Construir evolução diária do saldo (cumulativo)
-      const dateKey = (dStr: string) => {
-        if (!dStr) return new Date();
-        // If format is YYYY-MM-DD, parse as local date to avoid timezone shifts
-        const m = dStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (m) {
-          const y = Number(m[1]);
-          const mo = Number(m[2]);
-          const da = Number(m[3]);
-          return new Date(y, mo - 1, da);
-        }
-        // Fallback to Date parsing for full ISO datetimes
-        try {
-          return new Date(dStr);
-        } catch {
-          return new Date();
-        }
-      };
-      const dayMap: Record<string, { income: number; expense: number }> = {};
-      const pushItem = (arr: any[], type: 'income' | 'expense') => {
-        for (const it of arr) {
-          const rawDate = it.date || it.paidAt || it.createdAt || it.updatedAt;
-          if (!rawDate) continue;
-          const d = dateKey(rawDate);
-  const key = formatYmd(d);
-          if (!dayMap[key]) dayMap[key] = { income: 0, expense: 0 };
-          dayMap[key][type] += Number(it.amount) || 0;
-        }
-      };
-      pushItem(allIncomes, 'income');
-      pushItem(allExpenses, 'expense');
-      const dayKeysSorted = Object.keys(dayMap).sort();
-      // Calcular saldo acumulado até o último dia do mês anterior (previousBalance)
-      let previousBalance = 0;
-      {
-        const prevEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0); // último dia mês anterior
-  const prevEndStr = formatYmd(prevEnd);
-        const [pExpVar, pExpFix, pIncVar, pIncFix] = await Promise.all([
-          fetchAll(`/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&perPage=200`, fetchOpts),
-          fetchAll(`/api/expenses?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&perPage=200`, fetchOpts),
-          fetchAll(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=VARIABLE&perPage=200`, fetchOpts),
-          fetchAll(`/api/incomes?start=1900-01-01&end=${prevEndStr}${walletParam}&type=FIXED&perPage=200`, fetchOpts),
-        ]);
-        const prevExpenses: any[] = [...pExpVar, ...pExpFix];
-        const prevIncomes: any[] = [...pIncVar, ...pIncFix];
-        previousBalance =
-          prevIncomes.reduce((s, i) => s + Number(i.amount), 0) -
-          prevExpenses.reduce((s, e) => s + Number(e.amount), 0);
-      }
-      let running = previousBalance;
-      const dailyBalanceData: Array<{ date: string; balance: number }> = [];
-      for (const k of dayKeysSorted) {
-        const delta = dayMap[k].income - dayMap[k].expense;
-        running += delta;
-        // armazenar a data completa YYYY-MM-DD para o gráfico (o tick formatter mostrará apenas o dia)
-        dailyBalanceData.push({ date: k, balance: running });
-      }
-      // Projeção: baseline vs real
-      const daysElapsed = dayKeysSorted.length;
-      const totalDaysInMonth = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        0,
-      ).getDate();
-      const currentNet = running - previousBalance; // variação do mês (até hoje)
-      const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
-      // Calcular média histórica para o mesmo período nos últimos M meses
-      const M = 3; // usar 3 meses recentes por padrão
-      const historicalNets: number[] = [];
-      for (let i = 1; i <= M; i++) {
-        const refMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-        const { start: hStart, end: hEnd } = getMonthRange(refMonth.getFullYear(), refMonth.getMonth() + 1);
-        const hStartStr = toYmd(hStart);
-        const hEndStr = toYmd(hEnd);
-        try {
-          // buscar despesas/entradas do mês de referência (sincrono dentro do loop pode ser lento,
-          // mas M é pequeno). Usamos fetchAll com cache no-store.
-          // eslint-disable-next-line no-await-in-loop
-          const [hExpVar, hExpFix, hIncVar, hIncFix] = await Promise.all([
-            fetchAll(`/api/expenses?type=VARIABLE&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
-            fetchAll(`/api/expenses?type=FIXED&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
-            fetchAll(`/api/incomes?type=VARIABLE&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
-            fetchAll(`/api/incomes?type=FIXED&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
-          ]);
-          const hExpenses = [...hExpVar, ...hExpFix];
-          const hIncomes = [...hIncVar, ...hIncFix];
-          const hNet = hIncomes.reduce((s, x) => s + Number(x.amount), 0) - hExpenses.reduce((s, x) => s + Number(x.amount), 0);
-          historicalNets.push(hNet);
-        } catch (e) {
-          // se houve erro numa das requisições históricas, ignorar esse mês
-        }
-      }
-      const historicalAvgNet = historicalNets.length > 0 ? historicalNets.reduce((s, n) => s + n, 0) / historicalNets.length : avgPerDay * daysElapsed;
-      // combinar média atual (até hoje) com histórica: ponderar mais a média atual quando houver mais dias
-      // peso baseado na proporção de dias já transcorridos
-      const weightCurrent = daysElapsed / Math.max(1, totalDaysInMonth);
-      const combinedAvgPerDay = weightCurrent * (avgPerDay) + (1 - weightCurrent) * (historicalAvgNet / Math.max(1, totalDaysInMonth));
-      const projectedFinal = previousBalance + combinedAvgPerDay * totalDaysInMonth;
-      const balanceProjectionData: Array<{
-        day: number;
-        real?: number | undefined;
-        baselineLinear?: number | undefined;
-        baselineRecent?: number | undefined;
-      }> = [];
-      // Projeção linear global já calculada (projectedFinal)
-      // Projeção recente: média dos últimos N dias com movimento (ex: 7 ou menor se menos dias)
-      const N = 7;
-      const lastDays = dailyBalanceData
-        .filter((p) => p.date !== undefined && p.date !== '0')
-        .slice(-N);
-      const recentVariation = (() => {
-        if (lastDays.length <= 1) return currentNet; // fallback
-        const first = lastDays[0].balance;
-        const last = lastDays[lastDays.length - 1].balance;
-        return last - first;
-      })();
-      // calcular média por dia usando a diferença real de dias (evita dividir apenas pelo número de pontos)
-      const recentAvgPerDay = (() => {
-        if (lastDays.length <= 1) return avgPerDay;
-        const firstDay = Number((lastDays[0].date || '').toString().split('-').pop() || 0);
-        const lastDay = Number((lastDays[lastDays.length - 1].date || '').toString().split('-').pop() || 0);
-        const daySpan = Math.max(1, lastDay - firstDay);
-        return recentVariation / daySpan;
-      })();
-      const projectedRecentFinal = previousBalance + recentAvgPerDay * totalDaysInMonth;
-
-      // Descobrir o último dia com dado real (ou hoje se mês corrente)
-      const todayDay = new Date().getDate();
-      const lastRealDay = isAtCurrentMonth
-        ? Math.min(todayDay, totalDaysInMonth)
-        : Math.max(...dailyBalanceData.map((p) => Number(p.date.split('-').pop() || 0)), 0);
-
-      // balance do último dia real
-      const lastRealBalance = (() => {
-        if (!dailyBalanceData || dailyBalanceData.length === 0) return previousBalance;
-        const found = dailyBalanceData.find((p) => Number(p.date.split('-').pop()) === lastRealDay);
-        if (found) return found.balance;
-        // se não encontrar, usar running (saldo acumulado até o último dia conhecido)
-        return running;
-      })();
-
-      for (let d = 1; d <= totalDaysInMonth; d++) {
-        const realEntry = dailyBalanceData.find((x) => Number(x.date.split('-').pop()) === d);
-        // Somente preencher real até lastRealDay — para dias futuros usar undefined (chart tratará)
-        const real = realEntry && d <= lastRealDay ? realEntry.balance : undefined;
-
-        let baselineLinear: number | undefined;
-        let baselineRecent: number | undefined;
-
-        if (!isAtCurrentMonth) {
-          // Meses passados: sem projeções
-          baselineLinear = undefined;
-          baselineRecent = undefined;
-        } else if (d <= lastRealDay) {
-          // antes ou igual ao dia atual: manter baseline igual ao valor real (se existir) ou ao lastRealBalance
-          baselineLinear = real !== undefined ? real : lastRealBalance;
-          baselineRecent = real !== undefined ? real : lastRealBalance;
-        } else {
-          // dias futuros: projetar a partir do lastRealBalance usando taxas por dia
-          baselineLinear = lastRealBalance + combinedAvgPerDay * (d - lastRealDay);
-          baselineRecent = lastRealBalance + recentAvgPerDay * (d - lastRealDay);
-        }
-
-        balanceProjectionData.push({ day: d, real, baselineLinear, baselineRecent });
-      }
-      setSummary((prev: typeof summary) => ({
-        ...prev,
-        dailyBalanceData,
-        balanceProjectionData,
-      }));
-      // Totais e saldo do mês serão definidos no fetchSummary para evitar cálculo duplicado
-
-      // Saldo acumulado até o fim do mês
-      const [expVarA, expFixA, incVarA, incFixA] = await Promise.all([
-        fetchAll(`/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&perPage=200`, fetchOpts),
-        fetchAll(`/api/expenses?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&perPage=200`, fetchOpts),
-        fetchAll(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=VARIABLE&perPage=200`, fetchOpts),
-        fetchAll(`/api/incomes?start=1900-01-01&end=${endStr}${walletParam}&type=FIXED&perPage=200`, fetchOpts),
-      ]);
-
-      // NOTE: a rota da API (`/api/expenses` e `/api/incomes`) já expande registros FIXED
-      // quando `type=FIXED` e `start`/`end` são informados. Logo, aqui não devemos
-      // expandir novamente — somamos diretamente os arrays retornados.
-      const allExpensesA: any[] = [...expVarA, ...expFixA];
-      const allIncomesA: any[] = [...incVarA, ...incFixA];
-      const totalExpensesA = allExpensesA.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalIncomeA = allIncomesA.reduce((sum, i) => sum + Number(i.amount), 0);
-      setSaldoAcumulado(totalIncomeA - totalExpensesA);
-
-      // Limite diário
-      const hoje = new Date();
-      const fim = new Date(year, month, 0);
-      let diasRestantes = 0;
-      if (
-        year < hoje.getFullYear() ||
-        (year === hoje.getFullYear() && month - 1 < hoje.getMonth())
-      ) {
-        diasRestantes = 0;
-      } else {
-        diasRestantes = Math.max(
-          1,
-          fim.getDate() -
-            (year === hoje.getFullYear() && month - 1 === hoje.getMonth() ? hoje.getDate() : 1) +
-            1,
-        );
-      }
-      const limite = diasRestantes > 0 ? (totalIncomeA - totalExpensesA) / diasRestantes : 0;
-      setLimiteDiario(limite);
-
-      // Buscar carteiras
-      const resWallets = await fetch('/api/wallets', { cache: 'no-store' });
-      if (resWallets.ok) {
-        const data = await resWallets.json();
-        setWallets(Array.isArray(data) ? data : []);
+      try {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
+        const res = await fetch(`/api/dashboard/cards?year=${year}&month=${month}${walletParam}`, { cache: 'no-store', signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        // Atualizar todos os 5 cards de uma vez
+        setTotalExpenses(data.totalExpenses || 0);
+        setTotalIncome(data.totalIncomes || 0);
+        setSaldoDoMes((data.totalIncomes || 0) - (data.totalExpenses || 0));
+        setSaldoAcumulado(data.saldoAcumulado || 0);
+        setLimiteDiario(data.limiteDiario || 0);
+        if (Array.isArray(data.wallets)) setWallets(data.wallets);
+      } catch (e) {
+        if ((e as any)?.name === 'AbortError') return;
       }
     };
     fetchCards();
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWallet, currentDate]);
 
-  // Carregar dados dos últimos 12 meses para gráfico de barras empilhadas
+  // Carregar gráficos e dados agregados via API única (/api/dashboard/charts)
   useEffect(() => {
-    const fetchMonthlyData = async () => {
-      const now = new Date();
-      const months: { year: number; month: number; label: string }[] = [];
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        months.push({
-          year: d.getFullYear(),
-          month: d.getMonth() + 1,
-          label: `${d.toLocaleString('pt-BR', { month: 'short' })}/${d
-            .getFullYear()
-            .toString()
-            .slice(-2)}`,
-        });
+    const controller = new AbortController();
+    const fetchCharts = async () => {
+      try {
+  setChartsLoaded(false);
+  setLoadingDaily(true);
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
+        const res = await fetch(`/api/dashboard/charts?year=${year}&month=${month}${walletParam}`, { cache: 'no-store', signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        // Construir novos valores localmente e aplicar todos juntos para evitar renders parciais
+        const newSummary = (() => {
+          const s = data.summary || {};
+          return (prev => {
+            const merged: typeof prev = { ...prev };
+            if (s.expensesByCategory && Array.isArray(s.expensesByCategory) && s.expensesByCategory.length > 0) merged.expensesByCategory = s.expensesByCategory;
+            if (s.incomesByCategory && Array.isArray(s.incomesByCategory) && s.incomesByCategory.length > 0) merged.incomesByCategory = s.incomesByCategory;
+            if (s.monthlyData && Array.isArray(s.monthlyData) && s.monthlyData.length > 0) merged.monthlyData = s.monthlyData;
+            if (s.topExpenseCategories && Array.isArray(s.topExpenseCategories) && s.topExpenseCategories.length > 0) merged.topExpenseCategories = s.topExpenseCategories;
+            if (s.expenseDiffAll && Array.isArray(s.expenseDiffAll) && s.expenseDiffAll.length > 0) merged.expenseDiffAll = s.expenseDiffAll;
+            if (s.dailyBalanceData && Array.isArray(s.dailyBalanceData) && s.dailyBalanceData.length > 0) merged.dailyBalanceData = s.dailyBalanceData;
+            if (s.balanceProjectionData && Array.isArray(s.balanceProjectionData) && s.balanceProjectionData.length > 0) merged.balanceProjectionData = s.balanceProjectionData;
+            return merged;
+          })(summary);
+        })();
+
+        const newDailyByCategory = data.dailyByCategory || [];
+        const newDailyByWallet = data.dailyByWallet || [];
+        const newDailyByTag = data.dailyByTag || [];
+
+        // Aplicar todos os updates de uma vez
+        setSummary(newSummary);
+        setByCategory(newDailyByCategory);
+        setByWallet(newDailyByWallet);
+        setByTag(newDailyByTag);
+  setChartsLoaded(true);
+      } catch (e) {
+        if ((e as any)?.name === 'AbortError') return;
       }
-      const fetchOpts: RequestInit = {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      };
-  const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
-      const results = await Promise.all(
-        months.map(async ({ year, month }) => {
-          const { start, end } = getMonthRange(year, month);
-          const startStr = toYmd(start);
-          const endStr = toYmd(end);
-          const [expVar, expFix, incVar, incFix] = await Promise.all([
-            fetchAll<any[]>(
-              `/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
-              fetchOpts,
-            ),
-            fetchAll<any[]>(
-              `/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
-              fetchOpts,
-            ),
-            fetchAll<any[]>(
-              `/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
-              fetchOpts,
-            ),
-            fetchAll<any[]>(
-              `/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
-              fetchOpts,
-            ),
-          ]);
-          const allExpenses: any[] = [...expVar, ...expFix];
-          const allIncomes: any[] = [...incVar, ...incFix];
-          const expense = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-          const income = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
-          const balance = income - expense;
-          return { expense, income, balance };
-        }),
-      );
-      setSummary((prev: typeof summary) => ({
-        ...prev,
-        monthlyData: months.map((m, i) => ({ month: m.label, ...results[i] })),
-      }));
+      finally {
+        setLoadingDaily(false);
+      }
     };
-    fetchMonthlyData();
-  }, [selectedWallet]);
+    fetchCharts();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWallet, currentDate]);
 
   // Carregar dados do mês atual e anterior para top 5 categorias
   useEffect(() => {
@@ -535,7 +307,7 @@ export function DashboardContent() {
       const prevAmounts: Record<string, number> = {};
       for (const c of prevExpensesByCategory) prevAmounts[c.category] = c.amount;
 
-      // Construir lista completa com diffs
+      // Construir lista completa com diffs (apenas para uso local neste fluxo)
       const categoriesWithDiff = topCategoriesAll.map((c) => ({
         category: c.category,
         amount: c.amount,
@@ -546,17 +318,9 @@ export function DashboardContent() {
         .filter((c) => c.diff !== 0)
         .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
       const topExpenseCategories = expenseDiffAll.slice(0, 5);
-
-      setSummary((prev: typeof summary) => ({
-        ...prev,
-        expensesByCategory,
-        incomesByCategory,
-        topExpenseCategories,
-        expenseDiffAll,
-      }));
-      setTotalIncome(totalIncomeLocal);
-      setTotalExpenses(totalExpensesLocal);
-      setSaldoDoMes(totalIncomeLocal - totalExpensesLocal);
+  setTotalIncome(totalIncomeLocal);
+  setTotalExpenses(totalExpensesLocal);
+  setSaldoDoMes(totalIncomeLocal - totalExpensesLocal);
       setIsLoading(false);
     };
 
@@ -581,18 +345,12 @@ export function DashboardContent() {
 
   // Limite diário agora vem da API agregadora
 
-  // Dados diários para os novos gráficos
-  const {
-    byCategory: dailyByCategory,
-    byWallet: dailyByWallet,
-    byTag: dailyByTag,
-    loading: loadingDaily,
-  } = useDailyExpenseData({
-    year: currentDate.getFullYear(),
-    month: currentDate.getMonth() + 1,
-    // enviar lista como CSV ou undefined para todas
-    walletId: selectedWallet && selectedWallet.length > 0 ? selectedWallet.join(',') : undefined,
-  });
+  // Dados diários para os novos gráficos - agora controlados localmente para poder popular via API agregadora
+  const [dailyByCategory, setByCategory] = useState<any[]>([]);
+  const [dailyByWallet, setByWallet] = useState<any[]>([]);
+  const [dailyByTag, setByTag] = useState<any[]>([]);
+  const [loadingDaily, setLoadingDaily] = useState(false);
+  const [chartsLoaded, setChartsLoaded] = useState(false);
 
   // Função para fechar o modal e recarregar o dashboard
   const handleQuickAddSuccess = () => {
@@ -1028,9 +786,9 @@ export function DashboardContent() {
             <CardTitle>Gasto Diário por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingDaily ? (
+            {(!chartsLoaded && loadingDaily) ? (
               <Loader text="Carregando gráfico diário..." />
-            ) : dailyByCategory.length > 0 ? (
+            ) : chartsLoaded && dailyByCategory.length > 0 ? (
               <DailyCategoryChart
                 data={dailyByCategory}
                 categoryColors={Object.fromEntries(
@@ -1049,9 +807,9 @@ export function DashboardContent() {
             <CardTitle>Gasto Diário por Carteira</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingDaily ? (
+            {(!chartsLoaded && loadingDaily) ? (
               <Loader text="Carregando gráfico diário..." />
-            ) : dailyByWallet.length > 0 ? (
+            ) : chartsLoaded && dailyByWallet.length > 0 ? (
               <DailyWalletChart data={dailyByWallet} walletsMeta={wallets} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
@@ -1065,9 +823,9 @@ export function DashboardContent() {
             <CardTitle>Gasto Diário por Tag</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingDaily ? (
+            {(!chartsLoaded && loadingDaily) ? (
               <Loader text="Carregando gráfico diário..." />
-            ) : dailyByTag.length > 0 ? (
+            ) : chartsLoaded && dailyByTag.length > 0 ? (
               <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
@@ -1085,10 +843,12 @@ export function DashboardContent() {
             <CardTitle>Evolução Diária do Saldo</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {(!chartsLoaded && loadingDaily) ? (
               <Loader text="Carregando evolução..." />
-            ) : (
+            ) : chartsLoaded ? (
               <DailyBalanceChart data={summary.dailyBalanceData} />
+            ) : (
+              <Loader text="Carregando evolução..." />
             )}
           </CardContent>
         </Card>
@@ -1097,10 +857,12 @@ export function DashboardContent() {
             <CardTitle>Projeção do Saldo Final do Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {(!chartsLoaded && loadingDaily) ? (
               <Loader text="Calculando projeção..." />
-            ) : (
+            ) : chartsLoaded ? (
               <BalanceProjectionChart data={summary.balanceProjectionData} />
+            ) : (
+              <Loader text="Calculando projeção..." />
             )}
           </CardContent>
         </Card>
@@ -1113,7 +875,7 @@ export function DashboardContent() {
             <CardTitle>Entradas vs Saídas (12 meses)</CardTitle>
           </CardHeader>
           <CardContent>
-            {summary.monthlyData.length > 0 ? (
+            {chartsLoaded && summary.monthlyData.length > 0 ? (
               <MonthlyBarChart data={summary.monthlyData} />
             ) : (
               <Loader text="Carregando histórico..." />
@@ -1122,7 +884,7 @@ export function DashboardContent() {
         </Card>
 
         {/* Top 5 categorias de despesa do período (gráfico clicável para expandir; botão para ver variações) */}
-        <Card className="cursor-pointer">
+  <Card className="cursor-pointer" onClick={() => setModal('diff')}>
           <CardHeader>
             <CardTitle>Top 5 Categorias de Saída (vs mês anterior)</CardTitle>
           </CardHeader>
@@ -1130,27 +892,19 @@ export function DashboardContent() {
             <div onClick={() => setChartModal('top')}>
               <TopExpenseCategoriesChart
               data={
-                summary.topExpenseCategories.length > 0
-                  ? summary.topExpenseCategories
-                  : [
-                      { category: 'Sem categoria', amount: 0, diff: 0 },
-                      { category: '---', amount: 0, diff: 0 },
-                      { category: '---', amount: 0, diff: 0 },
-                      { category: '---', amount: 0, diff: 0 },
-                      { category: '---', amount: 0, diff: 0 },
-                    ]
+    chartsLoaded && summary.topExpenseCategories.length > 0
+      ? summary.topExpenseCategories
+      : [
+          { category: 'Sem categoria', amount: 0, diff: 0 },
+          { category: '---', amount: 0, diff: 0 },
+          { category: '---', amount: 0, diff: 0 },
+          { category: '---', amount: 0, diff: 0 },
+          { category: '---', amount: 0, diff: 0 },
+        ]
               }
               />
             </div>
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => setModal('diff')}
-                className="text-xs text-primary underline"
-              >
-                Ver variações completas
-              </button>
-            </div>
+      {/* removido link 'Ver variações completas' — card inteiro abre o modal */}
           </CardContent>
         </Card>
       </div>

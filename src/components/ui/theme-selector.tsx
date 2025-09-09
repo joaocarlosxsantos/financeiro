@@ -28,8 +28,9 @@ export function ThemeSelector() {
         <button
           type="button"
           onClick={() => setTheme('light')}
-          className={`${baseBtn} ${theme === 'light' ? active : inactive}`}
-          aria-pressed={theme === 'light'}
+          // manter aria-pressed falso no SSR; só refletir estado após mount para evitar mismatch
+          className={`${baseBtn} ${mounted ? (theme === 'light' ? active : inactive) : inactive}`}
+          aria-pressed={mounted ? theme === 'light' : false}
           aria-label="Tema claro"
         >
           <Sun className="h-6 w-6" />
@@ -37,8 +38,8 @@ export function ThemeSelector() {
         <button
           type="button"
           onClick={() => setTheme('dark')}
-          className={`${baseBtn} ${theme === 'dark' ? active : inactive}`}
-          aria-pressed={theme === 'dark'}
+          className={`${baseBtn} ${mounted ? (theme === 'dark' ? active : inactive) : inactive}`}
+          aria-pressed={mounted ? theme === 'dark' : false}
           aria-label="Tema escuro"
         >
           <Moon className="h-6 w-6" />
@@ -46,22 +47,29 @@ export function ThemeSelector() {
         <button
           type="button"
           onClick={() => setTheme('system')}
-          className={`${baseBtn} ${theme === 'system' ? active : inactive}`}
-          aria-pressed={theme === 'system'}
+          className={`${baseBtn} ${mounted ? (theme === 'system' ? active : inactive) : inactive}`}
+          aria-pressed={mounted ? theme === 'system' : false}
           aria-label="Tema automático"
         >
           <Monitor className="h-6 w-6" />
-          {mounted && (
+          {mounted ? (
             <span className="absolute -bottom-1 text-[10px] font-medium tracking-wide text-muted-foreground w-max left-1/2 -translate-x-1/2">
               {resolvedTheme === 'dark' ? 'escuro' : 'claro'}
             </span>
-          )}
+          ) : null}
         </button>
       </div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
-        {theme === 'system' ? 'Automático segue o sistema.' : theme === 'dark' ? 'Modo escuro ativo.' : 'Modo claro ativo.'}
-        {theme === 'system' && mounted && <span className="italic">({resolvedTheme === 'dark' ? 'escuro' : 'claro'})</span>}
+        {mounted ? (
+          <>
+            {theme === 'system' ? 'Automático segue o sistema.' : theme === 'dark' ? 'Modo escuro ativo.' : 'Modo claro ativo.'}
+            {theme === 'system' && <span className="italic">({resolvedTheme === 'dark' ? 'escuro' : 'claro'})</span>}
+          </>
+        ) : (
+          // Texto neutro no SSR para evitar mismatch
+          'Carregando preferência de tema...'
+        )}
       </div>
       <div aria-live="polite" aria-atomic="true" className="sr-only" ref={liveRef} />
     </div>

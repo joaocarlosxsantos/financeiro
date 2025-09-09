@@ -45,7 +45,8 @@ export function ExpenseChart({ data, maxItems }: ExpenseChartProps) {
               dataKey="value"
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                // fallback para casos sem cor definida
+                <Cell key={`cell-${index}`} fill={entry.color || 'hsl(var(--muted-foreground))'} />
               ))}
             </Pie>
             <Tooltip
@@ -68,7 +69,7 @@ export function ExpenseChart({ data, maxItems }: ExpenseChartProps) {
             <div className="flex items-start space-x-2 min-w-0">
               <div
                 className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: item.color }}
+                style={{ backgroundColor: item.color || 'hsl(var(--muted-foreground))' }}
               />
               <span className="whitespace-normal break-words">{item.name}</span>
             </div>
