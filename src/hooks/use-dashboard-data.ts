@@ -29,13 +29,17 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      // Calcular início e fim do mês
-      const start = new Date(year, month - 1, 1);
-      const end = new Date(year, month, 0);
+  // Calcular início e fim do mês
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 0);
+  // Se o mês solicitado for o mês atual, limitar o fim ao dia atual
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const effectiveEnd = isCurrentMonth ? new Date(year, month - 1, today.getDate()) : end;
       const toYmd = (d: Date) =>
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const startStr = toYmd(start);
-      const endStr = toYmd(end);
+  const startStr = toYmd(start);
+  const endStr = toYmd(effectiveEnd);
   // aceitar walletId CSV (ex: "id1,id2") ou id único
   const walletParam = walletId ? `&walletId=${encodeURIComponent(walletId)}` : '';
       // Buscar despesas variáveis e fixas do período com paginação automática
@@ -45,9 +49,9 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
       ]);
       const allExpenses = [...expVar, ...expFix];
 
-      // Mapear todas as datas do mês
+      // Mapear todas as datas do mês (ou até o dia atual se for o mês corrente)
       const days: string[] = [];
-      for (let d = 1; d <= end.getDate(); d++) {
+      for (let d = 1; d <= effectiveEnd.getDate(); d++) {
         days.push(toYmd(new Date(year, month - 1, d)));
       }
 
