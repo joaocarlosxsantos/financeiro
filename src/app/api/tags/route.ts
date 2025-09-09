@@ -14,9 +14,8 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Usuário não encontrado. Faça login novamente.' }, { status: 401 });
 
   const tags = await prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } });
-  const headers = new Headers();
-  headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-  return NextResponse.json(tags, { headers });
+  // Return without caching headers to ensure clients always get fresh data
+  return NextResponse.json(tags);
 }
 
 export async function POST(req: NextRequest) {

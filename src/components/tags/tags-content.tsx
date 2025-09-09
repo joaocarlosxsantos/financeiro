@@ -37,6 +37,22 @@ export function TagsContent({ onCreated }: TagsContentProps) {
     load();
   }, []);
 
+  // Recarrega tags quando alguma parte da app notificar mudança
+  useEffect(() => {
+    const onChanged = () => load();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    window.addEventListener('tags:changed', onChanged);
+    window.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onChanged);
+    return () => {
+      window.removeEventListener('tags:changed', onChanged);
+      window.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onChanged);
+    };
+  }, []);
+
   const handleEdit = (id: string) => {
     const tag = tags.find((t) => t.id === id);
     if (tag) {

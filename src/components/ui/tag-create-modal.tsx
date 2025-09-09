@@ -33,6 +33,14 @@ export function TagCreateModal({
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
+      try {
+        // Notifica outras partes da app que as tags foram alteradas
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('tags:changed'));
+        }
+      } catch (e) {
+        // ignore
+      }
       onCreated(data.id);
     } else {
       onCreated('');
