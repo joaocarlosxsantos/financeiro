@@ -14,7 +14,8 @@ export function WalletCreateModal({
   onCreated: (id: string) => void;
 }) {
   const [name, setName] = useState('');
-  const [type, setType] = useState('Banco');
+  // usar os valores internos que a API espera (enums)
+  const [type, setType] = useState('BANK');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,10 +57,10 @@ export function WalletCreateModal({
             onChange={(e) => setType(e.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            <option value="Banco">Banco</option>
-            <option value="Dinheiro">Dinheiro</option>
-            <option value="Cartão">Cartão</option>
-            <option value="Outro">Outro</option>
+            <option value="BANK">Banco</option>
+            <option value="CASH">Dinheiro</option>
+            <option value="OTHER">Cartão / Outro</option>
+            <option value="VALE_BENEFICIOS">Vale Benefícios</option>
           </select>
         </div>
         <div className="flex gap-2">

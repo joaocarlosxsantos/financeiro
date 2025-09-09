@@ -163,3 +163,6 @@ Contribuições são super bem-vindas! Abra uma issue ou pull request para suger
 <div align="center">
    <b>Feito por João Carlos</b>
 </div>
+
+<!-- Nota de alteração -->
+**Nota:** As páginas de `Despesas` e `Rendas` agora exibem uma coluna adicional chamada **Tags** nas tabelas de listagem. As tags são mostradas como badges e dependem do campo `tags` retornado pelos endpoints (`/api/expenses` e `/api/incomes`) e das tags carregadas em `/api/tags`.

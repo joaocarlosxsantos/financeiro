@@ -446,6 +446,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
                   <th className="px-3 py-2 text-right font-semibold">Valor</th>
                   <th className="px-3 py-2 text-center font-semibold">Data</th>
                   <th className="px-3 py-2 text-center font-semibold">Categoria</th>
+                  <th className="px-3 py-2 text-center font-semibold">Tags</th>
                   <th className="px-3 py-2 text-center font-semibold">Carteira</th>
                   <th className="px-3 py-2 text-center font-semibold">Fixa</th>
                   <th className="px-3 py-2 text-center font-semibold">Ações</th>
@@ -460,6 +461,25 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
                     </td>
                     <td className="px-3 py-2 text-center">{renda.date ? formatDate(renda.date) : '-'}</td>
                     <td className="px-3 py-2 text-center">{renda.categoryName}</td>
+                    <td className="px-3 py-2 text-center">
+                      {Array.isArray(renda.tags) && renda.tags.length > 0 ? (
+                        <div className="flex items-center justify-center gap-1 flex-wrap">
+                          {renda.tags.map((tid) => {
+                            const tag = tags.find((t) => String(t.id) === String(tid));
+                            return tag ? (
+                              <span
+                                key={tid}
+                                className="inline-block px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                              >
+                                {tag.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-center">
                       {!renda.walletId
                         ? 'Sem carteira'
