@@ -1,7 +1,7 @@
 'use client';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceArea } from 'recharts';
 
-export interface BalanceProjectionPoint { day: number; real: number; baselineLinear: number; baselineRecent: number }
+export interface BalanceProjectionPoint { day: number; real?: number | undefined; baselineLinear?: number | undefined; baselineRecent?: number | undefined }
 export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[] }) => {
   // identificar último dia com dado real (assumindo sequencial)
   const lastRealDay = (() => {
@@ -20,8 +20,8 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
           <LineChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
             <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip formatter={(v:number)=> v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} labelFormatter={l=>`Dia ${l}`} />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v:any) => typeof v === 'number' ? v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : v} />
+            <Tooltip formatter={(v:number)=> typeof v === 'number' ? v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : v} labelFormatter={l=>`Dia ${l}`} />
             <Legend formatter={(value)=> {
               if (value === 'baselineLinear') return 'Projeção Linear Global';
               if (value === 'baselineRecent') return 'Projeção Ritmo Recente';
@@ -35,6 +35,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
               stroke="#3b82f6" /* azul forte */
               strokeWidth={2.2}
               dot={false}
+              connectNulls={false}
               strokeDasharray="6 4" /* traço mais longo para diferenciar do grid */
               name="Projeção Linear Global"
             />
@@ -44,6 +45,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
               stroke="#ef4444" /* vermelho forte */
               strokeWidth={2.2}
               dot={false}
+              connectNulls={false}
               strokeDasharray="5 3" /* padrão distinto do anterior e do grid */
               name="Projeção Ritmo Recente"
             />
@@ -53,6 +55,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
               stroke="#10b981"
               strokeWidth={2}
               name="Saldo Real"
+              connectNulls={false}
               dot={(props) => {
                 // Recharts passes a variety of props to custom dot renderers.
                 // We'll only extract the values we need and type them loosely enough

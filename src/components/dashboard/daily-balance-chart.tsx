@@ -11,9 +11,9 @@ export const DailyBalanceChart = ({ data }: { data: DailyBalancePoint[] }) => {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip formatter={(v:number)=> v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} labelFormatter={l=>`Dia ${l}`} />
+            <XAxis dataKey="date" tick={{ fontSize: 12 }} tickFormatter={(d) => String(Number(String(d).split('-')[2]))} />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+            <Tooltip formatter={(v:number)=> v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} labelFormatter={(label) => `Dia ${String(Number(String(label).split('-')[2]))}`} />
             <Line
               type="monotone"
               dataKey="balance"

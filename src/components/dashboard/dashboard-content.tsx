@@ -87,9 +87,9 @@ export function DashboardContent() {
     dailyBalanceData: Array<{ date: string; balance: number }>;
     balanceProjectionData: Array<{
       day: number;
-      real: number;
-      baselineLinear: number;
-      baselineRecent: number;
+      real?: number | undefined;
+      baselineLinear?: number | undefined;
+      baselineRecent?: number | undefined;
     }>;
   };
   const [summary, setSummary] = useState<Summary>({
@@ -196,8 +196,8 @@ export function DashboardContent() {
       for (const k of dayKeysSorted) {
         const delta = dayMap[k].income - dayMap[k].expense;
         running += delta;
-        // k.slice(-2) = dia, incorpora saldo acumulado anterior já somado
-        dailyBalanceData.push({ date: k.slice(-2), balance: running });
+        // armazenar a data completa YYYY-MM-DD para o gráfico (o tick formatter mostrará apenas o dia)
+        dailyBalanceData.push({ date: k, balance: running });
       }
       // Projeção: baseline vs real
       const daysElapsed = dayKeysSorted.length;
@@ -206,23 +206,49 @@ export function DashboardContent() {
         currentDate.getMonth() + 1,
         0,
       ).getDate();
-      const currentNet = running - previousBalance; // variação do mês
+      const currentNet = running - previousBalance; // variação do mês (até hoje)
       const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
-      const projectedFinal = previousBalance + avgPerDay * totalDaysInMonth;
+      // Calcular média histórica para o mesmo período nos últimos M meses
+      const M = 3; // usar 3 meses recentes por padrão
+      const historicalNets: number[] = [];
+      for (let i = 1; i <= M; i++) {
+        const refMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        const { start: hStart, end: hEnd } = getMonthRange(refMonth.getFullYear(), refMonth.getMonth() + 1);
+        const hStartStr = toYmd(hStart);
+        const hEndStr = toYmd(hEnd);
+        try {
+          // buscar despesas/entradas do mês de referência (sincrono dentro do loop pode ser lento,
+          // mas M é pequeno). Usamos fetchAll com cache no-store.
+          // eslint-disable-next-line no-await-in-loop
+          const [hExpVar, hExpFix, hIncVar, hIncFix] = await Promise.all([
+            fetchAll(`/api/expenses?type=VARIABLE&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
+            fetchAll(`/api/expenses?type=FIXED&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
+            fetchAll(`/api/incomes?type=VARIABLE&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
+            fetchAll(`/api/incomes?type=FIXED&start=${hStartStr}&end=${hEndStr}${walletParam}&perPage=200`, fetchOpts),
+          ]);
+          const hExpenses = [...hExpVar, ...hExpFix];
+          const hIncomes = [...hIncVar, ...hIncFix];
+          const hNet = hIncomes.reduce((s, x) => s + Number(x.amount), 0) - hExpenses.reduce((s, x) => s + Number(x.amount), 0);
+          historicalNets.push(hNet);
+        } catch (e) {
+          // se houve erro numa das requisições históricas, ignorar esse mês
+        }
+      }
+      const historicalAvgNet = historicalNets.length > 0 ? historicalNets.reduce((s, n) => s + n, 0) / historicalNets.length : avgPerDay * daysElapsed;
+      // combinar média atual (até hoje) com histórica: ponderar mais a média atual quando houver mais dias
+      // peso baseado na proporção de dias já transcorridos
+      const weightCurrent = daysElapsed / Math.max(1, totalDaysInMonth);
+      const combinedAvgPerDay = weightCurrent * (avgPerDay) + (1 - weightCurrent) * (historicalAvgNet / Math.max(1, totalDaysInMonth));
+      const projectedFinal = previousBalance + combinedAvgPerDay * totalDaysInMonth;
       const balanceProjectionData: Array<{
         day: number;
-        real: number;
-        baselineLinear: number;
-        baselineRecent: number;
+        real?: number | undefined;
+        baselineLinear?: number | undefined;
+        baselineRecent?: number | undefined;
       }> = [];
       // Projeção linear global já calculada (projectedFinal)
       // Projeção recente: média dos últimos N dias com movimento (ex: 7 ou menor se menos dias)
       const N = 7;
-      const daysWithMovement = dailyBalanceData
-        .filter((p) => p.date !== undefined)
-        .map((p) => Number(p.date))
-        .filter((n) => !isNaN(n));
-      const effectiveDays = daysWithMovement.length;
       const lastDays = dailyBalanceData
         .filter((p) => p.date !== undefined && p.date !== '0')
         .slice(-N);
@@ -232,17 +258,53 @@ export function DashboardContent() {
         const last = lastDays[lastDays.length - 1].balance;
         return last - first;
       })();
-      const recentAvgPerDay =
-        lastDays.length > 1 ? recentVariation / (lastDays.length - 1) : avgPerDay;
+      // calcular média por dia usando a diferença real de dias (evita dividir apenas pelo número de pontos)
+      const recentAvgPerDay = (() => {
+        if (lastDays.length <= 1) return avgPerDay;
+        const firstDay = Number((lastDays[0].date || '').toString().split('-').pop() || 0);
+        const lastDay = Number((lastDays[lastDays.length - 1].date || '').toString().split('-').pop() || 0);
+        const daySpan = Math.max(1, lastDay - firstDay);
+        return recentVariation / daySpan;
+      })();
       const projectedRecentFinal = previousBalance + recentAvgPerDay * totalDaysInMonth;
 
+      // Descobrir o último dia com dado real (ou hoje se mês corrente)
+      const todayDay = new Date().getDate();
+      const lastRealDay = isAtCurrentMonth
+        ? Math.min(todayDay, totalDaysInMonth)
+        : Math.max(...dailyBalanceData.map((p) => Number(p.date.split('-').pop() || 0)), 0);
+
+      // balance do último dia real
+      const lastRealBalance = (() => {
+        if (!dailyBalanceData || dailyBalanceData.length === 0) return previousBalance;
+        const found = dailyBalanceData.find((p) => Number(p.date.split('-').pop()) === lastRealDay);
+        if (found) return found.balance;
+        // se não encontrar, usar running (saldo acumulado até o último dia conhecido)
+        return running;
+      })();
+
       for (let d = 1; d <= totalDaysInMonth; d++) {
-        const realEntry = dailyBalanceData.find((x) => Number(x.date) === d);
-        const real = realEntry ? realEntry.balance : running;
-        const baselineLinear =
-          previousBalance + (projectedFinal - previousBalance) * (d / totalDaysInMonth);
-        const baselineRecent =
-          previousBalance + (projectedRecentFinal - previousBalance) * (d / totalDaysInMonth);
+        const realEntry = dailyBalanceData.find((x) => Number(x.date.split('-').pop()) === d);
+        // Somente preencher real até lastRealDay — para dias futuros usar undefined (chart tratará)
+        const real = realEntry && d <= lastRealDay ? realEntry.balance : undefined;
+
+        let baselineLinear: number | undefined;
+        let baselineRecent: number | undefined;
+
+        if (!isAtCurrentMonth) {
+          // Meses passados: sem projeções
+          baselineLinear = undefined;
+          baselineRecent = undefined;
+        } else if (d <= lastRealDay) {
+          // antes ou igual ao dia atual: manter baseline igual ao valor real (se existir) ou ao lastRealBalance
+          baselineLinear = real !== undefined ? real : lastRealBalance;
+          baselineRecent = real !== undefined ? real : lastRealBalance;
+        } else {
+          // dias futuros: projetar a partir do lastRealBalance usando taxas por dia
+          baselineLinear = lastRealBalance + combinedAvgPerDay * (d - lastRealDay);
+          baselineRecent = lastRealBalance + recentAvgPerDay * (d - lastRealDay);
+        }
+
         balanceProjectionData.push({ day: d, real, baselineLinear, baselineRecent });
       }
       setSummary((prev: typeof summary) => ({
