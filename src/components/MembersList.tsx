@@ -11,7 +11,7 @@ function maskPhone(phone: string) {
   return phone || '';
 }
 
-export function MembersList({ groupId, showForm = true, compact = false }: { groupId: number; showForm?: boolean; compact?: boolean }) {
+export function MembersList({ groupId, showForm = true, compact = false, onChange, refreshKey }: { groupId: number; showForm?: boolean; compact?: boolean; onChange?: () => void; refreshKey?: any }) {
   const [confirmDelete, setConfirmDelete] = useState<{ member: Member | null; hasLinks: boolean }>({ member: null, hasLinks: false });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
@@ -23,15 +23,15 @@ export function MembersList({ groupId, showForm = true, compact = false }: { gro
   useEffect(() => {
     fetchMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId]);
+  }, [groupId, refreshKey]);
 
   async function fetchMembers() {
     setLoading(true);
     setError('');
     try {
       const res = await fetch(`/api/controle-contas/membros?groupId=${groupId}`);
-      const data = await res.json();
-      setMembers(data);
+  const data = await res.json();
+  setMembers(data);
     } catch {
       setError('Erro ao buscar membros');
     } finally {
@@ -52,7 +52,8 @@ export function MembersList({ groupId, showForm = true, compact = false }: { gro
       if (!res.ok) throw new Error('Erro ao cadastrar membro');
       setName('');
       setPhone('');
-      fetchMembers();
+  await fetchMembers();
+  onChange?.();
     } catch {
       setError('Erro ao cadastrar membro');
     } finally {
@@ -95,7 +96,8 @@ export function MembersList({ groupId, showForm = true, compact = false }: { gro
                   try {
                     await fetch(`/api/controle-contas/membros?id=${confirmDelete.member?.id}&force=1`, { method: 'DELETE' });
                     setConfirmDelete({ member: null, hasLinks: false });
-                    fetchMembers();
+                      await fetchMembers();
+                      onChange?.();
                   } catch {
                     setError('Erro ao remover membro e vínculos');
                   } finally {
@@ -121,7 +123,8 @@ export function MembersList({ groupId, showForm = true, compact = false }: { gro
                   try {
                     await fetch(`/api/controle-contas/membros?id=${confirmDelete.member?.id}`, { method: 'DELETE' });
                     setConfirmDelete({ member: null, hasLinks: false });
-                    fetchMembers();
+                      await fetchMembers();
+                      onChange?.();
                   } catch {
                     setError('Erro ao remover membro');
                   } finally {

@@ -14,6 +14,7 @@ interface Group {
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
+  const [groupsVersion, setGroupsVersion] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,8 @@ export default function GroupsPage() {
       const res = await fetch("/api/controle-contas/grupos");
       const data = await res.json();
       setGroups(data);
+  // bump version so child MembersList can react
+  setGroupsVersion((v) => v + 1);
     } catch {
       setError("Erro ao buscar grupos");
     } finally {
@@ -148,14 +151,14 @@ export default function GroupsPage() {
             }
           }
           return (
-            <GroupCard
+      <GroupCard
               key={group.id}
               name={group.name}
               phone={createdLabel}
               onClick={() => { setEditGroup(group); setEditName(group.name); setEditModalOpen(true); }}
             >
               <div className="mt-3">
-                <MembersList groupId={group.id} showForm={false} compact={true} />
+                <MembersList groupId={group.id} showForm={false} compact={true} onChange={fetchGroups} refreshKey={groupsVersion} />
               </div>
             </GroupCard>
           );
@@ -240,7 +243,7 @@ export default function GroupsPage() {
             </button>
           </div>
         </form>
-  {editGroup && <MembersList groupId={editGroup.id} />}
+  {editGroup && <MembersList groupId={editGroup.id} onChange={fetchGroups} refreshKey={groupsVersion} />}
         <Modal
           open={confirmDelete}
           onClose={() => setConfirmDelete(false)}
