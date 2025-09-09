@@ -48,13 +48,14 @@ function getWalletColor(walletName: string, walletType?: string) {
 interface DailyWalletChartProps {
   data: Array<{ date: string; [wallet: string]: number | string }>;
   walletsMeta?: Array<{ name: string; type: string }>;
+  height?: number | string;
 }
 
-export function DailyWalletChart({ data, walletsMeta }: DailyWalletChartProps) {
+export function DailyWalletChart({ data, walletsMeta, height = 320 }: DailyWalletChartProps) {
   // Extrai as carteiras dinamicamente (exceto a coluna 'date')
   const wallets = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== 'date') : [];
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={height as any}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
         <XAxis dataKey="date" tickFormatter={(d) => String(Number(d.split('-')[2]))} />

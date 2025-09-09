@@ -12,13 +12,14 @@ import {
 interface DailyCategoryChartProps {
   data: Array<{ date: string; [category: string]: number | string }>;
   categoryColors?: Record<string, string>;
+  height?: number | string;
 }
 
-export function DailyCategoryChart({ data, categoryColors }: DailyCategoryChartProps) {
+export function DailyCategoryChart({ data, categoryColors, height = 320 }: DailyCategoryChartProps) {
   // Extrai as categorias dinamicamente (exceto a coluna 'date')
   const categories = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== 'date') : [];
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={height as any}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
         <XAxis dataKey="date" tickFormatter={(d) => String(Number(d.split('-')[2]))} />

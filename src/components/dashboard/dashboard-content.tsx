@@ -76,6 +76,10 @@ export function DashboardContent() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickTab, setQuickTab] = useState<'despesa' | 'renda'>('despesa');
   const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance' | 'diff'>(null);
+  // Estado para modal de visualização ampliada dos gráficos
+  const [chartModal, setChartModal] = useState<
+    null | 'monthly' | 'top' | 'dailyCategory' | 'dailyWallet' | 'dailyTag'
+  >(null);
   // Estados removidos: modal agora sempre mostra todas as categorias ordenadas.
   type Summary = {
     expensesByCategory: Array<{ category: string; amount: number; color: string }>;
@@ -960,6 +964,7 @@ export function DashboardContent() {
         <Card
           className="cursor-pointer"
           onClick={() => {
+            // Entradas por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
             setModal('income');
           }}
         >
@@ -985,6 +990,7 @@ export function DashboardContent() {
         <Card
           className="cursor-pointer"
           onClick={() => {
+            // Saídas por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
             setModal('expense');
           }}
         >
@@ -1013,7 +1019,7 @@ export function DashboardContent() {
 
       {/* Gráficos diários: categoria, carteira e tag */}
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
-        <Card>
+  <Card className="cursor-pointer" onClick={() => setChartModal('dailyCategory')}>
           <CardHeader>
             <CardTitle>Gasto Diário por Categoria</CardTitle>
           </CardHeader>
@@ -1034,7 +1040,7 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
-        <Card>
+  <Card className="cursor-pointer" onClick={() => setChartModal('dailyWallet')}>
           <CardHeader>
             <CardTitle>Gasto Diário por Carteira</CardTitle>
           </CardHeader>
@@ -1050,7 +1056,7 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
-        <Card>
+  <Card className="cursor-pointer" onClick={() => setChartModal('dailyTag')}>
           <CardHeader>
             <CardTitle>Gasto Diário por Tag</CardTitle>
           </CardHeader>
@@ -1098,7 +1104,7 @@ export function DashboardContent() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
         {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
-        <Card>
+        <Card className="cursor-pointer" onClick={() => setChartModal('monthly')}>
           <CardHeader>
             <CardTitle>Entradas vs Saídas (12 meses)</CardTitle>
           </CardHeader>
@@ -1111,17 +1117,14 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Top 5 categorias de despesa do período (clicável para ver todas as variações) */}
-        <Card
-          className="cursor-pointer"
-          onClick={() => setModal('diff')}
-          aria-label="Ver todas as variações de categorias de saída"
-        >
+        {/* Top 5 categorias de despesa do período (gráfico clicável para expandir; botão para ver variações) */}
+        <Card className="cursor-pointer">
           <CardHeader>
             <CardTitle>Top 5 Categorias de Saída (vs mês anterior)</CardTitle>
           </CardHeader>
           <CardContent>
-            <TopExpenseCategoriesChart
+            <div onClick={() => setChartModal('top')}>
+              <TopExpenseCategoriesChart
               data={
                 summary.topExpenseCategories.length > 0
                   ? summary.topExpenseCategories
@@ -1133,12 +1136,68 @@ export function DashboardContent() {
                       { category: '---', amount: 0, diff: 0 },
                     ]
               }
-            />
+              />
+            </div>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setModal('diff')}
+                className="text-xs text-primary underline"
+              >
+                Ver variações completas
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
       {/* Espaçador para afastar do rodapé */}
       <div className="h-24 sm:h-32" aria-hidden="true" />
+      {/* Modal para exibir gráficos ampliados */}
+      <Modal open={chartModal !== null} onClose={() => setChartModal(null)} title={chartModal ? 'Visualizar gráfico' : undefined} size="full">
+  <div className="mt-2 h-[calc(80vh-96px)]">
+          {chartModal === 'dailyCategory' && (
+            <div className="h-full">
+              {dailyByCategory.length > 0 ? (
+                <DailyCategoryChart data={dailyByCategory} categoryColors={Object.fromEntries(summary.expensesByCategory.map((c) => [c.category, c.color]))} height={'100%'} />
+              ) : (
+                <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
+              )}
+            </div>
+          )}
+          {chartModal === 'dailyWallet' && (
+            <div className="h-full">
+              {dailyByWallet.length > 0 ? (
+                <DailyWalletChart data={dailyByWallet} walletsMeta={wallets} height={'100%'} />
+              ) : (
+                <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
+              )}
+            </div>
+          )}
+          {chartModal === 'dailyTag' && (
+            <div className="h-full">
+              {dailyByTag.length > 0 ? (
+                <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} height={'100%'} />
+              ) : (
+                <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
+              )}
+            </div>
+          )}
+          {chartModal === 'monthly' && (
+            <div className="h-full">
+              {summary.monthlyData.length > 0 ? (
+                <MonthlyBarChart data={summary.monthlyData} height={'100%'} />
+              ) : (
+                <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
+              )}
+            </div>
+          )}
+          {chartModal === 'top' && (
+            <div className="h-full">
+              <TopExpenseCategoriesChart data={summary.topExpenseCategories} height={'100%'} />
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

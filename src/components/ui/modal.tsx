@@ -5,7 +5,7 @@ export interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
 export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
@@ -64,11 +64,24 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
   const outerSizeClass =
     size === 'sm'
       ? 'max-w-md min-h-[18vh] max-h-[70vh]'
+      : size === 'xl'
+      ? 'max-w-5xl min-h-[60vh] max-h-[95vh]'
       : size === 'lg'
       ? 'max-w-3xl min-h-[40vh] max-h-[90vh]'
+      : size === 'full'
+        ? 'w-[80vw] h-[80vh] max-w-none'
       : 'max-w-xl min-h-[30vh] max-h-[80vh]';
 
-  const contentMaxHeight = size === 'sm' ? 'calc(70vh - 48px)' : size === 'lg' ? 'calc(90vh - 80px)' : 'calc(80vh - 64px)';
+  const contentMaxHeight =
+    size === 'sm'
+      ? 'calc(70vh - 48px)'
+      : size === 'xl'
+      ? 'calc(95vh - 96px)'
+      : size === 'lg'
+      ? 'calc(90vh - 80px)'
+      : size === 'full'
+        ? 'calc(80vh - 48px)'
+      : 'calc(80vh - 64px)';
 
   const contentPaddingClass = size === 'sm' ? 'px-4 pb-4 pt-3' : 'px-4 sm:px-8 pb-6 sm:pb-8 pt-2';
 

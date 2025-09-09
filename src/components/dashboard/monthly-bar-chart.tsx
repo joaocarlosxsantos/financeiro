@@ -17,11 +17,12 @@ interface MonthlyBarChartProps {
     expense: number;
     balance: number;
   }>;
+  height?: number | string;
 }
 
-export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
+export function MonthlyBarChart({ data, height = 300 }: MonthlyBarChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={height as any}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
         <XAxis dataKey="month" />

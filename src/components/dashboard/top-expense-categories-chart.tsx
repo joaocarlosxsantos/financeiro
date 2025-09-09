@@ -18,9 +18,10 @@ interface TopExpenseCategoriesChartProps {
     prevAmount?: number; // valor mês anterior
     diff: number;        // amount - prevAmount
   }>;
+  height?: number | string;
 }
 
-export function TopExpenseCategoriesChart({ data }: TopExpenseCategoriesChartProps) {
+export function TopExpenseCategoriesChart({ data, height }: TopExpenseCategoriesChartProps) {
   // Ajusta domínio simétrico baseado no maior |diff|
   const maxAbs = Math.max(0, ...data.map((d) => Math.abs(d.diff)));
   const domain = maxAbs === 0 ? [0, 0] : [-maxAbs, maxAbs];
@@ -31,7 +32,7 @@ export function TopExpenseCategoriesChart({ data }: TopExpenseCategoriesChartPro
     prevAmount: d.prevAmount ?? (d.amount - d.diff),
   }));
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={height ?? 300 as any}>
       <BarChart
         data={chartData}
         layout="vertical"
