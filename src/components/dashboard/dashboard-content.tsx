@@ -63,6 +63,9 @@ const TopExpenseCategoriesChart = dynamic(
 import { Modal } from '@/components/ui/modal';
 import { Fab } from '@/components/ui/fab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import MobileChartDetailList, { groupDailyData } from './mobile-chart-detail-list';
+import { getWalletColor } from './daily-wallet-chart';
 
 import QuickDespesaForm from '../quick-add/quick-despesa-form';
 import QuickRendaForm from '../quick-add/quick-renda-form';
@@ -80,6 +83,7 @@ export function DashboardContent() {
   const [chartModal, setChartModal] = useState<
     null | 'monthly' | 'top' | 'dailyCategory' | 'dailyWallet' | 'dailyTag'
   >(null);
+  const isMobile = useIsMobile();
   // Estados removidos: modal agora sempre mostra todas as categorias ordenadas.
   type Summary = {
     expensesByCategory: Array<{ category: string; amount: number; color: string }>;
@@ -1157,7 +1161,13 @@ export function DashboardContent() {
   <div className="mt-2 h-[calc(80vh-96px)]">
           {chartModal === 'dailyCategory' && (
             <div className="h-full">
-              {dailyByCategory.length > 0 ? (
+              {isMobile ? (
+                <MobileChartDetailList
+                  dailyData={dailyByCategory}
+                  meta={Object.fromEntries(summary.expensesByCategory.map((c) => [c.category, { color: c.color, name: c.category }] ))}
+                  title="Gasto Diário por Categoria"
+                />
+              ) : dailyByCategory.length > 0 ? (
                 <DailyCategoryChart data={dailyByCategory} categoryColors={Object.fromEntries(summary.expensesByCategory.map((c) => [c.category, c.color]))} height={'100%'} />
               ) : (
                 <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
@@ -1166,7 +1176,15 @@ export function DashboardContent() {
           )}
           {chartModal === 'dailyWallet' && (
             <div className="h-full">
-              {dailyByWallet.length > 0 ? (
+              {isMobile ? (
+                <MobileChartDetailList
+                  dailyData={dailyByWallet}
+                  meta={Object.fromEntries(
+                    wallets.map((w) => [w.name, { name: w.name, color: (w as any).color ?? getWalletColor(w.name, w.type) }])
+                  )}
+                  title="Gasto Diário por Carteira"
+                />
+              ) : dailyByWallet.length > 0 ? (
                 <DailyWalletChart data={dailyByWallet} walletsMeta={wallets} height={'100%'} />
               ) : (
                 <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
@@ -1175,7 +1193,13 @@ export function DashboardContent() {
           )}
           {chartModal === 'dailyTag' && (
             <div className="h-full">
-              {dailyByTag.length > 0 ? (
+              {isMobile ? (
+                <MobileChartDetailList
+                  dailyData={dailyByTag}
+                  meta={Object.fromEntries(Object.keys(tagNames).map((k) => [k, { name: tagNames[k], color: undefined }] ))}
+                  title="Gasto Diário por Tag"
+                />
+              ) : dailyByTag.length > 0 ? (
                 <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} height={'100%'} />
               ) : (
                 <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
@@ -1184,7 +1208,12 @@ export function DashboardContent() {
           )}
           {chartModal === 'monthly' && (
             <div className="h-full">
-              {summary.monthlyData.length > 0 ? (
+              {isMobile ? (
+                <MobileChartDetailList
+                  dailyData={summary.monthlyData}
+                  title="Entradas vs Saídas (12 meses)"
+                />
+              ) : summary.monthlyData.length > 0 ? (
                 <MonthlyBarChart data={summary.monthlyData} height={'100%'} />
               ) : (
                 <div className="text-sm text-muted-foreground">Sem dados para o período selecionado</div>
@@ -1193,7 +1222,14 @@ export function DashboardContent() {
           )}
           {chartModal === 'top' && (
             <div className="h-full">
-              <TopExpenseCategoriesChart data={summary.topExpenseCategories} height={'100%'} />
+              {isMobile ? (
+                <MobileChartDetailList
+                  dailyData={summary.topExpenseCategories}
+                  title="Top 5 Categorias de Saída"
+                />
+              ) : (
+                <TopExpenseCategoriesChart data={summary.topExpenseCategories} height={'100%'} />
+              )}
             </div>
           )}
         </div>

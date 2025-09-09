@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 
 // Função para determinar cor da carteira pelo nome e tipo
-function getWalletColor(walletName: string, walletType?: string) {
+export function getWalletColor(walletName: string, walletType?: string) {
   // Normalizar inputs para comparações tolerantes a case/espacos
   const name = (walletName || '').toLowerCase().trim();
   const type = (walletType || '').toLowerCase().trim();
@@ -54,18 +54,45 @@ interface DailyWalletChartProps {
 export function DailyWalletChart({ data, walletsMeta, height = 320 }: DailyWalletChartProps) {
   // Extrai as carteiras dinamicamente (exceto a coluna 'date')
   const wallets = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== 'date') : [];
+  const DayBreakdownTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !Array.isArray(payload)) return null;
+    const total = payload.reduce((s: number, p: any) => s + (Number(p?.value) || 0), 0);
+    if (!total) return null;
+    const items = payload
+      .map((p: any) => {
+        const name = p.name ?? p.dataKey ?? String(p.payload?.name ?? '');
+        const value = Number(p.value) || 0;
+  const meta = walletsMeta?.find((wm) => wm.name === name);
+  const color = (meta as any)?.color || p.color || p.fill || getWalletColor(name, (meta as any)?.type);
+        return { name, value, color };
+      })
+      .filter((it: any) => it.value > 0)
+      .sort((a: any, b: any) => b.value - a.value);
+    if (items.length === 0) return null;
+    return (
+      <div style={{ background: '#fff', color: '#0f172a', padding: 10, borderRadius: 8, boxShadow: '0 6px 18px rgba(2,6,23,0.08)', minWidth: 220 }}>
+        <div style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>Dia {String(Number(String(label).split('-').slice(-1)[0]))}</div>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {items.map((it: any) => (
+            <div key={it.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, background: it.color }} />
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
+              </div>
+              <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace', fontSize: 20 }}>{it.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
   return (
     <ResponsiveContainer width="100%" height={height as any}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.28} />
         <XAxis dataKey="date" tickFormatter={(d) => String(Number(d.split('-')[2]))} />
         <YAxis />
-        <Tooltip
-          formatter={(value: number) =>
-            value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-          }
-          labelFormatter={(label) => `Dia ${String(Number(label.split('-')[2]))}`}
-        />
+        <Tooltip content={<DayBreakdownTooltip />} />
   <Legend formatter={(value)=> value} />
         {wallets.map((w) => {
           const meta = walletsMeta?.find((wm) => wm.name === w);
