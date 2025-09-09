@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
   const expensesByCategory: Record<string, { amount: number; color: string }> = {};
   for (const e of expenses) {
     const cat = e.category?.name || 'Sem categoria';
-    const color = e.category?.color || '#94a3b8';
+    const color = e.category?.color || 'hsl(var(--muted-foreground))';
     if (!expensesByCategory[cat]) expensesByCategory[cat] = { amount: 0, color };
     expensesByCategory[cat].amount += Number(e.amount);
   }
@@ -139,9 +139,9 @@ export async function GET(req: NextRequest) {
   const expensesByTag: Record<string, { amount: number; color: string }> = {};
   for (const e of expenses) {
     if (Array.isArray(e.tags) && e.tags.length > 0) {
-      for (const tag of e.tags) {
+        for (const tag of e.tags) {
         const tagName = tag;
-        if (!expensesByTag[tagName]) expensesByTag[tagName] = { amount: 0, color: '#6366f1' };
+        if (!expensesByTag[tagName]) expensesByTag[tagName] = { amount: 0, color: 'hsl(var(--primary))' };
         expensesByTag[tagName].amount += Number(e.amount);
       }
     }

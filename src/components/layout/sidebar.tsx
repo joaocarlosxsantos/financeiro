@@ -177,7 +177,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   }, [pathname, module]);
 
   return (
-    <div className="flex h-full w-64 flex-col bg-[radial-gradient(circle_at_30%_20%,#1e293b_0%,#0f172a_60%)] dark:bg-[radial-gradient(circle_at_30%_20%,#0f172a_0%,#020617_65%)] text-white border-r border-white/10 backdrop-blur-sm">
+    <div className="flex h-full w-64 flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm">
       {/* Cabeçalho */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-white/10">
         <div className="flex items-center gap-2">

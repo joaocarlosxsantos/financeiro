@@ -17,7 +17,7 @@ export const DailyBalanceChart = ({ data }: { data: DailyBalancePoint[] }) => {
             <Line
               type="monotone"
               dataKey="balance"
-              stroke="#3b82f6"
+              stroke={`hsl(var(--primary))`}
               strokeWidth={2}
               name="Saldo"
               // Exibe pontos apenas nos dias que existem dados (todos os itens do array recebido)
@@ -30,8 +30,8 @@ export const DailyBalanceChart = ({ data }: { data: DailyBalancePoint[] }) => {
                     cx={cx as any}
                     cy={cy as any}
                     r={3.2}
-                    fill="#3b82f6"
-                    stroke="#1e40af"
+                    fill={`hsl(var(--primary))`}
+                    stroke={`hsl(var(--primary) / 0.8)`}
                     strokeWidth={1}
                   />
                 );

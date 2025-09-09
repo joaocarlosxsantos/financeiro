@@ -39,6 +39,9 @@ input[type='date']::-webkit-calendar-picker-indicator {
     color: hsl(var(--foreground));
   }
 }
+/* Tailwind directives are required for the PostCSS/Tailwind pipeline and must be present
+  so that `@layer base`/`@layer components` etc. are processed. Keep them literal.
+  If your editor flags unknown at-rules, prefer enabling Tailwind/PostCSS support in the IDE. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,6 +69,32 @@ input[type='date']::-webkit-calendar-picker-indicator {
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+  /* sidebar gradient tokens */
+  --sidebar-grad-start: 217 20% 13%;
+  --sidebar-grad-end: 220 12% 5%;
+  /* palette variables for existing hardcoded colors (brand & fallback) */
+  --c-22c55e: #22c55e;
+  --c-64748b: #64748b;
+  --c-ff7f00: #ff7f00;
+  --c-820ad1: #820ad1;
+  --c-0c6cb0: #0c6cb0;
+  --c-d90429: #d90429;
+  --c-ec0000: #ec0000;
+  --c-ff6600: #ff6600;
+  --c-ffcc29: #ffcc29;
+  --c-3b82f6: #3b82f6;
+  --c-ff0057: #ff0057;
+  --c-00995d: #00995d;
+  --c-e94e1b: #e94e1b;
+  --c-00a859: #00a859;
+  --c-f59e42: #f59e42;
+  --c-a3a3a3: #a3a3a3;
+  --c-6366f1: #6366f1;
+  /* semantic colors (H S% L%) so callers can use hsl(var(--success)) */
+  --success: 145 63% 42%; /* ~ #10b981 */
+  --success-foreground: 0 0% 100%;
+  --danger: 6 78% 58%; /* ~ #ef4444 */
+  --danger-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -88,7 +117,80 @@ input[type='date']::-webkit-calendar-picker-indicator {
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 94.1%;
+  --success: 145 63% 42%;
+  --success-foreground: 0 0% 100%;
+  --danger: 6 78% 58%;
+  --danger-foreground: 0 0% 100%;
   }
+}
+
+/* Sidebar background utility (use instead of inline bg-[radial-gradient(...)] classes) */
+@layer components {
+  .sidebar-bg {
+    background-image: radial-gradient(circle at 30% 20%, hsl(var(--sidebar-grad-start)) 0%, hsl(var(--sidebar-grad-end)) 60%);
+  }
+  .dark .sidebar-bg {
+    background-image: radial-gradient(circle at 30% 20%, hsl(220 12% 5%) 0%, hsl(220 8% 2%) 65%);
+  }
+}
+
+/* Tipografia e tokens de fonte padrão */
+@layer base {
+  :root {
+    /* Fonte principal (faça o preload em HTML se usar custom webfont) */
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+    --base-font-size: 16px;
+    --heading-weight: 600;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--base-font-size);
+    line-height: 1.4;
+  }
+}
+
+/* Botões e elementos padronizados */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
+    border: 1px solid transparent;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: color-mix(in srgb, hsl(var(--primary)) 85%, hsl(var(--background)) 15%);
+  }
+  .btn-primary:hover { filter: brightness(0.96); }
+
+  .btn-secondary {
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    border-color: color-mix(in srgb, hsl(var(--secondary)) 85%, hsl(var(--background)) 15%);
+  }
+  .btn-secondary:hover { filter: brightness(0.96); }
+
+  .btn-destructive {
+    background: hsl(var(--destructive));
+    color: hsl(var(--destructive-foreground));
+    border-color: color-mix(in srgb, hsl(var(--destructive)) 85%, hsl(var(--background)) 15%);
+  }
+  .btn-destructive:hover { filter: brightness(0.96); }
+
+  .text-small { font-size: 0.875rem; }
+  .text-muted { color: hsl(var(--muted-foreground)); }
+  .heading { font-weight: var(--heading-weight); }
 }
 
 /* Scrollbar customizado (Webkit + Firefox) */
@@ -145,9 +247,12 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 @layer base {
   * {
-    @apply border-border;
+  /* substituído @apply border-border para evitar warning do editor; mantém a mesma propriedade */
+  border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+  /* substituído @apply bg-background text-foreground para evitar warning do editor */
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   }
 }

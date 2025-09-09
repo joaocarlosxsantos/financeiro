@@ -32,7 +32,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
             <Line
               type="monotone"
               dataKey="baselineLinear"
-              stroke="#3b82f6" /* azul forte */
+              stroke={`hsl(var(--primary))`} /* azul forte */
               strokeWidth={2.2}
               dot={false}
               connectNulls={false}
@@ -42,7 +42,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
             <Line
               type="monotone"
               dataKey="baselineRecent"
-              stroke="#ef4444" /* vermelho forte */
+              stroke={`hsl(var(--danger))`} /* vermelho forte */
               strokeWidth={2.2}
               dot={false}
               connectNulls={false}
@@ -52,7 +52,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
             <Line
               type="monotone"
               dataKey="real"
-              stroke="#10b981"
+              stroke={`hsl(var(--success))`}
               strokeWidth={2}
               name="Saldo Real"
               connectNulls={false}
@@ -71,8 +71,8 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
                     cx={cx}
                     cy={cy}
                     r={isReal ? 3.5 : 0}
-                    fill={isReal ? '#10b981' : 'transparent'}
-                    stroke={isReal ? '#065f46' : 'transparent'}
+                    fill={isReal ? 'hsl(var(--success))' : 'transparent'}
+                    stroke={isReal ? 'hsl(145 60% 22%)' : 'transparent'}
                     strokeWidth={isReal ? 1 : 0}
                   />
                 );
@@ -81,7 +81,7 @@ export const BalanceProjectionChart = ({ data }: { data: BalanceProjectionPoint[
             />
             {/* sombrear período futuro */}
             {lastRealDay > 0 && lastRealDay < data[data.length-1].day && (
-              <ReferenceArea x1={lastRealDay} x2={data[data.length-1].day} fill="#334155" fillOpacity={0.04} />
+              <ReferenceArea x1={lastRealDay} x2={data[data.length-1].day} fill={`hsl(var(--muted))`} fillOpacity={0.04} />
             )}
           </LineChart>
         </ResponsiveContainer>

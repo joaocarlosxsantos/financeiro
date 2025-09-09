@@ -33,12 +33,12 @@ export function MonthlyBarChart({ data, height = 300 }: MonthlyBarChartProps) {
           }
         />
   <Legend formatter={(value)=> value === 'income' ? 'Entradas' : value === 'expense' ? 'Saídas' : value === 'balance' ? 'Saldo' : value} />
-        <Bar dataKey="income" fill="#10b981" name="Entradas" />
-        <Bar dataKey="expense" fill="#ef4444" name="Saídas" />
+  <Bar dataKey="income" fill={`hsl(var(--success))`} name="Entradas" />
+  <Bar dataKey="expense" fill={`hsl(var(--danger))`} name="Saídas" />
         <Line
           type="monotone"
           dataKey="balance"
-          stroke="#3b82f6"
+          stroke={`hsl(var(--primary))`}
           name="Saldo"
           dot={false}
           strokeWidth={2}

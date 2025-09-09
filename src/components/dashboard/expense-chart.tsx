@@ -41,7 +41,7 @@ export function ExpenseChart({ data, maxItems }: ExpenseChartProps) {
               label={false}
               labelLine={false}
               outerRadius={isMobile ? 100 : 150}
-              fill="#8884d8"
+              fill="hsl(var(--muted))"
               dataKey="value"
             >
               {chartData.map((entry, index) => (

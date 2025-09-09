@@ -85,7 +85,7 @@ export default function MobileChartDetailList({ dailyData, meta, title }: Mobile
                   <div className="flex items-center gap-2 min-w-0">
                     <span
                       className="w-3 h-3 rounded-full shrink-0"
-                      style={{ background: g.color || '#94a3b8' }}
+                      style={{ background: g.color || 'hsl(var(--muted-foreground))' }}
                       aria-hidden
                     />
                     <span className="truncate">{meta?.[g.key]?.name ?? g.key}</span>

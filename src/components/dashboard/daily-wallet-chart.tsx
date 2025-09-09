@@ -16,33 +16,33 @@ export function getWalletColor(walletName: string, walletType?: string) {
   const type = (walletType || '').toLowerCase().trim();
 
   // Preferir tipo quando disponível
-  if (type === 'dinheiro') return '#22c55e'; // verde
-  if (type === 'outros') return '#64748b'; // cinza
+  if (type === 'dinheiro') return 'var(--c-22c55e)'; // verde
+  if (type === 'outros') return 'var(--c-64748b)'; // cinza
 
   // Se for banco (ou se o tipo não estiver presente mas o nome sugira banco), escolher cores por heurística
   const looksLikeBank = type === 'banco' || /bank|banco|itau|itaú|nubank|bradesco|santander|caixa|inter|bb|brasil/.test(name);
   if (looksLikeBank) {
-    if (name.includes('inter')) return '#ff7f00'; // laranja Inter
-    if (name.includes('nubank')) return '#820ad1'; // roxo Nubank
-    if (name.includes('caixa')) return '#0c6cb0'; // azul Caixa
-    if (name.includes('bradesco')) return '#d90429'; // vermelho Bradesco
-    if (name.includes('santander')) return '#ec0000'; // vermelho Santander
-    if (name.includes('itau') || name.includes('itaú')) return '#ff6600'; // laranja Itaú
-    if (name.includes('bb') || name.includes('brasil')) return '#ffcc29'; // amarelo BB
+  if (name.includes('inter')) return 'var(--c-ff7f00)'; // laranja Inter
+  if (name.includes('nubank')) return 'var(--c-820ad1)'; // roxo Nubank
+  if (name.includes('caixa')) return 'var(--c-0c6cb0)'; // azul Caixa
+  if (name.includes('bradesco')) return 'var(--c-d90429)'; // vermelho Bradesco
+  if (name.includes('santander')) return 'var(--c-ec0000)'; // vermelho Santander
+  if (name.includes('itau') || name.includes('itaú')) return 'var(--c-ff6600)'; // laranja Itaú
+  if (name.includes('bb') || name.includes('brasil')) return 'var(--c-ffcc29)'; // amarelo BB
     // padrão para bancos
-    return '#3b82f6'; // azul padrão banco
+  return 'var(--c-3b82f6)'; // azul padrão banco
   }
 
   // Vale benefícios
   if (type === 'vale benefícios' || type === 'vale beneficios' || /alelo|sodexo|vr|flash/.test(name)) {
-    if (name.includes('flash')) return '#ff0057'; // cor Flash
-    if (name.includes('alelo')) return '#00995d'; // verde Alelo
-    if (name.includes('sodexo')) return '#e94e1b'; // laranja Sodexo
-    if (name.includes('vr')) return '#00a859'; // verde VR
-    return '#f59e42'; // laranja padrão benefício
+  if (name.includes('flash')) return 'var(--c-ff0057)'; // cor Flash
+  if (name.includes('alelo')) return 'var(--c-00995d)'; // verde Alelo
+  if (name.includes('sodexo')) return 'var(--c-e94e1b)'; // laranja Sodexo
+  if (name.includes('vr')) return 'var(--c-00a859)'; // verde VR
+  return 'var(--c-f59e42)'; // laranja padrão benefício
   }
 
-  return '#a3a3a3'; // fallback cinza
+  return 'var(--c-a3a3a3)'; // fallback cinza
 }
 
 interface DailyWalletChartProps {
@@ -70,8 +70,8 @@ export function DailyWalletChart({ data, walletsMeta, height = 320 }: DailyWalle
       .sort((a: any, b: any) => b.value - a.value);
     if (items.length === 0) return null;
     return (
-      <div style={{ background: '#fff', color: '#0f172a', padding: 10, borderRadius: 8, boxShadow: '0 6px 18px rgba(2,6,23,0.08)', minWidth: 220 }}>
-        <div style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>Dia {String(Number(String(label).split('-').slice(-1)[0]))}</div>
+      <div style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', padding: 10, borderRadius: 8, boxShadow: '0 6px 18px rgba(2,6,23,0.08)', minWidth: 220 }}>
+        <div style={{ fontSize: 14, color: 'hsl(var(--muted-foreground))', marginBottom: 8 }}>Dia {String(Number(String(label).split('-').slice(-1)[0]))}</div>
         <div style={{ display: 'grid', gap: 8 }}>
           {items.map((it: any) => (
             <div key={it.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 18 }}>

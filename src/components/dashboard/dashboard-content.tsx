@@ -467,7 +467,7 @@ export function DashboardContent() {
       const expenseMap = new Map<string, { amount: number; color: string }>();
       for (const e of allExpenses) {
         const key = e.category?.name || 'Sem categoria';
-        const color = e.category?.color || '#94a3b8';
+  const color = e.category?.color || `hsl(var(--muted-foreground))`;
         const cur = expenseMap.get(key) || { amount: 0, color };
         cur.amount += Number(e.amount);
         cur.color = color;
@@ -482,7 +482,7 @@ export function DashboardContent() {
       const incomeMap = new Map<string, { amount: number; color: string }>();
       for (const i of allIncomes) {
         const key = i.category?.name || 'Sem categoria';
-        const color = i.category?.color || '#10b981';
+  const color = i.category?.color || `hsl(var(--success))`;
         const cur = incomeMap.get(key) || { amount: 0, color };
         cur.amount += Number(i.amount);
         cur.color = color;

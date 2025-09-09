@@ -28,7 +28,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<{ name?: string }>({});
-  const [color, setColor] = useState('#3b82f6');
+  const [color, setColor] = useState('var(--c-3b82f6)');
 
   // (Removido useEffect de sincronização de cor, pois resetForm já garante o valor correto)
   const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'BOTH'>('EXPENSE');
@@ -54,7 +54,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
   const resetForm = (cat?: Category) => {
     setEditingId(cat ? cat.id : null);
     setName(cat ? cat.name : '');
-    setColor(cat ? cat.color : '#3b82f6');
+  setColor(cat ? cat.color : 'var(--c-3b82f6)');
     setType(cat ? cat.type : 'EXPENSE');
     setIcon(cat && cat.icon ? cat.icon : '');
     setTimeout(() => setShowForm(true), 0);
@@ -103,7 +103,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
     setShowForm(false);
     setEditingId(null);
     setName('');
-    setColor('#3b82f6');
+  setColor('var(--c-3b82f6)');
     setType('EXPENSE');
     setIcon('');
     setErrors({});

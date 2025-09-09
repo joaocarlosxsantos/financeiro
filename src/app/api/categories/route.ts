@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const categorySchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
-    color: z.string().optional().default('#3B82F6'),
+  color: z.string().optional().default('var(--c-3b82f6)'),
     type: z.enum(['EXPENSE', 'INCOME', 'BOTH']),
     icon: z.string().optional().nullable(),
   });

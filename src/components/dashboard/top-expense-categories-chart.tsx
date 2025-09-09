@@ -54,7 +54,7 @@ export function TopExpenseCategoriesChart({ data, height }: TopExpenseCategories
             fontWeight: 600,
           }}
         />
-        <ReferenceLine x={0} stroke="#64748b" strokeDasharray="4 3" />
+  <ReferenceLine x={0} stroke={`hsl(var(--muted-foreground))`} strokeDasharray="4 3" />
         <Tooltip
           formatter={(value: number | string, name: string) => {
             if (typeof value === 'number') {
@@ -75,7 +75,7 @@ export function TopExpenseCategoriesChart({ data, height }: TopExpenseCategories
           isAnimationActive={false}
         >
           {chartData.map((d) => (
-            <Cell key={d.category} fill={d.diff > 0 ? '#dc2626' : '#16a34a'} />
+            <Cell key={d.category} fill={d.diff > 0 ? `hsl(var(--danger))` : `hsl(var(--success))`} />
           ))}
           <LabelList content={renderDiffLabel} />
         </Bar>
@@ -124,7 +124,7 @@ const renderDiffLabel = (props: any) => {
   const prevAmount: number = Number(payload.prevAmount ?? (payload.amount - diff));
   const currentAmount: number = Number(payload.amount);
   const diffCompact = `${diff > 0 ? '+' : ''}${formatCompactCurrencyNumber(diff)}`;
-  const color = diff > 0 ? '#dc2626' : '#16a34a';
+  const color = diff > 0 ? `hsl(var(--danger))` : `hsl(var(--success))`;
   const centerY = Number(y) + Number(height) / 2 + 4;
   const anchor = diff >= 0 ? 'start' : 'end';
   const textX = diff >= 0 ? Number(x) + Number(width) + 6 : Number(x) - 6;
@@ -140,13 +140,13 @@ const renderDiffLabel = (props: any) => {
       >
         {diffCompact}
       </text>
-      <text
+  <text
         x={textX}
         y={centerY + 12}
         fontSize={10}
         fontWeight={500}
         textAnchor={anchor}
-        fill="#6b7280"
+  fill={`hsl(var(--muted-foreground))`}
       >
         {`${formatCompactCurrencyNumber(prevAmount)} → ${formatCompactCurrencyNumber(currentAmount)}`}
       </text>

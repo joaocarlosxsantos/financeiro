@@ -38,8 +38,8 @@ export function DailyCategoryChart({ data, categoryColors, height = 320 }: Daily
     if (items.length === 0) return null;
 
     return (
-      <div style={{ background: '#fff', color: '#0f172a', padding: 10, borderRadius: 8, boxShadow: '0 6px 18px rgba(2,6,23,0.08)', minWidth: 220 }}>
-        <div style={{ fontSize: 15, color: '#374151', marginBottom: 8 }}>Dia {String(Number(String(label).split('-').slice(-1)[0]))}</div>
+      <div style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', padding: 10, borderRadius: 8, boxShadow: '0 6px 18px rgba(2,6,23,0.08)', minWidth: 220 }}>
+        <div style={{ fontSize: 15, color: 'hsl(var(--muted-foreground))', marginBottom: 8 }}>Dia {String(Number(String(label).split('-').slice(-1)[0]))}</div>
         <div style={{ display: 'grid', gap: 8 }}>
           {items.map((it: any) => (
             <div key={it.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 18 }}>
@@ -79,18 +79,18 @@ export function DailyCategoryChart({ data, categoryColors, height = 320 }: Daily
 // Função simples para gerar cores distintas
 function getColor(idx: number) {
   const palette = [
-    '#6366f1',
-    '#10b981',
-    '#ef4444',
-    '#f59e42',
-    '#3b82f6',
-    '#a21caf',
-    '#eab308',
-    '#0ea5e9',
-    '#f43f5e',
-    '#22d3ee',
-    '#84cc16',
-    '#f472b6',
+    'hsl(var(--primary))',
+    'hsl(var(--success))',
+    'hsl(var(--danger))',
+    'hsl(34 95% 60%)',
+    'hsl(214 90% 56%)',
+    'hsl(286 60% 47%)',
+    'hsl(48 85% 50%)',
+    'hsl(197 90% 56%)',
+    'hsl(344 85% 58%)',
+    'hsl(187 85% 50%)',
+    'hsl(88 65% 45%)',
+    'hsl(326 70% 62%)',
   ];
   return palette[idx % palette.length];
 }
