@@ -66,14 +66,15 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
     dayOfMonth: '',
     categoryId: '',
     walletId: '',
-    startDate: '',
-    endDate: '',
+    startDate: today,
+    endDate: today,
     tags: [] as string[],
   });
 
@@ -202,8 +203,8 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
         dayOfMonth: '',
         categoryId: '',
         walletId: '',
-        startDate: '',
-        endDate: '',
+        startDate: today,
+        endDate: today,
         tags: [],
       });
       setErrors({});
@@ -219,7 +220,7 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
           <p className="text-gray-600 dark:text-foreground">Gerencie suas despesas fixas</p>
         </div>
         <Button
-          onClick={() => {
+            onClick={() => {
             setShowForm(true);
             setEditingId(null);
             setForm({
@@ -228,8 +229,8 @@ export function DespesasFixasTab({ currentDate }: DespesasFixasTabProps) {
               dayOfMonth: '',
               categoryId: '',
               walletId: '',
-              startDate: '',
-              endDate: '',
+              startDate: today,
+              endDate: today,
               tags: [],
             });
           }}

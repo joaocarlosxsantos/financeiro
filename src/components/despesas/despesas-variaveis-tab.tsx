@@ -70,10 +70,11 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
-    date: '',
+    date: today,
     categoryId: '',
     walletId: '',
     tags: [] as string[],
@@ -192,7 +193,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
                   setForm({
                     description: '',
                     amount: '',
-                    date: '',
+                    date: today,
                     categoryId: '',
                     walletId: '',
                     tags: [],
@@ -358,7 +359,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
               setForm({
                 description: '',
                 amount: '',
-                date: '',
+                date: today,
                 categoryId: '',
                 walletId: '',
                 tags: [],
@@ -435,7 +436,7 @@ export default function DespesasVariaveisTab({ currentDate }: any) {
                   setForm({
                     description: '',
                     amount: '',
-                    date: '',
+                    date: today,
                     categoryId: '',
                     walletId: '',
                     tags: [],

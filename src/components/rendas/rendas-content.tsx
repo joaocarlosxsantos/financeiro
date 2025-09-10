@@ -26,6 +26,8 @@ export default function RendasContent() {
   const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
   const yearLabel = currentDate.getFullYear();
 
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -55,7 +57,7 @@ export default function RendasContent() {
           </Button>
         </div>
       </div>
-      <RendasUnificadas currentDate={currentDate} />
+  <RendasUnificadas currentDate={currentDate} defaultDate={today} />
     </div>
   );
 }

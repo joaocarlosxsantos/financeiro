@@ -59,14 +59,15 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
     dayOfMonth: '',
     categoryId: '',
     walletId: '',
-    startDate: '',
-    endDate: '',
+    startDate: today,
+    endDate: today,
     tags: [] as string[],
   });
   const [errors, setErrors] = useState<{
@@ -191,8 +192,8 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
         dayOfMonth: '',
         categoryId: '',
         walletId: '',
-        startDate: '',
-        endDate: '',
+        startDate: today,
+        endDate: today,
         tags: [],
       });
       setEditingId(null);
@@ -210,15 +211,15 @@ export function RendasFixasTab({ currentDate }: { currentDate: Date }) {
           <p className="text-gray-600 dark:text-foreground">Gerencie suas rendas fixas</p>
         </div>
         <Button
-          onClick={() => {
+            onClick={() => {
             setForm({
               description: '',
               amount: '',
               dayOfMonth: '',
               categoryId: '',
               walletId: '',
-              startDate: '',
-              endDate: '',
+              startDate: today,
+              endDate: today,
               tags: [],
             });
             setEditingId(null);

@@ -61,10 +61,11 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
     walletId: string;
     tags: string[];
   };
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState<FormState>({
     description: '',
     amount: '',
-    date: '',
+    date: today,
     categoryId: '',
     walletId: '',
     tags: [],
@@ -214,7 +215,7 @@ export function RendasVariaveisTab({ currentDate }: { currentDate: Date }) {
             setForm({
               description: '',
               amount: '',
-              date: '',
+              date: today,
               categoryId: '',
               walletId: '',
               tags: [],

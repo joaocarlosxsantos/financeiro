@@ -43,7 +43,7 @@ interface Renda {
   endDate?: Date | null;
 }
 
-export default function RendasUnificadas({ currentDate }: { currentDate: Date }) {
+export default function RendasUnificadas({ currentDate, defaultDate }: { currentDate: Date; defaultDate?: string }) {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
@@ -53,10 +53,11 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const today = defaultDate ?? new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
-    date: '',
+    date: today,
     categoryId: '',
     walletId: '',
     tags: [] as string[],
@@ -210,7 +211,7 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
       setForm({
         description: '',
         amount: '',
-        date: '',
+        date: today,
         categoryId: '',
         walletId: '',
         tags: [],
@@ -430,15 +431,15 @@ export default function RendasUnificadas({ currentDate }: { currentDate: Date })
                 setShowForm(true);
                 setEditingId(null);
                 setForm({
-                  description: '',
-                  amount: '',
-                  date: '',
-                  categoryId: '',
-                  walletId: '',
-                  tags: [],
-                  isFixed: false,
-                  endDate: '',
-                });
+                    description: '',
+                    amount: '',
+                    date: today,
+                    categoryId: '',
+                    walletId: '',
+                    tags: [],
+                    isFixed: false,
+                    endDate: '',
+                  });
               }}
           >
             <Plus className="h-4 w-4 mr-2" />

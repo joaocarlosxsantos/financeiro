@@ -27,6 +27,8 @@ export default function DespesasContent() {
   const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
   const yearLabel = currentDate.getFullYear();
 
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -56,7 +58,7 @@ export default function DespesasContent() {
           </Button>
         </div>
       </div>
-      <DespesasUnificadas currentDate={currentDate} />
+  <DespesasUnificadas currentDate={currentDate} defaultDate={today} />
     </div>
   );
 }

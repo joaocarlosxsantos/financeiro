@@ -8,10 +8,11 @@ type Carteira = { id: string; name: string };
 type Tag = { id: string; name: string };
 
 export default function QuickDespesaForm() {
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
-    date: '',
+    date: today,
     categoryId: '',
     walletId: '',
     tags: [] as string[],
@@ -106,7 +107,7 @@ export default function QuickDespesaForm() {
         return;
       }
       const keptCategory = form.categoryId;
-      setForm((f) => ({ ...f, description: '', amount: '', date: '', categoryId: keptCategory, tags: [] }));
+  setForm((f) => ({ ...f, description: '', amount: '', date: today, categoryId: keptCategory, tags: [] }));
       requestAnimationFrame(() => {
         amountRef.current?.focus();
         setShowToast(true);
