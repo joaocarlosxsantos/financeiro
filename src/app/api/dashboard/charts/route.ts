@@ -302,26 +302,80 @@ export async function GET(req: NextRequest) {
   const daysElapsed = dayKeysSorted.length;
   const currentNet = running - previousBalance;
   const avgPerDay = daysElapsed > 0 ? currentNet / daysElapsed : 0;
-  const historicalAvgPerDay = avgPerDay; // simplified for now
-  const combinedAvgPerDay = avgPerDay; // simplified
-  const projectedFinal = previousBalance + combinedAvgPerDay * totalDaysInMonth;
-  const balanceProjectionData: Array<{ day: number; real?: number; baselineLinear?: number; baselineRecent?: number }> = [];
+
+  // Projeção Linear Global: média diária líquida desde o primeiro dia do mês até hoje
+  // baselineLinear(d) = previousBalance + avgPerDay * d
+
+  // Projeção Ritmo Recente: média dos últimos 7 dias comparada com os mesmos 7 dias dos últimos 3 meses
+  // Calcular net dos últimos 7 dias (baseado em dayMap)
   const lastRealDay = isCurrentMonth ? Math.min(new Date().getDate(), totalDaysInMonth) : totalDaysInMonth;
+  const startRecentDay = Math.max(1, lastRealDay - 6);
+  let netLast7 = 0;
+  for (let dd = startRecentDay; dd <= lastRealDay; dd++) {
+    const key = toYmd(new Date(year, month - 1, dd));
+    const entry = dayMap[key];
+    if (entry) netLast7 += (entry.income || 0) - (entry.expense || 0);
+  }
+
+  // buscar valores equivalentes nos últimos 3 meses
+  const recentNets: number[] = [];
+  if (netLast7 !== 0) recentNets.push(netLast7);
+
+  for (let m = 1; m <= 3; m++) {
+    const monthDate = new Date(year, month - 1 - m, 1);
+    const lastDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+    const startDay = startRecentDay;
+    const endDay = Math.min(startDay + 6, lastDayOfMonth);
+    const startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), startDay);
+    const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), endDay);
+
+    // soma variáveis nesse intervalo
+    const [varsExp, varsInc] = await Promise.all([
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, ...walletFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, ...walletFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
+    ]);
+    const sumVarsExp = varsExp.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
+    const sumVarsInc = varsInc.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
+
+    // considerar FIXED ocorrências: prevExpFix e prevIncFix contém registros FIXED (com startDate/endDate/dayOfMonth)
+    let sumFixedExp = 0;
+    for (const fe of prevExpFix) {
+      const recStart = fe.startDate ?? fe.date ?? null;
+      const recEnd = fe.endDate ?? null;
+      const cnt = countMonthlyOccurrences(recStart, recEnd, (fe as any).dayOfMonth ?? null, startDate, endDate);
+      sumFixedExp += Number(fe.amount || 0) * cnt;
+    }
+    let sumFixedInc = 0;
+    for (const fi of prevIncFix) {
+      const recStart = fi.startDate ?? fi.date ?? null;
+      const recEnd = fi.endDate ?? null;
+      const cnt = countMonthlyOccurrences(recStart, recEnd, (fi as any).dayOfMonth ?? null, startDate, endDate);
+      sumFixedInc += Number(fi.amount || 0) * cnt;
+    }
+
+    const net = sumVarsInc + sumFixedInc - (sumVarsExp + sumFixedExp);
+    if (net !== 0) recentNets.push(net);
+  }
+
+  const validRecentCount = recentNets.length;
+  const avgRecent7 = validRecentCount > 0 ? recentNets.reduce((s, v) => s + v, 0) / validRecentCount : 0;
+  const perDayRecent = avgRecent7 / 7;
+
+  const balanceProjectionData: Array<{ day: number; real?: number; baselineLinear?: number; baselineRecent?: number }> = [];
   const lastRealBalance = dailyBalanceData.length ? dailyBalanceData[dailyBalanceData.length - 1].balance : previousBalance;
+  // projetar a partir do saldo real do último dia com dado (lastRealBalance)
   for (let d = 1; d <= totalDaysInMonth; d++) {
     const realEntry = dailyBalanceData.find((x) => Number(x.date.split('-').pop()) === d);
     const real = realEntry && d <= lastRealDay ? realEntry.balance : undefined;
-    let baselineLinear: number | undefined;
-    let baselineRecent: number | undefined;
-    if (!isCurrentMonth) {
-      baselineLinear = undefined;
-      baselineRecent = undefined;
-    } else if (d <= lastRealDay) {
-      baselineLinear = real !== undefined ? real : lastRealBalance;
-      baselineRecent = real !== undefined ? real : lastRealBalance;
-    } else {
-      baselineLinear = lastRealBalance + combinedAvgPerDay * (d - lastRealDay);
-      baselineRecent = lastRealBalance + combinedAvgPerDay * (d - lastRealDay);
+
+    let baselineLinear: number | undefined = undefined;
+    let baselineRecent: number | undefined = undefined;
+    // Somente projetar para o mês atual. Garantir que o dia atual (lastRealDay)
+    // tenha baseline igual ao saldo real para conectar as linhas.
+    if (isCurrentMonth && d >= lastRealDay) {
+      const daysAfter = d - lastRealDay;
+      baselineLinear = lastRealBalance + avgPerDay * daysAfter;
+      baselineRecent = lastRealBalance + perDayRecent * daysAfter;
     }
     balanceProjectionData.push({ day: d, real, baselineLinear, baselineRecent });
   }
