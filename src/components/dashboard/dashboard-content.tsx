@@ -950,7 +950,12 @@ export function DashboardContent() {
               {isMobile ? (
                 <MobileChartDetailList
                   dailyData={dailyByTag}
-                  meta={Object.fromEntries(Object.keys(tagNames).map((k) => [k, { name: tagNames[k], color: undefined }] ))}
+                  meta={Object.fromEntries(
+                    Object.keys(tagNames).flatMap((k) => [
+                      [k, { name: tagNames[k], color: undefined }],
+                      [tagNames[k], { name: tagNames[k], color: undefined }],
+                    ]),
+                  )}
                   title="Gasto Diário por Tag"
                 />
               ) : dailyByTag.length > 0 ? (
