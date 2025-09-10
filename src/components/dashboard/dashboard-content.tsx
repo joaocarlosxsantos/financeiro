@@ -968,8 +968,16 @@ export function DashboardContent() {
           {chartModal === 'monthly' && (
             <div className="h-full">
               {isMobile ? (
+                // transformar monthlyData para o formato esperado pelo MobileChartDetailList
                 <MobileChartDetailList
-                  dailyData={summary.monthlyData}
+                  dailyData={summary.monthlyData
+                    .map((m) => ({ date: m.month, Entradas: m.income, 'Saídas': m.expense }))
+                    .filter((r) => (Number(r.Entradas || 0) !== 0 || Number(r['Saídas'] || 0) !== 0))
+                  }
+                  meta={Object.fromEntries([
+                    ['Entradas', { name: 'Entradas', color: 'hsl(var(--success))' }],
+                    ['Saídas', { name: 'Saídas', color: 'hsl(var(--danger))' }],
+                  ])}
                   title="Entradas vs Saídas (12 meses)"
                 />
               ) : summary.monthlyData.length > 0 ? (
