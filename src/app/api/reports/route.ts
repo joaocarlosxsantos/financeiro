@@ -1,0 +1,316 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+// Rota: /api/reports
+// Query params suportados:
+// - type: 'income' | 'expense' | 'both' (default: both)
+// - startDate, endDate: ISO strings
+// - categoryIds: csv of category ids
+// - walletIds: csv of wallet ids
+// - tag: single tag name (prisma stores tags as string[])
+
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const url = new URL(req.url);
+  const qp = url.searchParams;
+
+  const type = qp.get('type') || 'both';
+  const startDate = qp.get('startDate');
+  const endDate = qp.get('endDate');
+  const categoryIds = qp.get('categoryIds') ? qp.get('categoryIds')!.split(',').filter(Boolean) : undefined;
+  const walletIds = qp.get('walletIds') ? qp.get('walletIds')!.split(',').filter(Boolean) : undefined;
+  const tags = qp.get('tags') ? qp.get('tags')!.split(',').filter(Boolean) : undefined;
+  const page = Number(qp.get('page') || '1');
+  const pageSize = Math.min(500, Math.max(1, Number(qp.get('pageSize') || '50')));
+  const debugFlag = qp.get('debug') === '1';
+
+  // If tags filter provided, resolve values (might be ids or names) to canonical tag names for filtering
+  let tagNames: string[] = [];
+  if (tags && tags.length > 0) {
+    const tagRows: { id: string; name: string }[] = await prisma.tag.findMany({ where: { userId: user.id, OR: [ { id: { in: tags } }, { name: { in: tags } } ] } });
+    tagNames = tagRows.map((t) => t.name);
+    // if resolution found none, fall back to original values (so filter still applies)
+    if (tagNames.length === 0) tagNames = tags;
+  }
+
+  // Basic where clause builder
+  const dateFilter: any = {};
+  if (startDate) dateFilter.gte = new Date(startDate);
+  if (endDate) dateFilter.lte = new Date(endDate);
+
+  try {
+    const results: Array<any> = [];
+    // where common used for counts/aggregates
+    const commonWhere: any = {
+      AND: [
+        { userId: user.id },
+        startDate || endDate ? { date: dateFilter } : {},
+        categoryIds ? { categoryId: { in: categoryIds } } : {},
+        walletIds ? { walletId: { in: walletIds } } : {},
+        tags ? { tags: { hasSome: tagNames } } : {},
+      ],
+    };
+
+    // Helper to expand fixed records into occurrences within the interval
+    const expandFixedOccurrences = async (rows: any[], kind: 'income' | 'expense') => {
+      const occurrences: any[] = [];
+      const sDate = startDate ? new Date(startDate) : null;
+      const eDate = endDate ? new Date(endDate) : null;
+      for (const r of rows) {
+        // For non-fixed records, only include if within requested date interval (if provided)
+        if (!r.isFixed) {
+          const rowDate = r.date ? new Date(r.date) : null;
+          if (rowDate) {
+            if ((sDate && rowDate < sDate) || (eDate && rowDate > eDate)) {
+              continue; // out of requested interval
+            }
+          }
+          occurrences.push({ ...r, kind });
+          continue;
+        }
+        // determine series start and end
+        const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
+        const seriesEnd = r.endDate ? new Date(r.endDate) : null;
+        // compute intersection of [seriesStart, seriesEnd?] with [sDate,eDate]
+        const from = sDate && sDate > seriesStart ? sDate : seriesStart;
+        const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
+        if (!to) {
+          // no upper bound, include one occurrence at 'from'
+          occurrences.push({ ...r, kind, date: from });
+          continue;
+        }
+        // create monthly occurrences between from and to (inclusive), limit months to 24
+        let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+        const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
+        let months = 0;
+        const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+  while (cursor <= endCursor && months < 24) {
+          // determine desired day: prefer explicit dayOfMonth, otherwise use original record day (use UTC to avoid timezone shifts)
+          const originalDay = r.date ? new Date(r.date).getUTCDate() : 1;
+          let desiredDay = (r.dayOfMonth && Number.isFinite(r.dayOfMonth)) ? Number(r.dayOfMonth) : originalDay;
+          const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
+          const day = Math.min(desiredDay, lastDay);
+          const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
+          // only include if within sDate..eDate
+          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) {
+            // give a deterministic occurrence id so frontend can key rows properly
+            const occId = `${r.id}::${occDate.getUTCFullYear()}-${String(occDate.getUTCMonth()+1).padStart(2,'0')}-${String(occDate.getUTCDate()).padStart(2,'0')}`;
+            occurrences.push({ ...r, kind, date: occDate, occurrenceId: occId });
+          }
+          cursor.setMonth(cursor.getMonth() + 1);
+          months += 1;
+        }
+      }
+      // Normalize tags: if tags look like IDs, try to resolve names
+      const allTagValues = Array.from(new Set(occurrences.flatMap((o) => Array.isArray(o.tags) ? o.tags : [])));
+      if (allTagValues.length > 0) {
+        // fetch user's tags once
+        const tagsInDb = await prisma.tag.findMany({ where: { userId: user.id, OR: [ { id: { in: allTagValues } }, { name: { in: allTagValues } } ] } });
+        const idToName: Record<string,string> = {};
+        for (const t of tagsInDb) idToName[String(t.id)] = t.name, idToName[String(t.name)] = t.name;
+        for (const o of occurrences) {
+          if (!Array.isArray(o.tags)) continue;
+          o.tags = o.tags.map((tv: string) => idToName[String(tv)] ?? String(tv));
+        }
+      }
+      return occurrences;
+    };
+
+  // keep fetched rows accessible for totals calculation
+  let incomesFetched: any[] = [];
+  let expensesFetched: any[] = [];
+
+  if (type === 'income' || type === 'both') {
+      // fetch both fixed and variable incomes matching filters (excluding date filter because we'll handle occurrences)
+      const incomeWhere = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {} ] };
+  const incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true } });
+  incomesFetched = incomes;
+      // debug logging removed to avoid noisy console output
+  const incOcc = await expandFixedOccurrences(incomes, 'income');
+      results.push(...incOcc);
+    }
+
+    if (type === 'expense' || type === 'both') {
+      const expenseWhere = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {} ] };
+  const expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true } });
+  expensesFetched = expenses;
+      // debug logging removed to avoid noisy console output
+  const expOcc = await expandFixedOccurrences(expenses, 'expense');
+      results.push(...expOcc);
+    }
+
+    // ordenar resultados por date desc
+    results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // totals: compute sums that respect all filters (date, category, wallet, tags)
+    // Approach:
+    // - For variable (non-fixed) records, use DB aggregate with date filter applied
+    // - For fixed records, compute occurrences within the interval and sum their amounts
+    const computeFixedSum = (rows: any[]) => {
+      let sum = 0;
+      const sDate = startDate ? new Date(startDate) : null;
+      const eDate = endDate ? new Date(endDate) : null;
+      const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+      for (const r of rows) {
+        if (!r.isFixed) continue;
+        const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
+        const seriesEnd = r.endDate ? new Date(r.endDate) : null;
+        const from = sDate && sDate > seriesStart ? sDate : seriesStart;
+        const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
+        if (!to) {
+          // no upper bound: include one occurrence at 'from' (same behavior as expansion)
+          const occDate = from;
+          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) sum += Number(r.amount ?? 0);
+          continue;
+        }
+        let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+        const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
+  let months = 0;
+  const originalDay = r.date ? new Date(r.date).getUTCDate() : 1;
+        while (cursor <= endCursor && months < 24) {
+          let desiredDay = (r.dayOfMonth && Number.isFinite(r.dayOfMonth)) ? Number(r.dayOfMonth) : originalDay;
+          const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
+          const day = Math.min(desiredDay, lastDay);
+          const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
+          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) {
+            sum += Number(r.amount ?? 0);
+          }
+          cursor.setMonth(cursor.getMonth() + 1);
+          months += 1;
+        }
+      }
+      return sum;
+    };
+
+    // helper used only for debug: build a breakdown of occurrences per fixed row
+    const buildFixedBreakdown = (rows: any[]) => {
+      const sDate = startDate ? new Date(startDate) : null;
+      const eDate = endDate ? new Date(endDate) : null;
+      const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+      const breakdown: any[] = [];
+      for (const r of rows) {
+        if (!r.isFixed) continue;
+        const occurrences: string[] = [];
+        const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
+        const seriesEnd = r.endDate ? new Date(r.endDate) : null;
+        const from = sDate && sDate > seriesStart ? sDate : seriesStart;
+        const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
+        if (!to) {
+          const occDate = from;
+          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) occurrences.push(occDate.toISOString());
+        } else {
+          let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+          const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
+          let months = 0;
+          const originalDay = r.date ? new Date(r.date).getDate() : 1;
+          while (cursor <= endCursor && months < 24) {
+            let desiredDay = (r.dayOfMonth && Number.isFinite(r.dayOfMonth)) ? Number(r.dayOfMonth) : originalDay;
+            const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
+            const day = Math.min(desiredDay, lastDay);
+            const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
+            if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) occurrences.push(occDate.toISOString());
+            cursor.setMonth(cursor.getMonth() + 1);
+            months += 1;
+          }
+        }
+        breakdown.push({ id: r.id, amount: r.amount, occurrences });
+      }
+      return breakdown;
+    };
+
+    // variable incomes/expenses aggregate (DB) — apply same category/wallet/tag filters plus date
+    const variableIncomeWhere: any = {
+      AND: [
+        { userId: user.id },
+        { isFixed: false },
+        startDate || endDate ? { date: dateFilter } : {},
+        categoryIds ? { categoryId: { in: categoryIds } } : {},
+        walletIds ? { walletId: { in: walletIds } } : {},
+        tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
+      ],
+    };
+    const variableExpenseWhere: any = {
+      AND: [
+        { userId: user.id },
+        { isFixed: false },
+        startDate || endDate ? { date: dateFilter } : {},
+        categoryIds ? { categoryId: { in: categoryIds } } : {},
+        walletIds ? { walletId: { in: walletIds } } : {},
+        tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
+      ],
+    };
+
+    const [incomeAgg, expenseAgg] = await Promise.all([
+      prisma.income.aggregate({ where: variableIncomeWhere, _sum: { amount: true } }),
+      prisma.expense.aggregate({ where: variableExpenseWhere, _sum: { amount: true } }),
+    ]);
+
+    const variableIncomeSum = Number(incomeAgg._sum.amount ?? 0);
+    const variableExpenseSum = Number(expenseAgg._sum.amount ?? 0);
+
+    // fixed sums: compute from fetched rows (these were already filtered by category/wallet/tags when loaded)
+  const fixedIncomeSum = computeFixedSum(incomesFetched.filter((i: any) => i.isFixed));
+  const fixedExpenseSum = computeFixedSum(expensesFetched.filter((e: any) => e.isFixed));
+
+    const totalIncomes = variableIncomeSum + fixedIncomeSum;
+    const totalExpenses = variableExpenseSum + fixedExpenseSum;
+
+    // fallback raw DB aggregates (kept for debugging / comparison)
+    // const incomeAgg = await prisma.income.aggregate({ where: commonWhere, _sum: { amount: true } });
+    // const expenseAgg = await prisma.expense.aggregate({ where: commonWhere, _sum: { amount: true } });
+    // const rawTotalIncomes = Number(incomeAgg._sum.amount ?? 0);
+    // const rawTotalExpenses = Number(expenseAgg._sum.amount ?? 0);
+
+    // counts (for pagination reflect expanded occurrences)
+  const totalCount = results.length;
+
+    // paginar (slice)
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const pageData = results.slice(start, end);
+
+    const totals: any = { incomes: Number(totalIncomes ?? 0), expenses: Number(totalExpenses ?? 0) };
+    if (type === 'both') totals.net = totals.incomes - totals.expenses;
+
+    // If debug requested (and running in non-production), include breakdown to help debugging
+    if (debugFlag && process.env.NODE_ENV !== 'production') {
+      const occurrenceCount = results.length;
+      const incomeOccurrences = results.filter((r) => r.kind === 'income');
+      const expenseOccurrences = results.filter((r) => r.kind === 'expense');
+      // sample few fixed occurrences that contributed (if any)
+      const fixedSamples = results.filter((r) => r.isFixed).slice(0, 20).map((r) => ({ id: r.id, occurrenceId: r.occurrenceId ?? null, date: r.date, amount: r.amount }));
+      const debugPayload = {
+        variableIncomeSum,
+        variableExpenseSum,
+        fixedIncomeSum,
+        fixedExpenseSum,
+        totals,
+        counts: { incomesFetched: incomesFetched.length, expensesFetched: expensesFetched.length, occurrenceCount, incomeOccurrences: incomeOccurrences.length, expenseOccurrences: expenseOccurrences.length },
+        fixedSamples,
+        // include small samples of fetched fixed records so we can see if fixed rows exist and their fields
+        fetchedFixed: {
+          incomes: incomesFetched.filter((i: any) => i.isFixed).slice(0, 50),
+          expenses: expensesFetched.filter((e: any) => e.isFixed).slice(0, 50),
+        },
+        fixedBreakdown: {
+          incomes: buildFixedBreakdown(incomesFetched),
+          expenses: buildFixedBreakdown(expensesFetched),
+        },
+      };
+  // debug payload returned in response; avoid logging to console
+      return NextResponse.json({ data: pageData, page, pageSize, totalCount, totals, debug: debugPayload });
+    }
+
+    return NextResponse.json({ data: pageData, page, pageSize, totalCount, totals });
+  } catch (err) {
+    console.error('reports error', err);
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  }
+}

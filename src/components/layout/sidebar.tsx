@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { BarChart3, CreditCard, DollarSign, Home, Tag, User, LogOut, Wallet, LucideLayoutDashboard } from 'lucide-react';
+import { BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, LucideLayoutDashboard, Table2Icon} from 'lucide-react';
 
 const navigationFinanceiro = [
   { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
@@ -17,6 +17,7 @@ const navigationFinanceiro = [
   { name: 'Carteiras', href: '/wallets', icon: Wallet },
   { name: 'Categorias', href: '/categorias', icon: BarChart3 },
   { name: 'Tags', href: '/tags', icon: Tag },
+  { name: 'Relatórios', href: '/reports', icon: Table2Icon },
   { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
 ];
 

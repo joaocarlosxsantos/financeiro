@@ -241,4 +241,26 @@ MIT — veja o arquivo LICENSE (se presente).
 
 Feito por João Carlos
 
+## Relatórios (nova funcionalidade)
+
+Uma tela dedicada de relatórios está disponível em `/reports`. Ela permite filtrar, visualizar e exportar lançamentos (rendas e despesas).
+
+Principais controles e comportamento:
+- Tipo: `Ambos` / `Rendas` / `Despesas`.
+- Período: campos `Início` e `Fim` (pré-selecionados — início: primeiro dia do mês atual; fim: data atual). É necessário clicar em `Atualizar` para carregar a pré-visualização.
+- Tag: filtro por tag (texto exato).
+- Categorias: multi-select (pode selecionar várias categorias).
+- Carteiras: multi-select (pode selecionar várias carteiras).
+- Paginação: controle de página e seleção de `linhas por página` (10/25/50/100). Alterar o tamanho da página não dispara o carregamento — é preciso clicar em `Atualizar`.
+
+Exportação:
+- `Exportar CSV`: gera um CSV cliente-side baseado na pré-visualização atual.
+- `Exportar XLSX`: solicita o endpoint server-side `GET /api/reports/export` que gera o arquivo Excel (`.xlsx`) formatado (coluna de data em `dd/mm/yyyy` e valores em real `R$`). A exportação não depende de a tabela estar previamente carregada — o servidor aplica os filtros recebidos e gera o arquivo completo.
+
+Notas para desenvolvedores:
+- Endpoint de listagem: `src/app/api/reports/route.ts` — retorna resultados paginados e totais (incomes, expenses, net). Está protegido por sessão (NextAuth) e filtra por `userId`.
+- Endpoint de export: `src/app/api/reports/export/route.ts` — gera o arquivo com `exceljs` e faz streaming via `PassThrough` para reduzir uso de memória em arquivos grandes.
+- Testes unitários básicos foram adicionados em `tests/api/*.test.ts` cobrindo autenticação e comportamento básico dos endpoints.
+- Pontos futuros: migrar para `WorkbookWriter` do ExcelJS para cenários extremamente grandes, rodar auditoria de acessibilidade (axe) e adicionar testes E2E.
+
 ```
