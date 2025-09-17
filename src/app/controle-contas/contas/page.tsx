@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import PageTitle from '@/components/PageTitle';
 import { Toast } from "@/components/ui/toast";
 import { Modal } from "@/components/controle-contas/modal";
 import { WhatsAppIcon } from '@/components/controle-contas/icons';
@@ -116,6 +117,11 @@ export default function Page() {
   useEffect(() => {
     fetchGroups();
   }, []);
+
+  // garantir título no cliente
+  // importa dinamicamente para evitar mudar a ordem de hooks
+  // (colocado aqui apenas para inclusão visual; PageTitle deve ser um componente cliente importado top-level,
+  // mas este arquivo já é client, então importar PageTitle direto é seguro)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -246,6 +252,7 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-12 w-full max-w-7xl mx-auto">
+      <PageTitle module="Controle de Contas" page="Contas" />
   {toastMsg && <Toast open={true} message={toastMsg} onClose={handleToastClose} inline={false} />}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 rounded-3xl border border-neutral-200/70 bg-white p-6 md:p-10 shadow-xl dark:border-neutral-800 dark:bg-neutral-900/80">
         <div className="flex-1 min-w-0 md:min-w-[260px]">

@@ -4,6 +4,7 @@ import './globals.css';
 import AuthProvider from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { MonthProvider } from '@/components/providers/month-provider';
+import PageTitle from '@/components/PageTitle';
 
 // componente dev para suprimir logs do hot-reloader
 let SuppressHotLogs: any = () => null;
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <MonthProvider>
             <AuthProvider>
               {process.env.NODE_ENV === 'development' && <SuppressHotLogs />}
+              {/* Páginas devem exportar `metadata` via `getMetadata` ou usar `PageTitle` localmente quando necessário. */}
               <main id="main">{children}</main>
             </AuthProvider>
           </MonthProvider>

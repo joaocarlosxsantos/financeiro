@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Loader } from '@/components/ui/loader';
@@ -7,6 +7,7 @@ import { Toast } from '@/components/ui/toast';
 import { ExtratoUpload } from '@/components/importar-extrato/extrato-upload';
 import { ExtratoPreview } from '@/components/importar-extrato/extrato-preview';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import PageTitle from '@/components/PageTitle';
 
 export default function ImportarExtratoPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -90,6 +91,7 @@ export default function ImportarExtratoPage() {
 
   return (
     <DashboardLayout>
+      <PageTitle module="Controle Financeiro" page="Importar Extrato" />
       <div className="space-y-6">
         <h1 className="text-2xl font-bold mb-2">Importar Extrato</h1>
         {uploading && <Loader text="Enviando arquivo..." />}

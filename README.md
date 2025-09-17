@@ -1,3 +1,34 @@
+## Padronização de títulos das páginas
+
+Este projeto usa o padrão "Nome do módulo | Nome da página" nos títulos que aparecem na aba do navegador.
+
+Como usar:
+
+- No servidor (Next.js app router), use o helper `getMetadata` para exportar `metadata` em uma página:
+
+```ts
+import { getMetadata } from '@/lib/pageTitle';
+
+export const metadata = getMetadata({ module: 'Dashboard', page: 'Visão geral' });
+```
+
+- No cliente, adicione o componente `PageTitle` dentro do layout ou da página para garantir que `document.title` seja atualizado quando navigate client-side:
+
+```tsx
+import PageTitle from '@/components/PageTitle';
+
+export default function Page() {
+   return (
+      <>
+         <PageTitle module="Dashboard" page="Visão geral" />
+         {/* restante do conteúdo */}
+      </>
+   );
+}
+```
+
+O helper `formatTitle` também está disponível em `src/lib/pageTitle.ts` se você precisar somente da string formatada.
+
 
 
 # 💸 Controle Financeiro

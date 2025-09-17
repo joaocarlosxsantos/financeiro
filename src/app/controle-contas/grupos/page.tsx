@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import PageTitle from '@/components/PageTitle';
 import { Modal } from "@/components/controle-contas/modal";
 import { parseApiDate, formatDate } from '@/lib/utils';
 import { MembersList } from '@/components/MembersList';
@@ -100,6 +101,7 @@ export default function GroupsPage() {
 
   return (
     <div className="flex flex-col gap-12 w-full max-w-7xl mx-auto">
+      <PageTitle module="Controle de Contas" page="Grupos" />
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 rounded-3xl border border-neutral-200/70 bg-white p-6 md:p-10 shadow-xl dark:border-neutral-800 dark:bg-neutral-900/80">
         <div className="flex-1 min-w-0 md:min-w-[260px]">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-blue-900 dark:text-blue-100 mb-2">
