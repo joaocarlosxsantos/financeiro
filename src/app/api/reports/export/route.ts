@@ -44,16 +44,6 @@ export async function GET(req: Request) {
   if (parsedStartDate) dateFilter.gte = parsedStartDate;
   if (parsedEndDate) dateFilter.lte = parsedEndDate;
 
-  const commonWhere: any = {
-    AND: [
-      { userId: user.id },
-      startDate || endDate ? { date: dateFilter } : {},
-      categoryIds ? { categoryId: { in: categoryIds } } : {},
-      walletIds ? { walletId: { in: walletIds } } : {},
-      tags ? { tags: { hasSome: tags } } : {},
-    ],
-  };
-
   // fetch data (we will expand fixed occurrences similar to /api/reports)
   // resolve incoming tag filters (ids or names) to canonical tag names
   let tagNames: string[] = [];
@@ -62,6 +52,26 @@ export async function GET(req: Request) {
     tagNames = tagRows.map(t => t.name);
     if (tagNames.length === 0) tagNames = tags;
   }
+
+  const buildTagFilter = (resolvedNames: string[] | undefined, rawValues: string[] | undefined) => {
+    const clauses: any[] = [];
+    if (resolvedNames && resolvedNames.length) clauses.push({ tags: { hasSome: resolvedNames } });
+    if (rawValues && rawValues.length) clauses.push({ tags: { hasSome: rawValues } });
+    if (clauses.length === 0) return {};
+    if (clauses.length === 1) return clauses[0];
+    return { OR: clauses };
+  };
+
+  const commonWhere: any = {
+    AND: [
+      { userId: user.id },
+      startDate || endDate ? { date: dateFilter } : {},
+      categoryIds ? { categoryId: { in: categoryIds } } : {},
+      walletIds ? { walletId: { in: walletIds } } : {},
+      // use resolved tagNames (may contain names resolved from ids or original provided values)
+      tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
+    ],
+  };
 
   const incomesRaw = type === 'expense' ? [] : await prisma.income.findMany({ where: { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames.length ? { tags: { hasSome: tagNames } } : {} ] }, include: { category: true, wallet: true } });
   const expensesRaw = type === 'income' ? [] : await prisma.expense.findMany({ where: { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames.length ? { tags: { hasSome: tagNames } } : {} ] }, include: { category: true, wallet: true } });

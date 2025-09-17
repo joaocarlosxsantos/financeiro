@@ -32,13 +32,44 @@ export async function GET(req: Request) {
   const debugFlag = qp.get('debug') === '1';
 
   // If tags filter provided, resolve values (might be ids or names) to canonical tag names for filtering
+  // We'll produce `tagNames` which contains the names we should match against the array field in DB.
   let tagNames: string[] = [];
   if (tags && tags.length > 0) {
-    const tagRows: { id: string; name: string }[] = await prisma.tag.findMany({ where: { userId: user.id, OR: [ { id: { in: tags } }, { name: { in: tags } } ] } });
-    tagNames = tagRows.map((t) => t.name);
-    // if resolution found none, fall back to original values (so filter still applies)
-    if (tagNames.length === 0) tagNames = tags;
+    const normalizedIncoming = tags.map((t) => String(t).toLowerCase().trim());
+    // fetch all user's tags and filter in-memory for robust matching
+    const userTags: { id: string; name: string }[] = await prisma.tag.findMany({ where: { userId: user.id } });
+    const nameMap: Record<string, string> = {};
+    for (const t of userTags) {
+      nameMap[String(t.name).toLowerCase().trim()] = t.name;
+      nameMap[String(t.id)] = t.name; // allow matching by id as well
+    }
+    const matched: string[] = [];
+    for (const inc of normalizedIncoming) {
+      if (nameMap[inc]) matched.push(nameMap[inc]);
+    }
+    tagNames = matched.length > 0 ? Array.from(new Set(matched)) : tags;
   }
+
+  // Build a flexible tag filter: try matching by resolved names and also by raw provided values
+  // to cope with rows that stored tags as ids or names.
+  const buildTagFilter = (resolvedNames: string[] | undefined, rawValues: string[] | undefined) => {
+    const clauses: any[] = [];
+    const seen = new Set<string>();
+    const pushUnique = (arr?: string[]) => {
+      if (!arr) return;
+      const filtered = arr.map((x) => String(x).trim()).filter(Boolean);
+      const uniq = Array.from(new Set(filtered));
+      if (uniq.length) {
+        clauses.push({ tags: { hasSome: uniq } });
+        for (const v of uniq) seen.add(String(v).toLowerCase());
+      }
+    };
+    pushUnique(resolvedNames);
+    pushUnique(rawValues);
+    if (clauses.length === 0) return {};
+    if (clauses.length === 1) return clauses[0];
+    return { OR: clauses };
+  };
 
   // Normalize incoming date-only strings to UTC day boundaries to avoid
   // off-by-one errors caused by timezone shifts. If the query param is
@@ -75,7 +106,7 @@ export async function GET(req: Request) {
         startDate || endDate ? { date: dateFilter } : {},
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
-        tags ? { tags: { hasSome: tagNames } } : {},
+        ...(tags ? [buildTagFilter(tagNames, tags)] : []),
       ],
     };
 
@@ -148,22 +179,66 @@ export async function GET(req: Request) {
   let incomesFetched: any[] = [];
   let expensesFetched: any[] = [];
 
-  if (type === 'income' || type === 'both') {
+    if (type === 'income' || type === 'both') {
       // fetch both fixed and variable incomes matching filters (excluding date filter because we'll handle occurrences)
-      const incomeWhere = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {} ] };
-  const incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true } });
-  incomesFetched = incomes;
-      // debug logging removed to avoid noisy console output
-  const incOcc = await expandFixedOccurrences(incomes, 'income');
+      const incomeWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
+      const incomeWhere = { ...incomeWhereBase, ...(tags ? { AND: [ ...(incomeWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
+      let incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true } });
+      // If DB returned no incomes when tags provided, attempt an in-memory fallback that matches tag ids/names case-insensitively
+      if (tags && tags.length > 0 && incomes.length === 0) {
+        try {
+          const incomesNoTag = await prisma.income.findMany({ where: incomeWhereBase, include: { category: true, wallet: true } });
+          if (incomesNoTag.length > 0) {
+            // build name/id map for user's tags
+            const userTags = await prisma.tag.findMany({ where: { userId: user.id } });
+            const nameMap: Record<string, string> = {};
+            for (const t of userTags) {
+              nameMap[String(t.name).toLowerCase().trim()] = t.name;
+              nameMap[String(t.id)] = t.name;
+            }
+            const normalizedIncoming = tags.map((t) => String(t).toLowerCase().trim());
+            const filtered = incomesNoTag.filter((r: any) => {
+              const rowTags = Array.isArray(r.tags) ? (r.tags as string[]).map((tv: string) => (nameMap[String(tv).toLowerCase().trim()] ?? nameMap[String(tv)] ?? String(tv))).map((s: string) => String(s).toLowerCase().trim()) : [];
+              return normalizedIncoming.some((nt) => rowTags.includes(nt));
+            });
+            if (filtered.length > 0) incomes = filtered;
+          }
+        } catch (e) {
+          // fallback best-effort: ignore and continue with empty set
+        }
+      }
+      incomesFetched = incomes;
+      const incOcc = await expandFixedOccurrences(incomes, 'income');
       results.push(...incOcc);
     }
 
     if (type === 'expense' || type === 'both') {
-      const expenseWhere = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {} ] };
-  const expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true } });
-  expensesFetched = expenses;
-      // debug logging removed to avoid noisy console output
-  const expOcc = await expandFixedOccurrences(expenses, 'expense');
+      const expenseWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
+      const expenseWhere = { ...expenseWhereBase, ...(tags ? { AND: [ ...(expenseWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
+      let expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true } });
+      if (tags && tags.length > 0 && expenses.length === 0) {
+        try {
+          const expensesNoTag = await prisma.expense.findMany({ where: expenseWhereBase, include: { category: true, wallet: true } });
+          if (expensesNoTag.length > 0) {
+            const userTags = await prisma.tag.findMany({ where: { userId: user.id } });
+            const nameMap: Record<string, string> = {};
+            for (const t of userTags) {
+              nameMap[String(t.name).toLowerCase().trim()] = t.name;
+              nameMap[String(t.id)] = t.name;
+            }
+            const normalizedIncoming = tags.map((t) => String(t).toLowerCase().trim());
+            const filtered = expensesNoTag.filter((r: any) => {
+              const rowTags = Array.isArray(r.tags) ? (r.tags as string[]).map((tv: string) => (nameMap[String(tv).toLowerCase().trim()] ?? nameMap[String(tv)] ?? String(tv))).map((s: string) => String(s).toLowerCase().trim()) : [];
+              return normalizedIncoming.some((nt) => rowTags.includes(nt));
+            });
+            if (filtered.length > 0) expenses = filtered;
+          }
+        } catch (e) {
+          // ignore fallback errors
+        }
+      }
+      expensesFetched = expenses;
+      const expOcc = await expandFixedOccurrences(expenses, 'expense');
       results.push(...expOcc);
     }
 
@@ -254,7 +329,7 @@ export async function GET(req: Request) {
         startDate || endDate ? { date: dateFilter } : {},
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
-        tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
+        ...(tags ? [buildTagFilter(tagNames, tags)] : []),
       ],
     };
     const variableExpenseWhere: any = {
@@ -264,7 +339,7 @@ export async function GET(req: Request) {
         startDate || endDate ? { date: dateFilter } : {},
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
-        tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
+        ...(tags ? [buildTagFilter(tagNames, tags)] : []),
       ],
     };
 

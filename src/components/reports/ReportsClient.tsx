@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { filterRows } from '@/lib/reportFilters';
 import { useTheme } from '@/components/providers/theme-provider';
 import Papa from 'papaparse';
 import ReactSelect from 'react-select';
@@ -14,11 +15,13 @@ type Option = { id: string; name: string };
 type Row = {
   id: string;
   date?: string;
-  description: string;
+  description?: string;
   amount: number;
   kind: 'income' | 'expense';
   categoryName?: string | null;
+  categoryId?: string | null;
   walletName?: string | null;
+  walletId?: string | null;
   tags?: string[];
   isFixed?: boolean;
 };
@@ -49,11 +52,13 @@ export default function ReportsClient() {
 
   // data & pagination
   const [data, setData] = useState<Row[]>([]);
+  const [fullDataCache, setFullDataCache] = useState<Record<string, Row[]>>({});
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(25);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [totals, setTotals] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [filterDebug, setFilterDebug] = useState<null | { availableTags: string[]; selectedTags: string[] }>(null);
 
   // select styles for react-select (theme aware)
   const selectStyles = useMemo(() => {
@@ -140,6 +145,83 @@ export default function ReportsClient() {
   async function fetchData(p: number, size?: number) {
     setLoading(true);
     try {
+      // Key representing the base unfiltered dataset for this type and date range
+      const baseKey = `${type}|${startDate}|${endDate}`;
+
+      // compute page size to use for pagination
+      const pageSizeToUse = typeof size === 'number' ? size : pageSize;
+
+      // If we have a cached full dataset for the baseKey and the user has selected
+      // filters (tags/categories/wallets), apply local filtering instead of fetching.
+      const hasFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0;
+      if (hasFilters && fullDataCache[baseKey]) {
+        const allRows = fullDataCache[baseKey];
+        // build a tag lookup from loaded tags (id->name and name->name)
+        const tagLookup: Record<string, string> = {};
+        for (const t of tags) {
+          tagLookup[String(t.id)] = t.name;
+          tagLookup[String(t.name)] = t.name;
+        }
+        // Normalize selected tags for local filtering: include both resolved name and original value
+        const normalizedSelectedTags = Array.from(
+          new Set(
+            selectedTagIds.flatMap((st) => {
+              const byId = tagLookup[String(st)];
+              return byId ? [byId, String(st)] : [String(st)];
+            }),
+          ),
+        );
+        // Normalize tags on cached rows using current tagLookup (so ids -> names when possible)
+        // For robustness include both the resolved name (if any) and the raw stored value so matching by id or name works
+        const normalizedAllRows = allRows.map((r) => ({
+          ...r,
+          tags: Array.isArray(r.tags)
+            ? Array.from(
+                new Set(
+                  r.tags.flatMap((tv: string) => {
+                    const resolved = tagLookup[String(tv)] ?? String(tv);
+                    return [resolved, String(tv)];
+                  }),
+                ),
+              )
+            : [],
+        }));
+        const filtered = filterRows(normalizedAllRows as any, selectedCategoryIds, selectedWalletIds, normalizedSelectedTags);
+
+  // paginate filtered
+        const start = (p - 1) * pageSizeToUse;
+        const end = start + pageSizeToUse;
+        const pageData = filtered.slice(start, end);
+
+        // compute totals from filtered set
+        const incomes = filtered.filter((x) => x.kind === 'income').reduce((acc, cur) => acc + Math.abs(cur.amount), 0);
+        const expensesSigned = -Math.abs(filtered.filter((x) => x.kind === 'expense').reduce((acc, cur) => acc + Math.abs(cur.amount), 0));
+        const net = incomes + expensesSigned;
+
+        setData(pageData);
+        setPage(p);
+        setTotalCount(filtered.length);
+        setTotals({ incomes, expenses: expensesSigned, net });
+        // debug: if no filtered results but we had rows in cache, expose available vs selected tags (dev only)
+        if (process.env.NODE_ENV !== 'production') {
+          if (filtered.length === 0 && Array.isArray(allRows) && allRows.length > 0) {
+            const availableTags = Array.from(
+              new Set(
+                normalizedAllRows.flatMap((r) => (Array.isArray(r.tags) ? r.tags.map((t: string) => String(t).toLowerCase().trim()) : [])),
+              ),
+            );
+            const selectedTagsLower = normalizedSelectedTags.map((s) => String(s).toLowerCase().trim());
+            // lightweight console.debug to help diagnose mismatches during development
+            // eslint-disable-next-line no-console
+            console.debug('[ReportsClient] local filter returned 0 rows', { availableTags, selectedTags: selectedTagsLower });
+            setFilterDebug({ availableTags, selectedTags: selectedTagsLower });
+          } else {
+            setFilterDebug(null);
+          }
+        }
+        setLoading(false);
+        return;
+      }
       const params = new URLSearchParams();
       params.set('type', type);
       params.set('startDate', startDate);
@@ -148,8 +230,7 @@ export default function ReportsClient() {
       if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
       if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
       params.set('page', String(p));
-      const pageSizeToUse = typeof size === 'number' ? size : pageSize;
-      params.set('pageSize', String(pageSizeToUse));
+  params.set('pageSize', String(pageSizeToUse));
 
       // keep local state in sync when caller provided an explicit size
       if (typeof size === 'number') {
@@ -176,7 +257,9 @@ export default function ReportsClient() {
           date: it.date ? new Date(it.date).toISOString() : '',
           kind: it.kind,
           categoryName: it.category?.name ?? it.categoryName ?? null,
+          categoryId: it.category?.id ?? it.categoryId ?? null,
           walletName: it.wallet?.name ?? it.walletName ?? null,
+          walletId: it.wallet?.id ?? it.walletId ?? null,
           tags: Array.isArray(it.tags) ? it.tags.map((tv: string) => tagLookup[String(tv)] ?? String(tv)) : [],
           isFixed: Boolean(it.isFixed),
         };
@@ -194,6 +277,14 @@ export default function ReportsClient() {
         setTotals({ incomes, expenses: expensesSigned, net });
       } else {
         setTotals(null);
+      }
+
+      // cache full dataset when server returned full page matching totalCount (we fetched all rows)
+      // We'll cache only when no filters were applied in the request (so base unfiltered data is stored)
+      const requestHadFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0;
+      if (!requestHadFilters && (Array.isArray(json.data) && (json.data.length === (json.totalCount || 0) || (json.totalCount || 0) <= pageSizeToUse))) {
+        const key = `${type}|${startDate}|${endDate}`;
+        setFullDataCache((prev) => ({ ...prev, [key]: rows }));
       }
     } catch (err) {
       // erro silencioso ao buscar dados (evita poluir console na carga inicial)
@@ -282,19 +373,17 @@ export default function ReportsClient() {
     }
   }
 
-  // initial fetch
+  // Fetch when filters change (type, dates, selected filters, pageSize handled elsewhere)
   useEffect(() => {
-    fetchData(1); /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, []);
+    // always fetch first page when filters change
+    fetchData(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, startDate, endDate, selectedTagIds, selectedCategoryIds, selectedWalletIds]);
 
   return (
     <div className="space-y-4">
       <form
         className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end"
-        onSubmit={(e) => {
-          e.preventDefault();
-          fetchData(1);
-        }}
         aria-labelledby="reports-filters"
       >
 
@@ -344,21 +433,20 @@ export default function ReportsClient() {
         </div>
 
         <div className="lg:col-span-1 sm:col-span-2 col-span-2">
-          <label className="block text-sm font-medium">Tags</label>
+          <label className="block text-sm font-medium">Carteiras</label>
           <div className="mt-1">
             <ReactSelect
-              aria-label="Tags"
+              aria-label="Carteiras"
               isMulti
-              options={tags.map((t) => ({ value: t.name, label: t.name }))}
-              value={tags
-                .filter((t) => selectedTagIds.includes(t.name))
-                .map((t) => ({ value: t.name, label: t.name }))}
-              onChange={(vals: any) => setSelectedTagIds((vals || []).map((v: any) => v.value))}
+              options={wallets.map((w) => ({ value: w.id, label: w.name }))}
+              value={wallets
+                .filter((w) => selectedWalletIds.includes(w.id))
+                .map((w) => ({ value: w.id, label: w.name }))}
+              onChange={(vals: any) => setSelectedWalletIds((vals || []).map((v: any) => v.value))}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
               menuPlacement={'auto'}
-              classNamePrefix="react-select"
               className="w-full"
             />
           </div>
@@ -387,24 +475,26 @@ export default function ReportsClient() {
         </div>
 
         <div className="lg:col-span-1 sm:col-span-2 col-span-2">
-          <label className="block text-sm font-medium">Carteiras</label>
+          <label className="block text-sm font-medium">Tags</label>
           <div className="mt-1">
             <ReactSelect
-              aria-label="Carteiras"
+              aria-label="Tags"
               isMulti
-              options={wallets.map((w) => ({ value: w.id, label: w.name }))}
-              value={wallets
-                .filter((w) => selectedWalletIds.includes(w.id))
-                .map((w) => ({ value: w.id, label: w.name }))}
-              onChange={(vals: any) => setSelectedWalletIds((vals || []).map((v: any) => v.value))}
+              options={tags.map((t) => ({ value: t.id, label: t.name }))}
+              value={tags
+                .filter((t) => selectedTagIds.includes(t.id))
+                .map((t) => ({ value: t.id, label: t.name }))}
+              onChange={(vals: any) => setSelectedTagIds((vals || []).map((v: any) => v.value))}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
               menuPlacement={'auto'}
+              classNamePrefix="react-select"
               className="w-full"
             />
           </div>
         </div>
+
       </form>
 
       <div className="grid grid-cols-1 gap-3 items-stretch w-full">
@@ -499,9 +589,7 @@ export default function ReportsClient() {
           </UiSelect>
         </div>
         <div className="sm:col-span-2 lg:col-span-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-end">
-          <Button aria-label="Atualizar relatórios" type="submit" className="w-full sm:w-auto">
-            Carregar
-          </Button>
+          {/* Atualizar manual removido: filtros atualizam automaticamente ao alterar */}
           <Button
             aria-label="Exportar CSV"
             type="button"
@@ -535,6 +623,12 @@ export default function ReportsClient() {
         ) : data.length === 0 ? (
           <div role="status" aria-live="polite">
             Nenhum resultado
+            {filterDebug ? (
+              <div className="mt-2 text-xs text-slate-500">
+                <div>DEBUG: tags disponíveis: {filterDebug.availableTags.join(', ') || '-'}</div>
+                <div>DEBUG: tags selecionadas: {filterDebug.selectedTags.join(', ') || '-'}</div>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="overflow-auto border rounded">
