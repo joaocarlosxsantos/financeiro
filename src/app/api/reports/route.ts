@@ -40,10 +40,31 @@ export async function GET(req: Request) {
     if (tagNames.length === 0) tagNames = tags;
   }
 
-  // Basic where clause builder
+  // Normalize incoming date-only strings to UTC day boundaries to avoid
+  // off-by-one errors caused by timezone shifts. If the query param is
+  // a plain date (YYYY-MM-DD) we create a UTC start/end for that day.
+  const parseStartToUtc = (d?: string | null) => {
+    if (!d) return null;
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0));
+    const dt = new Date(d);
+    return new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 0, 0, 0, 0));
+  };
+  const parseEndToUtc = (d?: string | null) => {
+    if (!d) return null;
+    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999));
+    const dt = new Date(d);
+    return new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 23, 59, 59, 999));
+  };
+
+  const parsedStartDate = parseStartToUtc(startDate);
+  const parsedEndDate = parseEndToUtc(endDate);
+
+  // Basic where clause builder (use normalized UTC dates)
   const dateFilter: any = {};
-  if (startDate) dateFilter.gte = new Date(startDate);
-  if (endDate) dateFilter.lte = new Date(endDate);
+  if (parsedStartDate) dateFilter.gte = parsedStartDate;
+  if (parsedEndDate) dateFilter.lte = parsedEndDate;
 
   try {
     const results: Array<any> = [];
@@ -61,8 +82,8 @@ export async function GET(req: Request) {
     // Helper to expand fixed records into occurrences within the interval
     const expandFixedOccurrences = async (rows: any[], kind: 'income' | 'expense') => {
       const occurrences: any[] = [];
-      const sDate = startDate ? new Date(startDate) : null;
-      const eDate = endDate ? new Date(endDate) : null;
+      const sDate = parsedStartDate;
+      const eDate = parsedEndDate;
       for (const r of rows) {
         // For non-fixed records, only include if within requested date interval (if provided)
         if (!r.isFixed) {
@@ -98,8 +119,8 @@ export async function GET(req: Request) {
           const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
           const day = Math.min(desiredDay, lastDay);
           const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
-          // only include if within sDate..eDate
-          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) {
+          // only include if within sDate..eDate (both normalized to UTC boundaries)
+          if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) {
             // give a deterministic occurrence id so frontend can key rows properly
             const occId = `${r.id}::${occDate.getUTCFullYear()}-${String(occDate.getUTCMonth()+1).padStart(2,'0')}-${String(occDate.getUTCDate()).padStart(2,'0')}`;
             occurrences.push({ ...r, kind, date: occDate, occurrenceId: occId });
@@ -146,8 +167,8 @@ export async function GET(req: Request) {
       results.push(...expOcc);
     }
 
-    // ordenar resultados por date desc
-    results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // ordenar resultados por date asc (padrão de exibição: mais antigo -> mais novo)
+  results.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     // totals: compute sums that respect all filters (date, category, wallet, tags)
     // Approach:
@@ -155,8 +176,8 @@ export async function GET(req: Request) {
     // - For fixed records, compute occurrences within the interval and sum their amounts
     const computeFixedSum = (rows: any[]) => {
       let sum = 0;
-      const sDate = startDate ? new Date(startDate) : null;
-      const eDate = endDate ? new Date(endDate) : null;
+  const sDate = parsedStartDate;
+  const eDate = parsedEndDate;
       const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
       for (const r of rows) {
         if (!r.isFixed) continue;
@@ -167,7 +188,7 @@ export async function GET(req: Request) {
         if (!to) {
           // no upper bound: include one occurrence at 'from' (same behavior as expansion)
           const occDate = from;
-          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) sum += Number(r.amount ?? 0);
+          if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) sum += Number(r.amount ?? 0);
           continue;
         }
         let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
@@ -179,7 +200,7 @@ export async function GET(req: Request) {
           const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
           const day = Math.min(desiredDay, lastDay);
           const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
-          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) {
+          if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) {
             sum += Number(r.amount ?? 0);
           }
           cursor.setMonth(cursor.getMonth() + 1);
@@ -191,8 +212,8 @@ export async function GET(req: Request) {
 
     // helper used only for debug: build a breakdown of occurrences per fixed row
     const buildFixedBreakdown = (rows: any[]) => {
-      const sDate = startDate ? new Date(startDate) : null;
-      const eDate = endDate ? new Date(endDate) : null;
+  const sDate = parsedStartDate;
+  const eDate = parsedEndDate;
       const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
       const breakdown: any[] = [];
       for (const r of rows) {
@@ -204,7 +225,7 @@ export async function GET(req: Request) {
         const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
         if (!to) {
           const occDate = from;
-          if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) occurrences.push(occDate.toISOString());
+          if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) occurrences.push(occDate.toISOString());
         } else {
           let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
           const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
@@ -215,7 +236,7 @@ export async function GET(req: Request) {
             const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
             const day = Math.min(desiredDay, lastDay);
             const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
-            if ((!sDate || occDate >= sDate) && (!eDate || occDate <= eDate)) occurrences.push(occDate.toISOString());
+            if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) occurrences.push(occDate.toISOString());
             cursor.setMonth(cursor.getMonth() + 1);
             months += 1;
           }
@@ -292,6 +313,8 @@ export async function GET(req: Request) {
         fixedIncomeSum,
         fixedExpenseSum,
         totals,
+        parsedStartDate: parsedStartDate ? parsedStartDate.toISOString() : null,
+        parsedEndDate: parsedEndDate ? parsedEndDate.toISOString() : null,
         counts: { incomesFetched: incomesFetched.length, expensesFetched: expensesFetched.length, occurrenceCount, incomeOccurrences: incomeOccurrences.length, expenseOccurrences: expenseOccurrences.length },
         fixedSamples,
         // include small samples of fetched fixed records so we can see if fixed rows exist and their fields
@@ -302,6 +325,13 @@ export async function GET(req: Request) {
         fixedBreakdown: {
           incomes: buildFixedBreakdown(incomesFetched),
           expenses: buildFixedBreakdown(expensesFetched),
+        },
+        // sample of expanded occurrences (first 50) with canonical ISO dates
+        occurrencesSample: results.slice(0, 50).map((r) => ({ id: r.id, occurrenceId: r.occurrenceId ?? null, date: r.date ? new Date(r.date).toISOString() : null, kind: r.kind, isFixed: Boolean(r.isFixed) })),
+        // sample of raw fetched rows (first 20) for inspection of stored dates
+        fetchedSamples: {
+          incomes: incomesFetched.slice(0, 20).map((r) => ({ id: r.id, date: r.date ? new Date(r.date).toISOString() : null, startDate: r.startDate ? new Date(r.startDate).toISOString() : null, endDate: r.endDate ? new Date(r.endDate).toISOString() : null })),
+          expenses: expensesFetched.slice(0, 20).map((r) => ({ id: r.id, date: r.date ? new Date(r.date).toISOString() : null, startDate: r.startDate ? new Date(r.startDate).toISOString() : null, endDate: r.endDate ? new Date(r.endDate).toISOString() : null })),
         },
       };
   // debug payload returned in response; avoid logging to console

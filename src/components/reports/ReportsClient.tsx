@@ -184,7 +184,17 @@ export default function ReportsClient() {
       setData(rows);
       setPage(json.page || p);
       setTotalCount(json.totalCount || 0);
-      setTotals(json.totals || null);
+      // server returns totals.incomes and totals.expenses as positive sums
+      // convert expenses to a signed negative value for display consistency
+      // and recalculate net as incomes + expensesSigned
+      if (json.totals) {
+        const incomes = Number(json.totals.incomes ?? 0);
+        const expensesSigned = -Math.abs(Number(json.totals.expenses ?? 0));
+        const net = incomes + expensesSigned;
+        setTotals({ incomes, expenses: expensesSigned, net });
+      } else {
+        setTotals(null);
+      }
     } catch (err) {
       // erro silencioso ao buscar dados (evita poluir console na carga inicial)
     } finally {
@@ -194,25 +204,57 @@ export default function ReportsClient() {
 
   function exportCSV() {
     if (!data || data.length === 0) return;
-    const csv = Papa.unparse(
-      data.map((d) => ({
-        date: d.date,
-        type: d.kind,
-        description: d.description,
-        category: d.categoryName ?? '',
-        wallet: d.walletName ?? '',
-        amount: Number(d.amount).toFixed(2),
-      })),
-    );
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorios-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    (async () => {
+      const params = new URLSearchParams();
+      params.set('type', type);
+      params.set('startDate', startDate);
+      params.set('endDate', endDate);
+      if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
+      if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
+      if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
+      params.set('page', '1');
+      const requestSize = totalCount > 0 ? totalCount : 100000;
+      params.set('pageSize', String(requestSize));
+      try {
+        const res = await fetch(`/api/reports?${params.toString()}`);
+        if (!res.ok) throw new Error('Erro ao carregar dados para exportação');
+        const json = await res.json();
+  let allData = Array.isArray(json.data) ? json.data.slice() : [];
+  allData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const tagLookup: Record<string, string> = {};
+        for (const t of tags) {
+          tagLookup[String(t.id)] = t.name;
+          tagLookup[String(t.name)] = t.name;
+        }
+        const csvRows = allData.map((it: any) => {
+          const rawAmount = typeof it.amount === 'number' ? Number(it.amount) : Number(it.amount ?? 0);
+          const signedAmount = it.kind === 'expense' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+          return {
+            Data: it.date ? new Date(it.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
+            Tipo: it.kind === 'income' ? 'Renda' : 'Despesa',
+            Descrição: it.description ?? '',
+            Categoria: it.category?.name ?? it.categoryName ?? '',
+            Carteira: it.wallet?.name ?? it.walletName ?? '',
+            Tags: Array.isArray(it.tags) ? it.tags.map((tv: string) => tagLookup[String(tv)] ?? String(tv)).join(', ') : '',
+            Fixa: Boolean(it.isFixed) ? 'Sim' : 'Não',
+            Valor: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(signedAmount)),
+          };
+        });
+        const csv = Papa.unparse(csvRows, { header: true });
+        const csvWithBOM = '\uFEFF' + csv;
+        const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        // silent
+      }
+    })();
   }
 
   async function exportXLSX() {
@@ -465,7 +507,7 @@ export default function ReportsClient() {
             type="button"
             variant="outline"
             onClick={exportCSV}
-            disabled={data.length === 0}
+            disabled={totalCount === 0 || loading}
             className="w-full sm:w-auto"
             size="sm"
           >
@@ -476,7 +518,7 @@ export default function ReportsClient() {
             type="button"
             variant="outline"
             onClick={exportXLSX}
-            disabled={data.length === 0}
+            disabled={totalCount === 0 || loading}
             className="w-full sm:w-auto"
             size="sm"
           >
@@ -522,7 +564,7 @@ export default function ReportsClient() {
                     aria-label={`${d.date} ${d.kind} ${d.description}`}
                   >
                     <td className="p-2">
-                      {d.date ? new Date(d.date).toLocaleDateString('pt-BR') : ''}
+                      {d.date ? new Date(d.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''}
                     </td>
                     <td className="p-2">{d.kind === 'income' ? 'Rendas' : 'Despesas'}</td>
                     <td className="p-2">{d.description}</td>
