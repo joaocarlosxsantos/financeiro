@@ -231,7 +231,7 @@ export default function ReportsClient() {
           const signedAmount = it.kind === 'expense' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
           return {
             Data: it.date ? new Date(it.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
-            Tipo: it.kind === 'income' ? 'Renda' : 'Despesa',
+            Tipo: it.kind === 'income' ? 'Ganho' : 'Gasto',
             Descrição: it.description ?? '',
             Categoria: it.category?.name ?? it.categoryName ?? '',
             Carteira: it.wallet?.name ?? it.walletName ?? '',
@@ -310,8 +310,8 @@ export default function ReportsClient() {
             className="mt-1"
           >
             <option value="both">Ambos</option>
-            <option value="income">Rendas</option>
-            <option value="expense">Despesas</option>
+            <option value="income">Ganhos</option>
+            <option value="expense">Gastos</option>
           </UiSelect>
         </div>
 
@@ -416,7 +416,7 @@ export default function ReportsClient() {
             {totals ? (
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center text-sm w-full justify-between">
                 <div className="flex-1 flex flex-col items-center justify-center">
-                    <span className="block text-xs text-slate-500">Rendas</span>
+                    <span className="block text-xs text-slate-500">Ganhos</span>
                     <span className="text-lg font-semibold">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                             Number(totals.incomes),
@@ -566,7 +566,7 @@ export default function ReportsClient() {
                     <td className="p-2">
                       {d.date ? new Date(d.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''}
                     </td>
-                    <td className="p-2">{d.kind === 'income' ? 'Rendas' : 'Despesas'}</td>
+                    <td className="p-2">{d.kind === 'income' ? 'Ganhos' : 'Gastos'}</td>
                     <td className="p-2">{d.description}</td>
                     <td className="p-2">{d.categoryName ?? '-'}</td>
                     <td className="p-2">{d.walletName ?? '-'}</td>

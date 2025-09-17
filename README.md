@@ -41,7 +41,7 @@ O helper `formatTitle` também está disponível em `src/lib/pageTitle.ts` se vo
    <code>Senha: <b>teste1</b></code>
 </div>
 
-Aplicação web moderna e responsiva para controle de despesas, rendas e organização financeira pessoal.<br>
+Aplicação web moderna e responsiva para controle de gastos, ganhos e organização financeira pessoal.<br>
 Desenvolvida com <b>Next.js 14</b>, <b>TypeScript</b>, <b>Tailwind CSS</b>, <b>Prisma</b> e arquitetura de componentes reutilizáveis.
 
 ---
@@ -50,7 +50,7 @@ Desenvolvida com <b>Next.js 14</b>, <b>TypeScript</b>, <b>Tailwind CSS</b>, <b>P
 ## 🚀 Funcionalidades
 
 - **Dashboard interativo** com gráficos dinâmicos (Recharts) e resumos financeiros
-- **Gestão completa de despesas e rendas** (fixas e variáveis), com categorias, tags e carteiras
+- **Gestão completa de gastos e ganhos** (fixos e variáveis), com categorias, tags e carteiras
 - **Importação de extratos bancários** (OFX) com sugestão automática de categorias/tags
 - **Transferências entre carteiras** e controle multi-carteira
 - **Filtros avançados** por período, carteira, categoria e tags
@@ -138,7 +138,7 @@ financeiro/
 
 [Demo (Vercel)](https://financeiro-seven-zeta.vercel.app) • Usuário: `teste@email.com` • Senha: `teste1`
 
-Aplicação web moderna para controlar despesas, rendas, transferências e organização por carteiras, categorias e tags.
+Aplicação web moderna para controlar gastos, ganhos, transferências e organização por carteiras, categorias e tags.
 
 Stack principal: Next.js 14, TypeScript, Tailwind CSS, Prisma (PostgreSQL), NextAuth, Recharts.
 
@@ -162,7 +162,7 @@ Esta é uma interface para gerenciamento financeiro pessoal com painéis e gráf
 
 ## Principais recursos
 - Dashboard com gráficos e projeções
-- Registro de despesas e rendas (fixas/variáveis)
+- Registro de gastos e ganhos (fixos/variáveis)
 - Tags, categorias e carteiras
 - Importador de extratos (OFX/CSV)
 - Transferências entre carteiras
@@ -274,10 +274,10 @@ Feito por João Carlos
 
 ## Relatórios (nova funcionalidade)
 
-Uma tela dedicada de relatórios está disponível em `/reports`. Ela permite filtrar, visualizar e exportar lançamentos (rendas e despesas).
+- Uma tela dedicada de relatórios está disponível em `/reports`. Ela permite filtrar, visualizar e exportar lançamentos (ganhos e gastos).
 
 Principais controles e comportamento:
-- Tipo: `Ambos` / `Rendas` / `Despesas`.
+- Tipo: `Ambos` / `Ganhos` / `Gastos`.
 - Período: campos `Início` e `Fim` (pré-selecionados — início: primeiro dia do mês atual; fim: data atual). É necessário clicar em `Atualizar` para carregar a pré-visualização.
 - Tag: filtro por tag (texto exato).
 - Categorias: multi-select (pode selecionar várias categorias).

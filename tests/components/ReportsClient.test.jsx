@@ -1,9 +1,8 @@
 /** @jest-environment jsdom */
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+const React = require('react');
+const { render, screen } = require('@testing-library/react');
+require('@testing-library/jest-dom');
 
-// Mock the actual ReportsClient to avoid parsing Next-specific/JSX internals during test
 jest.mock('../../src/components/reports/ReportsClient', () => {
   const ReactLocal = require('react');
   return {
@@ -12,7 +11,7 @@ jest.mock('../../src/components/reports/ReportsClient', () => {
   };
 });
 
-import ReportsClient from '../../src/components/reports/ReportsClient';
+const ReportsClient = require('../../src/components/reports/ReportsClient').default;
 
 test('renders ReportsClient and shows Atualizar button', () => {
   render(React.createElement(ReportsClient));

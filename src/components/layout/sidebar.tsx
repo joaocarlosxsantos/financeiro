@@ -12,8 +12,8 @@ import { BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, LucideLay
 
 const navigationFinanceiro = [
   { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
-  { name: 'Entradas', href: '/rendas', icon: DollarSign },
-  { name: 'Saídas', href: '/despesas', icon: CreditCard },
+  { name: 'Ganhos', href: '/rendas', icon: DollarSign },
+  { name: 'Gastos', href: '/despesas', icon: CreditCard },
   { name: 'Carteiras', href: '/wallets', icon: Wallet },
   { name: 'Categorias', href: '/categorias', icon: BarChart3 },
   { name: 'Tags', href: '/tags', icon: Tag },

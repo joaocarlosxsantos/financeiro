@@ -103,7 +103,7 @@ export default function QuickRendaForm() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setErrors({ ...newErrors, general: data.error || 'Erro ao cadastrar renda' });
+  setErrors({ ...newErrors, general: data.error || 'Erro ao cadastrar ganho' });
         return;
       }
       const keptCategory = form.categoryId;
@@ -177,11 +177,11 @@ export default function QuickRendaForm() {
         </div>
         <div className="flex items-center gap-2 mt-2">
           <input type="checkbox" id="isFixed" checked={form.isFixed} onChange={(e) => setForm((f) => ({ ...f, isFixed: e.target.checked }))} className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150" />
-          <Label htmlFor="isFixed" className="ml-1 select-none cursor-pointer text-sm">Renda Fixa?</Label>
+          <Label htmlFor="isFixed" className="ml-1 select-none cursor-pointer text-sm">Ganho Fixo?</Label>
         </div>
       </div>
 
-      {showToast && <div className="text-sm text-green-600 mb-2">Renda cadastrada</div>}
+  {showToast && <div className="text-sm text-green-600 mb-2">Ganho cadastrado</div>}
 
       <div className="flex justify-end gap-2 mt-4">
         <Button type="submit">Cadastrar</Button>

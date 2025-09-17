@@ -49,7 +49,7 @@ const IncomeChart = dynamic(() => import('./income-chart').then((mod) => mod.Inc
   loading: () => <div>Carregando gráfico...</div>,
 });
 import { Loader } from '@/components/ui/loader';
-// Removido SummaryRatioChart (Entradas x Saídas)
+// Removido SummaryRatioChart (Ganhos x Gastos)
 // Removido gráfico de Saídas por Tag (pizza) substituído por gráfico diário por Tag
 const MonthlyBarChart = dynamic(
   () => import('./monthly-bar-chart').then((mod) => mod.MonthlyBarChart),
@@ -417,11 +417,11 @@ export function DashboardContent() {
       - Card de Saldo Acumulado ocupa linha inteira nas telas pequenas/médias (col-span-2) e fica por último.
   */}
   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4 w-full">
-        {/* Entradas Totais */}
+  {/* Ganhos Totais */}
         <Card
           onClick={() => setModal('income')}
           className="group relative order-1 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
-          aria-label="Entradas Totais"
+          aria-label="Ganhos Totais"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -434,18 +434,18 @@ export function DashboardContent() {
               <TrendingUp className="hidden 2xl:block h-7 w-7 text-green-500/80" />
             </div>
             <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
-              Entradas Totais
+              Ganhos Totais
             </div>
             <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[180px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
-              Soma das entradas do mês selecionado
+              Soma dos ganhos do mês selecionado
             </span>
           </CardContent>
         </Card>
-        {/* Saídas Totais */}
+  {/* Gastos Totais */}
         <Card
           onClick={() => setModal('expense')}
           className="group relative order-2 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
-          aria-label="Saídas Totais"
+          aria-label="Gastos Totais"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -458,10 +458,10 @@ export function DashboardContent() {
               <TrendingDown className="hidden 2xl:block h-7 w-7 text-red-500/80" />
             </div>
             <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
-              Saídas Totais
+              Gastos Totais
             </div>
             <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[180px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
-              Soma das saídas do mês selecionado
+              Soma dos gastos do mês selecionado
             </span>
           </CardContent>
         </Card>
@@ -485,7 +485,7 @@ export function DashboardContent() {
               Saldo do mês
             </div>
             <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[200px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
-              Entradas menos Saídas do mês
+              Ganhos menos Gastos do mês
             </span>
           </CardContent>
         </Card>
@@ -531,7 +531,7 @@ export function DashboardContent() {
               Saldo Acumulado
             </div>
             <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
-              Entradas - Saídas de todos os meses até o selecionado
+              Ganhos - Gastos de todos os meses até o selecionado
             </span>
           </CardContent>
         </Card>
@@ -561,7 +561,7 @@ export function DashboardContent() {
                 }
               `}
             >
-              Saída
+              Gasto
             </button>
             <button
               type="button"
@@ -574,7 +574,7 @@ export function DashboardContent() {
                 }
               `}
             >
-              Entrada
+              Ganho
             </button>
           </div>
           <div className="mt-4">
@@ -589,11 +589,11 @@ export function DashboardContent() {
         }}
         title={
           modal === 'income'
-            ? 'Entradas do mês'
+            ? 'Ganhos do mês'
             : modal === 'expense'
-            ? 'Saídas do mês'
+            ? 'Gastos do mês'
             : modal === 'balance'
-            ? 'Entradas e Saídas do mês'
+            ? 'Ganhos e Gastos do mês'
             : modal === 'diff'
             ? 'Variação por Categoria (vs mês anterior)'
             : ''
@@ -602,7 +602,7 @@ export function DashboardContent() {
         {modal === 'income' && (
           <div className="mt-4">
             {summary.incomesByCategory.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
+              <div className="text-sm text-muted-foreground">Nenhum ganho encontrado.</div>
             ) : (
               <ul className="space-y-2">
                 {[...summary.incomesByCategory]
@@ -622,7 +622,7 @@ export function DashboardContent() {
         {modal === 'expense' && (
           <div className="mt-4">
             {summary.expensesByCategory.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
+              <div className="text-sm text-muted-foreground">Nenhum gasto encontrado.</div>
             ) : (
               <ul className="space-y-2">
                 {[...summary.expensesByCategory]
@@ -642,9 +642,9 @@ export function DashboardContent() {
         {modal === 'balance' && (
           <div className="space-y-6 mt-4">
             <div>
-              <div className="font-semibold mb-2">Entradas</div>
+              <div className="font-semibold mb-2">Ganhos</div>
               {summary.incomesByCategory.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Nenhuma entrada encontrada.</div>
+                <div className="text-sm text-muted-foreground">Nenhum ganho encontrado.</div>
               ) : (
                 <ul className="space-y-2">
                   {[...summary.incomesByCategory]
@@ -661,9 +661,9 @@ export function DashboardContent() {
               )}
             </div>
             <div>
-              <div className="font-semibold mb-2">Saídas</div>
+              <div className="font-semibold mb-2">Gastos</div>
               {summary.expensesByCategory.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Nenhuma saída encontrada.</div>
+                <div className="text-sm text-muted-foreground">Nenhum gasto encontrado.</div>
               ) : (
                 <ul className="space-y-2">
                   {[...summary.expensesByCategory]
@@ -726,16 +726,16 @@ export function DashboardContent() {
         <Card
           className="cursor-pointer"
           onClick={() => {
-            // Entradas por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
+            // Ganhos por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
             setModal('income');
           }}
         >
           <CardHeader>
-            <CardTitle>Entradas por Categoria (Top 5)</CardTitle>
+            <CardTitle>Ganhos por Categoria (Top 5)</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Loader text="Carregando entradas..." />
+              <Loader text="Carregando ganhos..." />
             ) : summary.incomesByCategory.length > 0 ? (
               <IncomeChart data={summary.incomesByCategory} maxItems={5} />
             ) : (
@@ -752,16 +752,16 @@ export function DashboardContent() {
         <Card
           className="cursor-pointer"
           onClick={() => {
-            // Saídas por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
+            // Gastos por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
             setModal('expense');
           }}
         >
           <CardHeader>
-            <CardTitle>Saídas por Categoria (Top 5)</CardTitle>
+            <CardTitle>Gastos por Categoria (Top 5)</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Loader text="Carregando saídas..." />
+              <Loader text="Carregando gastos..." />
             ) : summary.expensesByCategory.length > 0 ? (
               <ExpenseChart data={summary.expensesByCategory} maxItems={5} />
             ) : (
@@ -836,7 +836,7 @@ export function DashboardContent() {
         </Card>
       </div>
 
-      {/* Projeção e evolução diária lado a lado (substitui Entradas x Saídas) */}
+  {/* Projeção e evolução diária lado a lado (substitui Ganhos x Gastos) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
         <Card className="w-full">
           <CardHeader>
@@ -872,7 +872,7 @@ export function DashboardContent() {
         {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
         <Card className="cursor-pointer" onClick={() => setChartModal('monthly')}>
           <CardHeader>
-            <CardTitle>Entradas vs Saídas (12 meses)</CardTitle>
+            <CardTitle>Ganhos vs Gastos (12 meses)</CardTitle>
           </CardHeader>
           <CardContent>
             {chartsLoaded && summary.monthlyData.length > 0 ? (
@@ -886,7 +886,7 @@ export function DashboardContent() {
         {/* Top 5 categorias de despesa do período (gráfico clicável para expandir; botão para ver variações) */}
   <Card className="cursor-pointer" onClick={() => setModal('diff')}>
           <CardHeader>
-            <CardTitle>Top 5 Categorias de Saída (vs mês anterior)</CardTitle>
+            <CardTitle>Top 5 Categorias de Gasto (vs mês anterior)</CardTitle>
           </CardHeader>
           <CardContent>
             <div onClick={() => setChartModal('top')}>
@@ -971,14 +971,14 @@ export function DashboardContent() {
                 // transformar monthlyData para o formato esperado pelo MobileChartDetailList
                 <MobileChartDetailList
                   dailyData={summary.monthlyData
-                    .map((m) => ({ date: m.month, Entradas: m.income, 'Saídas': m.expense }))
-                    .filter((r) => (Number(r.Entradas || 0) !== 0 || Number(r['Saídas'] || 0) !== 0))
+                    .map((m) => ({ date: m.month, Ganhos: m.income, 'Gastos': m.expense }))
+                    .filter((r) => (Number(r.Ganhos || 0) !== 0 || Number(r['Gastos'] || 0) !== 0))
                   }
                   meta={Object.fromEntries([
-                    ['Entradas', { name: 'Entradas', color: 'hsl(var(--success))' }],
-                    ['Saídas', { name: 'Saídas', color: 'hsl(var(--danger))' }],
+                    ['Ganhos', { name: 'Ganhos', color: 'hsl(var(--success))' }],
+                    ['Gastos', { name: 'Gastos', color: 'hsl(var(--danger))' }],
                   ])}
-                  title="Entradas vs Saídas (12 meses)"
+                  title="Ganhos vs Gastos (12 meses)"
                 />
               ) : summary.monthlyData.length > 0 ? (
                 <MonthlyBarChart data={summary.monthlyData} height={'100%'} />
@@ -992,7 +992,7 @@ export function DashboardContent() {
               {isMobile ? (
                 <MobileChartDetailList
                   dailyData={summary.topExpenseCategories}
-                  title="Top 5 Categorias de Saída"
+                  title="Top 5 Categorias de Gasto"
                 />
               ) : (
                 <TopExpenseCategoriesChart data={summary.topExpenseCategories} height={'100%'} />

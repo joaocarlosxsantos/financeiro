@@ -274,7 +274,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
               setShowForm(false);
               setEditingId(null);
             }}
-            title={editingId ? 'Editar Entrada' : 'Nova Entrada'}
+            title={editingId ? 'Editar Ganho' : 'Novo Ganho'}
           >
             <form className="space-y-3" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
@@ -420,7 +420,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-              Entradas
+              Ganhos
             </h1>
             <p className="text-gray-600 dark:text-foreground">
               Gerencie todas as suas rendas (fixas e variáveis) do mês
@@ -443,7 +443,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
               }}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Adicionar Entrada
+            Adicionar Ganho
           </Button>
         </div>
         {/* Busca */}
@@ -456,7 +456,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         </div>
         {/* Lista de rendas */}
         {isLoading ? (
-          <Loader text="Carregando entradas..." />
+          <Loader text="Carregando ganhos..." />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-muted bg-background">
             <table className="min-w-full text-sm">
@@ -531,7 +531,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         {filteredRendas.length === 0 && !showForm && (
           <Card>
             <CardContent className="p-12 text-center">
-              <p className="text-gray-500">Nenhuma entrada cadastrada</p>
+              <p className="text-gray-500">Nenhum ganho cadastrado</p>
               <Button
                 className="mt-4"
                 onClick={() => {
@@ -550,7 +550,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar Primeira Entrada
+                Adicionar Primeiro Ganho
               </Button>
             </CardContent>
           </Card>

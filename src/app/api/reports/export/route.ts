@@ -228,7 +228,7 @@ export async function GET(req: Request) {
   for (const r of results) {
     wsDetails.addRow({
       date: r.date ? new Date(r.date) : null,
-      type: r.kind === 'income' ? 'Renda' : 'Despesa',
+  type: r.kind === 'income' ? 'Ganho' : 'Gasto',
       description: r.description,
       category: r.category?.name ?? null,
       wallet: r.wallet?.name ?? null,
@@ -251,8 +251,8 @@ export async function GET(req: Request) {
   const wsAgg = wb.addWorksheet('Resumo');
   wsAgg.columns = [{ header: 'Métrica', key: 'metric', width: 30 }, { header: 'Valor', key: 'value', width: 20 }];
   // adicionar linhas de resumo (despesas como valor negativo)
-  wsAgg.addRow(['Total Rendas', totalIncomes]);
-  wsAgg.addRow(['Total Despesas', -Math.abs(totalExpenses)]);
+  wsAgg.addRow(['Total Ganhos', totalIncomes]);
+  wsAgg.addRow(['Total Gastos', -Math.abs(totalExpenses)]);
   wsAgg.addRow(['Saldo', totalIncomes - Math.abs(totalExpenses)]);
   // estilizar cabeçalho (linha 1)
   const aggHeader = wsAgg.getRow(1);

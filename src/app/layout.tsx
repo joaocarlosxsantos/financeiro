@@ -19,7 +19,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Controle Financeiro',
-  description: 'Aplicação para controle de despesas e rendas pessoais',
+  description: 'Aplicação para controle de gastos e ganhos pessoais',
   icons: {
     icon: '/financeiro.png',
     shortcut: '/financeiro.png',

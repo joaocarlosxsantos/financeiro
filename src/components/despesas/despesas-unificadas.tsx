@@ -285,7 +285,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
               setShowForm(false);
               setEditingId(null);
             }}
-            title={editingId ? 'Editar Saída' : 'Nova Saída'}
+            title={editingId ? 'Editar Gasto' : 'Novo Gasto'}
           >
             <form className="space-y-3" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
@@ -396,7 +396,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                     className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150"
                   />
                   <Label htmlFor="isFixed" className="ml-1 select-none cursor-pointer text-sm">
-                    Despesa Fixa?
+                    Gasto Fixo?
                   </Label>
                 </div>
                 {form.isFixed && (
@@ -430,9 +430,9 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Saídas</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Gastos</h1>
             <p className="text-gray-600 dark:text-foreground">
-              Gerencie todas as suas despesas (fixas e variáveis) do mês
+              Gerencie todos os seus gastos (fixos e variáveis) do mês
             </p>
           </div>
           <Button
@@ -452,7 +452,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Adicionar Saída
+            Adicionar Gasto
           </Button>
         </div>
         {/* Busca */}
@@ -465,7 +465,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         </div>
         {/* Lista de despesas */}
         {isLoading ? (
-          <Loader text="Carregando despesas..." />
+          <Loader text="Carregando gastos..." />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-muted bg-background">
             <table className="min-w-full text-sm">
@@ -540,7 +540,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         {filteredDespesas.length === 0 && !showForm && (
           <Card>
             <CardContent className="p-12 text-center">
-              <p className="text-gray-500">Nenhuma saída cadastrada</p>
+              <p className="text-gray-500">Nenhum gasto cadastrado</p>
               <Button
                 className="mt-4"
                 onClick={() => {
@@ -559,7 +559,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar Primeira Saída
+                Adicionar Primeiro Gasto
               </Button>
             </CardContent>
           </Card>

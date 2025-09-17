@@ -56,8 +56,8 @@ export function CategoryCreateModal({
             onChange={(e) => setType(e.target.value as 'INCOME' | 'EXPENSE' | 'BOTH')}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            <option value="INCOME">Renda</option>
-            <option value="EXPENSE">Despesa</option>
+            <option value="INCOME">Ganho</option>
+            <option value="EXPENSE">Gasto</option>
             <option value="BOTH">Ambos</option>
           </select>
         </div>
