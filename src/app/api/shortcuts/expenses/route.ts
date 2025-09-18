@@ -36,7 +36,39 @@ async function findUserFromSessionOrApiKey(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-  const body = await req.json();
+  const rawBody = await req.json();
+  // Normalize inputs: allow categoryId to be null, empty string, or an object
+  const body = { ...rawBody };
+  // categoryId: accept '', null, object with { id }, object with { placeholder: true } or { name }
+  if (body.categoryId === '') body.categoryId = null;
+  if (body.categoryId === undefined) {
+    // leave undefined
+  } else if (body.categoryId === null) {
+    // explicit null => keep
+  } else if (typeof body.categoryId === 'object') {
+    if (body.categoryId.placeholder) {
+      body.categoryId = null;
+    } else if ('id' in body.categoryId) {
+      const idVal = body.categoryId.id;
+      body.categoryId = (typeof idVal === 'string' && idVal.trim()) ? idVal : null;
+    } else if ('name' in body.categoryId) {
+      body.categoryId = null;
+    } else {
+      body.categoryId = null;
+    }
+  }
+
+  // Normalize tags: accept array of strings or array of objects ({ name } or { id })
+  if (Array.isArray(body.tags)) {
+    body.tags = body.tags
+      .map((t: any) => {
+        if (!t) return '';
+        if (typeof t === 'string') return t;
+        if (t.placeholder) return '';
+        return t?.name || t?.id || '';
+      })
+      .filter(Boolean);
+  }
   const user = await findUserFromSessionOrApiKey(req);
 
     const expenseSchema = z.object({

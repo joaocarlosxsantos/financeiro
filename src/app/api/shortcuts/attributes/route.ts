@@ -30,8 +30,9 @@ export async function GET(req: NextRequest) {
 
     // Entradas especiais que permitem ao usuário não vincular categoria/tag.
     // Essas entradas não terão `id` e devem aparecer primeiro na lista.
-    const semCategoria = { name: 'Sem Categoria' , id: null };
-    const semTag = { name: 'Sem Tag' , id: null };
+  // Use a clear placeholder flag so clients can detect it easily
+  const semCategoria = { name: 'Sem Categoria', placeholder: true };
+  const semTag = { name: 'Sem Tag', placeholder: true };
 
     const categoriesPayload = [semCategoria, ...categories];
     const tagsPayload = [semTag, ...tags];
