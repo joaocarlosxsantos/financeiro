@@ -190,16 +190,36 @@ export function UserProfile({ className }: UserProfileProps) {
           </section>
           <section className="pt-2 border-t">
             <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">API Key</h3>
-            <div className="flex items-center gap-2">
-
-              <div className="flex flex-col-1 gap-2">
-                <Button disabled={!apiKey} onClick={async () => { if (!apiKey) return; await navigator.clipboard.writeText(apiKey); setCopied(true); setShowCopyToast(true); setTimeout(()=>setCopied(false),1500); }} title="Copiar chave">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start justify-items-center md:justify-items-start">
+              <div className="flex gap-2 justify-center md:justify-start">
+                <Button
+                  disabled={!apiKey}
+                  aria-disabled={!apiKey}
+                  onClick={async () => {
+                    if (!apiKey) return;
+                    try {
+                      await navigator.clipboard.writeText(apiKey);
+                      setCopied(true);
+                      setShowCopyToast(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    } catch (e) {
+                      setMessage('Erro ao copiar a chave. Copie manualmente.');
+                      if (liveRef.current) liveRef.current.textContent = 'Erro ao copiar chave';
+                    }
+                  }}
+                  title={apiKey ? 'Copiar chave' : 'Nenhuma chave disponível'}
+                  className={!apiKey ? 'opacity-50 cursor-not-allowed' : ''}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
                 <Button variant="outline" onClick={() => { setPendingAction('regenerate'); setConfirmOpen(true); }}>Regenerar</Button>
                 <Button variant="destructive" onClick={() => { setPendingAction('revoke'); setConfirmOpen(true); }}>Revogar</Button>
+              </div>
+              <div className="flex gap-2 mt-2 md:mt-0 justify-center md:justify-start">
                 {showAppleShortcutButton && (
                   <a href="https://www.icloud.com/shortcuts/af709560fb01492bb0bdf0fe63d38138" target="_blank" rel="noopener noreferrer" className="inline-block">
-                    <Button className="flex items-center bg-black text-white hover:bg-neutral-800 rounded-full px-3 py-2 shadow-sm border border-neutral-800" aria-label="Instalar Shortcut (Apple)">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 mr-2" aria-hidden="true" focusable="false">
+                    <Button className="flex items-center bg-black text-white hover:bg-neutral-800 rounded-full px-2 py-1 shadow-sm border border-neutral-800" aria-label="Instalar Shortcut (Apple)">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-3 h-3 mr-2" aria-hidden="true" focusable="false">
                         <path fill="currentColor" d="M16.365 1.43c-.7.02-1.8.48-2.4 1.19-.52.6-1 1.5-.83 2.4 1.02.06 2.1-.59 2.78-1.34.66-.71 1.12-1.92.45-2.25zM12 4c-1.9 0-3.6 1.33-4.12 3.2-.56 2.16.4 4.6 2.05 6.05.9.79 1.99 1.6 3.07 1.6 1.1 0 2.2-.78 3.08-1.57 1.6-1.45 2.6-3.86 2.03-6.02C15.8 5.33 13.9 4 12 4z" />
                       </svg>
                       Instalar Shortcut
