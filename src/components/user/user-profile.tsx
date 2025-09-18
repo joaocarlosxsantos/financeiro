@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import ThemeSelector from '@/components/ui/theme-selector';
 import { useTheme } from '@/components/providers/theme-provider';
 import { Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Toast } from '@/components/ui/toast';
 
 interface UserProfileProps { className?: string }
 
@@ -25,6 +26,7 @@ export function UserProfile({ className }: UserProfileProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showCopyToast, setShowCopyToast] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -176,15 +178,11 @@ export function UserProfile({ className }: UserProfileProps) {
           <section className="pt-2 border-t">
             <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">API Key</h3>
             <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Label>Chave de API</Label>
-                <Input value={apiKey ? (showApiKey ? apiKey : `${apiKey.substring(0,8)}...${apiKey.substring(apiKey.length-8)}`) : ''} readOnly />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button onClick={async () => { if (!apiKey) return; await navigator.clipboard.writeText(apiKey); setCopied(true); setTimeout(()=>setCopied(false),1500); }} title="Copiar chave">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</Button>
+
+              <div className="flex flex-col-1 gap-2">
+                <Button disabled={!apiKey} onClick={async () => { if (!apiKey) return; await navigator.clipboard.writeText(apiKey); setCopied(true); setShowCopyToast(true); setTimeout(()=>setCopied(false),1500); }} title="Copiar chave">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</Button>
                 <Button variant="outline" onClick={() => { setPendingAction('regenerate'); setConfirmOpen(true); }}>Regenerar</Button>
                 <Button variant="destructive" onClick={() => { setPendingAction('revoke'); setConfirmOpen(true); }}>Revogar</Button>
-                <Button onClick={() => setShowApiKey(s => !s)} variant="ghost">{showApiKey ? 'Ocultar' : 'Mostrar'}</Button>
               </div>
             </div>
           </section>
@@ -237,6 +235,7 @@ export function UserProfile({ className }: UserProfileProps) {
           </div>
         </div>
       </Modal>
+  <Toast open={showCopyToast} message="Chave copiada" onClose={() => setShowCopyToast(false)} />
     </Card>
   );
 }
