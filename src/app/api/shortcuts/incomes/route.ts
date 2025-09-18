@@ -32,22 +32,6 @@ async function findUserFromSessionOrApiKey(req: NextRequest) {
   return user;
 }
 
-export async function GET(req: NextRequest) {
-  try {
-  const user = await findUserFromSessionOrApiKey(req);
-    // Return select data for the quick-add form: categories (BOTH|INCOME), wallets, tags
-    const [categories, wallets, tags] = await Promise.all([
-      prisma.category.findMany({ where: { userId: user.id, OR: [{ type: 'INCOME' }, { type: 'BOTH' }] }, orderBy: { name: 'asc' } }),
-      prisma.wallet.findMany({ where: { userId: user.id }, orderBy: { name: 'asc' } }),
-      prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: 'asc' } }),
-    ]);
-    return NextResponse.json({ categories, wallets, tags });
-  } catch (err: any) {
-    const status = err?.status || 500;
-    return NextResponse.json({ error: err?.message || 'Internal error' }, { status });
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
   const body = await req.json();
