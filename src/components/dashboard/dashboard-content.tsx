@@ -69,7 +69,7 @@ import { getWalletColor } from './daily-wallet-chart';
 import QuickDespesaForm from '../quick-add/quick-despesa-form';
 import QuickRendaForm from '../quick-add/quick-renda-form';
 
-import React from 'react';
+import OnboardingTour from '@/components/OnboardingTour';
 
 export function DashboardContent() {
   const [saldoDoMes, setSaldoDoMes] = useState<number>(0);
@@ -123,6 +123,18 @@ export function DashboardContent() {
   const isAtCurrentMonth =
     currentDate.getFullYear() === today.getFullYear() &&
     currentDate.getMonth() === today.getMonth();
+
+  // Tour state and demo mode detection (antes dos efeitos que dependem disso)
+  const [tourOpen, setTourOpen] = useState(false);
+  const isDemoMode = useMemo(() => {
+    try {
+      if (typeof window === 'undefined') return false;
+      const params = new URLSearchParams(window.location.search);
+      return params.get('demo') === '1';
+    } catch {
+      return false;
+    }
+  }, []);
 
   // Agora: carregar cartões via API agregadora (/api/dashboard/cards)
   useEffect(() => {
@@ -206,6 +218,75 @@ export function DashboardContent() {
   useEffect(() => {
     const fetchSummary = async () => {
       setIsLoading(true);
+      // If demo mode is active, populate with fake data and skip API calls
+      if (isDemoMode) {
+        const fakeWallets = [{ id: 'w1', name: 'Carteira Demo', type: 'cash' }];
+        setWallets(fakeWallets as any);
+        const totalIncomeLocal = 12500;
+        const totalExpensesLocal = 7800;
+        const saldoDoMesLocal = totalIncomeLocal - totalExpensesLocal;
+        setTotalIncome(totalIncomeLocal);
+        setTotalExpenses(totalExpensesLocal);
+        setSaldoDoMes(saldoDoMesLocal);
+        setSaldoAcumulado(45200);
+        setLimiteDiario(120);
+        // richer demo mocks so charts have meaningful visuals during the tour
+        const demoMonthly = Array.from({ length: 12 }).map((_, i) => {
+          const month = new Date();
+          month.setMonth(month.getMonth() - (11 - i));
+          const label = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+          const income = 8000 + Math.round(Math.sin(i / 2) * 1500 + Math.random() * 800);
+          const expense = 5000 + Math.round(Math.cos(i / 3) * 1200 + Math.random() * 600);
+          return { month: label, income, expense, balance: income - expense };
+        });
+
+        const demoDailyBalance = Array.from({ length: 30 }).map((_, idx) => ({
+          date: toYmd(new Date(new Date().getFullYear(), new Date().getMonth(), idx + 1)),
+          balance: 30000 + idx * 50 + Math.round(Math.sin(idx / 3) * 400),
+        }));
+
+        const demoProjection = Array.from({ length: 30 }).map((_, idx) => ({ day: idx + 1, real: 30000 + idx * 50 + Math.round(Math.sin(idx / 4) * 300) }));
+
+        const demoExpensesByCategory = [
+          { category: 'Alimentação', amount: 3200, color: '#f97316' },
+          { category: 'Moradia', amount: 1800, color: '#ef4444' },
+          { category: 'Transporte', amount: 800, color: '#60a5fa' },
+          { category: 'Lazer', amount: 600, color: '#a78bfa' },
+          { category: 'Saúde', amount: 400, color: '#34d399' },
+        ];
+
+        const demoIncomesByCategory = [{ category: 'Salário', amount: 12500, color: '#10b981' }];
+
+        const demoDailyByCategory = Array.from({ length: 30 }).flatMap((_, dayIdx) =>
+          demoExpensesByCategory.map((c) => ({ date: toYmd(new Date(new Date().getFullYear(), new Date().getMonth(), dayIdx + 1)), category: c.category, amount: Math.round((c.amount / 30) * (0.5 + Math.random())), color: c.color }))
+        );
+
+        const demoWallets = [{ id: 'w1', name: 'Carteira Demo', type: 'cash', color: '#f43f5e' }];
+        setWallets(demoWallets as any);
+        const demoDailyByWallet = Array.from({ length: 30 }).map((_, dayIdx) => ({ date: toYmd(new Date(new Date().getFullYear(), new Date().getMonth(), dayIdx + 1)), wallet: demoWallets[0].name, amount: Math.round(200 + Math.random() * 150) }));
+
+        const demoDailyByTag = Array.from({ length: 30 }).flatMap((_, dayIdx) => [
+          { date: toYmd(new Date(new Date().getFullYear(), new Date().getMonth(), dayIdx + 1)), tag: 'Almoço', amount: Math.round(20 + Math.random() * 30) },
+          { date: toYmd(new Date(new Date().getFullYear(), new Date().getMonth(), dayIdx + 1)), tag: 'Uber', amount: Math.round(5 + Math.random() * 20) },
+        ]);
+
+        setSummary({
+          expensesByCategory: demoExpensesByCategory,
+          incomesByCategory: demoIncomesByCategory,
+          monthlyData: demoMonthly,
+          topExpenseCategories: demoExpensesByCategory.slice(0, 5).map((c) => ({ category: c.category, amount: c.amount, diff: Math.round((Math.random() - 0.5) * 300) })),
+          expenseDiffAll: demoExpensesByCategory.map((c) => ({ category: c.category, amount: c.amount, diff: Math.round((Math.random() - 0.5) * 300), prevAmount: Math.round(c.amount - (Math.random() * 200)) })),
+          dailyBalanceData: demoDailyBalance,
+          balanceProjectionData: demoProjection,
+        });
+
+        setByCategory(demoDailyByCategory);
+        setByWallet(demoDailyByWallet);
+        setByTag(demoDailyByTag);
+        setChartsLoaded(true);
+        setIsLoading(false);
+        return;
+      }
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
       const { start, end } = getMonthRange(year, month);
@@ -325,7 +406,7 @@ export function DashboardContent() {
     };
 
     fetchSummary();
-  }, [currentDate, selectedWallet]);
+  }, [currentDate, selectedWallet, isDemoMode]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -351,6 +432,13 @@ export function DashboardContent() {
   const [dailyByTag, setByTag] = useState<any[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(false);
   const [chartsLoaded, setChartsLoaded] = useState(false);
+  // Autostart do tour quando estamos em modo demo e os gráficos estiverem carregados
+  useEffect(() => {
+    if (isDemoMode && chartsLoaded && !tourOpen) {
+      setTourOpen(true);
+    }
+  }, [isDemoMode, chartsLoaded, tourOpen]);
+  
 
   // Função para fechar o modal e recarregar o dashboard
   const handleQuickAddSuccess = () => {
@@ -363,10 +451,10 @@ export function DashboardContent() {
     <div className="space-y-4 flex-1 min-h-screen flex flex-col px-2 sm:px-4 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-600 dark:text-foreground">Visão geral das suas finanças</p>
-        </div>
+          <div data-tour="dashboard-title">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p className="text-gray-600 dark:text-foreground">Visão geral das suas finanças</p>
+          </div>
 
         <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:space-x-2 w-full">
           <div className="w-full sm:w-auto">
@@ -407,6 +495,18 @@ export function DashboardContent() {
             >
               <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
             </Button>
+            <Button variant="secondary" size="sm" onClick={() => setTourOpen(true)} className="ml-2 hidden sm:inline-flex" aria-label="Iniciar tour">
+              {/* Ícone de lâmpada comum */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 3.5-2.5 6.5-5.5 7.5a1.5 1.5 0 0 1-3 0C7.5 15.5 5 12.5 5 9a7 7 0 0 1 7-7z"
+              />
+              </svg>
+            </Button>
           </div>
         </div>
       </div>
@@ -422,6 +522,7 @@ export function DashboardContent() {
           onClick={() => setModal('income')}
           className="group relative order-1 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Ganhos Totais"
+          data-tour="card-income"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -446,6 +547,7 @@ export function DashboardContent() {
           onClick={() => setModal('expense')}
           className="group relative order-2 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Gastos Totais"
+          data-tour="card-expense"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -470,6 +572,7 @@ export function DashboardContent() {
           onClick={() => setModal('balance')}
           className="group relative order-3 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Saldo do mês"
+          data-tour="cards-totals"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -493,6 +596,7 @@ export function DashboardContent() {
         <Card
           className="group relative order-4 flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Limite Diário"
+          data-tour="card-daily-limit"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -516,6 +620,7 @@ export function DashboardContent() {
         <Card
           className="group relative order-5 col-span-2 md:col-span-2 lg:col-span-1 flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Saldo Acumulado"
+          data-tour="card-accumulated"
         >
           <CardContent className="p-2 flex flex-col flex-1">
             <div className="flex flex-1 items-center justify-between gap-2">
@@ -729,6 +834,7 @@ export function DashboardContent() {
             // Ganhos por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
             setModal('income');
           }}
+          data-tour="chart-income-category"
         >
           <CardHeader>
             <CardTitle>Ganhos por Categoria (Top 5)</CardTitle>
@@ -755,6 +861,7 @@ export function DashboardContent() {
             // Gastos por Categoria é um gráfico de pizza — abrir modal de lista/detalhe existente
             setModal('expense');
           }}
+          data-tour="chart-expense-category"
         >
           <CardHeader>
             <CardTitle>Gastos por Categoria (Top 5)</CardTitle>
@@ -781,7 +888,7 @@ export function DashboardContent() {
 
       {/* Gráficos diários: categoria, carteira e tag */}
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
-  <Card className="cursor-pointer" onClick={() => setChartModal('dailyCategory')}>
+  <Card className="cursor-pointer" onClick={() => setChartModal('dailyCategory')} data-tour="chart-daily-category">
           <CardHeader>
             <CardTitle>Gasto Diário por Categoria</CardTitle>
           </CardHeader>
@@ -802,7 +909,7 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
-  <Card className="cursor-pointer" onClick={() => setChartModal('dailyWallet')}>
+  <Card className="cursor-pointer" onClick={() => setChartModal('dailyWallet')} data-tour="chart-daily-wallet">
           <CardHeader>
             <CardTitle>Gasto Diário por Carteira</CardTitle>
           </CardHeader>
@@ -818,7 +925,7 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
-  <Card className="cursor-pointer" onClick={() => setChartModal('dailyTag')}>
+  <Card className="cursor-pointer" onClick={() => setChartModal('dailyTag')} data-tour="chart-daily-tag">
           <CardHeader>
             <CardTitle>Gasto Diário por Tag</CardTitle>
           </CardHeader>
@@ -838,7 +945,7 @@ export function DashboardContent() {
 
   {/* Projeção e evolução diária lado a lado (substitui Ganhos x Gastos) */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
-        <Card className="w-full">
+  <Card className="w-full" data-tour="chart-daily-balance">
           <CardHeader>
             <CardTitle>Evolução Diária do Saldo</CardTitle>
           </CardHeader>
@@ -852,7 +959,7 @@ export function DashboardContent() {
             )}
           </CardContent>
         </Card>
-        <Card className="w-full">
+  <Card className="w-full" data-tour="chart-balance-projection">
           <CardHeader>
             <CardTitle>Projeção do Saldo Final do Mês</CardTitle>
           </CardHeader>
@@ -870,7 +977,7 @@ export function DashboardContent() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full">
         {/* Gráfico de barras empilhadas: renda vs despesas + saldo (últimos 12 meses) */}
-        <Card className="cursor-pointer" onClick={() => setChartModal('monthly')}>
+  <Card className="cursor-pointer" onClick={() => setChartModal('monthly')} data-tour="chart-monthly-bar">
           <CardHeader>
             <CardTitle>Ganhos vs Gastos (12 meses)</CardTitle>
           </CardHeader>
@@ -884,7 +991,7 @@ export function DashboardContent() {
         </Card>
 
         {/* Top 5 categorias de despesa do período (gráfico clicável para expandir; botão para ver variações) */}
-  <Card className="cursor-pointer" onClick={() => setModal('diff')}>
+  <Card className="cursor-pointer" onClick={() => setModal('diff')} data-tour="chart-top-categories">
           <CardHeader>
             <CardTitle>Top 5 Categorias de Gasto (vs mês anterior)</CardTitle>
           </CardHeader>
@@ -910,7 +1017,7 @@ export function DashboardContent() {
       </div>
       {/* Espaçador para afastar do rodapé */}
       <div className="h-24 sm:h-32" aria-hidden="true" />
-      {/* Modal para exibir gráficos ampliados */}
+  {/* Modal para exibir gráficos ampliados */}
       <Modal open={chartModal !== null} onClose={() => setChartModal(null)} title={chartModal ? 'Visualizar gráfico' : undefined} size="full">
   <div className="mt-2 h-[calc(80vh-96px)]">
           {chartModal === 'dailyCategory' && (
@@ -1001,6 +1108,8 @@ export function DashboardContent() {
           )}
         </div>
       </Modal>
+      {/* Onboarding tour */}
+      <OnboardingTour open={tourOpen} onClose={() => setTourOpen(false)} />
     </div>
   );
 }

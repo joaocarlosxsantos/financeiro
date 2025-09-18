@@ -184,10 +184,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         <div className="flex items-center gap-2">
           <Image src="/financeiro.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
           <div className="relative">
-            <ModuleSelector
-              module={module}
-              onSelect={(m) => switchModule(m)}
-            />
+            <div data-tour="sidebar-module">
+              <ModuleSelector
+                module={module}
+                onSelect={(m) => switchModule(m)}
+              />
+            </div>
           </div>
         </div>
         {onClose && (
@@ -206,9 +208,37 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Navegação */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        {currentNavigation.map((item) => (
-          <NavItem key={item.href} item={item} active={pathname === item.href} onClick={onClose} />
-        ))}
+        {currentNavigation.map((item) => {
+          // map href to a tour id-friendly key
+          const mapHrefToTour = (href: string) => {
+            switch (href) {
+              case '/dashboard':
+                return 'sidebar-dashboard';
+              case '/rendas':
+                return 'sidebar-incomes';
+              case '/despesas':
+                return 'sidebar-expenses';
+              case '/wallets':
+                return 'sidebar-wallets';
+              case '/categorias':
+                return 'sidebar-categories';
+              case '/tags':
+                return 'sidebar-tags';
+              case '/reports':
+                return 'sidebar-reports';
+              case '/importar-extrato':
+                return 'sidebar-import';
+              default:
+                return `sidebar-item-${href.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            }
+          };
+          const tourId = mapHrefToTour(item.href);
+          return (
+            <div key={item.href} data-tour={tourId}>
+              <NavItem item={item} active={pathname === item.href} onClick={onClose} />
+            </div>
+          );
+        })}
       </nav>
 
       {/* Usuário / Ações */}

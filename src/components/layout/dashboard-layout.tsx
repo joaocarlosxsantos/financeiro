@@ -1,6 +1,6 @@
 'use client';
 import { Sidebar } from './sidebar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -9,6 +9,15 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Abrir sidebar em mobile quando um evento customizado for disparado (ex: pelo tour)
+  // Isso permite que componentes externos peçam para abrir o drawer móvel sem acoplar estados.
+  useEffect(() => {
+    function handleOpen() {
+      setSidebarOpen(true);
+    }
+    window.addEventListener('openSidebar', handleOpen as EventListener);
+    return () => window.removeEventListener('openSidebar', handleOpen as EventListener);
+  }, []);
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar desktop */}

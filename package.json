@@ -32,6 +32,7 @@
     "papaparse": "^5.5.3",
     "react": "^18",
     "react-dom": "^18",
+  "react-joyride": "^2.7.0",
     "react-hook-form": "^7.48.2",
     "react-select": "^5.10.2",
     "recharts": "^2.8.0",
