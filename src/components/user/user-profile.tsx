@@ -32,6 +32,7 @@ export function UserProfile({ className }: UserProfileProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<'regenerate' | 'revoke' | null>(null);
   const liveRef = useRef<HTMLDivElement | null>(null);
+  const [showAppleShortcutButton, setShowAppleShortcutButton] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +57,18 @@ export function UserProfile({ className }: UserProfileProps) {
     })();
     return () => { cancelled = true; };
   }, [setTheme]);
+
+  useEffect(() => {
+    // Detect Apple platforms (iPhone, iPad, iPod, Mac) via userAgent/platform
+    let isApple = false;
+    try {
+      const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
+      const platform = typeof navigator !== 'undefined' ? (navigator.platform || '') : '';
+      isApple = /iPhone|iPad|iPod|Macintosh/.test(ua) || /MacIntel|iPhone|iPad|iPod/.test(platform);
+    } catch (e) { /* ignore */ }
+    const isDev = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+    setShowAppleShortcutButton(isApple || isDev);
+  }, []);
 
   const dirty = useMemo(() => (
     form.name !== user.name || form.email !== user.email || (form.phone || '') !== (user.phone || '')
@@ -183,6 +196,16 @@ export function UserProfile({ className }: UserProfileProps) {
                 <Button disabled={!apiKey} onClick={async () => { if (!apiKey) return; await navigator.clipboard.writeText(apiKey); setCopied(true); setShowCopyToast(true); setTimeout(()=>setCopied(false),1500); }} title="Copiar chave">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</Button>
                 <Button variant="outline" onClick={() => { setPendingAction('regenerate'); setConfirmOpen(true); }}>Regenerar</Button>
                 <Button variant="destructive" onClick={() => { setPendingAction('revoke'); setConfirmOpen(true); }}>Revogar</Button>
+                {showAppleShortcutButton && (
+                  <a href="https://www.icloud.com/shortcuts/af709560fb01492bb0bdf0fe63d38138" target="_blank" rel="noopener noreferrer" className="inline-block">
+                    <Button className="flex items-center bg-black text-white hover:bg-neutral-800 rounded-full px-3 py-2 shadow-sm border border-neutral-800" aria-label="Instalar Shortcut (Apple)">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 mr-2" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M16.365 1.43c-.7.02-1.8.48-2.4 1.19-.52.6-1 1.5-.83 2.4 1.02.06 2.1-.59 2.78-1.34.66-.71 1.12-1.92.45-2.25zM12 4c-1.9 0-3.6 1.33-4.12 3.2-.56 2.16.4 4.6 2.05 6.05.9.79 1.99 1.6 3.07 1.6 1.1 0 2.2-.78 3.08-1.57 1.6-1.45 2.6-3.86 2.03-6.02C15.8 5.33 13.9 4 12 4z" />
+                      </svg>
+                      Instalar Shortcut
+                    </Button>
+                  </a>
+                )}
               </div>
             </div>
           </section>
