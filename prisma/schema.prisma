@@ -52,6 +52,7 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
+  apiKey        String?   @unique
   phone         String?
   emailVerified DateTime?
   image         String?

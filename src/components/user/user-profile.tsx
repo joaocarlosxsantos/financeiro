@@ -25,6 +25,10 @@ export function UserProfile({ className }: UserProfileProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'regenerate' | 'revoke' | null>(null);
   const liveRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -38,6 +42,14 @@ export function UserProfile({ className }: UserProfileProps) {
           setForm({ name: data.name || '', email: data.email || '', phone: data.phone || '' });
           if (data.theme) setTheme(data.theme);
         }
+        // fetch apiKey separately
+        try {
+          const kres = await fetch('/api/user/apikey');
+          if (!cancelled && kres.ok) {
+            const kd = await kres.json();
+            setApiKey(kd.apiKey || null);
+          }
+        } catch (e) { /* ignore */ }
       } finally { if (!cancelled) setInitialLoading(false); }
     })();
     return () => { cancelled = true; };
@@ -162,6 +174,21 @@ export function UserProfile({ className }: UserProfileProps) {
             <div ref={liveRef} className="sr-only" aria-live="polite" />
           </section>
           <section className="pt-2 border-t">
+            <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">API Key</h3>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <Label>Chave de API</Label>
+                <Input value={apiKey ? (showApiKey ? apiKey : `${apiKey.substring(0,8)}...${apiKey.substring(apiKey.length-8)}`) : ''} readOnly />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button onClick={async () => { if (!apiKey) return; await navigator.clipboard.writeText(apiKey); setCopied(true); setTimeout(()=>setCopied(false),1500); }} title="Copiar chave">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</Button>
+                <Button variant="outline" onClick={() => { setPendingAction('regenerate'); setConfirmOpen(true); }}>Regenerar</Button>
+                <Button variant="destructive" onClick={() => { setPendingAction('revoke'); setConfirmOpen(true); }}>Revogar</Button>
+                <Button onClick={() => setShowApiKey(s => !s)} variant="ghost">{showApiKey ? 'Ocultar' : 'Mostrar'}</Button>
+              </div>
+            </div>
+          </section>
+          <section className="pt-2 border-t">
             <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">Preferências</h3>
             <ThemeSelector />
           </section>
@@ -185,6 +212,28 @@ export function UserProfile({ className }: UserProfileProps) {
           <div className="flex gap-2 mt-4">
             <Button onClick={handlePasswordSave} className="flex-1" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
             <Button onClick={() => { setShowPasswordModal(false); setPasswords({ password: '', confirm: '' }); setPasswordError(''); }} className="flex-1" variant="outline" disabled={loading}>Cancelar</Button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={confirmOpen} onClose={() => { setConfirmOpen(false); setPendingAction(null); }} title={pendingAction === 'revoke' ? 'Confirmar revogação' : 'Confirmar regeneração'}>
+        <div className="space-y-4">
+          <p>{pendingAction === 'revoke' ? 'Tem certeza que deseja revogar a sua chave de API? Isso fará com que a chave atual deixe de funcionar.' : 'Deseja gerar uma nova chave de API? A chave atual será substituída.'}</p>
+          <div className="flex gap-2 mt-4">
+            <Button onClick={async () => {
+              setConfirmOpen(false);
+              setInitialLoading(true);
+              try {
+                if (pendingAction === 'regenerate') {
+                  const res = await fetch('/api/user/apikey', { method: 'POST' });
+                  if (res.ok) {
+                    const d = await res.json(); setApiKey(d.apiKey); setShowApiKey(true);
+                  }
+                } else if (pendingAction === 'revoke') {
+                  await fetch('/api/user/apikey', { method: 'DELETE' }); setApiKey(null);
+                }
+              } finally { setInitialLoading(false); setPendingAction(null); }
+            }} className="flex-1">{pendingAction === 'revoke' ? 'Sim, revogar' : 'Sim, gerar'}</Button>
+            <Button onClick={() => { setConfirmOpen(false); setPendingAction(null); }} variant="outline" className="flex-1">Cancelar</Button>
           </div>
         </div>
       </Modal>

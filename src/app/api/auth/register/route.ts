@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,12 +23,16 @@ export async function POST(request: NextRequest) {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Gerar apiKey aleatória (hex, 64 chars)
+    const apiKey = crypto.randomBytes(32).toString('hex');
+
     // Criar usuário
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        apiKey,
       },
     });
 
