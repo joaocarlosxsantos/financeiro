@@ -1,0 +1,1082 @@
+[
+  {
+    "id": "b3317ff9-9ecd-4234-a7ef-b166eb5c00b7",
+    "user_id": "test-user-001",
+    "date": "2025-06-05",
+    "description": "Salário Mensal",
+    "amount": 7000.0,
+    "category_id": "c-salary",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-salary"
+  },
+  {
+    "id": "e2febcc9-59cf-44f7-b402-6c3fb3dc9d63",
+    "user_id": "test-user-001",
+    "date": "2025-07-05",
+    "description": "Salário Mensal",
+    "amount": 7000.0,
+    "category_id": "c-salary",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-salary"
+  },
+  {
+    "id": "4c702fc6-7dbd-48ad-8839-cdce4c5c291e",
+    "user_id": "test-user-001",
+    "date": "2025-08-05",
+    "description": "Salário Mensal",
+    "amount": 7000.0,
+    "category_id": "c-salary",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-salary"
+  },
+  {
+    "id": "3da46e57-452c-43f3-838c-b7fc38e74bfc",
+    "user_id": "test-user-001",
+    "date": "2025-06-02",
+    "description": "Aluguel",
+    "amount": -1800.0,
+    "category_id": "c-rent",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-rent"
+  },
+  {
+    "id": "81cacfb0-7cb5-4922-aca8-1e6a3c843410",
+    "user_id": "test-user-001",
+    "date": "2025-07-02",
+    "description": "Aluguel",
+    "amount": -1800.0,
+    "category_id": "c-rent",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-rent"
+  },
+  {
+    "id": "f89dca0f-b949-4870-8d2e-a1a6155323ac",
+    "user_id": "test-user-001",
+    "date": "2025-08-02",
+    "description": "Aluguel",
+    "amount": -1800.0,
+    "category_id": "c-rent",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-rent"
+  },
+  {
+    "id": "b8e91f7c-acc4-4472-ad9e-bd0534783341",
+    "user_id": "test-user-001",
+    "date": "2025-06-10",
+    "description": "Spotify/Streaming",
+    "amount": -29.9,
+    "category_id": "c-subscriptions",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-spotify"
+  },
+  {
+    "id": "a39b6086-67f0-4cdf-bd5e-2b5ae316d7b4",
+    "user_id": "test-user-001",
+    "date": "2025-07-10",
+    "description": "Spotify/Streaming",
+    "amount": -29.9,
+    "category_id": "c-subscriptions",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-spotify"
+  },
+  {
+    "id": "605081ea-d3bc-424e-8538-4e227de34248",
+    "user_id": "test-user-001",
+    "date": "2025-08-10",
+    "description": "Spotify/Streaming",
+    "amount": -29.9,
+    "category_id": "c-subscriptions",
+    "wallet_id": "w-inter",
+    "tags": [],
+    "recurring_id": "r-spotify"
+  },
+  {
+    "id": "df166e02-f6a3-4e9a-ac53-6a19cbf1fdd0",
+    "user_id": "test-user-001",
+    "date": "2025-06-15",
+    "description": "Investimento Automático",
+    "amount": -500.0,
+    "category_id": "c-investments",
+    "wallet_id": "w-nubank",
+    "tags": [],
+    "recurring_id": "r-invest"
+  },
+  {
+    "id": "530ee941-f150-4e4f-9289-0c689281709d",
+    "user_id": "test-user-001",
+    "date": "2025-07-15",
+    "description": "Investimento Automático",
+    "amount": -500.0,
+    "category_id": "c-investments",
+    "wallet_id": "w-nubank",
+    "tags": [],
+    "recurring_id": "r-invest"
+  },
+  {
+    "id": "a754b142-2d2f-46f3-8d6d-2f02b3d25e74",
+    "user_id": "test-user-001",
+    "date": "2025-08-15",
+    "description": "Investimento Automático",
+    "amount": -500.0,
+    "category_id": "c-investments",
+    "wallet_id": "w-nubank",
+    "tags": [],
+    "recurring_id": "r-invest"
+  },
+  {
+    "id": "e9a7ab5e-7d42-4c5b-a0f3-0679239532b7",
+    "user_id": "test-user-001",
+    "date": "2025-06-01",
+    "description": "Pagamento - c-grocery",
+    "amount": -118.57,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia",
+      "cartao"
+    ]
+  },
+  {
+    "id": "31b6e221-5e62-448b-98e3-e138b2e26189",
+    "user_id": "test-user-001",
+    "date": "2025-06-02",
+    "description": "Pagamento - c-grocery",
+    "amount": -93.06,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "4f491b63-d1fd-48d0-9544-0925962c9200",
+    "user_id": "test-user-001",
+    "date": "2025-06-05",
+    "description": "Pagamento - c-grocery",
+    "amount": -67.06,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "23679655-2a95-415e-b12f-fadf48574479",
+    "user_id": "test-user-001",
+    "date": "2025-06-06",
+    "description": "Pagamento - c-leisure",
+    "amount": -49.28,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "ab792d68-f962-49c7-82a4-ee29f6f85c0d",
+    "user_id": "test-user-001",
+    "date": "2025-06-07",
+    "description": "Pagamento - c-leisure",
+    "amount": -57.82,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": []
+  },
+  {
+    "id": "56605de3-9918-44c6-a566-53c1609d0318",
+    "user_id": "test-user-001",
+    "date": "2025-06-10",
+    "description": "Pagamento - c-leisure",
+    "amount": -72.34,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": [
+      "recreacao",
+      "viagem"
+    ]
+  },
+  {
+    "id": "b0907611-b580-4039-89b8-2ecdb4ba99df",
+    "user_id": "test-user-001",
+    "date": "2025-06-10",
+    "description": "Pagamento - c-grocery",
+    "amount": -154.61,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "cartao",
+      "viagem"
+    ]
+  },
+  {
+    "id": "9867f567-ec73-4ca1-bd63-bbcf03366ca5",
+    "user_id": "test-user-001",
+    "date": "2025-06-13",
+    "description": "Pagamento - c-leisure",
+    "amount": -57.05,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "2060f446-ba1e-4b09-9200-9ab17a635e5c",
+    "user_id": "test-user-001",
+    "date": "2025-06-14",
+    "description": "Recebimento - c-freelance",
+    "amount": 740.36,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "524f1efe-c0e0-43c6-b7a3-6d88d7965f0e",
+    "user_id": "test-user-001",
+    "date": "2025-06-14",
+    "description": "Pagamento - c-leisure",
+    "amount": -85.19,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": []
+  },
+  {
+    "id": "f425a481-60b0-4129-b415-a6b3e765ecf7",
+    "user_id": "test-user-001",
+    "date": "2025-06-15",
+    "description": "Pagamento - c-grocery",
+    "amount": -102.93,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "9a29ac2e-22f2-42ba-b9dc-dc7763e0ec9d",
+    "user_id": "test-user-001",
+    "date": "2025-06-16",
+    "description": "Pagamento - c-leisure",
+    "amount": -53.02,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": [
+      "cartao",
+      "food"
+    ]
+  },
+  {
+    "id": "08159b4b-7782-4b92-a0a5-9d8a8c28fc52",
+    "user_id": "test-user-001",
+    "date": "2025-06-17",
+    "description": "Pagamento - c-grocery",
+    "amount": -121.21,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem"
+    ]
+  },
+  {
+    "id": "38752846-f419-4663-a45a-45e3c8b51de5",
+    "user_id": "test-user-001",
+    "date": "2025-06-17",
+    "description": "Pagamento - c-grocery",
+    "amount": -129.12,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "cartao",
+      "moradia"
+    ]
+  },
+  {
+    "id": "b55e82f6-9940-4818-9547-86e7a309a663",
+    "user_id": "test-user-001",
+    "date": "2025-06-18",
+    "description": "Recebimento - c-freelance",
+    "amount": 1057.88,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "trabalho"
+    ]
+  },
+  {
+    "id": "a64506b9-4583-4e14-801b-39527b85f0f8",
+    "user_id": "test-user-001",
+    "date": "2025-06-20",
+    "description": "Pagamento - c-leisure",
+    "amount": -42.88,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": [
+      "food",
+      "trabalho"
+    ]
+  },
+  {
+    "id": "d0766097-c210-4e36-ae63-818a91274db2",
+    "user_id": "test-user-001",
+    "date": "2025-06-22",
+    "description": "Recebimento - c-freelance",
+    "amount": 862.73,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "b17b466c-c5f1-4fc1-9117-ce91e5f8fb61",
+    "user_id": "test-user-001",
+    "date": "2025-06-22",
+    "description": "Pagamento - c-transport",
+    "amount": -26.26,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia",
+      "saude"
+    ]
+  },
+  {
+    "id": "d5ac5158-f814-4d49-ad3c-45e3bea4ff21",
+    "user_id": "test-user-001",
+    "date": "2025-06-22",
+    "description": "Recebimento - c-freelance",
+    "amount": 577.82,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "familia",
+      "cartao"
+    ]
+  },
+  {
+    "id": "4040b319-4f6b-4a61-b2a8-34ed4b08bb17",
+    "user_id": "test-user-001",
+    "date": "2025-06-23",
+    "description": "Pagamento - c-leisure",
+    "amount": -48.54,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": []
+  },
+  {
+    "id": "59dde775-8e67-4197-91f7-b0f5746a1e8e",
+    "user_id": "test-user-001",
+    "date": "2025-06-27",
+    "description": "Pagamento - c-leisure",
+    "amount": -90.02,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem",
+      "food"
+    ]
+  },
+  {
+    "id": "b0f5f8d9-684b-4a64-a495-62bab1a09bea",
+    "user_id": "test-user-001",
+    "date": "2025-06-28",
+    "description": "Pagamento - c-transport",
+    "amount": -22.77,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "trabalho"
+    ]
+  },
+  {
+    "id": "a2e23d58-77fe-4dd8-a46c-0303e03e9e4d",
+    "user_id": "test-user-001",
+    "date": "2025-06-29",
+    "description": "Pagamento - c-grocery",
+    "amount": -86.11,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem"
+    ]
+  },
+  {
+    "id": "e6d16717-ffcd-449a-93b3-92289247d67d",
+    "user_id": "test-user-001",
+    "date": "2025-07-02",
+    "description": "Pagamento - c-grocery",
+    "amount": -95.72,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "recreacao",
+      "food"
+    ]
+  },
+  {
+    "id": "f7474ac3-f499-4325-a167-0c54ee6f406d",
+    "user_id": "test-user-001",
+    "date": "2025-07-04",
+    "description": "Pagamento - c-transport",
+    "amount": -30.89,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "food"
+    ]
+  },
+  {
+    "id": "999e434e-0255-4168-9592-e6abc8aa21fd",
+    "user_id": "test-user-001",
+    "date": "2025-07-04",
+    "description": "Pagamento - c-transport",
+    "amount": -31.15,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem",
+      "saude"
+    ]
+  },
+  {
+    "id": "78170fbe-da2f-40c2-8741-2f882ca27044",
+    "user_id": "test-user-001",
+    "date": "2025-07-05",
+    "description": "Pagamento - c-leisure",
+    "amount": -39.89,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "d82fdf4a-7e09-4d23-a7e7-f08a81402ebd",
+    "user_id": "test-user-001",
+    "date": "2025-07-05",
+    "description": "Pagamento - c-transport",
+    "amount": -28.43,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "familia"
+    ]
+  },
+  {
+    "id": "610cce3b-fabe-433d-95b2-52716a7a01c5",
+    "user_id": "test-user-001",
+    "date": "2025-07-05",
+    "description": "Pagamento - c-transport",
+    "amount": -24.23,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "6c052701-753a-4fb2-a660-e77ee78756ff",
+    "user_id": "test-user-001",
+    "date": "2025-07-09",
+    "description": "Pagamento - c-leisure",
+    "amount": -58.86,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": []
+  },
+  {
+    "id": "026ba36b-9037-4af9-af25-b6ecbe650a5e",
+    "user_id": "test-user-001",
+    "date": "2025-07-10",
+    "description": "Recebimento - c-freelance",
+    "amount": 811.95,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "785779be-4ed6-4c83-bb73-624e98808b7b",
+    "user_id": "test-user-001",
+    "date": "2025-07-12",
+    "description": "Pagamento - c-leisure",
+    "amount": -80.35,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": [
+      "recreacao"
+    ]
+  },
+  {
+    "id": "415ac171-21f1-4e83-8610-4e4fae427129",
+    "user_id": "test-user-001",
+    "date": "2025-07-13",
+    "description": "Pagamento - c-grocery",
+    "amount": -71.99,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "2ba0775b-88ff-495d-b646-b864fd25b086",
+    "user_id": "test-user-001",
+    "date": "2025-07-13",
+    "description": "Recebimento - c-freelance",
+    "amount": 187.52,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "d9a4500e-836c-4bfb-9581-74dd11dc6b09",
+    "user_id": "test-user-001",
+    "date": "2025-07-16",
+    "description": "Recebimento - c-freelance",
+    "amount": 908.56,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia"
+    ]
+  },
+  {
+    "id": "c1547852-cbfc-4f5b-be2b-459c38931cf3",
+    "user_id": "test-user-001",
+    "date": "2025-07-18",
+    "description": "Pagamento - c-grocery",
+    "amount": -156.67,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "35155554-1c6d-43f1-ab60-bcb36666f6be",
+    "user_id": "test-user-001",
+    "date": "2025-07-18",
+    "description": "Pagamento - c-transport",
+    "amount": -17.85,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "36ef8286-bd6b-44f0-be9a-15f06266e2c6",
+    "user_id": "test-user-001",
+    "date": "2025-07-18",
+    "description": "Pagamento - c-transport",
+    "amount": -29.77,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "19f9f4dc-1d36-4294-b345-19e06d5e8b8f",
+    "user_id": "test-user-001",
+    "date": "2025-07-19",
+    "description": "Pagamento - c-leisure",
+    "amount": -88.26,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": [
+      "recreacao"
+    ]
+  },
+  {
+    "id": "c9ce2722-5279-4bda-ab83-17ebf37a302c",
+    "user_id": "test-user-001",
+    "date": "2025-07-19",
+    "description": "Pagamento - c-transport",
+    "amount": -19.14,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "saude"
+    ]
+  },
+  {
+    "id": "e7aedc8d-36df-41fb-bc93-d94a53fe7107",
+    "user_id": "test-user-001",
+    "date": "2025-07-19",
+    "description": "Pagamento - c-grocery",
+    "amount": -80.45,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "37acf5a8-90be-4acc-a1a3-c4d8bdae0597",
+    "user_id": "test-user-001",
+    "date": "2025-07-21",
+    "description": "Pagamento - c-transport",
+    "amount": -20.53,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia",
+      "food"
+    ]
+  },
+  {
+    "id": "be508af1-3c54-4dc0-be1a-2bb6a1decb8c",
+    "user_id": "test-user-001",
+    "date": "2025-07-23",
+    "description": "Pagamento - c-transport",
+    "amount": -10.29,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "familia",
+      "viagem"
+    ]
+  },
+  {
+    "id": "3e35d363-da84-4a9a-964a-d4c6299a53e8",
+    "user_id": "test-user-001",
+    "date": "2025-07-25",
+    "description": "Pagamento - c-leisure",
+    "amount": -84.39,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": []
+  },
+  {
+    "id": "fdc1a602-4ec9-47e3-8e99-054f4c8ba1a7",
+    "user_id": "test-user-001",
+    "date": "2025-07-26",
+    "description": "Pagamento - c-leisure",
+    "amount": -61.28,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": [
+      "cartao"
+    ]
+  },
+  {
+    "id": "d35e411d-7589-4048-bbc7-0503a68e261c",
+    "user_id": "test-user-001",
+    "date": "2025-07-27",
+    "description": "Pagamento - c-grocery",
+    "amount": -156.05,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia"
+    ]
+  },
+  {
+    "id": "ec749584-316d-4109-a029-721772cbb590",
+    "user_id": "test-user-001",
+    "date": "2025-07-27",
+    "description": "Pagamento - c-grocery",
+    "amount": -78.44,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia"
+    ]
+  },
+  {
+    "id": "9ede17e4-ca77-4174-8b10-0c6720b1ae55",
+    "user_id": "test-user-001",
+    "date": "2025-07-28",
+    "description": "Pagamento - c-leisure",
+    "amount": -54.99,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": []
+  },
+  {
+    "id": "25ecc00c-2e5f-44d0-89a3-126fe5b4eecc",
+    "user_id": "test-user-001",
+    "date": "2025-07-28",
+    "description": "Recebimento - c-freelance",
+    "amount": 987.96,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem",
+      "cartao"
+    ]
+  },
+  {
+    "id": "4abccf31-1e3f-4ee9-b4cd-4d02dd4da5a4",
+    "user_id": "test-user-001",
+    "date": "2025-07-30",
+    "description": "Pagamento - c-leisure",
+    "amount": -35.73,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "00ffaad6-0255-423f-af9b-835d38df5b08",
+    "user_id": "test-user-001",
+    "date": "2025-07-30",
+    "description": "Pagamento - c-transport",
+    "amount": -23.57,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "e6309199-1122-44b5-9ac5-add274e6a5f4",
+    "user_id": "test-user-001",
+    "date": "2025-07-31",
+    "description": "Pagamento - c-leisure",
+    "amount": -84.29,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": [
+      "familia"
+    ]
+  },
+  {
+    "id": "f818ef52-44a5-4f82-b017-978d8a79f2ad",
+    "user_id": "test-user-001",
+    "date": "2025-08-02",
+    "description": "Pagamento - c-leisure",
+    "amount": -75.6,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem",
+      "moradia"
+    ]
+  },
+  {
+    "id": "07c2b6e5-e1cf-42f1-adb3-29441227584b",
+    "user_id": "test-user-001",
+    "date": "2025-08-03",
+    "description": "Recebimento - c-freelance",
+    "amount": 859.13,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "1b15225c-435c-4de6-a7b5-515c81a17b4b",
+    "user_id": "test-user-001",
+    "date": "2025-08-05",
+    "description": "Pagamento - c-transport",
+    "amount": -11.35,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "trabalho"
+    ]
+  },
+  {
+    "id": "876cf698-6eec-41c1-a858-86fad9242565",
+    "user_id": "test-user-001",
+    "date": "2025-08-05",
+    "description": "Pagamento - c-grocery",
+    "amount": -100.7,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "familia"
+    ]
+  },
+  {
+    "id": "11150df9-0bf2-4bee-b198-fe9797b3dcb8",
+    "user_id": "test-user-001",
+    "date": "2025-08-06",
+    "description": "Pagamento - c-transport",
+    "amount": -20.4,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "food",
+      "viagem"
+    ]
+  },
+  {
+    "id": "b3317eb4-ea7a-4660-ad5c-e42bf768e2b2",
+    "user_id": "test-user-001",
+    "date": "2025-08-06",
+    "description": "Pagamento - c-transport",
+    "amount": -14.88,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "5caa55a7-ac9c-41f3-a2e9-ca04dc174857",
+    "user_id": "test-user-001",
+    "date": "2025-08-07",
+    "description": "Pagamento - c-transport",
+    "amount": -26.24,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "saude"
+    ]
+  },
+  {
+    "id": "1b915008-ca57-42bd-8126-31b85ba77926",
+    "user_id": "test-user-001",
+    "date": "2025-08-07",
+    "description": "Pagamento - c-leisure",
+    "amount": -57.27,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia",
+      "saude"
+    ]
+  },
+  {
+    "id": "ce97b51c-f2b5-4557-9854-6bc69d5ebb7b",
+    "user_id": "test-user-001",
+    "date": "2025-08-07",
+    "description": "Pagamento - c-grocery",
+    "amount": -136.1,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem"
+    ]
+  },
+  {
+    "id": "d7469785-6b3b-4f62-aa42-0d114f604a1b",
+    "user_id": "test-user-001",
+    "date": "2025-08-08",
+    "description": "Pagamento - c-transport",
+    "amount": -20.87,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "80881df5-0762-4bba-98bf-028dab323abe",
+    "user_id": "test-user-001",
+    "date": "2025-08-08",
+    "description": "Pagamento - c-transport",
+    "amount": -20.13,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "cartao"
+    ]
+  },
+  {
+    "id": "3c091418-aea1-4551-a091-2515f87b4e05",
+    "user_id": "test-user-001",
+    "date": "2025-08-09",
+    "description": "Recebimento - c-freelance",
+    "amount": 915.51,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "09cb6e69-291f-4f34-b3ff-7fac1df30047",
+    "user_id": "test-user-001",
+    "date": "2025-08-11",
+    "description": "Pagamento - c-transport",
+    "amount": -6.2,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "92e95804-9a87-42ad-8718-3b8df9b8170d",
+    "user_id": "test-user-001",
+    "date": "2025-08-11",
+    "description": "Recebimento - c-freelance",
+    "amount": 466.38,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "cartao",
+      "saude"
+    ]
+  },
+  {
+    "id": "5a9b1e40-e3ef-48fa-9edd-cbc17c4f6d51",
+    "user_id": "test-user-001",
+    "date": "2025-08-11",
+    "description": "Pagamento - c-grocery",
+    "amount": -84.56,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "2f10d4f3-a957-4273-8107-59b4ba6b7676",
+    "user_id": "test-user-001",
+    "date": "2025-08-12",
+    "description": "Pagamento - c-grocery",
+    "amount": -151.17,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "food"
+    ]
+  },
+  {
+    "id": "652dc359-4605-4d1e-a8c0-e18132dc8263",
+    "user_id": "test-user-001",
+    "date": "2025-08-14",
+    "description": "Pagamento - c-leisure",
+    "amount": -41.0,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem",
+      "recreacao"
+    ]
+  },
+  {
+    "id": "97289421-1bd0-40b1-9e16-93963076c377",
+    "user_id": "test-user-001",
+    "date": "2025-08-16",
+    "description": "Recebimento - c-freelance",
+    "amount": 552.49,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "trabalho",
+      "moradia"
+    ]
+  },
+  {
+    "id": "f1b91781-8bfd-46c6-8e74-2a16101b9de9",
+    "user_id": "test-user-001",
+    "date": "2025-08-17",
+    "description": "Recebimento - c-freelance",
+    "amount": 571.49,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "familia"
+    ]
+  },
+  {
+    "id": "30108f23-2a47-4a21-8c30-c4b291e11b9f",
+    "user_id": "test-user-001",
+    "date": "2025-08-20",
+    "description": "Pagamento - c-leisure",
+    "amount": -25.12,
+    "category_id": "c-leisure",
+    "wallet_id": "w-nubank",
+    "tags": [
+      "recreacao"
+    ]
+  },
+  {
+    "id": "bc668db0-beb4-46d7-bbab-cf27475e09da",
+    "user_id": "test-user-001",
+    "date": "2025-08-20",
+    "description": "Pagamento - c-transport",
+    "amount": -11.71,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "moradia",
+      "trabalho"
+    ]
+  },
+  {
+    "id": "a3a8aa8a-efb5-41f9-82ab-c8f61213374d",
+    "user_id": "test-user-001",
+    "date": "2025-08-21",
+    "description": "Pagamento - c-leisure",
+    "amount": -57.76,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "db5061ac-fd12-4edc-8fa0-a8c27d989532",
+    "user_id": "test-user-001",
+    "date": "2025-08-22",
+    "description": "Pagamento - c-transport",
+    "amount": -26.47,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "5661c2b9-351d-4c82-9a69-02943389c62e",
+    "user_id": "test-user-001",
+    "date": "2025-08-23",
+    "description": "Pagamento - c-grocery",
+    "amount": -100.94,
+    "category_id": "c-grocery",
+    "wallet_id": "w-inter",
+    "tags": [
+      "saude"
+    ]
+  },
+  {
+    "id": "d11357a6-f147-4e7d-a60d-d01882b63e0e",
+    "user_id": "test-user-001",
+    "date": "2025-08-23",
+    "description": "Recebimento - c-freelance",
+    "amount": 620.61,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "eaf3d22f-e2fd-4f56-a20b-b916aa72f112",
+    "user_id": "test-user-001",
+    "date": "2025-08-23",
+    "description": "Recebimento - c-freelance",
+    "amount": 806.34,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": []
+  },
+  {
+    "id": "25d11a7b-fb88-4317-a600-e0109457b676",
+    "user_id": "test-user-001",
+    "date": "2025-08-24",
+    "description": "Recebimento - c-freelance",
+    "amount": 972.74,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "trabalho"
+    ]
+  },
+  {
+    "id": "cc1221f1-ba09-4f0d-9fb7-28f58eb9e977",
+    "user_id": "test-user-001",
+    "date": "2025-08-24",
+    "description": "Recebimento - c-freelance",
+    "amount": 856.39,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "food"
+    ]
+  },
+  {
+    "id": "557fe007-a8ca-4422-92ea-e3d475ae0faf",
+    "user_id": "test-user-001",
+    "date": "2025-08-25",
+    "description": "Recebimento - c-freelance",
+    "amount": 1116.24,
+    "category_id": "c-freelance",
+    "wallet_id": "w-inter",
+    "tags": [
+      "viagem"
+    ]
+  },
+  {
+    "id": "75b8607c-94c1-48a2-85c1-f02cc3e96f66",
+    "user_id": "test-user-001",
+    "date": "2025-08-25",
+    "description": "Pagamento - c-transport",
+    "amount": -17.55,
+    "category_id": "c-transport",
+    "wallet_id": "w-inter",
+    "tags": [
+      "recreacao",
+      "cartao"
+    ]
+  },
+  {
+    "id": "257092cb-df28-404c-9ff3-59c05850b25e",
+    "user_id": "test-user-001",
+    "date": "2025-08-27",
+    "description": "Pagamento - c-leisure",
+    "amount": -61.58,
+    "category_id": "c-leisure",
+    "wallet_id": "w-inter",
+    "tags": []
+  }
+]

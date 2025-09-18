@@ -1,0 +1,23 @@
+[
+  {
+    "id": "w-inter",
+    "name": "Inter",
+    "type": "checking",
+    "balance": 500.0,
+    "currency": "BRL"
+  },
+  {
+    "id": "w-nubank",
+    "name": "Nubank",
+    "type": "checking",
+    "balance": 1000.0,
+    "currency": "BRL"
+  },
+  {
+    "id": "w-sodexo",
+    "name": "Sodexo (Benefícios)",
+    "type": "benefits",
+    "balance": 300.0,
+    "currency": "BRL"
+  }
+]

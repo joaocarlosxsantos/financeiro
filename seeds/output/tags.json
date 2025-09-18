@@ -1,0 +1,34 @@
+[
+  {
+    "id": "t-family",
+    "name": "familia"
+  },
+  {
+    "id": "t-home",
+    "name": "moradia"
+  },
+  {
+    "id": "t-work",
+    "name": "trabalho"
+  },
+  {
+    "id": "t-health",
+    "name": "saude"
+  },
+  {
+    "id": "t-travel",
+    "name": "viagem"
+  },
+  {
+    "id": "t-card",
+    "name": "cartao"
+  },
+  {
+    "id": "t-food",
+    "name": "food"
+  },
+  {
+    "id": "t-fun",
+    "name": "recreacao"
+  }
+]

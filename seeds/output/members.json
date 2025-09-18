@@ -1,0 +1,98 @@
+[
+  {
+    "id": "3143f905-3795-44f5-b113-659e000d685a",
+    "group_id": "group-01",
+    "name": "Membro 1-1",
+    "email": "m11@exemplo.com"
+  },
+  {
+    "id": "21e6f2b1-6aa2-4dad-bd26-175ecdfdb362",
+    "group_id": "group-01",
+    "name": "Membro 1-2",
+    "email": "m12@exemplo.com"
+  },
+  {
+    "id": "d8c6d980-f753-4c2d-8cb8-ab0ec03061a0",
+    "group_id": "group-01",
+    "name": "Membro 1-3",
+    "email": "m13@exemplo.com"
+  },
+  {
+    "id": "e5f8b43c-724e-4dfe-879a-ceb8e3c94b4c",
+    "group_id": "group-02",
+    "name": "Membro 2-1",
+    "email": "m21@exemplo.com"
+  },
+  {
+    "id": "c4538a5d-8d75-4cb5-a8b9-83879024fafb",
+    "group_id": "group-02",
+    "name": "Membro 2-2",
+    "email": "m22@exemplo.com"
+  },
+  {
+    "id": "190b0d8d-c8ce-43e5-9a1f-a59ebd9f0fc9",
+    "group_id": "group-02",
+    "name": "Membro 2-3",
+    "email": "m23@exemplo.com"
+  },
+  {
+    "id": "6b50a09a-e887-4b25-ab2a-7f01cab868cd",
+    "group_id": "group-03",
+    "name": "Membro 3-1",
+    "email": "m31@exemplo.com"
+  },
+  {
+    "id": "9b1dc750-4a86-456b-943c-75f3fc63af33",
+    "group_id": "group-03",
+    "name": "Membro 3-2",
+    "email": "m32@exemplo.com"
+  },
+  {
+    "id": "b359314d-d19a-4d43-a13d-04e306da1311",
+    "group_id": "group-03",
+    "name": "Membro 3-3",
+    "email": "m33@exemplo.com"
+  },
+  {
+    "id": "45063e0f-6b10-44d3-81cc-8c6f4d4d56c8",
+    "group_id": "group-03",
+    "name": "Membro 3-4",
+    "email": "m34@exemplo.com"
+  },
+  {
+    "id": "2cf5ce76-98f5-4252-b4aa-52371530c070",
+    "group_id": "group-04",
+    "name": "Membro 4-1",
+    "email": "m41@exemplo.com"
+  },
+  {
+    "id": "82b5e04e-799e-4fa3-86b1-59220c5523ef",
+    "group_id": "group-04",
+    "name": "Membro 4-2",
+    "email": "m42@exemplo.com"
+  },
+  {
+    "id": "067db1ce-d1e3-4010-a4ab-c76c2476a9c2",
+    "group_id": "group-04",
+    "name": "Membro 4-3",
+    "email": "m43@exemplo.com"
+  },
+  {
+    "id": "7c61b1c9-8959-49ab-8c0b-604744a858d2",
+    "group_id": "group-05",
+    "name": "Membro 5-1",
+    "email": "m51@exemplo.com"
+  },
+  {
+    "id": "9210418c-7402-4390-a294-8ff2c65a3f18",
+    "group_id": "group-05",
+    "name": "Membro 5-2",
+    "email": "m52@exemplo.com"
+  },
+  {
+    "id": "97a8aeac-a1b0-41f8-95bd-9423af643731",
+    "group_id": "group-05",
+    "name": "Membro 5-3",
+    "email": "m53@exemplo.com"
+  }
+]

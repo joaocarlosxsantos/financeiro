@@ -1,0 +1,42 @@
+[
+  {
+    "id": "c-salary",
+    "name": "Salário",
+    "type": "income"
+  },
+  {
+    "id": "c-freelance",
+    "name": "Freelance",
+    "type": "income"
+  },
+  {
+    "id": "c-rent",
+    "name": "Aluguel",
+    "type": "expense"
+  },
+  {
+    "id": "c-grocery",
+    "name": "Supermercado",
+    "type": "expense"
+  },
+  {
+    "id": "c-transport",
+    "name": "Transporte",
+    "type": "expense"
+  },
+  {
+    "id": "c-leisure",
+    "name": "Lazer",
+    "type": "expense"
+  },
+  {
+    "id": "c-subscriptions",
+    "name": "Assinaturas",
+    "type": "expense"
+  },
+  {
+    "id": "c-investments",
+    "name": "Investimentos",
+    "type": "expense"
+  }
+]
