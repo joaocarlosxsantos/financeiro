@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { stableSortByDateDesc } from '@/lib/sort';
 import { CategoryCreateModal } from '@/components/ui/category-create-modal';
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { TagCreateModal } from '@/components/ui/tag-create-modal';
@@ -32,7 +33,7 @@ interface Despesa {
   id: string;
   description: string;
   amount: number;
-  date: Date;
+  date?: Date;
   dayOfMonth?: number;
   categoryId?: string;
   categoryName?: string;
@@ -118,7 +119,10 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
     isFixed: true,
       }));
       }
-      setDespesas([...despesasVar, ...despesasFix]);
+      // Combinar variáveis e fixas e ordenar apenas por data (desc).
+      // Preservar ordem original quando as datas forem iguais (stable by index).
+      const combined = [...despesasVar, ...despesasFix];
+      setDespesas(stableSortByDateDesc(combined, (it) => it?.date));
       setIsLoading(false);
     }
     load();
@@ -148,7 +152,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       setForm({
         description: d.description,
         amount: String(d.amount),
-  date: d.date instanceof Date ? formatYmd(d.date) : d.date,
+  date: d.date instanceof Date ? formatYmd(d.date) : (d.date ?? ''),
         categoryId: d.categoryId || '',
         walletId: d.walletId || '',
         tags: d.tags || [],
@@ -185,6 +189,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       endDate?: string | null;
       categoryId: string | null;
       walletId: string | null;
+      dayOfMonth?: number | null;
       tags: string[];
     }
     const payload: ExpensePayload = {
@@ -213,53 +218,110 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       });
     }
     if (res.ok) {
+      // Ler objeto retornado e atualizar localmente quando for VARIABLE
+      const returned = await res.json();
+      // capturar se estávamos editando antes de resetar
+      const wasEditing = editingId;
       setShowForm(false);
       setEditingId(null);
-  setForm({
-    description: '',
-    amount: '',
-    date: today,
-    categoryId: '',
-    walletId: '',
-    tags: [],
-    isFixed: false,
-  endDate: '',
-  });
+      setForm({
+        description: '',
+        amount: '',
+        date: today,
+        categoryId: '',
+        walletId: '',
+        tags: [],
+        isFixed: false,
+        endDate: '',
+      });
       setErrors({});
-      // Recarrega despesas
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-      const [variaveisRes, fixasRes] = await Promise.all([
-        fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}`, { cache: 'no-store' }),
-        fetch(`/api/expenses?type=FIXED&start=${start}&end=${end}`, { cache: 'no-store' }),
-      ]);
-      let despesasVar: Despesa[] = [];
-      let despesasFix: Despesa[] = [];
-      if (variaveisRes.ok) {
-        const data = await variaveisRes.json();
-        despesasVar = data.map((e: any) => ({
+
+      const toDespesa = (e: any): Despesa => ({
+        id: e.id,
+        description: e.description,
+        amount: Number(e.amount),
+        date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+        endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
+        dayOfMonth: e.dayOfMonth,
+        categoryName: e.category?.name,
+        categoryId: e.categoryId,
+        walletId: e.walletId,
+        tags: e.tags || [],
+        isFixed: Boolean(e.isFixed),
+      });
+
+      // If VARIABLE, update local state directly to avoid pagination issues
+      if (!returned?.isFixed) {
+        // build item either from returned or fallback to payload + editingId
+        const item = returned
+          ? toDespesa(returned)
+          : ({
+              id: wasEditing ?? undefined,
+              description: payload.description,
+              amount: Number(payload.amount),
+              date: payload.date ? parseApiDate(payload.date) : undefined,
+              endDate: payload.endDate ? parseApiDate(payload.endDate) : undefined,
+              dayOfMonth: payload.dayOfMonth,
+              categoryName: undefined,
+              categoryId: payload.categoryId || undefined,
+              walletId: payload.walletId || undefined,
+              tags: payload.tags || [],
+              isFixed: false,
+            } as Despesa);
+
+        // If this was a create and API didn't return an id, fallback to full reload
+        if (!item.id && !wasEditing) {
+          // fallback to reload (same as FIXED behaviour)
+        } else {
+          setDespesas((prev) => {
+            if (wasEditing) {
+              const idx = prev.findIndex((d) => String(d.id) === String(item.id));
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = item;
+                return stableSortByDateDesc(copy, (it) => it?.date);
+              }
+              return stableSortByDateDesc([...prev, item], (it) => it?.date);
+            }
+            return stableSortByDateDesc([...prev, item], (it) => it?.date);
+          });
+          // done — no need to re-fetch
+          return;
+        }
+      } else {
+        // For FIXED, fallback to full reload (expansions may be needed)
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const start = new Date(year, month, 1).toISOString().slice(0, 10);
+        const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+        const [variaveisRes, fixasRes] = await Promise.all([
+          fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+          fetch(`/api/expenses?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        ]);
+        let despesasVar: Despesa[] = [];
+        let despesasFix: Despesa[] = [];
+        if (variaveisRes.ok) {
+          const data = await variaveisRes.json();
+          despesasVar = data.map((e: any) => ({
             id: e.id,
             description: e.description,
             amount: Number(e.amount),
-      date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+            date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
             endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
             categoryName: e.category?.name,
             categoryId: e.categoryId,
             walletId: e.walletId,
             tags: e.tags || [],
             isFixed: false,
-          }),
-        );
-      }
-      if (fixasRes.ok) {
-        const data = await fixasRes.json();
-        despesasFix = data.map((e: any) => ({
+          }));
+        }
+        if (fixasRes.ok) {
+          const data = await fixasRes.json();
+          despesasFix = data.map((e: any) => ({
             id: e.id,
             description: e.description,
             amount: Number(e.amount),
-      date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
+            date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
             endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
             dayOfMonth: e.dayOfMonth,
             categoryName: e.category?.name,
@@ -267,10 +329,11 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
             walletId: e.walletId,
             tags: e.tags || [],
             isFixed: true,
-          }),
-        );
+          }));
+        }
+        const combinedAfter = [...despesasVar, ...despesasFix];
+        setDespesas(stableSortByDateDesc(combinedAfter, (it) => it?.date));
       }
-      setDespesas([...despesasVar, ...despesasFix]);
     }
   };
 

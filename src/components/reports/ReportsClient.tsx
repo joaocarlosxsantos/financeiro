@@ -6,6 +6,7 @@ import { useTheme } from '@/components/providers/theme-provider';
 import Papa from 'papaparse';
 import ReactSelect from 'react-select';
 import { Input } from '../ui/input';
+import { stableSortByDateAsc } from '@/lib/sort';
 import { Select as UiSelect } from '../ui/select';
 import { Button } from '@/components/ui/button';
 
@@ -241,7 +242,7 @@ export default function ReportsClient() {
       if (!res.ok) throw new Error('Erro ao buscar relatórios');
       const json = await res.json();
       const pageData = Array.isArray(json.data) ? json.data.slice() : [];
-      pageData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const pageDataSorted = stableSortByDateAsc(pageData as any[], (it: any) => it?.date);
       const tagLookup: Record<string, string> = {};
       for (const t of tags) {
         tagLookup[String(t.id)] = t.name;
@@ -311,7 +312,8 @@ export default function ReportsClient() {
         if (!res.ok) throw new Error('Erro ao carregar dados para exportação');
         const json = await res.json();
   let allData = Array.isArray(json.data) ? json.data.slice() : [];
-  allData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Stable sort by date asc for export
+  allData = stableSortByDateAsc(allData as any[], (it: any) => it?.date);
         const tagLookup: Record<string, string> = {};
         for (const t of tags) {
           tagLookup[String(t.id)] = t.name;

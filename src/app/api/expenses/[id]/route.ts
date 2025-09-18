@@ -26,6 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         walletId: body.walletId,
         tags: body.tags ?? [],
       },
+      include: { category: true, wallet: true },
     });
     return NextResponse.json(updated);
   } catch (e: any) {

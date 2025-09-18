@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { stableSortByDateAsc } from '@/lib/sort';
 import { formatYmd } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
 import { Select } from '@/components/ui/select';
@@ -56,7 +57,7 @@ export function ExtratoPreview({
 
   useEffect(() => {
     setRegistros(
-      preview.map((r) => {
+      stableSortByDateAsc(preview.map((r) => {
         // Se a categoria sugerida já existe, preenche com o id dela
         let categoriaId: string | undefined = undefined;
         if (r.categoriaSugerida && categorias.length > 0) {
@@ -77,7 +78,15 @@ export function ExtratoPreview({
           categoriaSugerida: r.categoriaSugerida || '',
         };
       }),
-    );
+      (it: any) => {
+        if (!it || !it.data) return undefined;
+        if (typeof it.data === 'string' && it.data.includes('/')) {
+          const [d, m, y] = it.data.split('/');
+          return new Date(Number(y), Number(m) - 1, Number(d));
+        }
+        return it.data ? new Date(it.data) : undefined;
+      },
+    ));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preview, categorias]);
 

@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { stableSortByDateDesc } from '@/lib/sort';
 import { CategoryCreateModal } from '@/components/ui/category-create-modal';
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { TagCreateModal } from '@/components/ui/tag-create-modal';
@@ -122,7 +123,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           isFixed: true,
         }));
       }
-      setRendas([...rendasVar, ...rendasFix]);
+      // Combinar variáveis e fixas e ordenar apenas por data (desc). Preservar ordem original quando datas empatam.
+      const combined = [...rendasVar, ...rendasFix];
+      setRendas(stableSortByDateDesc(combined, (it) => it?.date));
       setIsLoading(false);
     }
     load();
@@ -206,6 +209,16 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
       });
     }
     if (res.ok) {
+      // read returned item if API returns it (preferable)
+      let returned: any = null;
+      try {
+        returned = await res.json();
+      } catch (err) {
+        // ignore json parse errors
+      }
+
+      // capturar se estávamos editando antes de resetar
+      const wasEditing = editingId;
       setShowForm(false);
       setEditingId(null);
       setForm({
@@ -219,14 +232,51 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         endDate: '',
       });
       setErrors({});
-      // Recarrega rendas
+
+      // If the API returned the created/updated item and it's VARIABLE, update local state
+      if (returned) {
+        const item = {
+          id: returned.id,
+          description: returned.description,
+          amount: Number(returned.amount),
+          date: returned.date ? parseApiDate(returned.date) : returned.startDate ? parseApiDate(returned.startDate) : undefined,
+          categoryName: returned.category?.name,
+          categoryId: returned.categoryId,
+          walletId: returned.walletId,
+          tags: returned.tags || [],
+          isFixed: returned.type === 'FIXED' || returned.isFixed === true,
+        } as Renda;
+
+        if (!item.isFixed) {
+          // VARIABLE: update or insert into local state and keep stable ordering
+          setRendas((prev) => {
+            if (wasEditing) {
+              const idx = prev.findIndex((r) => String(r.id) === String(item.id));
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = item;
+                return stableSortByDateDesc(copy, (it) => it?.date);
+              }
+              return stableSortByDateDesc([...prev, item], (it) => it?.date);
+            }
+            const without = prev.filter((r) => r.id !== item.id);
+            const combined = [...without, item];
+            return stableSortByDateDesc(combined, (it) => it?.date);
+          });
+          // done — no need to re-fetch
+          return;
+        }
+        // else: fallthrough to full reload for FIXED
+      }
+
+      // For FIXED (or if API didn't return item), reload both lists (use perPage=200)
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const start = new Date(year, month, 1).toISOString().slice(0, 10);
       const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
       const [variaveisRes, fixasRes] = await Promise.all([
-        fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}`, { cache: 'no-store' }),
-        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       let rendasVar: Renda[] = [];
       let rendasFix: Renda[] = [];
@@ -259,7 +309,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           isFixed: true,
         }));
       }
-      setRendas([...rendasVar, ...rendasFix]);
+      // Ao recarregar após criação/edição, aplicar a ordenação estável por data
+      const combinedAfter = [...rendasVar, ...rendasFix];
+      setRendas(stableSortByDateDesc(combinedAfter, (it) => it?.date));
     }
   };
 

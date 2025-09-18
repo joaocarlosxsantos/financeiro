@@ -76,9 +76,12 @@ export async function GET(req: NextRequest) {
   }
   if (!type || type === 'VARIABLE') {
     const total = await prisma.expense.count({ where });
+    // Ordenar apenas por data (desc). Remover tie-break por createdAt para
+    // evitar que atualizações na linha mudem a ordem inesperadamente.
+    // Ordenar por date desc e tie-break por id asc para garantir ordem determinística
     const expenses = await prisma.expense.findMany({
       where,
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      orderBy: [{ date: 'desc' }, { id: 'asc' }],
       include: { category: true, wallet: true },
       skip: (page - 1) * perPage,
       take: perPage,
@@ -120,8 +123,21 @@ export async function GET(req: NextRequest) {
         cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
       }
     }
-    // ordenar por date desc para compatibilidade
-  expanded.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // ordenar por date desc. Se as datas empatarem, aplicar tie-break por id
+    // e por ordem de expansão para garantir comportamento determinístico
+    expanded.sort((a, b) => {
+      const ta = new Date(a.date).getTime();
+      const tb = new Date(b.date).getTime();
+      if (ta !== tb) return tb - ta;
+      const ida = String(a.id || '');
+      const idb = String(b.id || '');
+      const cmp = ida.localeCompare(idb);
+      if (cmp !== 0) return cmp;
+      // fallback: preserve expansion order if everything else equal
+      const oa = (a.__origOrder ?? 0) as number;
+      const ob = (b.__origOrder ?? 0) as number;
+      return oa - ob;
+    });
   const total = expanded.length;
   const startIdx = (page - 1) * perPage;
   const paged = expanded.slice(startIdx, startIdx + perPage);
@@ -191,5 +207,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(expense, { status: 201 });
+  // return created item including relations to match client expectations
+  const created = await prisma.expense.findUnique({ where: { id: expense.id }, include: { category: true, wallet: true } });
+  return NextResponse.json(created, { status: 201 });
 }
