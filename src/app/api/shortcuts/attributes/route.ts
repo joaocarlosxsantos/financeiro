@@ -27,7 +27,16 @@ export async function GET(req: NextRequest) {
       prisma.wallet.findMany({ where: { userId: user.id }, orderBy: { name: 'asc' } }),
       prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: 'asc' } }),
     ]);
-    return NextResponse.json({ categories, wallets, tags });
+
+    // Entradas especiais que permitem ao usuário não vincular categoria/tag.
+    // Essas entradas não terão `id` e devem aparecer primeiro na lista.
+    const semCategoria = { name: 'Sem Categoria' , id: null };
+    const semTag = { name: 'Sem Tag' , id: null };
+
+    const categoriesPayload = [semCategoria, ...categories];
+    const tagsPayload = [semTag, ...tags];
+
+    return NextResponse.json({ categories: categoriesPayload, wallets, tags: tagsPayload });
   } catch (err: any) {
     const status = err?.status || 500;
     return NextResponse.json({ error: err?.message || 'Internal error' }, { status });
