@@ -89,21 +89,40 @@ export default function OnboardingTour({ open = false, onClose }: OnboardingProp
         },
         tooltip: {
           // tooltip com background de card e texto do card-foreground
-          // Joyride aceita strings CSS, então usamos hsl(var(--card)) tokens
           backgroundColor: 'hsl(var(--card))',
           color: 'hsl(var(--card-foreground))',
           borderRadius: 12,
-          boxShadow: '0 8px 24px rgba(2,6,23,0.12)'
-        },
-        buttonClose: {
-          color: 'hsl(var(--muted-foreground))'
+          boxShadow: '0 8px 24px rgba(2,6,23,0.12)',
+          padding: 16
         },
         buttonNext: {
-          background: 'hsl(var(--primary))',
-          color: 'hsl(var(--primary-foreground))'
+          backgroundColor: 'hsl(var(--primary))',
+          color: 'hsl(var(--primary-foreground))',
+          padding: '10px 16px',
+          borderRadius: 10,
+          fontWeight: 700,
+          boxShadow: '0 8px 20px rgba(2,6,23,0.18)',
+          border: 'none'
         },
         buttonBack: {
-          color: 'hsl(var(--muted-foreground))'
+          backgroundColor: 'transparent',
+          color: 'hsl(var(--muted-foreground))',
+          padding: '8px 12px',
+          borderRadius: 10,
+          fontWeight: 600,
+          border: '1px solid rgba(255,255,255,0.06)',
+          marginRight: 8
+        },
+        buttonClose: {
+          color: 'hsl(var(--muted-foreground))',
+          padding: '6px',
+          fontWeight: 600
+        },
+        buttonSkip: {
+          color: 'hsl(var(--muted-foreground))',
+          padding: '8px 10px',
+          textDecoration: 'underline',
+          fontWeight: 600
         }
       }}
       locale={{
