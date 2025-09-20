@@ -1,11 +1,10 @@
 import { NextAuthOptions, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // Not using PrismaAdapter because Account/Session models were removed from the schema
   providers: [
     CredentialsProvider({
       name: 'credentials',
