@@ -22,115 +22,98 @@ model Tag {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  apiKey        String?   @unique
-  phone         String?
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  theme         String?   @default("system")
-  tags          Tag[]
-  categories    Category[]
-  expenses      Expense[]
-  incomes       Income[]
-  wallets       Wallet[]
-  transfers     Transfer[]
-  groups        Group[]
-  members       Member[]
-  bills         Bill[]
+  id               String            @id @default(cuid())
+  name             String?
+  email            String            @unique
+  apiKey           String?           @unique
+  phone            String?
+  emailVerified    DateTime?
+  image            String?
+  password         String?
+  theme            String?           @default("system")
+  tags             Tag[]
+  categories       Category[]
+  expenses         Expense[]
+  incomes          Income[]
+  wallets          Wallet[]
+  groups           Group[]
+  members          Member[]
+  bills            Bill[]
   billMemberShares BillMemberShare[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String
-  color       String    @default("#3B82F6")
-  icon        String?
-  type        CategoryType
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses    Expense[]
-  incomes     Income[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String       @id @default(cuid())
+  name      String
+  color     String       @default("#3B82F6")
+  icon      String?
+  type      CategoryType
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses  Expense[]
+  incomes   Income[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@unique([userId, name, type])
 }
 
 model Expense {
-  id          String        @id @default(cuid())
-  description String
-  amount      Decimal       @db.Decimal(10, 2)
-  date        DateTime
-  type        ExpenseType
-  isFixed     Boolean       @default(false)
-  startDate   DateTime?     // Para despesas fixas
-  endDate     DateTime?     // Para despesas fixas
-  dayOfMonth  Int?          // Para despesas fixas (dia do mês)
-  categoryId  String?
-  category    Category?     @relation(fields: [categoryId], references: [id])
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  walletId    String?
-  wallet      Wallet?       @relation(fields: [walletId], references: [id])
-  tags        String[]      // Tags secundárias
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-}
-
-model Income {
   id          String      @id @default(cuid())
   description String
   amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
-  type        IncomeType
+  type        ExpenseType
   isFixed     Boolean     @default(false)
-  startDate   DateTime?   // Para rendas fixas
-  endDate     DateTime?   // Para rendas fixas
-  dayOfMonth  Int?        // Para rendas fixas (dia do mês)
+  startDate   DateTime? // Para despesas fixas
+  endDate     DateTime? // Para despesas fixas
+  dayOfMonth  Int? // Para despesas fixas (dia do mês)
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   walletId    String?
   wallet      Wallet?     @relation(fields: [walletId], references: [id])
-  tags        String[]    // Tags secundárias
+  tags        String[] // Tags secundárias
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+}
+
+model Income {
+  id          String     @id @default(cuid())
+  description String
+  amount      Decimal    @db.Decimal(10, 2)
+  date        DateTime
+  type        IncomeType
+  isFixed     Boolean    @default(false)
+  startDate   DateTime? // Para rendas fixas
+  endDate     DateTime? // Para rendas fixas
+  dayOfMonth  Int? // Para rendas fixas (dia do mês)
+  categoryId  String?
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId    String?
+  wallet      Wallet?    @relation(fields: [walletId], references: [id])
+  tags        String[] // Tags secundárias
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Wallet {
   id        String    @id @default(cuid())
   name      String
-  type      String    // Ex: "carteira", "banco", "cartao"
+  type      String // Ex: "carteira", "banco", "cartao"
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses  Expense[]
   incomes   Income[]
-  transfersFrom Transfer[] @relation("FromWallet")
-  transfersTo   Transfer[] @relation("ToWallet")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@unique([userId, name])
-}
-
-model Transfer {
-  id          String   @id @default(cuid())
-  fromWallet  Wallet   @relation("FromWallet", fields: [fromWalletId], references: [id])
-  fromWalletId String
-  toWallet    Wallet   @relation("ToWallet", fields: [toWalletId], references: [id])
-  toWalletId  String
-  amount      Decimal  @db.Decimal(10, 2)
-  date        DateTime @default(now())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 enum CategoryType {
@@ -152,13 +135,13 @@ enum IncomeType {
 // --- Controle de Contas models ---
 
 model Group {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   members     Member[]
   bills       Bill[]
 
@@ -166,44 +149,44 @@ model Group {
 }
 
 model Member {
-  id        Int      @id @default(autoincrement())
+  id        Int               @id @default(autoincrement())
   name      String
   phone     String?
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   groupId   Int
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group     Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
   shares    BillMemberShare[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 }
 
 model Bill {
-  id          Int      @id @default(autoincrement())
+  id          Int               @id @default(autoincrement())
   title       String
   description String?
   amount      Float
   dueDate     DateTime
-  paid        Boolean  @default(false)
+  paid        Boolean           @default(false)
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   groupId     Int
-  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
   shares      BillMemberShare[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
 model BillMemberShare {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   billId    Int
   memberId  Int
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount    Float
   percent   Float?
-  bill      Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
-  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
