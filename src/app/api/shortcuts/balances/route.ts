@@ -17,36 +17,60 @@ async function findUserFromSessionOrApiKey(req: NextRequest) {
   return user;
 }
 
+// Copy of expansion logic used by /api/wallets so balances are computed the same way
+function expandFixedRecords(records: any[], upto: Date) {
+  const expanded: any[] = [];
+  for (const r of records) {
+    if (r.isFixed) {
+      const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(1900, 0, 1);
+      const recEnd = r.endDate ? new Date(r.endDate) : upto;
+      const from = recStart;
+      const to = recEnd < upto ? recEnd : upto;
+      if (from.getTime() <= to.getTime()) {
+        const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? new Date(r.date).getDate() : 1);
+        let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+        const last = new Date(to.getFullYear(), to.getMonth(), 1);
+        while (cur.getTime() <= last.getTime()) {
+          const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+          const dayInMonth = Math.min(day, lastDayOfMonth);
+          const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+          if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
+            expanded.push({ ...r, date: occDate.toISOString() });
+          }
+          cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+        }
+      }
+    } else {
+      if (r.date && new Date(r.date) <= upto) expanded.push(r);
+    }
+  }
+  return expanded;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await findUserFromSessionOrApiKey(req);
 
-    // Aggregate incomes and expenses sums grouped by walletId for this user
-    const incomeSums = await prisma.income.groupBy({
-      by: ['walletId'],
+    // Fetch wallets with incomes and expenses so we can expand FIXED items
+    const wallets = await prisma.wallet.findMany({
       where: { userId: user.id },
-      _sum: { amount: true },
+      include: { incomes: true, expenses: true },
+      orderBy: { name: 'asc' },
     });
 
-    const expenseSums = await prisma.expense.groupBy({
-      by: ['walletId'],
-      where: { userId: user.id },
-      _sum: { amount: true },
-    });
+    const today = new Date();
 
-  // Fetch wallets basic info
-  type WalletRow = { id: string; name: string; type: string };
-  const wallets: WalletRow[] = await prisma.wallet.findMany({ where: { userId: user.id }, select: { id: true, name: true, type: true }, orderBy: { name: 'asc' } });
+    const payload = wallets.map((w: any) => {
+      // If backend provided a precomputed numeric balance, prefer it
+      if (typeof w.balance === 'number') {
+        return { id: w.id, name: w.name, type: w.type, balance: Number(w.balance) };
+      }
 
-  const incomeMap = new Map<string, number>();
-    for (const i of incomeSums) incomeMap.set(i.walletId ?? '', Number(i._sum.amount ?? 0));
-    const expenseMap = new Map<string, number>();
-    for (const e of expenseSums) expenseMap.set(e.walletId ?? '', Number(e._sum.amount ?? 0));
-
-    const payload = wallets.map((w) => {
-      const income = incomeMap.get(w.id) ?? 0;
-      const expense = expenseMap.get(w.id) ?? 0;
-      const balance = income - expense;
+      const incomesExpanded = expandFixedRecords(w.incomes || [], today);
+      const expensesExpanded = expandFixedRecords(w.expenses || [], today);
+      const totalIncomes = incomesExpanded.reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
+      const totalExpenses = expensesExpanded.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+      const balance = totalIncomes - totalExpenses;
       return { id: w.id, name: w.name, type: w.type, balance };
     });
 

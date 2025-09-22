@@ -16,9 +16,16 @@ describe('GET /api/shortcuts/balances', () => {
   });
 
   it('returns balances for wallets', async () => {
-  mockedPrisma.income.groupBy.mockResolvedValue([{ walletId: 'w1', _sum: { amount: 200 } }]);
-  mockedPrisma.expense.groupBy.mockResolvedValue([{ walletId: 'w1', _sum: { amount: 50 } }]);
-  mockedPrisma.wallet.findMany.mockResolvedValue([{ id: 'w1', name: 'Carteira', type: 'carteira' }]);
+    // Mock wallets with incomes and expenses (no precomputed balance)
+    mockedPrisma.wallet.findMany.mockResolvedValue([
+      {
+        id: 'w1',
+        name: 'Carteira',
+        type: 'carteira',
+        incomes: [{ amount: 200, date: new Date().toISOString(), isFixed: false }],
+        expenses: [{ amount: 50, date: new Date().toISOString(), isFixed: false }],
+      },
+    ]);
   mockedPrisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'user@example.com' });
 
     // isolate module and provide a minimal mock for next/server to avoid environment globals
