@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
   const user = await findUserFromSessionOrApiKey(req);
     // read optional query param `type`: 'gasto' | 'ganho'
     const url = new URL(req.url);
-    const typeParam = url.searchParams.get('type');
+    const typeRaw = url.searchParams.get('type');
+    const typeParam = typeRaw ? typeRaw.toLowerCase() : '';
 
     // Build a where clause for categories based on the type param
     // Our DB enum values are: EXPENSE, INCOME, BOTH
