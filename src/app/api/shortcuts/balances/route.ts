@@ -47,6 +47,11 @@ function expandFixedRecords(records: any[], upto: Date) {
   return expanded;
 }
 
+function normalizeAmount(n: number) {
+  // Round to 2 decimal places and ensure a Number (not string)
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await findUserFromSessionOrApiKey(req);
@@ -63,15 +68,15 @@ export async function GET(req: NextRequest) {
   const payload = wallets.map((w: any) => {
       // If backend provided a precomputed numeric balance, prefer it
       if (typeof w.balance === 'number') {
-        return { id: w.id, name: w.name, type: w.type, balance: Number(w.balance) };
+        return { id: w.id, name: w.name, type: w.type, balance: normalizeAmount(Number(w.balance)) };
       }
 
       const incomesExpanded = expandFixedRecords(w.incomes || [], today);
       const expensesExpanded = expandFixedRecords(w.expenses || [], today);
       const totalIncomes = incomesExpanded.reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
       const totalExpenses = expensesExpanded.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-      const balance = totalIncomes - totalExpenses;
-      return { id: w.id, name: w.name, type: w.type, balance };
+  const balance = totalIncomes - totalExpenses;
+  return { id: w.id, name: w.name, type: w.type, balance: normalizeAmount(balance) };
     });
 
     // Return named property so clients (like Shortcuts) can reference the array by name
