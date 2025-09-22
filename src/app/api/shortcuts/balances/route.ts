@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     const today = new Date();
 
-    const payload = wallets.map((w: any) => {
+  const payload = wallets.map((w: any) => {
       // If backend provided a precomputed numeric balance, prefer it
       if (typeof w.balance === 'number') {
         return { id: w.id, name: w.name, type: w.type, balance: Number(w.balance) };
@@ -74,7 +74,8 @@ export async function GET(req: NextRequest) {
       return { id: w.id, name: w.name, type: w.type, balance };
     });
 
-    return NextResponse.json(payload);
+    // Return named property so clients (like Shortcuts) can reference the array by name
+    return NextResponse.json({ wallets: payload });
   } catch (err: any) {
     const status = err?.status || 500;
     return NextResponse.json({ error: err?.message || 'Internal error' }, { status });

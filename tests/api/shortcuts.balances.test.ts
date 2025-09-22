@@ -66,8 +66,9 @@ describe('GET /api/shortcuts/balances', () => {
     const res = await GET(req as any);
     const json = await res.json();
 
-    expect(Array.isArray(json)).toBe(true);
-    expect(json).toHaveLength(1);
-    expect(json[0]).toMatchObject({ id: 'w1', name: 'Carteira', type: 'carteira', balance: 150 });
+    expect(json).toHaveProperty('wallets');
+    expect(Array.isArray(json.wallets)).toBe(true);
+    expect(json.wallets).toHaveLength(1);
+    expect(json.wallets[0]).toMatchObject({ id: 'w1', name: 'Carteira', type: 'carteira', balance: 150 });
   });
 });
