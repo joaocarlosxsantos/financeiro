@@ -79,8 +79,11 @@ export async function GET(req: NextRequest) {
   return { id: w.id, name: w.name, type: w.type, balance: normalizeAmount(balance) };
     });
 
-    // Return named property so clients (like Shortcuts) can reference the array by name
-    return NextResponse.json({ wallets: payload });
+  // Sort wallets by balance descending (maior saldo primeiro)
+  payload.sort((a: any, b: any) => (b.balance ?? 0) - (a.balance ?? 0));
+
+  // Return named property so clients (like Shortcuts) can reference the array by name
+  return NextResponse.json({ wallets: payload });
   } catch (err: any) {
     const status = err?.status || 500;
     return NextResponse.json({ error: err?.message || 'Internal error' }, { status });
