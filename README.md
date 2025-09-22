@@ -294,6 +294,28 @@ Notas para desenvolvedores:
 - Testes unitários básicos foram adicionados em `tests/api/*.test.ts` cobrindo autenticação e comportamento básico dos endpoints.
 - Pontos futuros: migrar para `WorkbookWriter` do ExcelJS para cenários extremamente grandes, rodar auditoria de acessibilidade (axe) e adicionar testes E2E.
 
+### API: Shortcuts balances
+
+Endpoint para obter o saldo das carteiras do usuário.
+
+- URL: `GET /api/shortcuts/balances`
+- Autenticação: header `Authorization: Bearer <api-key>` ou sessão NextAuth.
+
+Exemplo (curl):
+
+```bash
+curl "https://seu-dominio.com/api/shortcuts/balances" -H "Authorization: Bearer <API_KEY>"
+```
+
+Resposta JSON esperada (exemplo):
+
+```json
+[
+   { "id": "ckw1...", "name": "Carteira", "type": "carteira", "balance": 150.5 },
+   { "id": "ckw2...", "name": "Banco", "type": "banco", "balance": 1020.0 }
+]
+```
+
 ### API: Shortcuts attributes
 
 Endpoint usado pelo app Shortcuts para obter listas reduzidas de categorias, tags e wallets (apenas `id` e `name`).
