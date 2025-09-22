@@ -294,4 +294,54 @@ Notas para desenvolvedores:
 - Testes unitários básicos foram adicionados em `tests/api/*.test.ts` cobrindo autenticação e comportamento básico dos endpoints.
 - Pontos futuros: migrar para `WorkbookWriter` do ExcelJS para cenários extremamente grandes, rodar auditoria de acessibilidade (axe) e adicionar testes E2E.
 
+### API: Shortcuts attributes
+
+Endpoint usado pelo app Shortcuts para obter listas reduzidas de categorias, tags e wallets (apenas `id` e `name`).
+
+- URL: `GET /api/shortcuts/attributes`
+- Autenticação: header `Authorization: Bearer <api-key>` ou sessão NextAuth.
+
+Query parameters:
+- `type=gasto` — retorna apenas categorias com tipo `EXPENSE` ou `BOTH`.
+- `type=ganho` — retorna apenas categorias com tipo `INCOME` ou `BOTH`.
+- sem parâmetro — retorna todas as categorias do usuário.
+
+Placeholders:
+- Categoria sem vínculo: `{ id: 'no-category', name: 'Sem categoria' }` (sempre o primeiro item em `categories`).
+- Tag sem vínculo: `{ id: 'no-tag', name: 'Sem tag' }` (sempre o primeiro item em `tags`).
+
+Exemplos (curl):
+
+```bash
+# tudo
+curl "https://seu-dominio.com/api/shortcuts/attributes" -H "Authorization: Bearer <API_KEY>"
+
+# somente categorias de gasto
+curl "https://seu-dominio.com/api/shortcuts/attributes?type=gasto" -H "Authorization: Bearer <API_KEY>"
+
+# somente categorias de ganho
+curl "https://seu-dominio.com/api/shortcuts/attributes?type=ganho" -H "Authorization: Bearer <API_KEY>"
+```
+
+Resposta JSON esperada (exemplo):
+
+```json
+{
+   "categories": [
+      { "id": "no-category", "name": "Sem categoria" },
+      { "id": "ckx...", "name": "Alimentação" },
+      { "id": "ckx...", "name": "Transporte" }
+   ],
+   "wallets": [
+      { "id": "ckw...", "name": "Carteira" },
+      { "id": "ckw...", "name": "Banco" }
+   ],
+   "tags": [
+      { "id": "no-tag", "name": "Sem tag" },
+      { "id": "ckt...", "name": "Supermercado" }
+   ]
+}
+```
+
+
 ```
