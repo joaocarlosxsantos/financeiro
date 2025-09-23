@@ -69,19 +69,38 @@ export function DailyWalletChart({ data, walletsMeta, height = 320 }: DailyWalle
       .filter((it: any) => it.value > 0)
       .sort((a: any, b: any) => b.value - a.value);
     if (items.length === 0) return null;
+    // Adiciona um último item 'Total' explicitamente (sempre por último)
+    const totalName = 'Total';
+    const totalValue = items.reduce((s: number, it: any) => s + it.value, 0);
+    if (!items.find((it: any) => it.name === totalName)) {
+      items.push({ name: totalName, value: totalValue, color: 'hsl(var(--muted-foreground))' });
+    }
     return (
       <div style={{ background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', padding: 10, borderRadius: 8, boxShadow: '0 6px 18px rgba(2,6,23,0.08)', minWidth: 220 }}>
         <div style={{ fontSize: 14, color: 'hsl(var(--muted-foreground))', marginBottom: 8 }}>Dia {String(Number(String(label).split('-').slice(-1)[0]))}</div>
         <div style={{ display: 'grid', gap: 8 }}>
-          {items.map((it: any) => (
-            <div key={it.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                <span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, background: it.color }} />
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
+          {items.map((it: any) => {
+            const isTotal = it.name === totalName;
+            return (
+              <div key={it.name}>
+                {isTotal && <div style={{ height: 1, background: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: isTotal ? 20 : 18, fontWeight: isTotal ? 700 : 500 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, background: it.color }} />
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
+                  </div>
+                  <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace', fontSize: isTotal ? 20 : 18 }}>
+                    {it.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {!isTotal && totalValue > 0 && (
+                      <span style={{ marginLeft: 8, fontSize: 12, color: 'hsl(var(--muted-foreground))' }}>
+                        ({Math.round((it.value / totalValue) * 100)}%)
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace', fontSize: 20 }}>{it.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

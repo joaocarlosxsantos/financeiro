@@ -40,7 +40,11 @@ export function groupDailyData(dailyData: Array<Record<string, any>>, meta?: Rec
         .map((k) => ({ key: k, amount: map[date][k], color: meta?.[k]?.color }))
         .filter((g) => g.amount !== 0)
         .sort((a, b) => b.amount - a.amount);
-      const total = groups.reduce((s, g) => s + g.amount, 0);
+        const total = groups.reduce((s, g) => s + g.amount, 0);
+        // Se não existir já um grupo chamado 'Total', adiciona um item 'Total' ao final
+        if (!groups.find((g) => g.key === 'Total') && total !== 0) {
+          groups.push({ key: 'Total', amount: total, color: meta?.['Total']?.color || 'hsl(var(--muted-foreground))' });
+        }
       return { date, total, groups };
     })
     .filter((d) => d.total !== 0) // remover dias cujo total é 0
@@ -81,17 +85,17 @@ export default function MobileChartDetailList({ dailyData, meta, title }: Mobile
             </div>
             <div className="space-y-1">
               {day.groups.map((g) => (
-                <div key={g.key} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ background: g.color || 'hsl(var(--muted-foreground))' }}
-                      aria-hidden
-                    />
-                    <span className="truncate">{meta?.[g.key]?.name ?? g.key}</span>
-                  </div>
-                  <div className="font-mono text-sm">{g.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                </div>
+                    <div key={g.key} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ background: g.color || 'hsl(var(--muted-foreground))' }}
+                          aria-hidden
+                        />
+                        <span className={`truncate ${g.key === 'Total' ? 'font-semibold' : ''}`}>{meta?.[g.key]?.name ?? g.key}</span>
+                      </div>
+                      <div className={`font-mono text-sm ${g.key === 'Total' ? 'text-lg font-semibold' : ''}`}>{g.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                    </div>
               ))}
             </div>
           </div>

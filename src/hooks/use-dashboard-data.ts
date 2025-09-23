@@ -70,6 +70,9 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
             const cat = e.category?.name || 'Sem categoria';
             row[cat] = (row[cat] as number) + Number(e.amount);
           });
+        // Calcular total do dia (soma das categorias) e expor como campo 'Total'
+        const total = categories.reduce((s, c) => s + (Number(row[c]) || 0), 0);
+        row['Total'] = total;
         return row;
       });
 
@@ -86,6 +89,9 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
             const w = e.wallet?.name || 'Sem carteira';
             row[w] = (row[w] as number) + Number(e.amount);
           });
+        // Expor total do dia
+        const total = wallets.reduce((s, w) => s + (Number(row[w]) || 0), 0);
+        row['Total'] = total;
         return row;
       });
 
@@ -110,6 +116,8 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
               }
             }
           });
+        const total = tags.reduce((s, t) => s + (Number(row[t]) || 0), 0);
+        row['Total'] = total;
         return row;
       });
 
