@@ -26,6 +26,8 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [tagAggregates, setTagAggregates] = useState<string[]>([]);
   const [kind, setKind] = useState('ATTAINMENT');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +40,19 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
       setTagFilters(initial.tagFilters ?? (initial.tagName ? [initial.tagName] : []));
       setTagAggregates(initial.tagAggregates ?? []);
       setKind(initial.kind ?? 'ATTAINMENT');
+      // Datas
+      if (initial.startDate) {
+        setStartDate(new Date(initial.startDate).toISOString().split('T')[0]);
+      } else {
+        setStartDate(new Date().toISOString().split('T')[0]);
+      }
+      if (initial.endDate) {
+        setEndDate(new Date(initial.endDate).toISOString().split('T')[0]);
+      } else {
+        const oneMonthAhead = new Date();
+        oneMonthAhead.setMonth(oneMonthAhead.getMonth() + 1);
+        setEndDate(oneMonthAhead.toISOString().split('T')[0]);
+      }
     } else {
       setTitle('');
       setAmount('');
@@ -47,6 +62,11 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
       setTagFilters([]);
       setTagAggregates([]);
       setKind('ATTAINMENT');
+      // Valores padrão para datas: hoje e um mês a frente
+      setStartDate(new Date().toISOString().split('T')[0]);
+      const oneMonthAhead = new Date();
+      oneMonthAhead.setMonth(oneMonthAhead.getMonth() + 1);
+      setEndDate(oneMonthAhead.toISOString().split('T')[0]);
     }
   }, [initial]);
 
@@ -121,7 +141,7 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
 
     setLoading(true);
     try {
-      const payload = {
+      const payload: any = {
         title,
         amount,
         type,
@@ -131,6 +151,12 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
         tagFilters,
         tagAggregates,
       };
+
+      // Adicionar datas apenas se for meta com prazo
+      if (type === 'TIMED') {
+        payload.startDate = startDate;
+        payload.endDate = endDate;
+      }
 
       if (initial?.id) {
         const res = await fetch(`/api/goals/${initial.id}`, {
@@ -192,6 +218,20 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
               <option value="TIMED">Com prazo</option>
             </Select>
           </div>
+
+          {type === 'TIMED' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">Data de início</label>
+                <Input type="date" value={startDate} onChange={(e: any) => setStartDate(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Data de fim</label>
+                <Input type="date" value={endDate} onChange={(e: any) => setEndDate(e.target.value)} />
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Aplica-se a</label>

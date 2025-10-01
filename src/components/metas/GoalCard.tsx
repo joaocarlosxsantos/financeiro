@@ -31,8 +31,14 @@ export default function GoalCard({ goal, onClick }: { goal: any; onClick?: (g: a
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <h3 className="text-lg font-semibold truncate">{goal.title}</h3>
-            <div className="text-sm text-neutral-500 dark:text-neutral-400 truncate">{goal.type === 'RECURRING' ? 'Recorrente' : goal.type === 'TIMED' ? 'Com prazo' : goal.type} { /* mostra apenas a parte de recorrência */ }
+            <div className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
+              {goal.type === 'RECURRING' ? 'Recorrente' : goal.type === 'TIMED' ? 'Com prazo' : goal.type}
             </div>
+            {goal.type === 'TIMED' && goal.startDate && goal.endDate && (
+              <div className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                {new Date(goal.startDate).toLocaleDateString('pt-BR')} - {new Date(goal.endDate).toLocaleDateString('pt-BR')}
+              </div>
+            )}
           </div>
           <div className="text-right ml-4">
             <div className="text-sm text-neutral-500 dark:text-neutral-400">Alvo</div>
