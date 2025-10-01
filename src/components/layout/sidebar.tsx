@@ -18,6 +18,7 @@ const navigationFinanceiro = [
   { name: 'Categorias', href: '/categorias', icon: BarChart3 },
   { name: 'Tags', href: '/tags', icon: Tag },
   { name: 'Relatórios', href: '/reports', icon: Table2Icon },
+  { name: 'Metas', href: '/metas', icon: BarChart3 },
   { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
 ];
 
