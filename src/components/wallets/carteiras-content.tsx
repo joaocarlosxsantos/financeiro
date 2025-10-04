@@ -248,7 +248,9 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
             const saldoFallback =
               (wallet.incomes?.reduce((acc: number, i: { amount: number | string }) => acc + Number(i.amount), 0) || 0) -
               (wallet.expenses?.reduce((acc: number, e: { amount: number | string }) => acc + Number(e.amount), 0) || 0);
-            const saldo = typeof saldoFromBackend === 'number' ? saldoFromBackend : saldoFallback;
+            const saldoRaw = typeof saldoFromBackend === 'number' ? saldoFromBackend : saldoFallback;
+            // Corrigir -0 para 0
+            const saldo = Object.is(saldoRaw, -0) ? 0 : saldoRaw;
 
             return (
               <Card key={wallet.id} className="p-2 shadow-lg rounded-xl">
@@ -257,12 +259,14 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                   <div className="flex justify-start">
                     <span
                       className={
-                        saldo >= 0
+                        saldo > 0
+                          ? 'text-green-600 font-bold text-2xl sm:text-3xl'
+                          : saldo === 0 || Math.abs(saldo) < 0.01
                           ? 'text-green-600 font-bold text-2xl sm:text-3xl'
                           : 'text-red-600 font-bold text-2xl sm:text-3xl'
                       }
                     >
-                      {saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {saldo === 0 || Math.abs(saldo) < 0.01 ? '0,00' : saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
                   </div>
 
