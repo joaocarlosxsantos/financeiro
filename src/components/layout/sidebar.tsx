@@ -216,7 +216,7 @@ function ModuleSelector({ module, onSelect }: { module: ModuleKey; onSelect: (m:
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide select-none"
+        className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide select-none text-white hover:text-white/80 transition-colors"
       >
         <span>{module === 'financeiro' ? 'Controle Financeiro' : 'Controle de Contas'}</span>
         <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="none" stroke="currentColor">
@@ -224,21 +224,21 @@ function ModuleSelector({ module, onSelect }: { module: ModuleKey; onSelect: (m:
         </svg>
       </button>
       {open && (
-        <div role="menu" className="absolute left-0 mt-2 w-56 rounded-md bg-background border border-white/10 shadow-lg z-50">
+        <div role="menu" className="absolute left-0 mt-2 w-56 rounded-md bg-background border shadow-lg z-50">
           <button
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 text-foreground transition-colors"
             onClick={() => { onSelect('financeiro'); setOpen(false); }}
           >
-            <LucideLayoutDashboard className="h-4 w-4 text-white/70" />
+            <LucideLayoutDashboard className="h-4 w-4 text-muted-foreground" />
             <span>Controle Financeiro</span>
           </button>
           <button
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
+            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 text-foreground transition-colors"
             onClick={() => { onSelect('accounts'); setOpen(false); }}
           >
-            <CreditCard className="h-4 w-4 text-white/70" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
             <span>Controle de Contas</span>
           </button>
         </div>
