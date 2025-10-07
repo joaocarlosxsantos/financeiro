@@ -8,25 +8,66 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, LucideLayoutDashboard, Table2Icon} from 'lucide-react';
+import { 
+  BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
+  LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
+  TrendingUp, TrendingDown, Upload, ChevronDown, ChevronRight,
+  FolderOpen, Users
+} from 'lucide-react';
 
-const navigationFinanceiro = [
-  { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
-  { name: 'Ganhos', href: '/rendas', icon: DollarSign },
-  { name: 'Gastos', href: '/despesas', icon: CreditCard },
-  { name: 'Carteiras', href: '/wallets', icon: Wallet },
-  { name: 'Categorias', href: '/categorias', icon: BarChart3 },
-  { name: 'Tags', href: '/tags', icon: Tag },
-  { name: 'Relatórios', href: '/reports', icon: Table2Icon },
-  { name: 'Metas', href: '/metas', icon: BarChart3 },
-  { name: 'Importar Extrato', href: '/importar-extrato', icon: CreditCard },
-];
+// Estrutura hierárquica para o módulo financeiro
+const navigationFinanceiro = {
+  dashboard: {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: LucideLayoutDashboard,
+    standalone: true
+  },
+  financeiro: {
+    name: 'Financeiro',
+    icon: DollarSign,
+    items: [
+      { name: 'Ganhos', href: '/rendas', icon: TrendingUp },
+      { name: 'Gastos', href: '/despesas', icon: TrendingDown },
+      { name: 'Importar Extrato', href: '/importar-extrato', icon: Upload },
+    ]
+  },
+  planejamento: {
+    name: 'Planejamento',
+    icon: Target,
+    items: [
+      { name: 'Metas', href: '/metas', icon: Target },
+      { name: 'Relatórios', href: '/reports', icon: FileText },
+    ]
+  },
+  configuracao: {
+    name: 'Configuração',
+    icon: Settings,
+    items: [
+      { name: 'Carteiras', href: '/wallets', icon: Wallet },
+      { name: 'Categorias', href: '/categorias', icon: FolderOpen },
+      { name: 'Tags', href: '/tags', icon: Tag },
+    ]
+  }
+};
 
-const navigationAccounts = [
-  { name: 'Dashboard', href: '/controle-contas', icon: LucideLayoutDashboard },
-  { name: 'Contas', href: '/controle-contas/contas', icon: CreditCard },
-  { name: 'Grupos', href: '/controle-contas/grupos', icon: BarChart3 },
-];
+// Estrutura hierárquica para o módulo de contas
+const navigationAccounts = {
+  dashboard: {
+    name: 'Dashboard',
+    href: '/controle-contas',
+    icon: LucideLayoutDashboard,
+    standalone: true
+  },
+  gestao: {
+    name: 'Gestão',
+    icon: Users,
+    items: [
+      { name: 'Contas', href: '/controle-contas/contas', icon: CreditCard },
+      { name: 'Grupos', href: '/controle-contas/grupos', icon: Users },
+    ]
+  }
+};
 
 type ModuleKey = 'financeiro' | 'accounts';
 
@@ -37,32 +78,113 @@ interface NavEntry {
   icon: any;
 }
 
-const NavItem = ({ item, active, onClick }: { item: NavEntry; active: boolean; onClick?: () => void }) => {
+// Seção da navegação hierárquica
+interface NavSection {
+  name: string;
+  icon: any;
+  items?: NavEntry[];
+  standalone?: boolean;
+  href?: string;
+}
+
+const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry; active: boolean; onClick?: () => void; isSubItem?: boolean }) => {
   return (
     <Link
       href={item.href}
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/60',
+        'relative group flex items-center gap-3 rounded-xl py-2 text-sm font-medium outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/60',
+        isSubItem ? 'px-4 ml-6' : 'px-3',
         active
-          ? 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow'
-          : 'text-white/70 hover:text-white/90 hover:bg-white/5'
+          ? 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow-md transform scale-[1.02]'
+          : isSubItem 
+            ? 'text-white/65 hover:text-white/90 hover:bg-white/8 hover:ml-7 hover:shadow-sm'
+            : 'text-white/70 hover:text-white/90 hover:bg-white/5'
       )}
     >
       <span className={cn(
-        'relative flex h-7 w-7 items-center justify-center rounded-md transition-all duration-200',
+        'relative flex items-center justify-center rounded-md transition-all duration-200',
+        isSubItem ? 'h-6 w-6' : 'h-7 w-7',
         active
           ? 'bg-white/20 ring-1 ring-white/30 scale-105'
           : 'bg-transparent group-hover:bg-white/10 group-hover:ring-1 group-hover:ring-white/20'
       )}>
-        <item.icon className={cn('h-4 w-4 transition-colors', active ? 'text-white' : 'text-white/70 group-hover:text-white')} />
+        <item.icon className={cn('transition-colors', isSubItem ? 'h-3.5 w-3.5' : 'h-4 w-4', active ? 'text-white' : 'text-white/70 group-hover:text-white')} />
         {/* Glow sutil ativo */}
         {active && <span className="pointer-events-none absolute inset-0 rounded-md bg-primary/40 mix-blend-overlay blur-[6px]" aria-hidden="true" />}
       </span>
       <span className="truncate">{item.name}</span>
-  {/* Indicador lateral removido conforme solicitação */}
     </Link>
+  );
+};
+
+// Componente para seção expansível
+const NavSection = ({ 
+  section, 
+  isExpanded, 
+  onToggle, 
+  pathname, 
+  onItemClick 
+}: { 
+  section: NavSection; 
+  isExpanded: boolean; 
+  onToggle: () => void; 
+  pathname: string;
+  onItemClick?: () => void;
+}) => {
+  // Se for standalone (como Dashboard), renderiza como item normal
+  if (section.standalone) {
+    return (
+      <NavItem 
+        item={section as NavEntry} 
+        active={pathname === section.href} 
+        onClick={onItemClick}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/8 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group"
+      >
+        <span className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-white/15 transition-colors duration-200">
+          <section.icon className="h-4 w-4" />
+        </span>
+        <span className="flex-1 truncate text-left font-semibold tracking-wide">{section.name}</span>
+        <span className="transition-transform duration-200 text-white/50 group-hover:text-white/70">
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </span>
+      </button>
+      
+      {/* Itens da seção com animação */}
+      <div 
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out",
+          isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="space-y-1 pl-1 mt-1 relative">
+          {/* Linha de conexão sutil */}
+          <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
+          {section.items?.map((item) => (
+            <NavItem 
+              key={item.href} 
+              item={item} 
+              active={pathname === item.href} 
+              onClick={onItemClick}
+              isSubItem
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -143,6 +265,42 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const [module, setModule] = useState<ModuleKey>(readStored);
 
   const currentNavigation = module === 'financeiro' ? navigationFinanceiro : navigationAccounts;
+  
+  // Estado para controlar seções expandidas
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`sidebar-expanded-${module}`);
+        return new Set(stored ? JSON.parse(stored) : ['financeiro', 'gestao']); // Seções abertas por padrão
+      } catch {
+        return new Set(['financeiro', 'gestao']);
+      }
+    }
+    return new Set(['financeiro', 'gestao']);
+  });
+  
+  // Salvar estado das seções no localStorage
+  const saveExpandedState = (sections: Set<string>) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`sidebar-expanded-${module}`, JSON.stringify(Array.from(sections)));
+      } catch {
+        // Ignorar erros de localStorage
+      }
+    }
+  };
+  
+  // Toggle seção
+  const toggleSection = (sectionKey: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(sectionKey)) {
+      newExpanded.delete(sectionKey);
+    } else {
+      newExpanded.add(sectionKey);
+    }
+    setExpandedSections(newExpanded);
+    saveExpandedState(newExpanded);
+  };
 
   // when module changes, redirect to the module dashboard
   const switchModule = (m: ModuleKey) => {
@@ -208,35 +366,22 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Navegação */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        {currentNavigation.map((item) => {
-          // map href to a tour id-friendly key
-          const mapHrefToTour = (href: string) => {
-            switch (href) {
-              case '/dashboard':
-                return 'sidebar-dashboard';
-              case '/rendas':
-                return 'sidebar-incomes';
-              case '/despesas':
-                return 'sidebar-expenses';
-              case '/wallets':
-                return 'sidebar-wallets';
-              case '/categorias':
-                return 'sidebar-categories';
-              case '/tags':
-                return 'sidebar-tags';
-              case '/reports':
-                return 'sidebar-reports';
-              case '/importar-extrato':
-                return 'sidebar-import';
-              default:
-                return `sidebar-item-${href.replace(/[^a-zA-Z0-9]/g, '-')}`;
-            }
-          };
-          const tourId = mapHrefToTour(item.href);
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        {Object.entries(currentNavigation).map(([sectionKey, section]) => {
+          // Adiciona atributos data-tour para o tour guiado
+          let tourAttr = {};
+          if ('href' in section && section.href === '/dashboard') tourAttr = { 'data-tour': 'sidebar-dashboard' };
+          else if (sectionKey === 'financeiro') tourAttr = { 'data-tour': 'sidebar-incomes' };
+          
           return (
-            <div key={item.href} data-tour={tourId}>
-              <NavItem item={item} active={pathname === item.href} onClick={onClose} />
+            <div key={sectionKey} {...tourAttr}>
+              <NavSection
+                section={section}
+                isExpanded={expandedSections.has(sectionKey)}
+                onToggle={() => toggleSection(sectionKey)}
+                pathname={pathname}
+                onItemClick={onClose}
+              />
             </div>
           );
         })}

@@ -141,12 +141,12 @@ export function UserProfile({ className }: UserProfileProps) {
   };
 
   return (
-    <Card className={className || 'w-full max-w-2xl mx-auto'}>
-      <CardHeader className="text-center"><CardTitle className="text-2xl">Meu Perfil</CardTitle></CardHeader>
+    <Card className={`${className || 'w-full max-w-2xl mx-auto'} bg-card/95 dark:bg-card shadow-lg border-border/50 dark:border-border`}>
+      <CardHeader className="text-center border-b border-border/30 dark:border-border"><CardTitle className="text-2xl font-bold text-foreground">Meu Perfil</CardTitle></CardHeader>
       <CardContent>
         <div className="space-y-8">
           <section>
-            <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">Dados Pessoais</h3>
+            <h3 className="text-sm font-semibold tracking-wide text-foreground/80 dark:text-muted-foreground uppercase mb-3">Dados Pessoais</h3>
             {initialLoading ? (
               <div className="space-y-4 animate-pulse">
                 <div className="h-4 bg-muted rounded w-1/3" />
@@ -159,19 +159,19 @@ export function UserProfile({ className }: UserProfileProps) {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <Label htmlFor="name">Nome</Label>
-                  <Input id="name" value={form.name} disabled={!edit} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
-                  {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
+                  <Label htmlFor="name" className="text-foreground/90 dark:text-foreground font-semibold">Nome</Label>
+                  <Input id="name" value={form.name} disabled={!edit} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="bg-background dark:bg-white/5 border-border dark:border-white/15 text-foreground" />
+                  {errors.name && <span className="text-red-700 dark:text-red-400 text-xs font-medium">{errors.name}</span>}
                 </div>
                 <div className="relative">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={form.email} disabled={!edit} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
-                  {errors.email && <span className="text-red-600 text-xs">{errors.email}</span>}
-                  <button type="button" onClick={async () => { await navigator.clipboard.writeText(form.email); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="absolute top-7 right-2 p-2 text-muted-foreground hover:text-foreground" aria-label="Copiar email">{copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}</button>
+                  <Label htmlFor="email" className="text-foreground/90 dark:text-foreground font-semibold">Email</Label>
+                  <Input id="email" value={form.email} disabled={!edit} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} className="bg-background dark:bg-white/5 border-border dark:border-white/15 text-foreground" />
+                  {errors.email && <span className="text-red-700 dark:text-red-400 text-xs font-medium">{errors.email}</span>}
+                  <button type="button" onClick={async () => { await navigator.clipboard.writeText(form.email); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="absolute top-7 right-2 p-2 text-foreground/80 dark:text-muted-foreground hover:text-foreground hover:bg-muted/70 dark:hover:bg-muted/50 rounded-md transition-all duration-200 border border-transparent hover:border-primary/30" aria-label="Copiar email">{copied ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}</button>
                 </div>
                 <div>
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input id="phone" value={form.phone || ''} disabled={!edit} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="(99) 99999-9999" />
+                  <Label htmlFor="phone" className="text-foreground/90 dark:text-foreground font-semibold">Telefone</Label>
+                  <Input id="phone" value={form.phone || ''} disabled={!edit} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="(99) 99999-9999" className="bg-background dark:bg-white/5 border-border dark:border-white/15 text-foreground" />
                 </div>
               </div>
             )}
@@ -185,11 +185,11 @@ export function UserProfile({ className }: UserProfileProps) {
               </>}
               <Button variant="secondary" className="flex-1" onClick={() => setShowPasswordModal(true)} disabled={initialLoading}>Alterar senha</Button>
             </div>
-            {message && <div className="text-center text-sm text-green-600 mt-2" aria-live="polite">{message}</div>}
+            {message && <div className="text-center text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/50 p-2 rounded-md border border-green-200 dark:border-green-800 mt-2" aria-live="polite">{message}</div>}
             <div ref={liveRef} className="sr-only" aria-live="polite" />
           </section>
-          <section className="pt-2 border-t">
-            <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">API Key</h3>
+          <section className="pt-4 border-t border-border/60 dark:border-border">
+            <h3 className="text-sm font-semibold tracking-wide text-foreground/80 dark:text-muted-foreground uppercase mb-3">API Key</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start justify-items-center md:justify-items-start">
               <div className="flex gap-2 justify-center md:justify-start">
                 <Button
@@ -229,27 +229,27 @@ export function UserProfile({ className }: UserProfileProps) {
               </div>
             </div>
           </section>
-          <section className="pt-2 border-t">
-            <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase mb-3">Preferências</h3>
-            <ThemeSelector />
+          <section className="pt-4 border-t border-border/60 dark:border-border">
+            <h3 className="text-sm font-semibold tracking-wide text-foreground/80 dark:text-muted-foreground uppercase mb-3">Preferências</h3>
+            <ThemeSelector context="profile" />
           </section>
         </div>
       </CardContent>
       <Modal open={showPasswordModal} onClose={() => { setShowPasswordModal(false); setPasswords({ password: '', confirm: '' }); setPasswordError(''); }} title="Alterar senha">
         <div className="space-y-4">
           <div className="relative">
-            <Label htmlFor="new-password">Nova senha</Label>
-            <Input id="new-password" type={showPassword ? 'text' : 'password'} value={passwords.password} onChange={(e) => setPasswords(p => ({ ...p, password: e.target.value }))} />
-            <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute top-7 right-2 p-2 text-muted-foreground hover:text-foreground" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-            <div className="mt-2 h-2 w-full bg-muted rounded overflow-hidden"><div className={`h-full transition-all duration-300 ${passwordStrength>0?strengthColor[passwordStrength-1]:'bg-transparent'}`} style={{ width: `${(passwordStrength/5)*100}%` }} /></div>
-            <p className="text-xs text-muted-foreground mt-1">Força: {['','Fraca','Média','Razoável','Forte','Excelente'][passwordStrength]}</p>
+            <Label htmlFor="new-password" className="text-foreground/90 dark:text-foreground font-semibold">Nova senha</Label>
+            <Input id="new-password" type={showPassword ? 'text' : 'password'} value={passwords.password} onChange={(e) => setPasswords(p => ({ ...p, password: e.target.value }))} className="bg-background dark:bg-white/5 border-border dark:border-white/15 text-foreground" />
+            <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute top-7 right-2 p-2 text-foreground/80 dark:text-muted-foreground hover:text-foreground hover:bg-muted/70 dark:hover:bg-muted/50 rounded-md transition-all duration-200 border border-transparent hover:border-primary/30" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            <div className="mt-2 h-2 w-full bg-muted dark:bg-muted border border-border/50 dark:border-transparent rounded overflow-hidden"><div className={`h-full transition-all duration-300 ${passwordStrength>0?strengthColor[passwordStrength-1]:'bg-transparent'}`} style={{ width: `${(passwordStrength/5)*100}%` }} /></div>
+            <p className="text-xs text-foreground/70 dark:text-muted-foreground mt-1 font-medium">Força: {['','Fraca','Média','Razoável','Forte','Excelente'][passwordStrength]}</p>
           </div>
           <div className="relative">
-            <Label htmlFor="confirm-password">Confirme a nova senha</Label>
-            <Input id="confirm-password" type={showConfirm ? 'text' : 'password'} value={passwords.confirm} onChange={(e) => setPasswords(p => ({ ...p, confirm: e.target.value }))} />
-            <button type="button" onClick={() => setShowConfirm(s => !s)} className="absolute top-7 right-2 p-2 text-muted-foreground hover:text-foreground" aria-label={showConfirm ? 'Ocultar confirmação' : 'Mostrar confirmação'}>{showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            <Label htmlFor="confirm-password" className="text-foreground/90 dark:text-foreground font-semibold">Confirme a nova senha</Label>
+            <Input id="confirm-password" type={showConfirm ? 'text' : 'password'} value={passwords.confirm} onChange={(e) => setPasswords(p => ({ ...p, confirm: e.target.value }))} className="bg-background dark:bg-white/5 border-border dark:border-white/15 text-foreground" />
+            <button type="button" onClick={() => setShowConfirm(s => !s)} className="absolute top-7 right-2 p-2 text-foreground/80 dark:text-muted-foreground hover:text-foreground hover:bg-muted/70 dark:hover:bg-muted/50 rounded-md transition-all duration-200 border border-transparent hover:border-primary/30" aria-label={showConfirm ? 'Ocultar confirmação' : 'Mostrar confirmação'}>{showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
           </div>
-          {passwordError && <div className="text-red-600 text-sm text-center">{passwordError}</div>}
+          {passwordError && <div className="text-red-700 dark:text-red-400 text-sm text-center bg-red-50 dark:bg-red-950/50 p-2 rounded-md border border-red-200 dark:border-red-800">{passwordError}</div>}
           <div className="flex gap-2 mt-4">
             <Button onClick={handlePasswordSave} className="flex-1" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
             <Button onClick={() => { setShowPasswordModal(false); setPasswords({ password: '', confirm: '' }); setPasswordError(''); }} className="flex-1" variant="outline" disabled={loading}>Cancelar</Button>
