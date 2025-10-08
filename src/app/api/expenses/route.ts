@@ -209,5 +209,15 @@ export async function POST(req: NextRequest) {
 
   // return created item including relations to match client expectations
   const created = await prisma.expense.findUnique({ where: { id: expense.id }, include: { category: true, wallet: true } });
+  
+  // Process notifications after expense creation
+  try {
+    const { processTransactionAlerts } = await import('@/lib/notifications/processor');
+    await processTransactionAlerts(user.id, 'expense');
+  } catch (error) {
+    console.error('Erro ao processar alertas de despesa:', error);
+    // Don't fail the request if notification processing fails
+  }
+  
   return NextResponse.json(created, { status: 201 });
 }

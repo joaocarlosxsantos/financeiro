@@ -30,7 +30,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="fixed inset-0 z-50 flex md:hidden">
           {/* Overlay */}
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-64 bg-gray-900 dark:bg-slate-900 shadow-xl animate-slide-in-mobile z-50">
+          <div className="absolute left-0 top-0 h-full w-72 bg-gray-900 dark:bg-slate-900 shadow-xl animate-slide-in-mobile z-50">
             <Sidebar onClose={() => setSidebarOpen(false)} />
           </div>
         </div>

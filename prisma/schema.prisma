@@ -22,27 +22,29 @@ model Tag {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  name             String?
-  email            String            @unique
-  apiKey           String?           @unique
-  phone            String?
-  emailVerified    DateTime?
-  image            String?
-  password         String?
-  theme            String?           @default("system")
-  tags             Tag[]
-  categories       Category[]
-  goals            Goal[]
-  expenses         Expense[]
-  incomes          Income[]
-  wallets          Wallet[]
-  groups           Group[]
-  members          Member[]
-  bills            Bill[]
-  billMemberShares BillMemberShare[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                 String               @id @default(cuid())
+  name               String?
+  email              String               @unique
+  apiKey             String?              @unique
+  phone              String?
+  emailVerified      DateTime?
+  image              String?
+  password           String?
+  theme              String?              @default("system")
+  tags               Tag[]
+  categories         Category[]
+  goals              Goal[]
+  expenses           Expense[]
+  incomes            Income[]
+  wallets            Wallet[]
+  groups             Group[]
+  members            Member[]
+  bills              Bill[]
+  billMemberShares   BillMemberShare[]
+  notifications      Notification[]
+  alertConfigurations AlertConfiguration[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model Category {
@@ -250,4 +252,74 @@ enum GoalRecurrence {
 enum GoalKind {
   ATTAINMENT // aim to reach or accumulate an amount (positive)
   LIMIT // limit to not exceed (e.g., spend <= X), exceeding is negative
+}
+
+// Notifications and Alerts System
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String
+  priority    NotificationPriority @default(MEDIUM)
+  isRead      Boolean          @default(false)
+  isActive    Boolean          @default(true)
+  data        Json?            // Additional data related to the notification
+  scheduledFor DateTime?       // For scheduled notifications
+  triggeredAt DateTime?        // When the alert condition was first detected
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId, isRead])
+  @@index([userId, type])
+  @@index([scheduledFor])
+}
+
+model AlertConfiguration {
+  id               String              @id @default(cuid())
+  userId           String
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             AlertConfigType
+  isEnabled        Boolean             @default(true)
+  thresholdAmount  Decimal?            @db.Decimal(12, 2)
+  thresholdPercent Float?
+  categoryIds      String[]            @default([])
+  walletIds        String[]            @default([])
+  settings         Json?               // Additional configuration data
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([userId, type])
+  @@index([userId, isEnabled])
+}
+
+enum NotificationType {
+  BUDGET_EXCEEDED        // Orçamento excedido
+  UNUSUAL_SPENDING       // Gasto incomum detectado
+  LOW_BALANCE           // Saldo baixo
+  GOAL_AT_RISK          // Meta em risco
+  DUPLICATE_TRANSACTION // Possível transação duplicada
+  RECURRING_DUE         // Lembrete de gasto fixo
+  MONTHLY_SUMMARY       // Resumo mensal
+  ACHIEVEMENT          // Conquista/meta atingida
+  SYSTEM              // Notificação do sistema
+  CUSTOM              // Personalizada
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AlertConfigType {
+  BUDGET_EXCEEDED
+  UNUSUAL_SPENDING
+  LOW_BALANCE
+  GOAL_AT_RISK
+  DUPLICATE_TRANSACTION
+  RECURRING_DUE
+  MONTHLY_SUMMARY
 }

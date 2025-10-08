@@ -8,11 +8,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { NotificationCenter } from '@/components/notifications/notification-center';
 import { 
   BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
   LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
   TrendingUp, TrendingDown, Upload, ChevronDown, ChevronRight,
-  FolderOpen, Users
+  FolderOpen, Users, Bell
 } from 'lucide-react';
 
 // Estrutura hierárquica para o módulo financeiro
@@ -47,6 +48,7 @@ const navigationFinanceiro = {
       { name: 'Carteiras', href: '/wallets', icon: Wallet },
       { name: 'Categorias', href: '/categorias', icon: FolderOpen },
       { name: 'Tags', href: '/tags', icon: Tag },
+      { name: 'Notificações', href: '/notifications/settings', icon: Bell },
     ]
   }
 };
@@ -247,6 +249,19 @@ function ModuleSelector({ module, onSelect }: { module: ModuleKey; onSelect: (m:
   );
 }
 
+// Função para detectar qual seção deve estar expandida baseado na página atual
+const getSectionFromPathname = (pathname: string, navigation: Record<string, NavSection>): string | null => {
+  for (const [sectionKey, section] of Object.entries(navigation)) {
+    if (section.items && Array.isArray(section.items)) {
+      const hasActiveItem = section.items.some((item) => pathname === item.href);
+      if (hasActiveItem) {
+        return sectionKey;
+      }
+    }
+  }
+  return null;
+};
+
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -271,16 +286,26 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(`sidebar-expanded-${module}`);
-        return new Set(stored ? JSON.parse(stored) : ['financeiro', 'gestao']); // Seções abertas por padrão
+        if (stored) {
+          return new Set(JSON.parse(stored));
+        }
       } catch {
-        return new Set(['financeiro', 'gestao']);
+        // Ignorar erros de localStorage
       }
     }
-    return new Set(['financeiro', 'gestao']);
+    
+    // Se não há estado salvo, detectar automaticamente qual seção expandir baseado na página atual
+    const activeSection = getSectionFromPathname(pathname, currentNavigation);
+    if (activeSection) {
+      return new Set([activeSection]);
+    }
+    
+    // Se não conseguir detectar, usar seções padrão baseado no módulo
+    return new Set(module === 'financeiro' ? ['financeiro'] : ['gestao']);
   });
   
   // Salvar estado das seções no localStorage
-  const saveExpandedState = (sections: Set<string>) => {
+  const saveExpandedState = React.useCallback((sections: Set<string>) => {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(`sidebar-expanded-${module}`, JSON.stringify(Array.from(sections)));
@@ -288,7 +313,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         // Ignorar erros de localStorage
       }
     }
-  };
+  }, [module]);
   
   // Toggle seção
   const toggleSection = (sectionKey: string) => {
@@ -336,8 +361,19 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     }
   }, [pathname, module]);
 
+  // Atualizar seções expandidas quando a página mudar
+  React.useEffect(() => {
+    const activeSection = getSectionFromPathname(pathname, currentNavigation);
+    if (activeSection && !expandedSections.has(activeSection)) {
+      const newExpanded = new Set(expandedSections);
+      newExpanded.add(activeSection);
+      setExpandedSections(newExpanded);
+      saveExpandedState(newExpanded);
+    }
+  }, [pathname, currentNavigation, expandedSections, saveExpandedState]);
+
   return (
-    <div className="flex h-full w-64 flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm">
+    <div className="flex h-full w-72 flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm">
       {/* Cabeçalho */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-white/10">
         <div className="flex items-center gap-2">
@@ -351,18 +387,21 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             </div>
           </div>
         </div>
-        {onClose && (
-          <button
-            aria-label="Fechar menu"
-            className="md:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            onClick={onClose}
-          >
-            <span className="sr-only">Fechar menu</span>
-            <svg width="22" height="22" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <NotificationCenter className="text-white hover:text-white/80" />
+          {onClose && (
+            <button
+              aria-label="Fechar menu"
+              className="md:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onClick={onClose}
+            >
+              <span className="sr-only">Fechar menu</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Navegação */}

@@ -206,5 +206,15 @@ export async function POST(req: NextRequest) {
     },
   });
   const created = await prisma.income.findUnique({ where: { id: income.id }, include: { category: true, wallet: true } });
+  
+  // Process notifications after income creation
+  try {
+    const { processTransactionAlerts } = await import('@/lib/notifications/processor');
+    await processTransactionAlerts(user.id, 'income');
+  } catch (error) {
+    console.error('Erro ao processar alertas de renda:', error);
+    // Don't fail the request if notification processing fails
+  }
+  
   return NextResponse.json(created, { status: 201 });
 }

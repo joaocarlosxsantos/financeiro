@@ -199,32 +199,60 @@ export async function POST(req: NextRequest) {
   }
   const userEmail = session.user.email;
   try {
-    // Separar lançamentos em incomes e expenses
-    const incomes = [];
-    const expenses = [];
-    for (const reg of registrosFinal) {
-      const dataObj = parsePtBrDate(reg.data);
-      if (!dataObj) throw new Error('Data inválida em um dos lançamentos');
-      let categoriaId = reg.categoriaId;
-      const base = {
-        amount: Math.abs(reg.valor),
-        date: dataObj,
-        description: reg.descricaoSimplificada || reg.descricao,
-        type: 'VARIABLE' as const,
-        walletId: carteiraId,
-        userId: user.id,
-        categoryId: categoriaId || undefined,
-      };
-      if (reg.valor > 0) incomes.push(base);
-      else if (reg.valor < 0) expenses.push(base);
+    // Marcar início da importação em lote para evitar alertas individuais
+    const { startBatchImport, endBatchImport } = await import('@/lib/notifications/batchContext');
+    startBatchImport(user.id);
+
+    try {
+      // Separar lançamentos em incomes e expenses
+      const incomes = [];
+      const expenses = [];
+      for (const reg of registrosFinal) {
+        const dataObj = parsePtBrDate(reg.data);
+        if (!dataObj) throw new Error('Data inválida em um dos lançamentos');
+        let categoriaId = reg.categoriaId;
+        const base = {
+          amount: Math.abs(reg.valor),
+          date: dataObj,
+          description: reg.descricaoSimplificada || reg.descricao,
+          type: 'VARIABLE' as const,
+          walletId: carteiraId,
+          userId: user.id,
+          categoryId: categoriaId || undefined,
+        };
+        if (reg.valor > 0) incomes.push(base);
+        else if (reg.valor < 0) expenses.push(base);
+      }
+      const queries = [];
+      if (incomes.length) queries.push(prisma.income.createMany({ data: incomes }));
+      if (expenses.length) queries.push(prisma.expense.createMany({ data: expenses }));
+      if (queries.length) {
+        await prisma.$transaction(queries);
+      }
+
+      // Processar alertas uma única vez após salvar todas as transações
+      try {
+        const { processBatchTransactionAlerts } = await import('@/lib/notifications/processor');
+        await processBatchTransactionAlerts(user.id, { 
+          expenses: expenses.length, 
+          incomes: incomes.length 
+        });
+      } catch (error) {
+        console.error('Erro ao processar alertas da importação:', error);
+        // Não falhar a importação se houver erro nos alertas
+      }
+
+      return NextResponse.json({ 
+        ok: true, 
+        imported: { 
+          incomes: incomes.length, 
+          expenses: expenses.length 
+        }
+      });
+    } finally {
+      // Sempre finalizar contexto de importação em lote, mesmo em caso de erro
+      endBatchImport();
     }
-    const queries = [];
-    if (incomes.length) queries.push(prisma.income.createMany({ data: incomes }));
-    if (expenses.length) queries.push(prisma.expense.createMany({ data: expenses }));
-    if (queries.length) {
-      await prisma.$transaction(queries);
-    }
-    return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const msg = err && typeof err === 'object' && 'message' in err ? (err as any).message : String(err);
     return NextResponse.json({ error: msg || 'Erro ao salvar lançamentos' }, { status: 500 });
