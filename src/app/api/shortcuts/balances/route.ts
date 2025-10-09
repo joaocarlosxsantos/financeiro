@@ -96,8 +96,8 @@ export async function GET(req: NextRequest) {
     })
     .filter((wallet: any) => wallet.balance !== 0); // Filtrar carteiras com saldo zerado
 
-  // Sort wallets by balance descending (maior saldo primeiro)
-  payload.sort((a: any, b: any) => (b.balance ?? 0) - (a.balance ?? 0));
+  // Sort wallets by balance ascending (menor saldo primeiro)
+  payload.sort((a: any, b: any) => (a.balance ?? 0) - (b.balance ?? 0));
 
   // Return named property so clients (like Shortcuts) can reference the array by name
   return NextResponse.json({ wallets: payload });
