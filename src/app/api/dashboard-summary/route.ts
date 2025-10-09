@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Session } from 'next-auth';
+import { getMonthRangeBrasilia, createBrasiliaDate, parseInputDateBrasilia } from '@/lib/datetime-brasilia';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,9 +20,8 @@ export async function GET(req: NextRequest) {
   const month = Number(searchParams.get('month'));
   const walletId = searchParams.get('walletId') || undefined;
 
-  // datas do mês
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0, 23, 59, 59, 999);
+  // datas do mês usando timezone do Brasil
+  const { start, end } = getMonthRangeBrasilia(year, month);
   const { formatYmd } = await import('@/lib/utils');
   const startStr = formatYmd(start);
   const endStr = formatYmd(end);
@@ -74,29 +74,30 @@ export async function GET(req: NextRequest) {
     },
   });
   // Expandir despesas/rendas FIXED em ocorrências mensais até endStr
-  const endDate = new Date(endStr);
+  const endDate = parseInputDateBrasilia(endStr);
 
   function expandFixedRecords(records: (PrismaExpense | PrismaIncome)[], upto: Date) {
     const expanded: (PrismaExpense | PrismaIncome)[] = [];
     for (const r of records) {
       // Se for FIXED, NÃO incluir o registro original (evita duplicação) — gerar apenas ocorrências mensais
       if (r.isFixed) {
-        const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(1900, 0, 1);
-        const recEnd = r.endDate ? new Date(r.endDate) : upto;
-        const from = recStart > new Date(1900, 0, 1) ? recStart : new Date(1900, 0, 1);
+        const recStart = r.startDate ? parseInputDateBrasilia(r.startDate) : r.date ? parseInputDateBrasilia(r.date) : createBrasiliaDate(1900, 1, 1);
+        const recEnd = r.endDate ? parseInputDateBrasilia(r.endDate) : upto;
+        const minDate = createBrasiliaDate(1900, 1, 1);
+        const from = recStart > minDate ? recStart : minDate;
         const to = recEnd < upto ? recEnd : upto;
         if (from && to && from.getTime() <= to.getTime()) {
-          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? new Date(r.date).getDate() : 1);
-          let cur = new Date(from.getFullYear(), from.getMonth(), 1);
-          const last = new Date(to.getFullYear(), to.getMonth(), 1);
+          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? parseInputDateBrasilia(r.date).getDate() : 1);
+          let cur = createBrasiliaDate(from.getFullYear(), from.getMonth() + 1, 1);
+          const last = createBrasiliaDate(to.getFullYear(), to.getMonth() + 1, 1);
           while (cur.getTime() <= last.getTime()) {
-            const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+            const lastDayOfMonth = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 0).getDate();
             const dayInMonth = Math.min(day, lastDayOfMonth);
-            const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+            const occDate = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 1, dayInMonth);
             if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
               expanded.push({ ...(r as any), date: formatYmd(occDate) } as PrismaExpense | PrismaIncome);
             }
-            cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+            cur = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 1);
           }
         }
       } else {

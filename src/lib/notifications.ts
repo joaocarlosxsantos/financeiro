@@ -1,4 +1,4 @@
-import { sendNotificationToUser, broadcastNotification } from '@/app/api/notifications/stream/route';
+import { sendNotificationToUser, broadcastNotification } from '@/lib/notifications/sse-utils';
 
 export interface NotificationData {
   title: string;

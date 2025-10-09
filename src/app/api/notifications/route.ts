@@ -16,6 +16,7 @@ import {
   logValidationError,
   detectAttackAttempt 
 } from '@/lib/validation';
+import { getNowBrasilia, parseInputDateBrasilia } from '@/lib/datetime-brasilia';
 
 // Use secure validation schemas
 const createNotificationSchema = secureNotificationSchemas.create;
@@ -303,19 +304,4 @@ export async function PATCH(req: NextRequest) {
     console.error('Error updating notifications:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
-}
-
-// Example integration with real-time notifications
-// This function can be called from other APIs to send real-time notifications
-export async function sendRealtimeNotificationExample(userId: string, data: any) {
-  // Note: Import this at the top when using
-  // import { sendRealtimeNotification } from '@/lib/notifications';
-  
-  // Example usage:
-  // await sendRealtimeNotification(userId, {
-  //   title: 'Nova Transação',
-  //   message: 'Sua transação foi processada com sucesso',
-  //   type: 'success',
-  //   category: 'transaction'
-  // });
 }

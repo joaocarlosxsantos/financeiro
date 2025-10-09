@@ -4,19 +4,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { parseInputDateBrasilia, createBrasiliaDate } from '@/lib/datetime-brasilia';
 
 function parseFlexibleDate(input?: string | null): Date | undefined {
   if (!input) return undefined;
   if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
     const [y, m, d] = input.split('-').map(Number);
-    return new Date(y, m - 1, d);
+    return createBrasiliaDate(y, m, d);
   }
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(input)) {
     const [d, m, y] = input.split('/').map(Number);
-    return new Date(y, m - 1, d);
+    return createBrasiliaDate(y, m, d);
   }
-  const dt = new Date(input);
-  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  return parseInputDateBrasilia(input);
 }
 
 export async function GET(req: NextRequest) {
@@ -105,22 +105,22 @@ export async function GET(req: NextRequest) {
       if (!from || !to) continue;
 
       // dia do mês para ocorrência (fallback para dia da data original)
-      const day = typeof e.dayOfMonth === 'number' && e.dayOfMonth > 0 ? e.dayOfMonth : new Date(e.date).getDate();
+      const day = typeof e.dayOfMonth === 'number' && e.dayOfMonth > 0 ? e.dayOfMonth : parseInputDateBrasilia(e.date).getDate();
 
       // iterar meses entre from e to
-      let cur = new Date(from.getFullYear(), from.getMonth(), 1);
-      const last = new Date(to.getFullYear(), to.getMonth(), 1);
+      let cur = createBrasiliaDate(from.getFullYear(), from.getMonth() + 1, 1);
+      const last = createBrasiliaDate(to.getFullYear(), to.getMonth() + 1, 1);
       while (cur.getTime() <= last.getTime()) {
-        const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+        const lastDayOfMonth = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 0).getDate();
         const dayInMonth = Math.min(day, lastDayOfMonth);
-        const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+        const occDate = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 1, dayInMonth);
         // garantir dentro do intervalo original (from..to)
         if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
           // clonar objeto e ajustar data (string YYYY-MM-DD usando partes locais para evitar timezone issues)
           const { formatYmd } = await import('@/lib/utils');
           expanded.push({ ...e, date: formatYmd(occDate) });
         }
-        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+        cur = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 1);
       }
     }
     // ordenar por date desc. Se as datas empatarem, aplicar tie-break por id

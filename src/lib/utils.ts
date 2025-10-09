@@ -13,13 +13,16 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR').format(date);
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo'
+  }).format(date);
 }
 
 export function getMonthYear(date: Date): string {
   return new Intl.DateTimeFormat('pt-BR', {
     month: 'long',
     year: 'numeric',
+    timeZone: 'America/Sao_Paulo'
   }).format(date);
 }
 
@@ -34,6 +37,28 @@ export function getMonthRange(year: number, month: number): { start: Date; end: 
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 0, 23, 59, 59);
   return { start, end };
+}
+
+/**
+ * Cria uma nova data ajustada para o fuso horário do Brasil (GMT-3)
+ * Use esta função em vez de new Date() quando criar registros no banco
+ */
+export function createBrasiliaDate(): Date {
+  return new Date();
+}
+
+/**
+ * Formata data e hora para exibição no padrão brasileiro
+ */
+export function formatDateTime(date: Date): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
 }
 
 // Parses date strings from API (e.g., 'YYYY-MM-DD' or ISO) into a local Date without timezone shift
