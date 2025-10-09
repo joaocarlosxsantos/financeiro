@@ -10,6 +10,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
+  
+  // Normalize tags: filter out 'no-tag' values
+  let normalizedTags = body.tags ?? [];
+  if (Array.isArray(normalizedTags)) {
+    normalizedTags = normalizedTags
+      .map((t: any) => {
+        if (!t) return '';
+        if (typeof t === 'string') return t === 'no-tag' ? '' : t;
+        if (t.placeholder) return '';
+        // Se o ID for 'no-tag', não incluir a tag
+        if (t?.id === 'no-tag') return '';
+        return t?.name || t?.id || '';
+      })
+      .filter(Boolean);
+  }
+  
   try {
     const updated = await prisma.expense.update({
       where: { id: params.id, userId: user.id } as any,
@@ -24,7 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         dayOfMonth: body.dayOfMonth,
         categoryId: body.categoryId,
         walletId: body.walletId,
-        tags: body.tags ?? [],
+        tags: normalizedTags,
       },
       include: { category: true, wallet: true },
     });

@@ -63,8 +63,10 @@ export async function POST(req: NextRequest) {
     body.tags = body.tags
       .map((t: any) => {
         if (!t) return '';
-        if (typeof t === 'string') return t;
+        if (typeof t === 'string') return t === 'no-tag' ? '' : t;
         if (t.placeholder) return '';
+        // Se o ID for 'no-tag', não incluir a tag
+        if (t?.id === 'no-tag') return '';
         return t?.name || t?.id || '';
       })
       .filter(Boolean);
