@@ -52,6 +52,13 @@ function normalizeAmount(n: number) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(amount);
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await findUserFromSessionOrApiKey(req);
@@ -66,18 +73,28 @@ export async function GET(req: NextRequest) {
     const today = new Date();
 
   const payload = wallets.map((w: any) => {
+      let balance: number;
+      
       // If backend provided a precomputed numeric balance, prefer it
       if (typeof w.balance === 'number') {
-        return { id: w.id, name: w.name, type: w.type, balance: normalizeAmount(Number(w.balance)) };
+        balance = normalizeAmount(Number(w.balance));
+      } else {
+        const incomesExpanded = expandFixedRecords(w.incomes || [], today);
+        const expensesExpanded = expandFixedRecords(w.expenses || [], today);
+        const totalIncomes = incomesExpanded.reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
+        const totalExpenses = expensesExpanded.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+        balance = normalizeAmount(totalIncomes - totalExpenses);
       }
-
-      const incomesExpanded = expandFixedRecords(w.incomes || [], today);
-      const expensesExpanded = expandFixedRecords(w.expenses || [], today);
-      const totalIncomes = incomesExpanded.reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
-      const totalExpenses = expensesExpanded.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-  const balance = totalIncomes - totalExpenses;
-  return { id: w.id, name: w.name, type: w.type, balance: normalizeAmount(balance) };
-    });
+      
+      return { 
+        id: w.id, 
+        name: w.name, 
+        type: w.type, 
+        balance: balance,
+        balanceFormatted: formatCurrency(balance)
+      };
+    })
+    .filter((wallet: any) => wallet.balance !== 0); // Filtrar carteiras com saldo zerado
 
   // Sort wallets by balance descending (maior saldo primeiro)
   payload.sort((a: any, b: any) => (b.balance ?? 0) - (a.balance ?? 0));
