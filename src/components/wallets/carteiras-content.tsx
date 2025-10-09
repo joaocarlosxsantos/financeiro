@@ -242,7 +242,26 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
       )}
       {!isLoading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-6 xl:gap-3 overflow-x-auto">
-          {wallets.map((wallet) => {
+          {wallets
+            .slice() // Criar uma cópia para não modificar o array original
+            .sort((a, b) => {
+              // Calcular saldo para ordenação
+              const getSaldo = (wallet: Wallet) => {
+                const saldoFromBackend = typeof wallet.balance === 'number' ? wallet.balance : undefined;
+                const saldoFallback =
+                  (wallet.incomes?.reduce((acc: number, i: { amount: number | string }) => acc + Number(i.amount), 0) || 0) -
+                  (wallet.expenses?.reduce((acc: number, e: { amount: number | string }) => acc + Number(e.amount), 0) || 0);
+                const saldoRaw = typeof saldoFromBackend === 'number' ? saldoFromBackend : saldoFallback;
+                return Object.is(saldoRaw, -0) ? 0 : saldoRaw;
+              };
+              
+              const saldoA = getSaldo(a);
+              const saldoB = getSaldo(b);
+              
+              // Ordenação decrescente (maior valor primeiro)
+              return saldoB - saldoA;
+            })
+            .map((wallet) => {
             // If backend provided a precomputed balance (includes expanded FIXED items), prefer it.
             const saldoFromBackend = typeof wallet.balance === 'number' ? wallet.balance : undefined;
             const saldoFallback =
