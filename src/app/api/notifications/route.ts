@@ -9,35 +9,28 @@ import {
   CreateNotificationRequest 
 } from '@/types/notifications';
 import { z } from 'zod';
+import { withRateLimit, withUserRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
+import { 
+  secureNotificationSchemas, 
+  validateAndSanitize, 
+  logValidationError,
+  detectAttackAttempt 
+} from '@/lib/validation';
 
-// Validation schemas
-const createNotificationSchema = z.object({
-  type: z.nativeEnum(NotificationType),
-  title: z.string().min(1).max(255),
-  message: z.string().min(1).max(1000),
-  priority: z.nativeEnum(NotificationPriority).optional(),
-  data: z.any().optional(),
-  scheduledFor: z.string().datetime().optional(),
-});
-
-const updateNotificationSchema = z.object({
-  isRead: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
-
-const filterSchema = z.object({
-  isRead: z.boolean().optional(),
-  type: z.nativeEnum(NotificationType).optional(),
-  priority: z.nativeEnum(NotificationPriority).optional(),
-  dateFrom: z.string().datetime().optional(),
-  dateTo: z.string().datetime().optional(),
-  limit: z.number().min(1).max(100).optional(),
-  offset: z.number().min(0).optional(),
-});
+// Use secure validation schemas
+const createNotificationSchema = secureNotificationSchemas.create;
+const updateNotificationSchema = secureNotificationSchemas.update;
+const filterSchema = secureNotificationSchemas.filter;
 
 // GET /api/notifications - List notifications with filters
 export async function GET(req: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.NOTIFICATIONS_READ);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -164,6 +157,12 @@ export async function GET(req: NextRequest) {
 // POST /api/notifications - Create notification
 export async function POST(req: NextRequest) {
   try {
+    // Apply rate limiting for creation
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.NOTIFICATIONS_CREATE);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -178,7 +177,30 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const validatedData = createNotificationSchema.parse(body);
+    
+    // Enhanced validation with attack detection
+    const attackDetection = detectAttackAttempt(JSON.stringify(body));
+    if (attackDetection.isAttack) {
+      const ip = req.headers.get('x-forwarded-for') || 'unknown';
+      logValidationError('/api/notifications', user.id, ip, [
+        `Tentativa de ataque detectada: ${attackDetection.attackType} (confiança: ${attackDetection.confidence})`
+      ]);
+      return NextResponse.json({ 
+        error: 'Dados inválidos' 
+      }, { status: 400 });
+    }
+
+    const validation = await validateAndSanitize(createNotificationSchema, body);
+    if (!validation.success) {
+      const ip = req.headers.get('x-forwarded-for') || 'unknown';
+      logValidationError('/api/notifications', user.id, ip, validation.errors);
+      return NextResponse.json({ 
+        error: 'Dados inválidos', 
+        details: validation.errors 
+      }, { status: 400 });
+    }
+
+    const validatedData = validation.data;
 
     const notification = await prisma.notification.create({
       data: {
@@ -207,6 +229,12 @@ export async function POST(req: NextRequest) {
 // PATCH /api/notifications - Bulk update notifications (mark all as read, etc.)
 export async function PATCH(req: NextRequest) {
   try {
+    // Apply rate limiting for bulk operations
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.NOTIFICATIONS_BULK);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -275,4 +303,19 @@ export async function PATCH(req: NextRequest) {
     console.error('Error updating notifications:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
+}
+
+// Example integration with real-time notifications
+// This function can be called from other APIs to send real-time notifications
+export async function sendRealtimeNotificationExample(userId: string, data: any) {
+  // Note: Import this at the top when using
+  // import { sendRealtimeNotification } from '@/lib/notifications';
+  
+  // Example usage:
+  // await sendRealtimeNotification(userId, {
+  //   title: 'Nova Transação',
+  //   message: 'Sua transação foi processada com sucesso',
+  //   type: 'success',
+  //   category: 'transaction'
+  // });
 }

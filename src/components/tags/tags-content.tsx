@@ -164,7 +164,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center space-x-3 min-w-0">
-                    <Tag className="w-4 h-4 text-gray-400 dark:text-foreground flex-shrink-0" />
+                    <Tag className="w-4 h-4 text-gray-300 dark:text-foreground flex-shrink-0" />
                     <span className="font-semibold text-lg truncate">{tag.name}</span>
                   </div>
                   <div className="flex space-x-2 flex-shrink-0">
@@ -185,7 +185,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
       {tags.length === 0 && !showForm && !isLoading && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Tag className="h-12 w-12 text-gray-400 dark:text-foreground mx-auto mb-4" />
+            <Tag className="h-12 w-12 text-gray-300 dark:text-foreground mx-auto mb-4" />
             <p className="text-gray-500 dark:text-foreground">Nenhuma tag cadastrada</p>
             <Button className="mt-4" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />

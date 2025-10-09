@@ -93,7 +93,7 @@ export interface DialogDescriptionProps {
 
 export function DialogDescription({ className, children }: DialogDescriptionProps) {
   return (
-    <p className={cn("text-sm text-slate-600 dark:text-slate-400 mt-2", className)}>
+    <p className={cn("text-sm text-slate-600 dark:text-slate-300 mt-2", className)}>
       {children}
     </p>
   );

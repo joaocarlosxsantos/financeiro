@@ -145,7 +145,7 @@ export function NotificationItem({
                 'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
                 notification.priority === NotificationPriority.URGENT && 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
                 notification.priority === NotificationPriority.HIGH && 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-                notification.priority === NotificationPriority.LOW && 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                notification.priority === NotificationPriority.LOW && 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
               )}>
                 {notification.priority === NotificationPriority.URGENT && 'Urgente'}
                 {notification.priority === NotificationPriority.HIGH && 'Alta'}

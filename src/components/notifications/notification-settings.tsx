@@ -134,7 +134,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        <p className="text-sm text-muted-foreground mt-2">Carregando configurações...</p>
+        <p className="text-sm text-muted-foreground/80 mt-2">Carregando configurações...</p>
       </div>
     );
   }
@@ -153,7 +153,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Configurações de Notificações
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
               Gerencie seus alertas financeiros personalizados
             </p>
           </div>
@@ -179,7 +179,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Alertas Configurados
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
               {configs.length > 0 
                 ? `Você tem ${configs.length} alerta${configs.length > 1 ? 's' : ''} configurado${configs.length > 1 ? 's' : ''}`
                 : 'Nenhum alerta configurado ainda'
@@ -198,13 +198,13 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
             <CardContent className="p-8 text-center">
               <div className="flex flex-col items-center justify-center space-y-4">
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-8 w-8 text-gray-400" />
+                  <AlertCircle className="h-8 w-8 text-gray-300 dark:text-gray-400" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100">
                     Nenhum alerta configurado
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 max-w-sm">
                     Configure alertas inteligentes para monitorar seus gastos, saldos e metas financeiras automaticamente.
                   </p>
                 </div>

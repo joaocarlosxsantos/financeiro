@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
 
 // DELETE /api/notifications/alerts/[id] - Delete alert configuration
 export async function DELETE(
@@ -9,6 +10,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Apply strict rate limiting for deletions
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.ALERTS_DELETE);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -61,6 +68,12 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Apply rate limiting for updates
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.ALERTS_CONFIG);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });

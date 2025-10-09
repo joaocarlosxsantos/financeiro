@@ -6,7 +6,12 @@ module.exports = {
   },
   testPathIgnorePatterns: ['/tests/archived/'],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: {
+        jsx: 'react-jsx',
+      },
+    }],
   },
   testMatch: ['**/tests/**/*.(test|spec).(ts|tsx|js|jsx)'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 };

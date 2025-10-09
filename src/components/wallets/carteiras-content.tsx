@@ -300,7 +300,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
       {wallets.length === 0 && !showForm && (
         <Card>
           <CardContent className="p-12 text-center">
-            <WalletIcon className="h-12 w-12 text-gray-400 dark:text-foreground mx-auto mb-4" />
+            <WalletIcon className="h-12 w-12 text-gray-300 dark:text-foreground mx-auto mb-4" />
             <p className="text-gray-500 dark:text-foreground">Nenhuma carteira cadastrada</p>
             <Button className="mt-4" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />

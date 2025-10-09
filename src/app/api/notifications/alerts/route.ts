@@ -4,20 +4,25 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { AlertConfigType } from '@/types/notifications';
 import { z } from 'zod';
+import { withRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
+import { 
+  secureAlertSchemas, 
+  validateAndSanitize, 
+  logValidationError,
+  detectAttackAttempt 
+} from '@/lib/validation';
 
-const alertConfigSchema = z.object({
-  type: z.nativeEnum(AlertConfigType),
-  isEnabled: z.boolean(),
-  thresholdAmount: z.number().positive().optional().nullable().transform(val => val ?? undefined),
-  thresholdPercent: z.number().min(0).max(100).optional().nullable().transform(val => val ?? undefined),
-  categoryIds: z.array(z.string()).optional().nullable().transform(val => val ?? undefined),
-  walletIds: z.array(z.string()).optional().nullable().transform(val => val ?? undefined),
-  settings: z.any().optional().nullable().transform(val => val ?? undefined),
-});
+const alertConfigSchema = secureAlertSchemas.create;
 
 // GET /api/notifications/alerts - Get alert configurations
 export async function GET(req: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.ALERTS_CONFIG);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -47,6 +52,12 @@ export async function GET(req: NextRequest) {
 // POST /api/notifications/alerts - Create or update alert configuration
 export async function POST(req: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await withRateLimit(req, RATE_LIMITS.ALERTS_CONFIG);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -61,7 +72,30 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const validatedData = alertConfigSchema.parse(body);
+    
+    // Enhanced validation with attack detection
+    const attackDetection = detectAttackAttempt(JSON.stringify(body));
+    if (attackDetection.isAttack) {
+      const ip = req.headers.get('x-forwarded-for') || 'unknown';
+      logValidationError('/api/notifications/alerts', user.id, ip, [
+        `Tentativa de ataque detectada: ${attackDetection.attackType} (confiança: ${attackDetection.confidence})`
+      ]);
+      return NextResponse.json({ 
+        error: 'Dados inválidos' 
+      }, { status: 400 });
+    }
+
+    const validation = await validateAndSanitize(alertConfigSchema, body);
+    if (!validation.success) {
+      const ip = req.headers.get('x-forwarded-for') || 'unknown';
+      logValidationError('/api/notifications/alerts', user.id, ip, validation.errors);
+      return NextResponse.json({ 
+        error: 'Dados inválidos', 
+        details: validation.errors 
+      }, { status: 400 });
+    }
+
+    const validatedData = validation.data;
 
     const alertConfiguration = await prisma.alertConfiguration.upsert({
       where: {
