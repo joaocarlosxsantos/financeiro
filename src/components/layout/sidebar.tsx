@@ -9,11 +9,12 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { NotificationCenter } from '@/components/notifications/notification-center';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { 
   BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
   LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
   TrendingUp, TrendingDown, Upload, ChevronDown, ChevronRight,
-  FolderOpen, Users, Bell
+  FolderOpen, Users, Bell, Menu, X
 } from 'lucide-react';
 
 // Estrutura hierárquica para o módulo financeiro
@@ -90,14 +91,18 @@ interface NavSection {
 }
 
 const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry; active: boolean; onClick?: () => void; isSubItem?: boolean }) => {
+  const isMobile = useIsMobile();
+  
   return (
     <Link
       href={item.href}
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative group flex items-center gap-3 rounded-xl py-2 text-sm font-medium outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/60',
-        isSubItem ? 'px-4 ml-6' : 'px-3',
+        'relative group flex items-center gap-3 rounded-xl text-sm font-medium outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/60',
+        // Mobile-optimized spacing and touch targets
+        isMobile ? 'py-3 px-4 min-h-[48px]' : 'py-2',
+        isSubItem && !isMobile ? 'px-4 ml-6' : !isSubItem ? 'px-3' : 'px-4 ml-4',
         active
           ? 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow-md transform scale-[1.02]'
           : isSubItem 
@@ -107,16 +112,28 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
     >
       <span className={cn(
         'relative flex items-center justify-center rounded-md transition-all duration-200',
-        isSubItem ? 'h-6 w-6' : 'h-7 w-7',
+        // Mobile-optimized icon container
+        isMobile ? (isSubItem ? 'h-7 w-7' : 'h-8 w-8') : (isSubItem ? 'h-6 w-6' : 'h-7 w-7'),
         active
           ? 'bg-white/20 ring-1 ring-white/30 scale-105'
           : 'bg-transparent group-hover:bg-white/10 group-hover:ring-1 group-hover:ring-white/20'
       )}>
-        <item.icon className={cn('transition-colors', isSubItem ? 'h-3.5 w-3.5' : 'h-4 w-4', active ? 'text-white' : 'text-white/70 group-hover:text-white')} />
+        <item.icon className={cn(
+          'transition-colors', 
+          // Mobile-optimized icon size
+          isMobile ? (isSubItem ? 'h-4 w-4' : 'h-5 w-5') : (isSubItem ? 'h-3.5 w-3.5' : 'h-4 w-4'), 
+          active ? 'text-white' : 'text-white/70 group-hover:text-white'
+        )} />
         {/* Glow sutil ativo */}
         {active && <span className="pointer-events-none absolute inset-0 rounded-md bg-primary/40 mix-blend-overlay blur-[6px]" aria-hidden="true" />}
       </span>
-      <span className="truncate">{item.name}</span>
+      <span className={cn(
+        'truncate',
+        // Larger font for mobile
+        isMobile ? 'text-base font-medium' : ''
+      )}>
+        {item.name}
+      </span>
     </Link>
   );
 };
@@ -135,6 +152,8 @@ const NavSection = ({
   pathname: string;
   onItemClick?: () => void;
 }) => {
+  const isMobile = useIsMobile();
+  
   // Se for standalone (como Dashboard), renderiza como item normal
   if (section.standalone) {
     return (
@@ -150,17 +169,31 @@ const NavSection = ({
     <div className="space-y-1">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/8 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group"
+        className={cn(
+          "w-full flex items-center gap-3 rounded-xl text-sm font-medium text-white/90 hover:text-white hover:bg-white/8 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group",
+          // Mobile: Larger touch target
+          isMobile ? "px-4 py-3 min-h-[48px]" : "px-3 py-2"
+        )}
       >
-        <span className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-white/15 transition-colors duration-200">
-          <section.icon className="h-4 w-4" />
+        <span className={cn(
+          "flex items-center justify-center rounded-md bg-white/5 group-hover:bg-white/15 transition-colors duration-200",
+          // Mobile: Larger icon container
+          isMobile ? "h-8 w-8" : "h-7 w-7"
+        )}>
+          <section.icon className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
         </span>
-        <span className="flex-1 truncate text-left font-semibold tracking-wide">{section.name}</span>
+        <span className={cn(
+          "flex-1 truncate text-left font-semibold tracking-wide",
+          // Mobile: Larger text
+          isMobile ? "text-base" : ""
+        )}>
+          {section.name}
+        </span>
         <span className="transition-transform duration-200 text-white/50 group-hover:text-white/70">
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
           )}
         </span>
       </button>
@@ -266,6 +299,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const isMobile = useIsMobile();
 
   // initialize module: prefer localStorage, else derive from pathname
   const readStored = () => {
@@ -373,11 +407,25 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   }, [pathname, currentNavigation, expandedSections, saveExpandedState]);
 
   return (
-    <div className="flex h-full w-72 flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm">
+    <div className={cn(
+      "flex h-full flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm",
+      // Mobile: Full width, Desktop: Fixed width
+      isMobile ? "w-full" : "w-72"
+    )}>
       {/* Cabeçalho */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <Image src="/financeiro.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
+      <div className={cn(
+        "flex items-center justify-between border-b border-white/10",
+        // Mobile: Larger header, Desktop: Standard size
+        isMobile ? "h-20 px-6" : "h-16 px-4"
+      )}>
+        <div className="flex items-center gap-3">
+          <Image 
+            src="/financeiro.png" 
+            alt="Logo" 
+            width={isMobile ? 28 : 24} 
+            height={isMobile ? 28 : 24} 
+            className={cn(isMobile ? "h-7 w-7" : "h-6 w-6")} 
+          />
           <div className="relative">
             <div data-tour="sidebar-module">
               <ModuleSelector
@@ -392,20 +440,26 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           {onClose && (
             <button
               aria-label="Fechar menu"
-              className="md:hidden p-2 rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className={cn(
+                "rounded-md hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors",
+                // Mobile: Larger touch target
+                isMobile ? "p-3" : "p-2 md:hidden"
+              )}
               onClick={onClose}
             >
               <span className="sr-only">Fechar menu</span>
-              <svg width="22" height="22" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className={cn(isMobile ? "h-6 w-6" : "h-5 w-5")} />
             </button>
           )}
         </div>
       </div>
 
       {/* Navegação */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <nav className={cn(
+        "flex-1 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent",
+        // Mobile: More padding for easier touch navigation
+        isMobile ? "px-4 py-6" : "px-3 py-4"
+      )}>
         {Object.entries(currentNavigation).map(([sectionKey, section]) => {
           // Adiciona atributos data-tour para o tour guiado
           let tourAttr = {};
@@ -427,7 +481,11 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* Usuário / Ações */}
-      <div className="border-t border-white/10 p-4 mt-auto">
+      <div className={cn(
+        "border-t border-white/10 mt-auto",
+        // Mobile: More padding and larger touch targets
+        isMobile ? "p-6" : "p-4"
+      )}>
         <div className="flex items-center gap-3">
           <Link
             href="/user"
@@ -437,37 +495,60 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               } catch {}
               if (onClose) onClose();
             }}
-            className="group flex items-center gap-3 flex-1 min-w-0"
+            className={cn(
+              "group flex items-center gap-3 flex-1 min-w-0 rounded-xl transition-colors",
+              // Mobile: Add padding for better touch target
+              isMobile ? "p-2 hover:bg-white/5" : ""
+            )}
           >
             <div className="relative">
               {user?.image ? (
                 <Image
                   src={user.image}
                   alt={user.name || 'User'}
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 rounded-xl object-cover ring-2 ring-white/20 group-hover:ring-primary/50 transition"
+                  width={isMobile ? 48 : 40}
+                  height={isMobile ? 48 : 40}
+                  className={cn(
+                    "rounded-xl object-cover ring-2 ring-white/20 group-hover:ring-primary/50 transition",
+                    isMobile ? "h-12 w-12" : "h-10 w-10"
+                  )}
                 />
               ) : (
-                <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center ring-2 ring-white/10 group-hover:ring-primary/50 transition">
-                  <User className="h-5 w-5 text-white/70" />
+                <div className={cn(
+                  "rounded-xl bg-white/10 flex items-center justify-center ring-2 ring-white/10 group-hover:ring-primary/50 transition",
+                  isMobile ? "h-12 w-12" : "h-10 w-10"
+                )}>
+                  <User className={cn(isMobile ? "h-6 w-6" : "h-5 w-5", "text-white/70")} />
                 </div>
               )}
-              <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse" aria-hidden="true" />
+              <span className={cn(
+                "absolute -bottom-1 -right-1 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse",
+                isMobile ? "h-5 w-5" : "h-4 w-4"
+              )} aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate group-hover:text-white">{user?.name || 'Usuário'}</p>
-              <p className="text-[11px] text-white/60 truncate">{user?.email || 'usuario@email.com'}</p>
+              <p className={cn(
+                "font-medium truncate group-hover:text-white",
+                isMobile ? "text-base" : "text-sm"
+              )}>{user?.name || 'Usuário'}</p>
+              <p className={cn(
+                "text-white/60 truncate",
+                isMobile ? "text-sm" : "text-[11px]"
+              )}>{user?.email || 'usuario@email.com'}</p>
             </div>
           </Link>
           <Button
             variant="ghost"
             size="icon"
             onClick={logout}
-            className="rounded-lg h-10 w-10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition"
+            className={cn(
+              "rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition",
+              // Mobile: Larger touch target
+              isMobile ? "h-12 w-12" : "h-10 w-10"
+            )}
             aria-label="Sair"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className={cn(isMobile ? "h-6 w-6" : "h-5 w-5")} />
           </Button>
         </div>
       </div>
