@@ -259,7 +259,13 @@ async function hasRecentNotification(
   const existingData = existing.data as any;
   if (!existingData) return false;
 
-  // Simple deep comparison for key fields
+  // For low balance notifications, check if it's for the same wallet
+  if (type === NotificationType.LOW_BALANCE && dataMatch.walletId) {
+    const existingLowBalanceData = existingData.lowBalanceData;
+    return existingLowBalanceData?.walletId === dataMatch.walletId;
+  }
+
+  // For other types, use the original generic comparison
   return Object.keys(dataMatch).every(key => 
     existingData[Object.keys(existingData)[0]]?.[key] === dataMatch[key]
   );

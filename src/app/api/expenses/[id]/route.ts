@@ -44,6 +44,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       },
       include: { category: true, wallet: true },
     });
+
+    // Process notifications after expense update
+    try {
+      const { processTransactionAlerts } = await import('@/lib/notifications/processor');
+      await processTransactionAlerts(user.id, 'expense');
+    } catch (error) {
+      console.error('Erro ao processar alertas de despesa:', error);
+      // Don't fail the request if notification processing fails
+    }
+
     return NextResponse.json(updated);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Erro ao atualizar' }, { status: 400 });

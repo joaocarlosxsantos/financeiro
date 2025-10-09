@@ -22,8 +22,10 @@ interface UseMobileOptions {
  */
 export function useIsMobile(breakpoint = 768): boolean {
   const [isMobile, setIsMobile] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    setIsHydrated(true);
     function handleResize() {
       setIsMobile(window.innerWidth < breakpoint);
     }
@@ -31,6 +33,11 @@ export function useIsMobile(breakpoint = 768): boolean {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [breakpoint]);
+
+  // Durante a hidratação, retorna false para evitar inconsistências
+  if (!isHydrated) {
+    return false;
+  }
 
   return isMobile;
 }
@@ -46,8 +53,11 @@ export function useIsMobileAdvanced(options: UseMobileOptions = {}): boolean {
   } = options;
 
   const [isMobile, setIsMobile] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    setIsHydrated(true);
+    
     const checkMobile = () => {
       let mobile = false;
 
@@ -87,6 +97,11 @@ export function useIsMobileAdvanced(options: UseMobileOptions = {}): boolean {
     // Cleanup
     return () => window.removeEventListener('resize', checkMobile);
   }, [breakpoint, widthOnly, includeTouch]);
+
+  // Durante a hidratação, retorna false para evitar inconsistências
+  if (!isHydrated) {
+    return false;
+  }
 
   return isMobile;
 }
