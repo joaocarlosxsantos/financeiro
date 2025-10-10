@@ -35,23 +35,34 @@ interface CreditBill {
   createdAt: string;
 }
 
-export default function CreditBillsList() {
+interface CreditBillsListProps {
+  currentDate?: Date;
+}
+
+export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
   const [bills, setBills] = useState<CreditBill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedBill, setExpandedBill] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    loadBills();
-  }, []);
+    const loadBills = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const loadBills = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+        let url = '/api/credit-bills';
+        
+        // Se uma data específica for fornecida, filtra por mês/ano
+        if (currentDate) {
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth(); // getMonth() retorna 0-11, mas a API espera 1-12
+          url += `?year=${year}&month=${month + 1}`;
+        }
 
-      console.log('🧾 Carregando faturas...');
-      const response = await fetch('/api/credit-bills');
+        console.log('🧾 Carregando faturas...', url);
+        const response = await fetch(url);
       
       if (!response.ok) {
         console.error('❌ Erro HTTP faturas:', response.status, response.statusText);
@@ -67,6 +78,13 @@ export default function CreditBillsList() {
     } finally {
       setLoading(false);
     }
+  };
+    
+    loadBills();
+  }, [currentDate, reloadKey]);
+
+  const reloadBills = () => {
+    setReloadKey(prev => prev + 1);
   };
 
   const payBill = async (billId: string, amount: number) => {
@@ -88,7 +106,7 @@ export default function CreditBillsList() {
       }
 
       // Recarregar a lista
-      await loadBills();
+      reloadBills();
     } catch (error) {
       console.error('Erro ao registrar pagamento:', error);
       alert('Erro ao registrar pagamento. Tente novamente.');
@@ -145,7 +163,7 @@ export default function CreditBillsList() {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={loadBills}
+          onClick={reloadBills}
           className="mt-2"
         >
           Tentar novamente

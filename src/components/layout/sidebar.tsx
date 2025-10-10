@@ -13,8 +13,8 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { 
   BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
   LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
-  TrendingUp, TrendingDown, Upload, ChevronRight,
-  FolderOpen, Users, Bell, Menu, X
+  TrendingUp, TrendingDown, Upload, ChevronRight, ArrowUpDown,
+  FolderOpen, Users, Bell, Menu, X, PieChart, Activity
 } from 'lucide-react';
 
 // Componente para ícone de expansão que evita hydration mismatch
@@ -63,20 +63,21 @@ const ExpandedContent = ({
   );
 };
 
-// Estrutura hierárquica para o módulo financeiro
+// Estrutura hierárquica reorganizada para melhor UX
 const navigationFinanceiro = {
-  dashboard: {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: LucideLayoutDashboard,
-    standalone: true
-  },
-  financeiro: {
-    name: 'Financeiro',
-    icon: DollarSign,
+  visaoGeral: {
+    name: 'Visão Geral',
+    icon: PieChart,
     items: [
-      { name: 'Ganhos', href: '/rendas', icon: TrendingUp },
-      { name: 'Gastos', href: '/despesas', icon: TrendingDown },
+      { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
+      { name: 'Relatórios', href: '/reports', icon: BarChart3 },
+    ]
+  },
+  movimentacoes: {
+    name: 'Movimentações',
+    icon: Activity,
+    items: [
+      { name: 'Transações', href: '/transacoes', icon: ArrowUpDown },
       { name: 'Cartão de Crédito', href: '/credit-management', icon: CreditCard },
       { name: 'Importar Extrato', href: '/importar-extrato', icon: Upload },
     ]
@@ -85,18 +86,29 @@ const navigationFinanceiro = {
     name: 'Planejamento',
     icon: Target,
     items: [
-      { name: 'Metas', href: '/metas', icon: Target },
-      { name: 'Relatórios', href: '/reports', icon: FileText },
+      { name: 'Metas Financeiras', href: '/metas', icon: Target },
     ]
   },
-  configuracao: {
-    name: 'Configuração',
-    icon: Settings,
+  contasCartoes: {
+    name: 'Contas & Cartões',
+    icon: Wallet,
     items: [
       { name: 'Carteiras', href: '/wallets', icon: Wallet },
       { name: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard },
+    ]
+  },
+  organizacao: {
+    name: 'Organização',
+    icon: FolderOpen,
+    items: [
       { name: 'Categorias', href: '/categorias', icon: FolderOpen },
       { name: 'Tags', href: '/tags', icon: Tag },
+    ]
+  },
+  sistema: {
+    name: 'Sistema',
+    icon: Settings,
+    items: [
       { name: 'Notificações', href: '/notifications/settings', icon: Bell },
     ]
   }
@@ -145,6 +157,7 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
   const getDataTour = (href: string) => {
     const tourMap: Record<string, string> = {
       '/dashboard': 'sidebar-dashboard',
+      '/transacoes': 'sidebar-transactions',
       '/rendas': 'sidebar-incomes',
       '/despesas': 'sidebar-expenses',
       '/credit-management': 'sidebar-credit-management',

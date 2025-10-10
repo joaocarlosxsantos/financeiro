@@ -1,17 +1,22 @@
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import DespesasContent from '@/components/despesas/despesas-content';
-import PageTitle from '@/components/PageTitle';
-import { getMetadata } from '@/lib/pageTitle';
+'use client';
 
-export const metadata = getMetadata({ module: 'Controle Financeiro', page: 'Gastos' });
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function DespesasPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redireciona para a nova página unificada de transações na aba de gastos
+    router.replace('/transacoes?tab=gastos');
+  }, [router]);
+
   return (
-        <>
-          <PageTitle module="Controle Financeiro" page="Gastos" />
-          <DashboardLayout>
-            <DespesasContent />
-          </DashboardLayout>
-        </>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-lg font-semibold mb-2">Redirecionando...</h2>
+        <p className="text-muted-foreground">Você está sendo redirecionado para a nova página de transações.</p>
+      </div>
+    </div>
   );
 }

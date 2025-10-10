@@ -29,34 +29,55 @@ interface CreditPayment {
   createdAt: string;
 }
 
-export default function CreditPaymentsList() {
+interface CreditPaymentsListProps {
+  currentDate?: Date;
+}
+
+export default function CreditPaymentsList({ currentDate }: CreditPaymentsListProps) {
   const [payments, setPayments] = useState<CreditPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    loadPayments();
-  }, []);
+    const loadPayments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const loadPayments = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+        const response = await fetch('/api/credit-bills/payments');
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar pagamentos');
+        }
 
-      const response = await fetch('/api/credit-bills/payments');
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar pagamentos');
+        const data = await response.json();
+        let payments = Array.isArray(data) ? data : [];
+        
+        // Filtrar por mês se currentDate for fornecida
+        if (currentDate) {
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth();
+          payments = payments.filter((payment: CreditPayment) => {
+            const paymentDate = new Date(payment.paymentDate);
+            return paymentDate.getFullYear() === year && paymentDate.getMonth() === month;
+          });
+        }
+        
+        setPayments(payments);
+      } catch (error) {
+        console.error('Erro ao carregar pagamentos:', error);
+        setError(error instanceof Error ? error.message : 'Erro desconhecido');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      setPayments(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Erro ao carregar pagamentos:', error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
+    loadPayments();
+  }, [currentDate, reloadKey]);
+
+  const reloadPayments = () => {
+    setReloadKey(prev => prev + 1);
   };
 
   const formatCurrency = (amount: number) => {
@@ -94,7 +115,7 @@ export default function CreditPaymentsList() {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={loadPayments}
+          onClick={reloadPayments}
           className="mt-2"
         >
           Tentar novamente

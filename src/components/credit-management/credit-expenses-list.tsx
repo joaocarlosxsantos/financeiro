@@ -30,24 +30,34 @@ interface CreditExpense {
 
 interface CreditExpensesListProps {
   onEdit?: (expenseId: string) => void;
+  currentDate?: Date;
 }
 
-export default function CreditExpensesList({ onEdit }: CreditExpensesListProps) {
+export default function CreditExpensesList({ onEdit, currentDate }: CreditExpensesListProps) {
   const [expenses, setExpenses] = useState<CreditExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    loadExpenses();
-  }, []);
+    const loadExpenses = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const loadExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+        let url = '/api/credit-expenses';
+        
+        // Se uma data específica for fornecida, filtra por mês
+        if (currentDate) {
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth();
+          const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+          const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+          url += `?start=${startDate}&end=${endDate}`;
+        }
 
-      console.log('🔄 Carregando gastos de crédito...');
-      const response = await fetch('/api/credit-expenses');
+        console.log('🔄 Carregando gastos de crédito...', url);
+        const response = await fetch(url);
       
       if (!response.ok) {
         console.error('❌ Erro HTTP:', response.status, response.statusText);
@@ -68,6 +78,13 @@ export default function CreditExpensesList({ onEdit }: CreditExpensesListProps) 
       setLoading(false);
     }
   };
+    
+    loadExpenses();
+  }, [currentDate, reloadKey]);
+
+  const reloadExpenses = () => {
+    setReloadKey(prev => prev + 1);
+  };
 
   const deleteExpense = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este gasto? Esta ação não pode ser desfeita.')) {
@@ -84,7 +101,7 @@ export default function CreditExpensesList({ onEdit }: CreditExpensesListProps) 
       }
 
       // Recarregar a lista
-      await loadExpenses();
+      reloadExpenses();
     } catch (error) {
       console.error('Erro ao excluir gasto:', error);
       alert('Erro ao excluir gasto. Tente novamente.');
@@ -118,7 +135,7 @@ export default function CreditExpensesList({ onEdit }: CreditExpensesListProps) 
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={loadExpenses}
+          onClick={reloadExpenses}
           className="mt-2"
         >
           Tentar novamente
