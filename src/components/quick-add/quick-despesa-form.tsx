@@ -3,6 +3,8 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { MultiTagSelector } from '../ui/multi-tag-selector';
+import { SmartSuggestionsCard } from '../ui/smart-suggestions-card';
+import { useSmartSuggestions } from '../../hooks/use-smart-suggestions';
 
 type Categoria = { id: string; name: string; type: string };
 type Carteira = { id: string; name: string };
@@ -33,6 +35,21 @@ export default function QuickDespesaForm() {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [recentCategories, setRecentCategories] = useState<string[]>([]);
+
+  // Hook de sugestões inteligentes
+  const smartSuggestions = useSmartSuggestions({
+    description: form.description,
+    transactionType: 'EXPENSE',
+    categories: categories,
+    tags: tags,
+    debounceMs: 800,
+    onCategoryPreselect: (categoryId) => {
+      setForm(f => ({ ...f, categoryId }));
+    },
+    onTagsPreselect: (tagIds) => {
+      setForm(f => ({ ...f, tags: [...f.tags, ...tagIds.filter(id => !f.tags.includes(id))] }));
+    }
+  });
 
   useEffect(() => {
     (async () => {
@@ -98,7 +115,67 @@ export default function QuickDespesaForm() {
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    updateRecents(form.categoryId);
+    // Processar tags sugeridas - criar tags que ainda não existem
+    const processedTags: string[] = [];
+    for (const tagId of form.tags || []) {
+      if (tagId.startsWith('suggested:')) {
+        // É uma tag sugerida, precisa criar
+        const tagName = tagId.replace('suggested:', '');
+        try {
+          const response = await fetch('/api/tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: tagName })
+          });
+          if (response.ok) {
+            const newTag = await response.json();
+            setTags(prev => [...prev, newTag]);
+            processedTags.push(newTag.id);
+          } else {
+            console.error('Erro ao criar tag sugerida:', tagName);
+            // Se não conseguir criar, ignora a tag
+          }
+        } catch (error) {
+          console.error('Erro ao criar tag sugerida:', tagName, error);
+          // Se não conseguir criar, ignora a tag
+        }
+      } else {
+        // Tag normal, mantém o ID
+        processedTags.push(tagId);
+      }
+    }
+
+    // Criar categoria sugerida se necessário
+    let finalCategoryId: string | null = form.categoryId;
+    if (form.categoryId?.startsWith('suggested:')) {
+      const categoryName = form.categoryId.replace('suggested:', '');
+      try {
+        const response = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: categoryName, 
+            type: 'EXPENSE',
+            color: '#3B82F6' // cor azul padrão para categorias sugeridas
+          })
+        });
+        if (response.ok) {
+          const newCategory = await response.json();
+          setCategories(prev => [...prev, newCategory]);
+          finalCategoryId = newCategory.id;
+        } else {
+          console.error('Erro ao criar categoria sugerida:', categoryName);
+          finalCategoryId = null;
+        }
+      } catch (error) {
+        console.error('Erro ao criar categoria sugerida:', categoryName, error);
+        finalCategoryId = null;
+      }
+    }
+
+    if (finalCategoryId) {
+      updateRecents(finalCategoryId);
+    }
 
     const payload = {
       description: form.description,
@@ -106,11 +183,11 @@ export default function QuickDespesaForm() {
       date: form.date,
       type: form.isFixed ? 'FIXED' : 'VARIABLE',
       isFixed: form.isFixed,
-      categoryId: form.categoryId || null,
+      categoryId: finalCategoryId || null,
       walletId: form.paymentType === 'CREDIT' ? null : (form.walletId || null),
       creditCardId: form.paymentType === 'CREDIT' ? (form.creditCardId || null) : null,
       paymentType: form.paymentType,
-      tags: form.tags || [],
+      tags: processedTags,
     } as any;
 
     try {
@@ -165,10 +242,41 @@ export default function QuickDespesaForm() {
   return (
     <form className="space-y-3" onSubmit={handleSubmit}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-        <div>
+        <div className="md:col-span-2">
           <Label htmlFor="description">Descrição</Label>
-          <Input id="description" placeholder="Ex: Mercado" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+          <Input id="description" placeholder="Ex: Mercado, Uber, Netflix..." value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
           {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+          
+          {/* Sugestões Inteligentes */}
+          {smartSuggestions.suggestions && (
+            <div className="mt-2">
+              <SmartSuggestionsCard
+                suggestions={smartSuggestions.suggestions}
+                isLoading={smartSuggestions.isLoading}
+                isPreselected={true}
+                onAcceptCategory={async () => {
+                  const categoryId = await smartSuggestions.acceptCategorySuggestion();
+                  if (categoryId) {
+                    setForm(f => ({ ...f, categoryId }));
+                    // Recarrega categorias para incluir a nova
+                    const res = await fetch('/api/categories');
+                    if (res.ok) setCategories(await res.json());
+                  }
+                }}
+                onAcceptTag={async (tagName) => {
+                  const tagId = await smartSuggestions.acceptTagSuggestion(tagName);
+                  if (tagId) {
+                    setForm(f => ({ ...f, tags: [...f.tags, tagId] }));
+                    // Recarrega tags para incluir a nova
+                    const res = await fetch('/api/tags');
+                    if (res.ok) setTags(await res.json());
+                  }
+                }}
+                onDismiss={smartSuggestions.dismissSuggestions}
+                className="text-sm"
+              />
+            </div>
+          )}
         </div>
         <div>
           <Label htmlFor="amount">Valor</Label>
@@ -182,9 +290,27 @@ export default function QuickDespesaForm() {
         </div>
         <div>
           <Label htmlFor="category">Categoria</Label>
-          <select id="category" ref={categorySelectRef} onKeyDown={handleCategoryKeyDown} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.categoryId} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, categoryId: e.target.value })); }}>
+          <select id="category" ref={categorySelectRef} onKeyDown={handleCategoryKeyDown} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.categoryId} onChange={(e) => { 
+            if (e.target.value === '__create__') {
+              // Criar categoria 
+            } else {
+              // Detecta se uma categoria sugerida foi removida
+              if (form.categoryId?.startsWith('suggested:') && e.target.value !== form.categoryId) {
+                const categoryName = form.categoryId.replace('suggested:', '');
+                smartSuggestions.dismissCategorySuggestion(categoryName);
+              }
+              
+              setForm((f) => ({ ...f, categoryId: e.target.value }));
+            }
+          }}>
             <option value="__create__">➕ Criar categoria</option>
             <option value="">Sem categoria</option>
+            {/* Sugestão da IA como opção especial */}
+            {smartSuggestions.suggestions?.category?.isNew && (
+              <option value={`suggested:${smartSuggestions.suggestions.category.name}`} className="text-blue-600 bg-blue-50 font-medium">
+                🤖 {smartSuggestions.suggestions.category.name} (sugestão IA)
+              </option>
+            )}
             {categories.filter((c) => c.type === 'EXPENSE' || c.type === 'BOTH').map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             {recentCategories.filter((id) => !categories.find((c) => c.id === id)).map((id) => (<option key={id} value={id}>(Recente) {id}</option>))}
           </select>
@@ -238,8 +364,22 @@ export default function QuickDespesaForm() {
           <Label htmlFor="tags">Tags</Label>
           <MultiTagSelector
             selectedTags={form.tags}
-            onTagsChange={(newTags) => setForm(f => ({ ...f, tags: newTags }))}
+            onTagsChange={(newTags) => {
+              // Detecta tags removidas
+              const removedTags = form.tags.filter(tagId => !newTags.includes(tagId));
+              
+              // Dispensa sugestões para tags sugeridas que foram removidas
+              removedTags.forEach(removedTagId => {
+                if (removedTagId.startsWith('suggested:')) {
+                  const tagName = removedTagId.replace('suggested:', '');
+                  smartSuggestions.dismissTagSuggestion(tagName);
+                }
+              });
+              
+              setForm(f => ({ ...f, tags: newTags }));
+            }}
             availableTags={tags}
+            suggestedTags={smartSuggestions.suggestions?.tags.map(tag => tag.name) || []}
             placeholder="Selecione ou crie tags..."
             maxTags={5}
             onCreateTag={async (tagName) => {

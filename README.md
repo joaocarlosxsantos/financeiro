@@ -1,138 +1,218 @@
-## Padronização de títulos das páginas
-
-Este projeto usa o padrão "Nome do módulo | Nome da página" nos títulos que aparecem na aba do navegador.
-
-Como usar:
-
-- No servidor (Next.js app router), use o helper `getMetadata` para exportar `metadata` em uma página:
-
-```ts
-import { getMetadata } from '@/lib/pageTitle';
-
-export const metadata = getMetadata({ module: 'Dashboard', page: 'Visão geral' });
-```
-
-- No cliente, adicione o componente `PageTitle` dentro do layout ou da página para garantir que `document.title` seja atualizado quando navigate client-side:
-
-```tsx
-import PageTitle from '@/components/PageTitle';
-
-export default function Page() {
-   return (
-      <>
-         <PageTitle module="Dashboard" page="Visão geral" />
-         {/* restante do conteúdo */}
-      </>
-   );
-}
-```
-
-O helper `formatTitle` também está disponível em `src/lib/pageTitle.ts` se você precisar somente da string formatada.
-
-
-
-# 💸 Controle Financeiro
+# 💸 Sistema de Controle Financeiro
 
 <div align="center">
-   <a href="https://financeiro-seven-zeta.vercel.app" target="_blank"><img src="https://img.shields.io/badge/ACESSAR%20DEMO-00C7B7?style=for-the-badge&logo=vercel&logoColor=white" alt="Acessar Demo" /></a>
-   <br />
-   <b>Teste agora mesmo:</b><br />
-   <code>Usuário: <b>teste@email.com</b></code><br />
-   <code>Senha: <b>teste1</b></code>
+   <a href="https://financeiro-seven-zeta.vercel.app" target="_blank">
+      <img src="https://img.shields.io/badge/DEMO_ONLINE-00C7B7?style=for-the-badge&logo=vercel&logoColor=white" alt="Demo Online" />
+   </a>
+   <br /><br />
+   <strong>🎯 Teste agora:</strong><br />
+   <code>Usuário: <strong>teste@email.com</strong></code><br />
+   <code>Senha: <strong>teste1</strong></code>
 </div>
 
-Aplicação web moderna e responsiva para controle de gastos, ganhos e organização financeira pessoal.<br>
-Desenvolvida com <b>Next.js 14</b>, <b>TypeScript</b>, <b>Tailwind CSS</b>, <b>Prisma</b> e arquitetura de componentes reutilizáveis.
+Sistema completo de controle financeiro pessoal com **inteligência artificial integrada** para categorização automática de transações. Desenvolvido com tecnologias modernas para oferecer uma experiência eficiente e intuitiva.
 
 ---
 
+## ✨ Principais Recursos
 
-## 🚀 Funcionalidades
+### 🤖 **Inteligência Artificial Integrada**
+- **Categorização automática** de transações com base na descrição
+- **Sugestão inteligente de tags** relacionadas ao contexto
+- **Pré-seleção automática** de categorias e tags em formulários
+- **Algoritmo de correspondência inteligente** com normalização de texto
 
-- **Dashboard interativo** com gráficos dinâmicos (Recharts) e resumos financeiros
-- **Gestão completa de gastos e ganhos** (fixos e variáveis), com categorias, tags e carteiras
-- **Importação de extratos bancários** (OFX) com sugestão automática de categorias/tags
-- **Transferências entre carteiras** e controle multi-carteira
-- **Filtros avançados** por período, carteira, categoria e tags
-- **Edição e exclusão em massa** de dados do usuário
-- **Interface moderna, responsiva e com modo escuro** (Dark Mode)
-- **Autenticação segura** com NextAuth.js (Credentials e OAuth)
-- **Notificações (toasts) integradas**
-- **Validação robusta de dados** em todas as rotas de API usando [Zod](https://zod.dev/)
-- **Lazy loading** e otimizações de performance (useMemo, useCallback, dynamic imports)
-- **Imagens otimizadas** com next/image
-- **Padrão de código garantido** com ESLint e Prettier
-- **Exportação de relatórios** _(em breve)_
+### 📊 **Dashboard & Relatórios**
+- Dashboard interativo com gráficos dinâmicos (Recharts)
+- Resumos financeiros em tempo real
+- Relatórios detalhados com filtros avançados
+- Exportação de dados em CSV e XLSX
 
+### 💰 **Gestão Financeira Completa**
+- Controle de **gastos e ganhos** (fixos e variáveis)  
+- Sistema de **carteiras múltiplas** com transferências
+- **Categorias personalizadas** com tipos flexíveis
+- **Tags organizacionais** para melhor controle
 
-## 🛠️ Tecnologias & Arquitetura
+### 📋 **Importação & Automação**
+- **Importação automática de extratos** (OFX/CSV)
+- **Sugestões de IA** durante a importação
+- Processamento inteligente de descrições
+- Detecção automática de padrões financeiros
 
-- **Frontend:** Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
-- **Backend:** Next.js API Routes (serverless functions)
-- **Banco de Dados:** PostgreSQL + Prisma ORM
-- **Gráficos:** Recharts
-- **Autenticação:** NextAuth.js (Credentials + OAuth)
-- **Validação:** Zod
-- **Padrão de código:** ESLint, Prettier
-- **Deploy:** Vercel (compatível)
-
-
-## 📋 Pré-requisitos
-
-- [Node.js 18+](https://nodejs.org/)
-- [PostgreSQL](https://www.postgresql.org/)
-- npm ou yarn
-
-
-## 🏁 Como rodar o projeto
-
-1. **Clone o repositório**
-   ```bash
-   git clone <url-do-repositorio>
-   cd financeiro-1
-   ```
-
-2. **Instale as dependências**
-   ```bash
-   npm install
-   # ou yarn
-   ```
-
-3. **Configure as variáveis de ambiente**
-   - Copie o arquivo `.env.example` para `.env.local` e preencha os dados:
-   ```bash
-   cp env.example .env.local
-   ```
-   - Configure:
-     - `DATABASE_URL` (PostgreSQL)
-     - `NEXTAUTH_SECRET` (chave aleatória)
-     - `NEXTAUTH_URL` (ex: http://localhost:3000)
-     - (Opcional) Google OAuth
-
-4. **Configure o banco de dados**
-   ```bash
-   npm run db:generate   # Gera o client Prisma
-   npm run db:push       # Aplica o schema no banco
-   npm run db:studio     # (opcional) Abre o Prisma Studio
-   ```
-
-5. **Inicie o servidor de desenvolvimento**
-   ```bash
-   npm run dev
-   ```
-   Acesse: [http://localhost:3000](http://localhost:3000)
+### 🎨 **Interface Moderna**
+- Design responsivo com **modo escuro/claro**
+- Componentes reutilizáveis com Shadcn/ui
+- **Notificações em tempo real** integradas
+- Experiência otimizada para mobile
 
 ---
 
+## 🛠️ Stack Tecnológica
 
-## � Estrutura do Projeto
+### **Frontend**
+- **Next.js 14** (App Router) + TypeScript
+- **Tailwind CSS** + Shadcn/ui
+- **Recharts** para visualizações
+- React Hooks customizados
+
+### **Backend**
+- **Next.js API Routes** (Serverless)
+- **PostgreSQL** + Prisma ORM
+- **NextAuth.js** (Autenticação)
+- **Zod** (Validação de dados)
+
+### **Qualidade & Performance**
+- ESLint + Prettier (Padrão de código)
+- Lazy loading e otimizações React
+- Caching inteligente
+- Imagens otimizadas
+
+---
+
+## � Instalação Rápida
+
+### **Pré-requisitos**
+- Node.js 18+ 
+- PostgreSQL
+- npm/yarn
+
+### **Setup do Projeto**
+
+```bash
+# 1. Clone o repositório
+git clone <url-do-repositorio>
+cd financeiro
+
+# 2. Instale as dependências
+npm install
+
+# 3. Configure o ambiente
+cp env.example .env.local
+
+# 4. Configure o banco de dados
+npm run db:generate
+npm run db:push
+
+# 5. Inicie o servidor
+npm run dev
+```
+
+### **Variáveis de Ambiente Essenciais**
+
+```env
+DATABASE_URL="postgresql://usuario:senha@localhost:5432/financeiro"
+NEXTAUTH_SECRET="sua-chave-secreta-super-segura"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+---
+
+## 📁 Estrutura do Projeto
 
 ```
-financeiro/
-├── src/
-│   ├── app/            # Páginas, rotas e API (Next.js App Router)
-│   ├── components/     # Componentes React (UI, dashboard, forms, etc)
-│   ├── hooks/          # React hooks customizados
+src/
+├── app/                 # Rotas e API (App Router)
+│   ├── api/            # Endpoints da API
+│   ├── dashboard/      # Painel principal
+│   ├── despesas/       # Gestão de gastos
+│   ├── rendas/         # Gestão de ganhos
+│   └── importar-extrato/ # IA para importação
+├── components/         # Componentes React
+│   ├── ui/            # Componentes base (Shadcn)
+│   ├── dashboard/     # Componentes do dashboard
+│   └── forms/         # Formulários inteligentes
+├── lib/               # Utilitários e helpers
+│   ├── ai-categorization.ts  # IA para categorização
+│   └── auth.ts        # Configuração de autenticação
+├── hooks/             # React Hooks customizados
+└── types/             # Definições TypeScript
+```
+
+---
+
+## 🤖 Sistema de IA
+
+### **Como Funciona**
+O sistema de IA analisa as descrições das transações e sugere automaticamente:
+
+- **Categoria mais apropriada** baseada no contexto
+- **Tags relacionadas** ao tipo de gasto/ganho
+- **Normalização inteligente** removendo informações irrelevantes
+
+### **Algoritmo de Categorização**
+```typescript
+// Exemplo de uso da IA
+import { analyzeFormDescription } from '@/lib/ai-categorization';
+
+const suggestions = await analyzeFormDescription({
+  description: "Supermercado Extra SP",
+  type: "expense"
+});
+
+// Resultado:
+// {
+//   suggestedCategory: "Alimentação",
+//   suggestedTags: ["Supermercado"],
+//   confidence: 0.95
+// }
+```
+
+---
+
+## 🔧 Scripts Disponíveis
+
+```bash
+npm run dev          # Servidor de desenvolvimento
+npm run build        # Build para produção
+npm run start        # Servidor de produção
+npm run lint         # Verificação de código
+npm run db:generate  # Gerar cliente Prisma
+npm run db:push      # Aplicar schema no banco
+npm run db:studio    # Interface visual do banco
+npm test             # Executar testes
+```
+
+---
+
+## 🌟 Deploy
+
+### **Vercel (Recomendado)**
+1. Conecte seu repositório à Vercel
+2. Configure as variáveis de ambiente
+3. Deploy automático a cada push
+
+### **Outras Plataformas**
+O projeto é compatível com qualquer plataforma que suporte Next.js.
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Por favor:
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+---
+
+## 👨‍💻 Autor
+
+**João Carlos**
+
+<div align="center">
+   <br />
+   <strong>💡 Transformando controle financeiro com inteligência artificial</strong>
+</div>
 ```md
 # 💸 Financeiro — Controle financeiro pessoal
 

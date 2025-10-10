@@ -7,6 +7,8 @@ import { CategoryCreateModal } from '@/components/ui/category-create-modal';
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { TagCreateModal } from '@/components/ui/tag-create-modal';
 import { MultiTagSelector } from '@/components/ui/multi-tag-selector';
+import { SmartSuggestionsCard } from '@/components/ui/smart-suggestions-card';
+import { useSmartSuggestions } from '@/hooks/use-smart-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,6 +83,21 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Hook de sugestões inteligentes
+  const smartSuggestions = useSmartSuggestions({
+    description: form.description,
+    transactionType: 'INCOME',
+    categories: categories,
+    tags: tags,
+    debounceMs: 1000,
+    onCategoryPreselect: (categoryId) => {
+      setForm(f => ({ ...f, categoryId }));
+    },
+    onTagsPreselect: (tagIds) => {
+      setForm(f => ({ ...f, tags: [...f.tags, ...tagIds.filter(id => !f.tags.includes(id))] }));
+    }
+  });
 
   // Carregar rendas fixas e variáveis juntas
   useEffect(() => {
@@ -212,6 +229,65 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
     }
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
+
+    // Processar tags sugeridas - criar tags que ainda não existem
+    const processedTags: string[] = [];
+    for (const tagId of form.tags) {
+      if (tagId.startsWith('suggested:')) {
+        // É uma tag sugerida, precisa criar
+        const tagName = tagId.replace('suggested:', '');
+        try {
+          const response = await fetch('/api/tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: tagName })
+          });
+          if (response.ok) {
+            const newTag = await response.json();
+            setTags(prev => [...prev, newTag]);
+            processedTags.push(newTag.id);
+          } else {
+            console.error('Erro ao criar tag sugerida:', tagName);
+            // Se não conseguir criar, ignora a tag
+          }
+        } catch (error) {
+          console.error('Erro ao criar tag sugerida:', tagName, error);
+          // Se não conseguir criar, ignora a tag
+        }
+      } else {
+        // Tag normal, mantém o ID
+        processedTags.push(tagId);
+      }
+    }
+
+    // Criar categoria sugerida se necessário
+    let finalCategoryId: string | null = form.categoryId;
+    if (form.categoryId?.startsWith('suggested:')) {
+      const categoryName = form.categoryId.replace('suggested:', '');
+      try {
+        const response = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: categoryName, 
+            type: 'INCOME',
+            color: '#10B981' // cor verde padrão para categorias de renda sugeridas
+          })
+        });
+        if (response.ok) {
+          const newCategory = await response.json();
+          setCategories(prev => [...prev, newCategory]);
+          finalCategoryId = newCategory.id;
+        } else {
+          console.error('Erro ao criar categoria sugerida:', categoryName);
+          finalCategoryId = null;
+        }
+      } catch (error) {
+        console.error('Erro ao criar categoria sugerida:', categoryName, error);
+        finalCategoryId = null;
+      }
+    }
+
     const payload = {
       description: form.description,
       amount: Number(form.amount),
@@ -219,11 +295,11 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
       type: form.isFixed ? ('FIXED' as 'FIXED' | 'VARIABLE') : ('VARIABLE' as 'FIXED' | 'VARIABLE'),
       isFixed: form.isFixed,
       endDate: form.endDate || null,
-      categoryId: form.categoryId || null,
+      categoryId: finalCategoryId || null,
       paymentType: form.paymentType,
       walletId: form.paymentType === 'CREDIT' ? null : (form.walletId || null),
       creditCardId: form.paymentType === 'CREDIT' ? (form.creditCardId || null) : null,
-      tags: form.tags,
+      tags: processedTags,
     };
     let res;
     if (editingId) {
@@ -375,16 +451,46 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           >
             <form className="space-y-3" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-                <div>
+                <div className="md:col-span-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Input
                     id="description"
-                    placeholder="Ex: Salário"
+                    placeholder="Ex: Salário, Freelance, Vendas..."
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+                  )}
+                  
+                  {/* Sugestões Inteligentes */}
+                  {smartSuggestions.suggestions && (
+                    <div className="mt-3">
+                      <SmartSuggestionsCard
+                        suggestions={smartSuggestions.suggestions}
+                        isLoading={smartSuggestions.isLoading}
+                        isPreselected={true}
+                        onAcceptCategory={async () => {
+                          const categoryId = await smartSuggestions.acceptCategorySuggestion();
+                          if (categoryId) {
+                            setForm(f => ({ ...f, categoryId }));
+                            // Recarrega categorias para incluir a nova
+                            const res = await fetch('/api/categories');
+                            if (res.ok) setCategories(await res.json());
+                          }
+                        }}
+                        onAcceptTag={async (tagName) => {
+                          const tagId = await smartSuggestions.acceptTagSuggestion(tagName);
+                          if (tagId) {
+                            setForm(f => ({ ...f, tags: [...f.tags, tagId] }));
+                            // Recarrega tags para incluir a nova
+                            const res = await fetch('/api/tags');
+                            if (res.ok) setTags(await res.json());
+                          }
+                        }}
+                        onDismiss={smartSuggestions.dismissSuggestions}
+                      />
+                    </div>
                   )}
                 </div>
                 <div>
@@ -415,12 +521,27 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={form.categoryId}
                     onChange={(e) => {
-                      if (e.target.value === '__create__') setShowCategoryModal(true);
-                      else setForm((f) => ({ ...f, categoryId: e.target.value }));
+                      if (e.target.value === '__create__') {
+                        setShowCategoryModal(true);
+                      } else {
+                        // Detecta se uma categoria sugerida foi removida (mudou para "" ou outra categoria)
+                        if (form.categoryId?.startsWith('suggested:') && e.target.value !== form.categoryId) {
+                          const categoryName = form.categoryId.replace('suggested:', '');
+                          smartSuggestions.dismissCategorySuggestion(categoryName);
+                        }
+                        
+                        setForm((f) => ({ ...f, categoryId: e.target.value }));
+                      }
                     }}
                   >
                     <option value="__create__">➕ Criar categoria</option>
                     <option value="">Sem categoria</option>
+                    {/* Sugestão da IA como opção especial */}
+                    {smartSuggestions.suggestions?.category?.isNew && (
+                      <option value={`suggested:${smartSuggestions.suggestions.category.name}`} className="text-green-600 bg-green-50 font-medium">
+                        🤖 {smartSuggestions.suggestions.category.name} (sugestão IA)
+                      </option>
+                    )}
                     {categories
                       .filter((c) => c.type === 'INCOME' || c.type === 'BOTH')
                       .map((c) => (
@@ -499,8 +620,22 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   <Label htmlFor="tags">Tags</Label>
                   <MultiTagSelector
                     selectedTags={form.tags}
-                    onTagsChange={(newTags) => setForm(f => ({ ...f, tags: newTags }))}
+                    onTagsChange={(newTags) => {
+                      // Detecta tags removidas
+                      const removedTags = form.tags.filter(tagId => !newTags.includes(tagId));
+                      
+                      // Dispensa sugestões para tags sugeridas que foram removidas
+                      removedTags.forEach(removedTagId => {
+                        if (removedTagId.startsWith('suggested:')) {
+                          const tagName = removedTagId.replace('suggested:', '');
+                          smartSuggestions.dismissTagSuggestion(tagName);
+                        }
+                      });
+                      
+                      setForm(f => ({ ...f, tags: newTags }));
+                    }}
                     availableTags={tags}
+                    suggestedTags={smartSuggestions.suggestions?.tags.map(tag => tag.name) || []}
                     placeholder="Selecione ou crie tags..."
                     maxTags={5}
                     onCreateTag={async (tagName) => {
