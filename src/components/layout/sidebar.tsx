@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 import Link from 'next/link';
@@ -13,9 +13,55 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { 
   BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
   LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
-  TrendingUp, TrendingDown, Upload, ChevronDown, ChevronRight,
+  TrendingUp, TrendingDown, Upload, ChevronRight,
   FolderOpen, Users, Bell, Menu, X
 } from 'lucide-react';
+
+// Componente para ícone de expansão que evita hydration mismatch
+const ExpandIcon = ({ isExpanded, isMobile }: { isExpanded: boolean; isMobile: boolean }) => {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <ChevronRight 
+      className={cn(
+        "transition-transform duration-200",
+        isMobile ? "h-5 w-5" : "h-4 w-4",
+        mounted && isExpanded && "rotate-90"
+      )} 
+    />
+  );
+};
+
+// Componente para conteúdo expansível que evita hydration mismatch
+const ExpandedContent = ({ 
+  isExpanded, 
+  children 
+}: { 
+  isExpanded: boolean; 
+  children: React.ReactNode;
+}) => {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <div 
+      className={cn(
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        // Inicia sempre colapsado para evitar mismatch, depois aplica o estado real
+        mounted && isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+      )}
+    >
+      {children}
+    </div>
+  );
+};
 
 // Estrutura hierárquica para o módulo financeiro
 const navigationFinanceiro = {
@@ -31,6 +77,7 @@ const navigationFinanceiro = {
     items: [
       { name: 'Ganhos', href: '/rendas', icon: TrendingUp },
       { name: 'Gastos', href: '/despesas', icon: TrendingDown },
+      { name: 'Cartão de Crédito', href: '/credit-management', icon: CreditCard },
       { name: 'Importar Extrato', href: '/importar-extrato', icon: Upload },
     ]
   },
@@ -100,6 +147,7 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
       '/dashboard': 'sidebar-dashboard',
       '/rendas': 'sidebar-incomes',
       '/despesas': 'sidebar-expenses',
+      '/credit-management': 'sidebar-credit-management',
       '/wallets': 'sidebar-wallets',
       '/credit-cards': 'sidebar-credit-cards',
       '/categorias': 'sidebar-categories',
@@ -210,21 +258,12 @@ const NavSection = ({
           {section.name}
         </span>
         <span className="transition-transform duration-200 text-white/50 group-hover:text-white/70">
-          {isExpanded ? (
-            <ChevronDown className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
-          ) : (
-            <ChevronRight className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
-          )}
+          <ExpandIcon isExpanded={isExpanded} isMobile={isMobile} />
         </span>
       </button>
       
       {/* Itens da seção com animação */}
-      <div 
-        className={cn(
-          "overflow-hidden transition-all duration-300 ease-in-out",
-          isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-        )}
-      >
+      <ExpandedContent isExpanded={isExpanded}>
         <div className="space-y-1 pl-1 mt-1 relative">
           {/* Linha de conexão sutil */}
           <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
@@ -238,7 +277,7 @@ const NavSection = ({
             />
           ))}
         </div>
-      </div>
+      </ExpandedContent>
     </div>
   );
 };

@@ -222,11 +222,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
     if (!form.description) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
-    if (form.paymentType === 'CREDIT') {
-      if (!form.creditCardId) newErrors.creditCardId = 'Cartão de crédito é obrigatório.';
-    } else {
-      if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
-    }
+    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -297,8 +293,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
       endDate: form.endDate || null,
       categoryId: finalCategoryId || null,
       paymentType: form.paymentType,
-      walletId: form.paymentType === 'CREDIT' ? null : (form.walletId || null),
-      creditCardId: form.paymentType === 'CREDIT' ? (form.creditCardId || null) : null,
+      walletId: form.walletId || null,
       tags: processedTags,
     };
     let res;

@@ -31,10 +31,7 @@ interface Carteira {
   id: string;
   name: string;
 }
-interface CreditCard {
-  id: string;
-  name: string;
-}
+
 
 interface Despesa {
   id: string;
@@ -63,7 +60,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+
   const [tags, setTags] = useState<Tag[]>([]);
   const today = defaultDate ?? new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -73,7 +70,6 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
     categoryId: '',
     paymentType: 'DEBIT',
     walletId: '',
-    creditCardId: '',
     tags: [] as string[],
     isFixed: false,
     endDate: '',
@@ -106,18 +102,16 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
   const { formatYmd } = await import('@/lib/utils');
   const start = formatYmd(new Date(year, month, 1));
   const end = formatYmd(new Date(year, month + 1, 0));
-      const [catsRes, walletsRes, tagsRes, creditCardsRes, variaveisRes, fixasRes] = await Promise.all([
+      const [catsRes, walletsRes, tagsRes, variaveisRes, fixasRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
-        fetch('/api/credit-cards', { cache: 'no-store' }),
         fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
         fetch(`/api/expenses?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
       if (walletsRes.ok) setWallets(await walletsRes.json());
       if (tagsRes.ok) setTags(await tagsRes.json());
-      if (creditCardsRes.ok) setCreditCards(await creditCardsRes.json());
       let despesasVar: Despesa[] = [];
       let despesasFix: Despesa[] = [];
       if (variaveisRes.ok) {
@@ -194,7 +188,6 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         categoryId: d.categoryId || '',
         paymentType: d.paymentType || 'DEBIT',
         walletId: d.walletId || '',
-        creditCardId: d.creditCardId || '',
         tags: d.tags || [],
         isFixed: d.isFixed,
         endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
@@ -217,11 +210,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
     if (!form.description) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
-    if (form.paymentType === 'CREDIT') {
-      if (!form.creditCardId) newErrors.creditCardId = 'Cartão de crédito é obrigatório.';
-    } else {
-      if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
-    }
+    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -305,8 +294,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       endDate: form.endDate || null,
       categoryId: finalCategoryId || null,
       paymentType: form.paymentType,
-      walletId: form.paymentType === 'CREDIT' ? null : (form.walletId || null),
-      creditCardId: form.paymentType === 'CREDIT' ? (form.creditCardId || null) : null,
+      walletId: form.walletId || null,
       tags: processedTags,
     };
 
@@ -338,7 +326,6 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         categoryId: '',
         paymentType: 'DEBIT',
         walletId: '',
-        creditCardId: '',
         tags: [],
         isFixed: false,
         endDate: '',
@@ -586,40 +573,20 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                     onChange={(e) => setForm((f) => ({ 
                       ...f, 
                       paymentType: e.target.value,
-                      walletId: e.target.value === 'CREDIT' ? '' : f.walletId,
-                      creditCardId: e.target.value !== 'CREDIT' ? '' : f.creditCardId
+                      walletId: f.walletId
                     }))}
                   >
                     <option value="DEBIT">Débito</option>
-                    <option value="CREDIT">Crédito</option>
                     <option value="PIX_TRANSFER">PIX/TRANSF</option>
                     <option value="CASH">Dinheiro</option>
                     <option value="OTHER">Outros</option>
                   </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Para gastos no cartão de crédito, acesse <span className="text-primary cursor-pointer hover:underline">Gestão de Crédito</span>
+                  </p>
                 </div>
-                {form.paymentType === 'CREDIT' ? (
-                  <div>
-                    <Label htmlFor="creditCard">Cartão de Crédito</Label>
-                    <select
-                      id="creditCard"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={form.creditCardId}
-                      onChange={(e) => setForm((f) => ({ ...f, creditCardId: e.target.value }))}
-                    >
-                      <option value="">Selecione</option>
-                      {creditCards.map((cc) => (
-                        <option key={cc.id} value={cc.id}>
-                          {cc.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.creditCardId && (
-                      <p className="text-red-500 text-xs mt-1">{errors.creditCardId}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <Label htmlFor="wallet">Carteira</Label>
+                <div>
+                  <Label htmlFor="wallet">Carteira</Label>
                   <select
                     id="wallet"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -640,8 +607,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                   {errors.walletId && (
                     <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>
                   )}
-                  </div>
-                )}
+                </div>
                 <div>
                   <Label htmlFor="tags">Tags</Label>
                   <MultiTagSelector
@@ -742,7 +708,6 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                 categoryId: '',
                 paymentType: 'DEBIT',
                 walletId: '',
-                creditCardId: '',
                 tags: [],
                 isFixed: false,
                 endDate: '',
@@ -810,22 +775,15 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                     </td>
                     <td className="px-3 py-2 text-center">
                       {despesa.paymentType === 'DEBIT' ? 'Débito' :
-                       despesa.paymentType === 'CREDIT' ? 'Crédito' :
                        despesa.paymentType === 'PIX_TRANSFER' ? 'PIX/TRANSF' :
                        despesa.paymentType === 'CASH' ? 'Dinheiro' :
                        despesa.paymentType === 'OTHER' ? 'Outros' :
                        'Débito'}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {despesa.paymentType === 'CREDIT' ? (
-                        despesa.creditCardId
-                          ? creditCards.find((cc) => String(cc.id) === String(despesa.creditCardId))?.name || '(Cartão não encontrado)'
-                          : 'Sem cartão'
-                      ) : (
-                        despesa.walletId
-                          ? wallets.find((w) => String(w.id) === String(despesa.walletId))?.name || '(Carteira não encontrada)'
-                          : 'Sem carteira'
-                      )}
+                      {despesa.walletId
+                        ? wallets.find((w) => String(w.id) === String(despesa.walletId))?.name || '(Carteira não encontrada)'
+                        : 'Sem carteira'}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {despesa.isFixed ? (
@@ -863,7 +821,6 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                         categoryId: '',
                         paymentType: 'DEBIT',
                         walletId: '',
-                        creditCardId: '',
                         tags: [],
                         isFixed: false,
                         endDate: '',

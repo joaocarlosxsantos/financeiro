@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     const expenses = await prisma.expense.findMany({
       where,
       orderBy: [{ date: 'desc' }, { id: 'asc' }],
-      include: { category: true, wallet: true, creditCard: true },
+      include: { category: true, wallet: true },
       skip: (page - 1) * perPage,
       take: perPage,
     });
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   }
   // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
   if (type === 'FIXED' && startD && endD) {
-    const fixedRecords = await prisma.expense.findMany({ where, include: { category: true, wallet: true, creditCard: true } });
+    const fixedRecords = await prisma.expense.findMany({ where, include: { category: true, wallet: true } });
     const expanded: any[] = [];
     for (const e of fixedRecords) {
       // Determinar período efetivo da recorrência

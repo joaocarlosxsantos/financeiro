@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         creditCardId: paymentType === 'CREDIT' ? body.creditCardId : null,
         tags: normalizedTags,
       },
-      include: { category: true, wallet: true, creditCard: true },
+      include: { category: true, wallet: true },
     });
 
     // Process notifications after income update

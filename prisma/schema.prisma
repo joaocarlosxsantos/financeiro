@@ -38,6 +38,9 @@ model User {
   incomes            Income[]
   wallets            Wallet[]
   creditCards        CreditCard[]
+  creditExpenses     CreditExpense[]
+  creditBills        CreditBill[]
+  billPayments       BillPayment[]
   groups             Group[]
   members            Member[]
   bills              Bill[]
@@ -49,18 +52,19 @@ model User {
 }
 
 model Category {
-  id        String       @id @default(cuid())
-  name      String
-  color     String       @default("#3B82F6")
-  icon      String?
-  type      CategoryType
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses  Expense[]
-  incomes   Income[]
-  goals     Goal[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id             String          @id @default(cuid())
+  name           String
+  color          String          @default("#3B82F6")
+  icon           String?
+  type           CategoryType
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses       Expense[]
+  incomes        Income[]
+  creditExpenses CreditExpense[]
+  goals          Goal[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([userId, name, type])
 }
@@ -71,7 +75,7 @@ model Expense {
   amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
   type        ExpenseType
-  paymentType PaymentType @default(DEBIT)
+  paymentType PaymentType @default(DEBIT) // Agora só aceita DEBIT, PIX_TRANSFER, CASH, OTHER
   isFixed     Boolean     @default(false)
   startDate   DateTime? // Para despesas fixas
   endDate     DateTime? // Para despesas fixas
@@ -80,10 +84,8 @@ model Expense {
   category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  walletId    String?
-  wallet      Wallet?     @relation(fields: [walletId], references: [id])
-  creditCardId String?
-  creditCard  CreditCard? @relation(fields: [creditCardId], references: [id])
+  walletId    String
+  wallet      Wallet      @relation(fields: [walletId], references: [id])
   tags        String[] // Tags secundárias
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -95,7 +97,7 @@ model Income {
   amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
   type        IncomeType
-  paymentType PaymentType @default(DEBIT)
+  paymentType PaymentType @default(DEBIT) // Agora só aceita DEBIT, PIX_TRANSFER, CASH, OTHER
   isFixed     Boolean     @default(false)
   startDate   DateTime? // Para rendas fixas
   endDate     DateTime? // Para rendas fixas
@@ -104,44 +106,43 @@ model Income {
   category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  walletId    String?
-  wallet      Wallet?     @relation(fields: [walletId], references: [id])
-  creditCardId String?
-  creditCard  CreditCard? @relation(fields: [creditCardId], references: [id])
+  walletId    String
+  wallet      Wallet      @relation(fields: [walletId], references: [id])
   tags        String[] // Tags secundárias
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
 
 model Wallet {
-  id          String       @id @default(cuid())
-  name        String
-  type        String       // Ex: "carteira", "banco", "cartao"
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses    Expense[]
-  incomes     Income[]
-  creditCards CreditCard[] @relation("CreditCardBank")
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String        @id @default(cuid())
+  name         String
+  type         String        // Ex: "carteira", "banco", "cartao"
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses     Expense[]
+  incomes      Income[]
+  creditCards  CreditCard[]  @relation("CreditCardBank")
+  billPayments BillPayment[] @relation("BillPayments")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([userId, name])
 }
 
 model CreditCard {
-  id          String    @id @default(cuid())
-  name        String    // Nome do cartão
-  limit       Decimal   @db.Decimal(10, 2) // Limite do cartão
-  closingDay  Int       // Dia do fechamento da fatura (1-31)
-  dueDay      Int       // Dia do vencimento da fatura (1-31)
-  bankId      String?   // Banco vinculado (pode ser nulo)
-  bank        Wallet?   @relation("CreditCardBank", fields: [bankId], references: [id])
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses    Expense[]
-  incomes     Income[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String         @id @default(cuid())
+  name          String         // Nome do cartão
+  limit         Decimal        @db.Decimal(10, 2) // Limite do cartão
+  closingDay    Int            // Dia do fechamento da fatura (1-31)
+  dueDay        Int            // Dia do vencimento da fatura (1-31)
+  bankId        String?        // Banco vinculado (pode ser nulo)
+  bank          Wallet?        @relation("CreditCardBank", fields: [bankId], references: [id])
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditExpenses CreditExpense[]
+  creditBills   CreditBill[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@unique([userId, name])
 }
@@ -164,10 +165,10 @@ enum IncomeType {
 
 enum PaymentType {
   DEBIT        // Débito (carteira)
-  CREDIT       // Crédito (cartão de crédito)
   PIX_TRANSFER // PIX/Transferência (carteira)
   CASH         // Dinheiro (carteira)
   OTHER        // Outros (carteira)
+  // CREDIT foi removido - agora gastos de crédito usam CreditExpense
 }
 
 // --- Controle de Contas models ---
@@ -356,4 +357,104 @@ enum AlertConfigType {
   DUPLICATE_TRANSACTION
   RECURRING_DUE
   MONTHLY_SUMMARY
+}
+
+// --- Modelos de Crédito ---
+
+model CreditExpense {
+  id           String           @id @default(cuid())
+  description  String
+  amount       Decimal          @db.Decimal(10, 2) // Valor total da compra
+  purchaseDate DateTime         // Data da compra
+  installments Int              @default(1) // Número de parcelas
+  type         CreditExpenseType @default(EXPENSE) // Tipo: gasto ou estorno
+  categoryId   String?
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  creditCardId String
+  creditCard   CreditCard       @relation(fields: [creditCardId], references: [id])
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags         String[]         @default([])
+  
+  // Relacionamento com itens da fatura (parcelas)
+  billItems    CreditBillItem[]
+  
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([userId, purchaseDate])
+  @@index([creditCardId])
+}
+
+model CreditBillItem {
+  id                String        @id @default(cuid())
+  creditExpenseId   String
+  creditExpense     CreditExpense @relation(fields: [creditExpenseId], references: [id], onDelete: Cascade)
+  installmentNumber Int           // Número da parcela (1, 2, 3...)
+  amount            Decimal       @db.Decimal(10, 2) // Valor desta parcela
+  dueDate           DateTime      // Data de vencimento desta parcela
+  billId            String?
+  bill              CreditBill?   @relation(fields: [billId], references: [id])
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([billId])
+  @@index([dueDate])
+}
+
+model CreditBill {
+  id           String         @id @default(cuid())
+  creditCardId String
+  creditCard   CreditCard     @relation(fields: [creditCardId], references: [id])
+  closingDate  DateTime       // Data de fechamento da fatura
+  dueDate      DateTime       // Data de vencimento da fatura
+  totalAmount  Decimal        @db.Decimal(10, 2) // Valor total da fatura
+  paidAmount   Decimal        @db.Decimal(10, 2) @default(0) // Valor já pago
+  status       BillStatus     @default(PENDING)
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relacionamentos
+  items        CreditBillItem[] // Itens (parcelas) desta fatura
+  payments     BillPayment[]    // Pagamentos desta fatura
+  
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([creditCardId, closingDate]) // Uma fatura por cartão por mês
+  @@index([userId, dueDate])
+  @@index([status])
+}
+
+model BillPayment {
+  id          String     @id @default(cuid())
+  billId      String
+  bill        CreditBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  amount      Decimal    @db.Decimal(10, 2) // Valor pago
+  paymentDate DateTime   // Data do pagamento
+  walletId    String     // Carteira de onde saiu o dinheiro
+  wallet      Wallet     @relation("BillPayments", fields: [walletId], references: [id])
+  description String?    // Descrição opcional do pagamento
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId, paymentDate])
+  @@index([billId])
+}
+
+// Novos enums
+enum CreditExpenseType {
+  EXPENSE   // Gasto normal
+  REFUND    // Estorno/Reembolso
+}
+
+enum BillStatus {
+  PENDING   // Pendente
+  PAID      // Paga totalmente
+  PARTIAL   // Parcialmente paga
+  OVERDUE   // Vencida
 }
