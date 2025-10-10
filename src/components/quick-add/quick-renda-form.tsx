@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { MultiTagSelector } from '../ui/multi-tag-selector';
 
 type Categoria = { id: string; name: string; type: string };
 type Carteira = { id: string; name: string };
@@ -234,12 +235,31 @@ export default function QuickRendaForm() {
           </div>
         )}
         <div>
-          <Label htmlFor="tag">Tag</Label>
-          <select id="tag" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.tags[0] || ''} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, tags: e.target.value ? [e.target.value] : [] })); }}>
-            <option value="__create__">➕ Criar tag</option>
-            <option value="">Sem tag</option>
-            {tags.map((tag) => (<option key={tag.id} value={tag.id}>{tag.name}</option>))}
-          </select>
+          <Label htmlFor="tags">Tags</Label>
+          <MultiTagSelector
+            selectedTags={form.tags}
+            onTagsChange={(newTags) => setForm(f => ({ ...f, tags: newTags }))}
+            availableTags={tags}
+            placeholder="Selecione ou crie tags..."
+            maxTags={5}
+            onCreateTag={async (tagName) => {
+              try {
+                const response = await fetch('/api/tags', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: tagName })
+                });
+                if (response.ok) {
+                  const newTag = await response.json();
+                  setTags(prev => [...prev, newTag]);
+                  return newTag;
+                }
+              } catch (error) {
+                console.error('Erro ao criar tag:', error);
+              }
+              return null;
+            }}
+          />
         </div>
         <div className="flex items-center gap-2 mt-2">
           <input type="checkbox" id="isFixed" checked={form.isFixed} onChange={(e) => setForm((f) => ({ ...f, isFixed: e.target.checked }))} className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150" />

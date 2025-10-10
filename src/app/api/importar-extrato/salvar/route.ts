@@ -10,7 +10,16 @@ export async function POST(req: NextRequest) {
   }
   const { registros, carteiraId } = await req.json();
   // registros: array de lançamentos extraídos do extrato (esperamos objetos com campos definidos)
-  type ImportRow = { data: string; valor: number; categoriaId?: string; categoriaSugerida?: string; descricao?: string; descricaoSimplificada?: string; isSaldoInicial?: boolean };
+  type ImportRow = { 
+    data: string; 
+    valor: number; 
+    categoriaId?: string; 
+    categoriaSugerida?: string; 
+    descricao?: string; 
+    descricaoSimplificada?: string; 
+    isSaldoInicial?: boolean;
+    tags?: string[]; // Suporte para múltiplas tags
+  };
   if (!Array.isArray(registros) || !carteiraId) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
   }
@@ -219,6 +228,7 @@ export async function POST(req: NextRequest) {
           walletId: carteiraId,
           userId: user.id,
           categoryId: categoriaId || undefined,
+          tags: reg.tags || [], // Suporte para múltiplas tags
         };
         if (reg.valor > 0) incomes.push(base);
         else if (reg.valor < 0) expenses.push(base);

@@ -147,16 +147,31 @@ import * as ofxParser from 'ofx-parser';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
 
 async function handler(req: NextRequest) {
   // Busca categorias do usuário logado (se autenticado)
   let categoriasUsuario: any[] = [];
+  let user: any = null;
   try {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
-      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+      user = await prisma.user.findUnique({ 
+        where: { email: session.user.email },
+        include: {
+          categories: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              color: true,
+              icon: true
+            }
+          }
+        }
+      });
       if (user) {
-        categoriasUsuario = await prisma.category.findMany({ where: { userId: user.id } });
+        categoriasUsuario = user.categories;
       }
     }
   } catch {}
@@ -186,7 +201,7 @@ async function handler(req: NextRequest) {
           { status: 400 },
         );
       }
-      preview = transactions.map((t: any) => {
+      preview = await Promise.all(transactions.map(async (t: any) => {
         // Normaliza data OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
         let rawDate = t.DTPOSTED || t.date || '';
         let data = '';
@@ -200,27 +215,68 @@ async function handler(req: NextRequest) {
         const descricao = String(
           t.MEMO || t.memo || t.NAME || t.name || t.PAYEE || t.payee || '',
         ).trim();
-        const descricaoSimplificada = simplificarDescricao(descricao);
-        // Sugerir/pre-selecionar categoria existente se similar
-        let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+        
+        // Usa IA para análise da transação
+        let aiAnalysis = null;
+        let categoriaSugerida = '';
+        let descricaoMelhorada = descricao;
+        let tagsRecomendadas: string[] = [];
+        let shouldCreateCategory = false;
+        
+        try {
+          if (user && descricao) {
+            aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
+            categoriaSugerida = aiAnalysis.suggestedCategory;
+            descricaoMelhorada = aiAnalysis.enhancedDescription;
+            tagsRecomendadas = aiAnalysis.suggestedTags;
+            shouldCreateCategory = aiAnalysis.shouldCreateCategory;
+          }
+        } catch (error) {
+          console.error('Erro na análise IA:', error);
+          // Fallback para método antigo se IA falhar
+          const descricaoSimplificada = simplificarDescricao(descricao);
+          categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+          descricaoMelhorada = descricaoSimplificada || descricao;
+        }
+        
+        // Se não encontrou com IA, usa método antigo
+        if (!categoriaSugerida) {
+          const descricaoSimplificada = simplificarDescricao(descricao);
+          categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+          descricaoMelhorada = descricaoSimplificada || descricao;
+        }
+        
+        // Verifica se categoria existe nas do usuário
         if (categoriaSugerida && categoriasUsuario.length > 0) {
-          // Função para remover acentos (sem regex ES6)
           const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
           const match = categoriasUsuario.find(
             (cat) =>
               removeAcentos(cat.name.toLowerCase()) ===
               removeAcentos(categoriaSugerida.toLowerCase()),
           );
-          if (match) categoriaSugerida = match.name;
+          if (match) {
+            categoriaSugerida = match.name;
+            shouldCreateCategory = false;
+          }
         }
+        
         return {
           data,
           valor,
           descricao,
-          descricaoSimplificada,
+          descricaoOriginal: descricao,
+          descricaoMelhorada,
           categoriaSugerida,
+          tagsRecomendadas,
+          shouldCreateCategory,
+          aiAnalysis: aiAnalysis ? {
+            confidence: aiAnalysis.confidence,
+            merchant: aiAnalysis.merchant,
+            location: aiAnalysis.location,
+            categoryType: aiAnalysis.categoryType
+          } : null,
         };
-      });
+      }));
     } catch (e) {
       return NextResponse.json(
         { error: 'Erro ao processar OFX', details: String(e), debug: text.slice(0, 200) },

@@ -6,6 +6,7 @@ import { stableSortByDateDesc } from '@/lib/sort';
 import { CategoryCreateModal } from '@/components/ui/category-create-modal';
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { TagCreateModal } from '@/components/ui/tag-create-modal';
+import { MultiTagSelector } from '@/components/ui/multi-tag-selector';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -495,24 +496,31 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   </div>
                 )}
                 <div>
-                  <Label htmlFor="tag">Tag</Label>
-                  <select
-                    id="tag"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={form.tags[0] || ''}
-                    onChange={(e) => {
-                      if (e.target.value === '__create__') setShowTagModal(true);
-                      else setForm((f) => ({ ...f, tags: e.target.value ? [e.target.value] : [] }));
+                  <Label htmlFor="tags">Tags</Label>
+                  <MultiTagSelector
+                    selectedTags={form.tags}
+                    onTagsChange={(newTags) => setForm(f => ({ ...f, tags: newTags }))}
+                    availableTags={tags}
+                    placeholder="Selecione ou crie tags..."
+                    maxTags={5}
+                    onCreateTag={async (tagName) => {
+                      try {
+                        const response = await fetch('/api/tags', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ name: tagName })
+                        });
+                        if (response.ok) {
+                          const newTag = await response.json();
+                          setTags(prev => [...prev, newTag]);
+                          return newTag;
+                        }
+                      } catch (error) {
+                        console.error('Erro ao criar tag:', error);
+                      }
+                      return null;
                     }}
-                  >
-                    <option value="__create__">➕ Criar tag</option>
-                    <option value="">Sem tag</option>
-                    {tags.map((tag) => (
-                      <option key={tag.id} value={tag.id}>
-                        {tag.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <input

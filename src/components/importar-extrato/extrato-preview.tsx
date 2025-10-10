@@ -5,6 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, Check, X, Info } from 'lucide-react';
 
 interface ExtratoPreviewProps {
   preview: any[];
@@ -18,6 +20,7 @@ interface ExtratoPreviewProps {
   fetchWallets?: () => Promise<void>;
 }
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
+import { TransactionRow } from './transaction-row';
 import { Plus } from 'lucide-react';
 
 export function ExtratoPreview({
@@ -74,7 +77,7 @@ export function ExtratoPreview({
         return {
           ...r,
           categoriaId,
-          tagId: '',
+          tags: [], // Array de tags vazio inicialmente
           categoriaSugerida: r.categoriaSugerida || '',
         };
       }),
@@ -110,8 +113,132 @@ export function ExtratoPreview({
     return sub.slice(0, lastSpace) + '...';
   }
 
-  function handleEdit(index: number, field: string, value: string) {
+  function handleEdit(index: number, field: string, value: string | string[]) {
     setRegistros((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
+
+  // Função para criar categoria automaticamente
+  async function handleCreateCategory(categoryName: string, categoryType: string) {
+    try {
+      const response = await fetch('/api/ai/analyze-transaction', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: categoryName,
+          type: categoryType,
+          color: getCategoryColor(categoryName),
+          icon: getCategoryIcon(categoryName)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // Atualiza lista de categorias
+          setCategorias(prev => [...prev, result.category]);
+          return result.category;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao criar categoria:', error);
+    }
+  }
+
+  // Função para criar tag automaticamente
+  async function handleCreateTag(tagName: string) {
+    try {
+      const response = await fetch('/api/tags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: tagName
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Atualiza lista de tags
+        setTags(prev => [...prev, result]);
+        return result;
+      }
+    } catch (error) {
+      console.error('Erro ao criar tag:', error);
+    }
+  }
+
+  // Função para aceitar sugestão da IA
+  function handleAcceptAISuggestion(index: number) {
+    const registro = registros[index];
+    if (!registro.categoriaSugerida) return;
+
+    // Verifica se categoria existe
+    const existingCategory = categorias.find(cat => 
+      cat.name.toLowerCase() === registro.categoriaSugerida.toLowerCase()
+    );
+
+    if (existingCategory) {
+      handleEdit(index, 'categoriaId', existingCategory.id);
+    } else {
+      handleEdit(index, 'categoriaId', registro.categoriaSugerida);
+    }
+  }
+
+  // Função para rejeitar sugestão da IA
+  function handleRejectAISuggestion(index: number) {
+    handleEdit(index, 'categoriaSugerida', '');
+    setRegistros(prev => prev.map((r, i) => 
+      i === index ? { ...r, shouldCreateCategory: false } : r
+    ));
+  }
+
+  // Função para obter cor da categoria
+  function getCategoryColor(categoryName: string): string {
+    const colorMap: Record<string, string> = {
+      'alimentação': '#EF4444',
+      'supermercado': '#10B981',
+      'transporte': '#3B82F6',
+      'saúde': '#EF4444',
+      'educação': '#8B5CF6',
+      'lazer': '#F59E0B',
+      'tecnologia': '#06B6D4',
+      'assinaturas': '#8B5CF6',
+      'casa': '#84CC16',
+      'roupas': '#EC4899',
+      'investimentos': '#10B981',
+      'impostos': '#EF4444',
+      'cartão de crédito': '#F97316',
+      'transferência': '#6B7280',
+      'serviços': '#6B7280',
+      'salário': '#10B981',
+      'outros': '#6B7280'
+    };
+    return colorMap[categoryName.toLowerCase()] || '#6B7280';
+  }
+
+  // Função para obter ícone da categoria
+  function getCategoryIcon(categoryName: string): string | null {
+    const iconMap: Record<string, string> = {
+      'alimentação': '🍽️',
+      'supermercado': '🛒',
+      'transporte': '🚗',
+      'saúde': '⚕️',
+      'educação': '📚',
+      'lazer': '🎬',
+      'tecnologia': '💻',
+      'assinaturas': '📱',
+      'casa': '🏠',
+      'roupas': '👕',
+      'investimentos': '💰',
+      'impostos': '📋',
+      'cartão de crédito': '💳',
+      'transferência': '💸',
+      'salário': '💼'
+    };
+    return iconMap[categoryName.toLowerCase()] || null;
   }
 
   function handleSaveComSaldo() {
@@ -136,7 +263,7 @@ export function ExtratoPreview({
           descricaoSimplificada: 'Saldo inicial',
           categoriaId,
           categoriaSugerida: 'Saldo',
-          tagId: '',
+          tags: [], // Array vazio para tags
           tipo: 'RENDA_VARIAVEL',
           isSaldoInicial: true,
         },
@@ -148,71 +275,50 @@ export function ExtratoPreview({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Pré-visualização dos dados</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">Pré-visualização dos dados</h2>
+        <Badge className="bg-blue-100 text-blue-800">
+          <Sparkles className="w-4 h-4 mr-1" />
+          IA Ativada
+        </Badge>
+      </div>
+      
+      <div className="bg-blue-50 p-3 rounded-lg">
+        <div className="flex items-center gap-2 text-sm text-blue-700">
+          <Info className="w-4 h-4" />
+          <span>
+            A IA analisou suas transações e sugeriu categorias, melhorou descrições e identificou estabelecimentos.
+            Revise as sugestões antes de salvar.
+          </span>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full border text-sm">
           <thead>
             <tr>
               <th className="border px-2 py-1">Data</th>
               <th className="border px-2 py-1">Valor</th>
-              <th className="border px-2 py-1">Descrição extrato</th>
-              <th className="border px-2 py-1">Descrição</th>
+              <th className="border px-2 py-1 min-w-[250px]">Descrição</th>
               <th className="border px-2 py-1 min-w-[200px]">Categoria</th>
               <th className="border px-2 py-1 min-w-[160px]">Tag</th>
+              <th className="border px-2 py-1 min-w-[120px]">Info IA</th>
             </tr>
           </thead>
           <tbody>
             {registros.map((row, i) => (
-              <tr key={i}>
-                <td className="border px-2 py-1 whitespace-nowrap">{row.data}</td>
-                <td className="border px-2 py-1 whitespace-nowrap">{row.valor}</td>
-                <td
-                  className="border px-2 py-1 min-w-[180px]"
-                  title={row.descricao}
-                >
-                  {truncateByWord(row.descricao)}
-                </td>
-                <td className="border px-2 py-1 min-w-[180px]">
-                  <Input
-                    value={row.descricaoSimplificada || ''}
-                    onChange={(e) => handleEdit(i, 'descricaoSimplificada', e.target.value)}
-                    className="text-xs"
-                  />
-                </td>
-                <td className="border px-2 py-1 min-w-[200px]">
-                  <Select
-                    value={row.categoriaId || ''}
-                    onChange={(e) => handleEdit(i, 'categoriaId', e.target.value)}
-                  >
-                    <option value="">Nenhuma</option>
-                    {/* Sugestão de categoria */}
-                    {row.categoriaSugerida &&
-                      !categorias.some((c: any) => c.name === row.categoriaSugerida) && (
-                        <option value={row.categoriaSugerida} style={{ fontStyle: 'italic' }}>
-                          Sugerida: {row.categoriaSugerida}
-                        </option>
-                      )}
-                    {categorias.map((c: any) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Select>
-                </td>
-                <td className="border px-2 py-1 min-w-[160px]">
-                  <Select
-                    value={row.tagId || ''}
-                    onChange={(e) => handleEdit(i, 'tagId', e.target.value)}
-                  >
-                    <option value="">Nenhuma</option>
-                    {tags.map((t: any) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </Select>
-                </td>
-              </tr>
+              <TransactionRow
+                key={i}
+                registro={row}
+                index={i}
+                categorias={categorias}
+                tags={tags}
+                onEdit={handleEdit}
+                onCreateCategory={handleCreateCategory}
+                onCreateTag={handleCreateTag}
+                onAcceptAISuggestion={handleAcceptAISuggestion}
+                onRejectAISuggestion={handleRejectAISuggestion}
+              />
             ))}
           </tbody>
         </table>
