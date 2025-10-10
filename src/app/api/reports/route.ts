@@ -26,6 +26,7 @@ export async function GET(req: Request) {
   const endDate = qp.get('endDate');
   const categoryIds = qp.get('categoryIds') ? qp.get('categoryIds')!.split(',').filter(Boolean) : undefined;
   const walletIds = qp.get('walletIds') ? qp.get('walletIds')!.split(',').filter(Boolean) : undefined;
+  const creditCardIds = qp.get('creditCardIds') ? qp.get('creditCardIds')!.split(',').filter(Boolean) : undefined;
   const tags = qp.get('tags') ? qp.get('tags')!.split(',').filter(Boolean) : undefined;
   const page = Number(qp.get('page') || '1');
   const pageSize = Math.min(500, Math.max(1, Number(qp.get('pageSize') || '50')));
@@ -106,6 +107,7 @@ export async function GET(req: Request) {
         startDate || endDate ? { date: dateFilter } : {},
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
+        creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
         ...(tags ? [buildTagFilter(tagNames, tags)] : []),
       ],
     };
@@ -181,13 +183,13 @@ export async function GET(req: Request) {
 
     if (type === 'income' || type === 'both') {
       // fetch both fixed and variable incomes matching filters (excluding date filter because we'll handle occurrences)
-      const incomeWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
+      const incomeWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, creditCardIds ? { creditCardId: { in: creditCardIds } } : {} ] };
       const incomeWhere = { ...incomeWhereBase, ...(tags ? { AND: [ ...(incomeWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
-      let incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true } });
+      let incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true, creditCard: true } });
       // If DB returned no incomes when tags provided, attempt an in-memory fallback that matches tag ids/names case-insensitively
       if (tags && tags.length > 0 && incomes.length === 0) {
         try {
-          const incomesNoTag = await prisma.income.findMany({ where: incomeWhereBase, include: { category: true, wallet: true } });
+          const incomesNoTag = await prisma.income.findMany({ where: incomeWhereBase, include: { category: true, wallet: true, creditCard: true } });
           if (incomesNoTag.length > 0) {
             // build name/id map for user's tags
             const userTags = await prisma.tag.findMany({ where: { userId: user.id } });
@@ -213,12 +215,12 @@ export async function GET(req: Request) {
     }
 
     if (type === 'expense' || type === 'both') {
-      const expenseWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
+      const expenseWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, creditCardIds ? { creditCardId: { in: creditCardIds } } : {} ] };
       const expenseWhere = { ...expenseWhereBase, ...(tags ? { AND: [ ...(expenseWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
-      let expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true } });
+      let expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true, creditCard: true } });
       if (tags && tags.length > 0 && expenses.length === 0) {
         try {
-          const expensesNoTag = await prisma.expense.findMany({ where: expenseWhereBase, include: { category: true, wallet: true } });
+          const expensesNoTag = await prisma.expense.findMany({ where: expenseWhereBase, include: { category: true, wallet: true, creditCard: true } });
           if (expensesNoTag.length > 0) {
             const userTags = await prisma.tag.findMany({ where: { userId: user.id } });
             const nameMap: Record<string, string> = {};

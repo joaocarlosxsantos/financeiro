@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const walletId = parseCsvParam(searchParams.get('walletId'));
+  const paymentType = parseCsvParam(searchParams.get('paymentType'));
   const year = Number(searchParams.get('year')) || undefined;
   const month = Number(searchParams.get('month')) || undefined;
 
@@ -27,6 +28,12 @@ export async function GET(req: NextRequest) {
   if (walletId) {
     if (Array.isArray(walletId)) walletFilter.walletId = { in: walletId };
     else walletFilter.walletId = walletId;
+  }
+
+  const paymentTypeFilter: any = {};
+  if (paymentType) {
+    if (Array.isArray(paymentType)) paymentTypeFilter.paymentType = { in: paymentType };
+    else paymentTypeFilter.paymentType = paymentType;
   }
 
   if (!year || !month) return NextResponse.json({ error: 'year and month required' }, { status: 400 });
@@ -43,8 +50,8 @@ export async function GET(req: NextRequest) {
   // Fetch all expenses for period (both VARIABLE and FIXED expanded in existing APIs)
   // Buscar despesas VARIÁVEIS no período e todas as despesas FIXED (para expandir ocorrências)
   const [expVar, expFix] = await Promise.all([
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true, wallet: true } }),
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter }, include: { category: true, wallet: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true, wallet: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter }, include: { category: true, wallet: true } }),
   ]);
   // Expand FIXED expenses into individual occurrences inside the requested period
   const expandedFixed: any[] = [];
@@ -124,10 +131,10 @@ export async function GET(req: NextRequest) {
     const mStartDate = new Date(d.getFullYear(), d.getMonth(), 1);
     const mEndDate = new Date(d.getFullYear(), d.getMonth() + 1, 0);
     const [mExpVar, mExpFix, mIncVar, mIncFix] = await Promise.all([
-      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
-      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
-      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
-      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
     ]);
     const allExp = [...mExpVar, ...mExpFix];
     const allInc = [...mIncVar, ...mIncFix];
@@ -154,8 +161,8 @@ export async function GET(req: NextRequest) {
 
   // incomesByCategory for the current month
   const [incVarThis, incFixThis] = await Promise.all([
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
   ]);
   const allIncomesThisMonth = [...incVarThis, ...incFixThis];
   const incomeMap = new Map<string, { amount: number; color: string }>();
@@ -175,8 +182,8 @@ export async function GET(req: NextRequest) {
   const prevStartDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1);
   const prevMonthEndDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
   const [pExpVar, pExpFix] = await Promise.all([
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
   ]);
   const prevAll = [...pExpVar, ...pExpFix];
   const prevMap = new Map<string, number>();
@@ -224,10 +231,10 @@ export async function GET(req: NextRequest) {
 
   // fetch variable expenses/incomes up to prevEndDate and all FIXED to count occurrences
   const [prevExpVar, prevExpFix, prevIncVar, prevIncFix] = await Promise.all([
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
   ]);
 
   const prevExpTotalVar = prevExpVar.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
@@ -253,8 +260,8 @@ export async function GET(req: NextRequest) {
   // fill dayMap from incomes and expenses
   // fetch incomes variable in period and FIXED incomes (to expand occurrences into this period)
   const [incVarList, incFixList] = await Promise.all([
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, date: { gte: startDateObj, lte: endDateObj } }, select: { amount: true, date: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'VARIABLE', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, select: { amount: true, date: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'FIXED', ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
   ]);
   const expandedFixedIncomes: any[] = [];
   for (const inc of incFixList) {
@@ -331,8 +338,8 @@ export async function GET(req: NextRequest) {
 
     // soma variáveis nesse intervalo
     const [varsExp, varsInc] = await Promise.all([
-      prisma.expense.findMany({ where: { user: { email: session.user.email }, ...walletFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
-      prisma.income.findMany({ where: { user: { email: session.user.email }, ...walletFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
     ]);
     const sumVarsExp = varsExp.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
     const sumVarsInc = varsInc.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);

@@ -47,6 +47,7 @@ const navigationFinanceiro = {
     icon: Settings,
     items: [
       { name: 'Carteiras', href: '/wallets', icon: Wallet },
+      { name: 'Cartões de Crédito', href: '/credit-cards', icon: CreditCard },
       { name: 'Categorias', href: '/categorias', icon: FolderOpen },
       { name: 'Tags', href: '/tags', icon: Tag },
       { name: 'Notificações', href: '/notifications/settings', icon: Bell },
@@ -93,11 +94,30 @@ interface NavSection {
 const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry; active: boolean; onClick?: () => void; isSubItem?: boolean }) => {
   const isMobile = useIsMobile();
   
+  // Gerar data-tour baseado no href
+  const getDataTour = (href: string) => {
+    const tourMap: Record<string, string> = {
+      '/dashboard': 'sidebar-dashboard',
+      '/rendas': 'sidebar-incomes',
+      '/despesas': 'sidebar-expenses',
+      '/wallets': 'sidebar-wallets',
+      '/credit-cards': 'sidebar-credit-cards',
+      '/categorias': 'sidebar-categories',
+      '/tags': 'sidebar-tags',
+      '/reports': 'sidebar-reports',
+      '/importar-extrato': 'sidebar-import',
+      '/metas': 'sidebar-goals',
+      '/notifications/settings': 'sidebar-notifications'
+    };
+    return tourMap[href] || '';
+  };
+  
   return (
     <Link
       href={item.href}
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
+      data-tour={getDataTour(item.href)}
       className={cn(
         'relative group flex items-center gap-3 rounded-xl text-sm font-medium outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/60',
         // Mobile-optimized spacing and touch targets

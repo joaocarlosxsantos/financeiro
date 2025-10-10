@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     const expenses = await prisma.expense.findMany({
       where,
       orderBy: [{ date: 'desc' }, { id: 'asc' }],
-      include: { category: true, wallet: true },
+      include: { category: true, wallet: true, creditCard: true },
       skip: (page - 1) * perPage,
       take: perPage,
     });
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   }
   // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
   if (type === 'FIXED' && startD && endD) {
-    const fixedRecords = await prisma.expense.findMany({ where, include: { category: true, wallet: true } });
+    const fixedRecords = await prisma.expense.findMany({ where, include: { category: true, wallet: true, creditCard: true } });
     const expanded: any[] = [];
     for (const e of fixedRecords) {
       // Determinar período efetivo da recorrência
@@ -164,12 +164,14 @@ export async function POST(req: NextRequest) {
     amount: z.number().positive('Valor deve ser positivo'),
     date: z.string().optional(),
     type: z.enum(['FIXED', 'VARIABLE']),
+    paymentType: z.enum(['DEBIT', 'CREDIT', 'PIX_TRANSFER', 'CASH', 'OTHER']).optional(),
     isFixed: z.boolean().optional(),
     startDate: z.string().optional().nullable(),
     endDate: z.string().optional().nullable(),
     dayOfMonth: z.number().optional().nullable(),
     categoryId: z.string().optional().nullable(),
     walletId: z.string().optional().nullable(),
+    creditCardId: z.string().optional().nullable(),
     tags: z.array(z.string()).optional(),
   });
   const parse = expenseSchema.safeParse(body);
@@ -181,14 +183,30 @@ export async function POST(req: NextRequest) {
     amount,
     date,
     type,
+    paymentType = 'DEBIT',
     isFixed = false,
     startDate,
     endDate,
     dayOfMonth,
     categoryId,
     walletId,
+    creditCardId,
     tags = [],
   } = parse.data;
+
+  // Validar que quando for CREDIT, deve ter creditCardId e não walletId
+  if (paymentType === 'CREDIT' && !creditCardId) {
+    return NextResponse.json({ error: 'Cartão de crédito é obrigatório para pagamento à crédito' }, { status: 400 });
+  }
+  if (paymentType === 'CREDIT' && walletId) {
+    return NextResponse.json({ error: 'Não é possível especificar carteira para pagamento à crédito' }, { status: 400 });
+  }
+  if (paymentType !== 'CREDIT' && creditCardId) {
+    return NextResponse.json({ error: 'Cartão de crédito só pode ser usado para pagamento à crédito' }, { status: 400 });
+  }
+  if (paymentType !== 'CREDIT' && !walletId) {
+    return NextResponse.json({ error: 'Carteira é obrigatória para este tipo de pagamento' }, { status: 400 });
+  }
 
   const expense = await prisma.expense.create({
     data: {
@@ -196,19 +214,28 @@ export async function POST(req: NextRequest) {
       amount,
       date: date ? (parseFlexibleDate(date) ?? new Date()) : new Date(),
       type,
+      paymentType,
       isFixed,
       startDate: startDate ? parseFlexibleDate(startDate) : undefined,
       endDate: endDate ? parseFlexibleDate(endDate) : undefined,
       dayOfMonth,
       categoryId,
-      walletId,
+      walletId: paymentType === 'CREDIT' ? null : walletId,
+      creditCardId: paymentType === 'CREDIT' ? creditCardId : null,
       userId: user.id,
       tags,
     },
   });
 
   // return created item including relations to match client expectations
-  const created = await prisma.expense.findUnique({ where: { id: expense.id }, include: { category: true, wallet: true } });
+  const created = await prisma.expense.findUnique({ 
+    where: { id: expense.id }, 
+    include: { 
+      category: true, 
+      wallet: true, 
+      creditCard: true 
+    } 
+  });
   
   // Process notifications after expense creation
   try {

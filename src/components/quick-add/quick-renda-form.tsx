@@ -6,6 +6,9 @@ import { Button } from '../ui/button';
 type Categoria = { id: string; name: string; type: string };
 type Carteira = { id: string; name: string };
 type Tag = { id: string; name: string };
+type CreditCard = { id: string; name: string };
+
+type PaymentType = 'DEBIT' | 'CREDIT' | 'PIX_TRANSFER' | 'CASH' | 'OTHER';
 
 export default function QuickRendaForm() {
   const today = new Date().toISOString().slice(0, 10);
@@ -15,6 +18,8 @@ export default function QuickRendaForm() {
     date: today,
     categoryId: '',
     walletId: '',
+    creditCardId: '',
+    paymentType: 'DEBIT' as PaymentType,
     tags: [] as string[],
     isFixed: false,
   });
@@ -24,19 +29,22 @@ export default function QuickRendaForm() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [recentCategories, setRecentCategories] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [catRes, walRes, tagRes] = await Promise.all([
+        const [catRes, walRes, cardRes, tagRes] = await Promise.all([
           fetch('/api/categories?&_=' + Date.now()),
           fetch('/api/wallets?&_=' + Date.now()),
+          fetch('/api/credit-cards?&_=' + Date.now()),
           fetch('/api/tags?&_=' + Date.now()),
         ]);
         if (catRes.ok) setCategories(await catRes.json());
         if (walRes.ok) setWallets(await walRes.json());
+        if (cardRes.ok) setCreditCards(await cardRes.json());
         if (tagRes.ok) setTags(await tagRes.json());
       } catch {}
     })();
@@ -78,7 +86,14 @@ export default function QuickRendaForm() {
     if (!form.description) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
-    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
+    
+    // Validação baseada no tipo de pagamento
+    if (form.paymentType === 'CREDIT') {
+      if (!form.creditCardId) newErrors.creditCardId = 'Cartão de crédito é obrigatório.';
+    } else {
+      if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
+    }
+    
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -91,7 +106,9 @@ export default function QuickRendaForm() {
       type: form.isFixed ? 'FIXED' : 'VARIABLE',
       isFixed: form.isFixed,
       categoryId: form.categoryId || null,
-      walletId: form.walletId || null,
+      walletId: form.paymentType === 'CREDIT' ? null : (form.walletId || null),
+      creditCardId: form.paymentType === 'CREDIT' ? (form.creditCardId || null) : null,
+      paymentType: form.paymentType,
       tags: form.tags || [],
     } as any;
 
@@ -107,7 +124,20 @@ export default function QuickRendaForm() {
         return;
       }
       const keptCategory = form.categoryId;
-  setForm((f) => ({ ...f, description: '', amount: '', date: today, categoryId: keptCategory, tags: [] }));
+      const keptPaymentType = form.paymentType;
+      const keptWalletId = form.walletId;
+      const keptCreditCardId = form.creditCardId;
+  setForm((f) => ({ 
+        ...f, 
+        description: '', 
+        amount: '', 
+        date: today, 
+        categoryId: keptCategory, 
+        paymentType: keptPaymentType,
+        walletId: keptWalletId,
+        creditCardId: keptCreditCardId,
+        tags: [] 
+      }));
       requestAnimationFrame(() => {
         amountRef.current?.focus();
         setShowToast(true);
@@ -159,14 +189,50 @@ export default function QuickRendaForm() {
           </select>
         </div>
         <div>
-          <Label htmlFor="wallet">Carteira</Label>
-          <select id="wallet" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.walletId} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, walletId: e.target.value })); }}>
-            <option value="__create__">➕ Criar carteira</option>
-            <option value="">Selecione</option>
-            {wallets.map((w) => (<option key={w.id} value={w.id}>{w.name}</option>))}
+          <Label htmlFor="paymentType">Tipo de Pagamento</Label>
+          <select 
+            id="paymentType" 
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+            value={form.paymentType} 
+            onChange={(e) => setForm((f) => ({ 
+              ...f, 
+              paymentType: e.target.value as PaymentType,
+              walletId: e.target.value === 'CREDIT' ? '' : f.walletId,
+              creditCardId: e.target.value === 'CREDIT' ? f.creditCardId : ''
+            }))}
+          >
+            <option value="DEBIT">Débito</option>
+            <option value="CREDIT">Crédito</option>
+            <option value="PIX_TRANSFER">PIX/Transferência</option>
+            <option value="CASH">Dinheiro</option>
+            <option value="OTHER">Outro</option>
           </select>
-          {errors.walletId && <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>}
         </div>
+        {form.paymentType === 'CREDIT' ? (
+          <div>
+            <Label htmlFor="creditCard">Cartão de Crédito</Label>
+            <select 
+              id="creditCard" 
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+              value={form.creditCardId} 
+              onChange={(e) => setForm((f) => ({ ...f, creditCardId: e.target.value }))}
+            >
+              <option value="">Selecione</option>
+              {creditCards.map((cc) => (<option key={cc.id} value={cc.id}>{cc.name}</option>))}
+            </select>
+            {errors.creditCardId && <p className="text-red-500 text-xs mt-1">{errors.creditCardId}</p>}
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="wallet">Carteira</Label>
+            <select id="wallet" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.walletId} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, walletId: e.target.value })); }}>
+              <option value="__create__">➕ Criar carteira</option>
+              <option value="">Selecione</option>
+              {wallets.map((w) => (<option key={w.id} value={w.id}>{w.name}</option>))}
+            </select>
+            {errors.walletId && <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>}
+          </div>
+        )}
         <div>
           <Label htmlFor="tag">Tag</Label>
           <select id="tag" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.tags[0] || ''} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, tags: e.target.value ? [e.target.value] : [] })); }}>

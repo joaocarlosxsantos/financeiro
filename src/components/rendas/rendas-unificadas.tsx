@@ -29,6 +29,12 @@ interface Carteira {
   name: string;
 }
 
+interface CreditCard {
+  id: string;
+  name: string;
+  bank: { name: string };
+}
+
 interface Renda {
   id: string;
   description: string;
@@ -39,6 +45,9 @@ interface Renda {
   categoryName?: string;
   walletId?: string;
   walletName?: string;
+  creditCardId?: string;
+  creditCardName?: string;
+  paymentType?: string;
   tags: string[];
   isFixed: boolean;
   endDate?: Date | null;
@@ -54,16 +63,19 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
   const [categories, setCategories] = useState<Categoria[]>([]);
   const [wallets, setWallets] = useState<Carteira[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const today = defaultDate ?? new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
     date: today,
     categoryId: '',
+    paymentType: 'DEBIT',
     walletId: '',
+    creditCardId: '',
     tags: [] as string[],
     isFixed: false,
-  endDate: '',
+    endDate: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -78,16 +90,18 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
   const { formatYmd } = await import('@/lib/utils');
   const start = formatYmd(new Date(year, month, 1));
   const end = formatYmd(new Date(year, month + 1, 0));
-      const [catsRes, walletsRes, tagsRes, variaveisRes, fixasRes] = await Promise.all([
+      const [catsRes, walletsRes, tagsRes, creditCardsRes, variaveisRes, fixasRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
-  fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-  fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch('/api/credit-cards', { cache: 'no-store' }),
+        fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
       if (walletsRes.ok) setWallets(await walletsRes.json());
       if (tagsRes.ok) setTags(await tagsRes.json());
+      if (creditCardsRes.ok) setCreditCards(await creditCardsRes.json());
       let rendasVar: Renda[] = [];
       let rendasFix: Renda[] = [];
       if (variaveisRes.ok) {
@@ -102,6 +116,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
+          walletName: e.wallet?.name,
+          creditCardId: e.creditCardId,
+          creditCardName: e.creditCard?.name,
+          paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
           isFixed: false,
         }));
@@ -119,6 +137,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
+          walletName: e.wallet?.name,
+          creditCardId: e.creditCardId,
+          creditCardName: e.creditCard?.name,
+          paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
           isFixed: true,
         }));
@@ -157,7 +179,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         amount: String(d.amount),
         date: d.date ? (d.date instanceof Date ? formatYmd(d.date) : d.date) : '',
         categoryId: d.categoryId || '',
+        paymentType: d.paymentType || 'DEBIT',
         walletId: d.walletId || '',
+        creditCardId: d.creditCardId || '',
         tags: d.tags || [],
         isFixed: d.isFixed,
         endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
@@ -180,7 +204,11 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
     if (!form.description) newErrors.description = 'Descrição é obrigatória.';
     if (!form.amount || isNaN(Number(form.amount))) newErrors.amount = 'Valor é obrigatório.';
     if (!form.date) newErrors.date = 'Data é obrigatória.';
-    if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
+    if (form.paymentType === 'CREDIT') {
+      if (!form.creditCardId) newErrors.creditCardId = 'Cartão de crédito é obrigatório.';
+    } else {
+      if (!form.walletId) newErrors.walletId = 'Carteira é obrigatória.';
+    }
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
     const payload = {
@@ -191,7 +219,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
       isFixed: form.isFixed,
       endDate: form.endDate || null,
       categoryId: form.categoryId || null,
-      walletId: form.walletId || null,
+      paymentType: form.paymentType,
+      walletId: form.paymentType === 'CREDIT' ? null : (form.walletId || null),
+      creditCardId: form.paymentType === 'CREDIT' ? (form.creditCardId || null) : null,
       tags: form.tags,
     };
     let res;
@@ -226,7 +256,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         amount: '',
         date: today,
         categoryId: '',
+        paymentType: 'DEBIT',
         walletId: '',
+        creditCardId: '',
         tags: [],
         isFixed: false,
         endDate: '',
@@ -243,6 +275,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           categoryName: returned.category?.name,
           categoryId: returned.categoryId,
           walletId: returned.walletId,
+          walletName: returned.wallet?.name,
+          creditCardId: returned.creditCardId,
+          creditCardName: returned.creditCard?.name,
+          paymentType: returned.paymentType || 'DEBIT',
           tags: returned.tags || [],
           isFixed: returned.type === 'FIXED' || returned.isFixed === true,
         } as Renda;
@@ -290,6 +326,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
+          walletName: e.wallet?.name,
+          creditCardId: e.creditCardId,
+          creditCardName: e.creditCard?.name,
+          paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
           isFixed: false,
         }));
@@ -305,6 +345,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           categoryName: e.category?.name,
           categoryId: e.categoryId,
           walletId: e.walletId,
+          walletName: e.wallet?.name,
+          creditCardId: e.creditCardId,
+          creditCardName: e.creditCard?.name,
+          paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
           isFixed: true,
         }));
@@ -386,7 +430,48 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="wallet">Carteira</Label>
+                  <Label htmlFor="paymentType">Tipo de Pagamento</Label>
+                  <select
+                    id="paymentType"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={form.paymentType}
+                    onChange={(e) => setForm((f) => ({ 
+                      ...f, 
+                      paymentType: e.target.value,
+                      walletId: e.target.value === 'CREDIT' ? '' : f.walletId,
+                      creditCardId: e.target.value !== 'CREDIT' ? '' : f.creditCardId
+                    }))}
+                  >
+                    <option value="DEBIT">Débito</option>
+                    <option value="CREDIT">Crédito</option>
+                    <option value="PIX_TRANSFER">PIX/TRANSF</option>
+                    <option value="CASH">Dinheiro</option>
+                    <option value="OTHER">Outros</option>
+                  </select>
+                </div>
+                {form.paymentType === 'CREDIT' ? (
+                  <div>
+                    <Label htmlFor="creditCard">Cartão de Crédito</Label>
+                    <select
+                      id="creditCard"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={form.creditCardId}
+                      onChange={(e) => setForm((f) => ({ ...f, creditCardId: e.target.value }))}
+                    >
+                      <option value="">Selecione</option>
+                      {creditCards.map((cc) => (
+                        <option key={cc.id} value={cc.id}>
+                          {cc.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.creditCardId && (
+                      <p className="text-red-500 text-xs mt-1">{errors.creditCardId}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="wallet">Carteira</Label>
                   <select
                     id="wallet"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -407,7 +492,8 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   {errors.walletId && (
                     <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>
                   )}
-                </div>
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="tag">Tag</Label>
                   <select
@@ -487,7 +573,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     amount: '',
                     date: today,
                     categoryId: '',
+                    paymentType: 'DEBIT',
                     walletId: '',
+                    creditCardId: '',
                     tags: [],
                     isFixed: false,
                     endDate: '',
@@ -519,7 +607,8 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   <th className="px-3 py-2 text-center font-semibold">Data</th>
                   <th className="px-3 py-2 text-center font-semibold">Categoria</th>
                   <th className="px-3 py-2 text-center font-semibold">Tags</th>
-                  <th className="px-3 py-2 text-center font-semibold">Carteira</th>
+                  <th className="px-3 py-2 text-center font-semibold">Pagamento</th>
+                  <th className="px-3 py-2 text-center font-semibold">Conta/Cartão</th>
                   <th className="px-3 py-2 text-center font-semibold">Fixa</th>
                   <th className="px-3 py-2 text-center font-semibold">Ações</th>
                 </tr>
@@ -553,10 +642,23 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                       )}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {!renda.walletId
-                        ? 'Sem carteira'
-                        : wallets.find((w) => String(w.id) === String(renda.walletId))?.name ||
-                          '(Carteira não encontrada)'}
+                      {renda.paymentType === 'DEBIT' ? 'Débito' :
+                       renda.paymentType === 'CREDIT' ? 'Crédito' :
+                       renda.paymentType === 'PIX_TRANSFER' ? 'PIX/TRANSF' :
+                       renda.paymentType === 'CASH' ? 'Dinheiro' :
+                       renda.paymentType === 'OTHER' ? 'Outros' :
+                       'Débito'}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {renda.paymentType === 'CREDIT' ? (
+                        renda.creditCardId
+                          ? creditCards.find((cc) => String(cc.id) === String(renda.creditCardId))?.name || '(Cartão não encontrado)'
+                          : 'Sem cartão'
+                      ) : (
+                        renda.walletId
+                          ? wallets.find((w) => String(w.id) === String(renda.walletId))?.name || '(Carteira não encontrada)'
+                          : 'Sem carteira'
+                      )}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {renda.isFixed ? (
@@ -592,7 +694,9 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     amount: '',
                     date: '',
                     categoryId: '',
+                    paymentType: 'DEBIT',
                     walletId: '',
+                    creditCardId: '',
                     tags: [],
                     isFixed: false,
                     endDate: '',

@@ -39,6 +39,7 @@ export default function OnboardingTour({ open = false, onClose }: OnboardingProp
     { target: '[data-tour="sidebar-incomes"]', content: 'Área de Ganhos (rendas).', placement: 'right' },
     { target: '[data-tour="sidebar-expenses"]', content: 'Área de Gastos (despesas).', placement: 'right' },
     { target: '[data-tour="sidebar-wallets"]', content: 'Gerencie suas carteiras e saldos aqui.', placement: 'right' },
+    { target: '[data-tour="sidebar-credit-cards"]', content: 'Gerencie seus cartões de crédito e limites.', placement: 'right' },
     { target: '[data-tour="sidebar-categories"]', content: 'Gerencie categorias de gastos/receitas.', placement: 'right' },
     { target: '[data-tour="sidebar-tags"]', content: 'Gerencie tags para classificar lançamentos.', placement: 'right' },
     { target: '[data-tour="sidebar-reports"]', content: 'Acesse relatórios e exporte seus dados.', placement: 'right' },

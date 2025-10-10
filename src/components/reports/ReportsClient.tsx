@@ -9,8 +9,15 @@ import { Input } from '../ui/input';
 import { stableSortByDateAsc } from '@/lib/sort';
 import { Select as UiSelect } from '../ui/select';
 import { Button } from '@/components/ui/button';
+import { PAYMENT_TYPE_LABELS } from '../ui/payment-type-multi-select';
 
 type Option = { id: string; name: string };
+
+// Helper function to translate payment types
+const getPaymentTypeLabel = (paymentType: string | null | undefined): string => {
+  if (!paymentType) return '-';
+  return PAYMENT_TYPE_LABELS[paymentType as keyof typeof PAYMENT_TYPE_LABELS] || paymentType;
+};
 
 // Additional imports if needed
 type Row = {
@@ -23,6 +30,9 @@ type Row = {
   categoryId?: string | null;
   walletName?: string | null;
   walletId?: string | null;
+  creditCardName?: string | null;
+  creditCardId?: string | null;
+  paymentType?: string | null;
   tags?: string[];
   isFixed?: boolean;
 };
@@ -46,10 +56,12 @@ export default function ReportsClient() {
   const [tags, setTags] = useState<Option[]>([]);
   const [categories, setCategories] = useState<Option[]>([]);
   const [wallets, setWallets] = useState<Option[]>([]);
+  const [creditCards, setCreditCards] = useState<Option[]>([]);
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
+  const [selectedCreditCardIds, setSelectedCreditCardIds] = useState<string[]>([]);
 
   // data & pagination
   const [data, setData] = useState<Row[]>([]);
@@ -111,10 +123,11 @@ export default function ReportsClient() {
   useEffect(() => {
     (async () => {
       try {
-        const [tRes, cRes, wRes] = await Promise.all([
+        const [tRes, cRes, wRes, ccRes] = await Promise.all([
           fetch('/api/tags'),
           fetch('/api/categories'),
           fetch('/api/wallets'),
+          fetch('/api/credit-cards'),
         ]);
         if (tRes.ok) {
           const tJson = await tRes.json();
@@ -136,6 +149,12 @@ export default function ReportsClient() {
             Array.isArray(wJson) ? wJson.map((w: any) => ({ id: String(w.id), name: w.name })) : [],
           );
         }
+        if (ccRes.ok) {
+          const ccJson = await ccRes.json();
+          setCreditCards(
+            Array.isArray(ccJson) ? ccJson.map((cc: any) => ({ id: String(cc.id), name: cc.name })) : [],
+          );
+        }
       } catch (err) {
         // silent
       }
@@ -153,8 +172,8 @@ export default function ReportsClient() {
       const pageSizeToUse = typeof size === 'number' ? size : pageSize;
 
       // If we have a cached full dataset for the baseKey and the user has selected
-      // filters (tags/categories/wallets), apply local filtering instead of fetching.
-      const hasFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0;
+      // filters (tags/categories/wallets/creditCards), apply local filtering instead of fetching.
+      const hasFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0 || selectedCreditCardIds.length > 0;
       if (hasFilters && fullDataCache[baseKey]) {
         const allRows = fullDataCache[baseKey];
         // build a tag lookup from loaded tags (id->name and name->name)
@@ -187,7 +206,7 @@ export default function ReportsClient() {
               )
             : [],
         }));
-        const filtered = filterRows(normalizedAllRows as any, selectedCategoryIds, selectedWalletIds, normalizedSelectedTags);
+        const filtered = filterRows(normalizedAllRows as any, selectedCategoryIds, selectedWalletIds, normalizedSelectedTags, selectedCreditCardIds);
 
   // paginate filtered
         const start = (p - 1) * pageSizeToUse;
@@ -230,6 +249,7 @@ export default function ReportsClient() {
       if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
       if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
       if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
+      if (selectedCreditCardIds.length) params.set('creditCardIds', selectedCreditCardIds.join(','));
       params.set('page', String(p));
   params.set('pageSize', String(pageSizeToUse));
 
@@ -261,6 +281,9 @@ export default function ReportsClient() {
           categoryId: it.category?.id ?? it.categoryId ?? null,
           walletName: it.wallet?.name ?? it.walletName ?? null,
           walletId: it.wallet?.id ?? it.walletId ?? null,
+          creditCardName: it.creditCard?.name ?? it.creditCardName ?? null,
+          creditCardId: it.creditCard?.id ?? it.creditCardId ?? null,
+          paymentType: it.paymentType ?? null,
           tags: Array.isArray(it.tags) ? it.tags.map((tv: string) => tagLookup[String(tv)] ?? String(tv)) : [],
           isFixed: Boolean(it.isFixed),
         };
@@ -282,7 +305,7 @@ export default function ReportsClient() {
 
       // cache full dataset when server returned full page matching totalCount (we fetched all rows)
       // We'll cache only when no filters were applied in the request (so base unfiltered data is stored)
-      const requestHadFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0;
+      const requestHadFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0 || selectedCreditCardIds.length > 0;
       if (!requestHadFilters && (Array.isArray(json.data) && (json.data.length === (json.totalCount || 0) || (json.totalCount || 0) <= pageSizeToUse))) {
         const key = `${type}|${startDate}|${endDate}`;
         setFullDataCache((prev) => ({ ...prev, [key]: rows }));
@@ -304,6 +327,7 @@ export default function ReportsClient() {
       if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
       if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
       if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
+      if (selectedCreditCardIds.length) params.set('creditCardIds', selectedCreditCardIds.join(','));
       params.set('page', '1');
       const requestSize = totalCount > 0 ? totalCount : 100000;
       params.set('pageSize', String(requestSize));
@@ -328,6 +352,8 @@ export default function ReportsClient() {
             Descrição: it.description ?? '',
             Categoria: it.category?.name ?? it.categoryName ?? '',
             Carteira: it.wallet?.name ?? it.walletName ?? '',
+            Cartão: it.creditCard?.name ?? it.creditCardName ?? '',
+            'Tipo Pgto': getPaymentTypeLabel(it.paymentType),
             Tags: Array.isArray(it.tags) ? it.tags.map((tv: string) => tagLookup[String(tv)] ?? String(tv)).join(', ') : '',
             Fixa: Boolean(it.isFixed) ? 'Sim' : 'Não',
             Valor: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(signedAmount)),
@@ -359,6 +385,7 @@ export default function ReportsClient() {
       if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
       if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
       if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
+      if (selectedCreditCardIds.length) params.set('creditCardIds', selectedCreditCardIds.join(','));
       const res = await fetch(`/api/reports/export?${params.toString()}`);
       if (!res.ok) throw new Error('Erro ao gerar planilha');
       const blob = await res.blob();
@@ -380,7 +407,7 @@ export default function ReportsClient() {
     // always fetch first page when filters change
     fetchData(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, startDate, endDate, selectedTagIds, selectedCategoryIds, selectedWalletIds]);
+  }, [type, startDate, endDate, selectedTagIds, selectedCategoryIds, selectedWalletIds, selectedCreditCardIds]);
 
   return (
     <div className="space-y-4">
@@ -445,6 +472,26 @@ export default function ReportsClient() {
                 .filter((w) => selectedWalletIds.includes(w.id))
                 .map((w) => ({ value: w.id, label: w.name }))}
               onChange={(vals: any) => setSelectedWalletIds((vals || []).map((v: any) => v.value))}
+              styles={selectStyles}
+              menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+              menuPosition={'fixed'}
+              menuPlacement={'auto'}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-1 sm:col-span-2 col-span-2">
+          <label className="block text-sm font-medium">Cartões de Crédito</label>
+          <div className="mt-1">
+            <ReactSelect
+              aria-label="Cartões de Crédito"
+              isMulti
+              options={creditCards.map((c) => ({ value: c.id, label: c.name }))}
+              value={creditCards
+                .filter((c) => selectedCreditCardIds.includes(c.id))
+                .map((c) => ({ value: c.id, label: c.name }))}
+              onChange={(vals: any) => setSelectedCreditCardIds((vals || []).map((v: any) => v.value))}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
@@ -645,6 +692,8 @@ export default function ReportsClient() {
                   <th className="p-2">Descrição</th>
                   <th className="p-2">Categoria</th>
                   <th className="p-2">Carteira</th>
+                  <th className="p-2">Cartão</th>
+                  <th className="p-2">Tipo Pgto</th>
                   <th className="p-2">Tags</th>
                   <th className="p-2">Fixa</th>
                   <th className="p-2">Valor</th>
@@ -666,6 +715,8 @@ export default function ReportsClient() {
                     <td className="p-2">{d.description}</td>
                     <td className="p-2">{d.categoryName ?? '-'}</td>
                     <td className="p-2">{d.walletName ?? '-'}</td>
+                    <td className="p-2">{d.creditCardName ?? '-'}</td>
+                    <td className="p-2">{getPaymentTypeLabel(d.paymentType)}</td>
                     <td className="p-2">
                       {Array.isArray(d.tags) && d.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">

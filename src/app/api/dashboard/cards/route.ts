@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const walletId = parseCsvParam(searchParams.get('walletId'));
+  const paymentType = parseCsvParam(searchParams.get('paymentType'));
   const year = Number(searchParams.get('year')) || undefined;
   const month = Number(searchParams.get('month')) || undefined;
 
@@ -22,6 +23,12 @@ export async function GET(req: NextRequest) {
   if (walletId) {
     if (Array.isArray(walletId)) walletFilter.walletId = { in: walletId };
     else walletFilter.walletId = walletId;
+  }
+
+  const paymentTypeFilter: any = {};
+  if (paymentType) {
+    if (Array.isArray(paymentType)) paymentTypeFilter.paymentType = { in: paymentType };
+    else paymentTypeFilter.paymentType = paymentType;
   }
 
   // Determine date range if year/month provided (use Date objects for Prisma)
@@ -42,7 +49,7 @@ export async function GET(req: NextRequest) {
   // Fetch totals including FIXED items expanded for the period.
   // VARIABLE items can be aggregated directly; FIXED items need to be expanded
   // across months that intersect the requested period.
-  const whereBase = { user: { email: session.user.email }, ...walletFilter };
+  const whereBase = { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter };
 
   // For monthly totals we restrict by date
   const expensesWhere = { ...whereBase, ...(dateWhere as any) };

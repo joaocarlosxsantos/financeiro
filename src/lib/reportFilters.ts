@@ -8,6 +8,8 @@ export type ReportRow = {
   categoryId?: string | null;
   walletName?: string | null;
   walletId?: string | null;
+  creditCardName?: string | null;
+  creditCardId?: string | null;
   tags?: string[];
   isFixed?: boolean;
 };
@@ -17,6 +19,7 @@ export function filterRows(
   selectedCategoryIds: string[],
   selectedWalletIds: string[],
   selectedTagIds: string[],
+  selectedCreditCardIds: string[] = [],
 ) {
   return rows.filter((r) => {
     if (selectedCategoryIds.length) {
@@ -26,6 +29,10 @@ export function filterRows(
     if (selectedWalletIds.length) {
       if (!r.walletId) return false;
       if (!selectedWalletIds.includes(String(r.walletId))) return false;
+    }
+    if (selectedCreditCardIds.length) {
+      if (!r.creditCardId) return false;
+      if (!selectedCreditCardIds.includes(String(r.creditCardId))) return false;
     }
     if (selectedTagIds.length) {
       const rowTags = Array.isArray(r.tags) ? r.tags.map((x) => String(x).toLowerCase().trim()) : [];

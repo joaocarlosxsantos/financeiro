@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import WalletMultiSelect from '@/components/ui/wallet-multi-select';
+import PaymentTypeMultiSelect, { PaymentType } from '@/components/ui/payment-type-multi-select';
 import { AutoFitNumber } from '@/components/ui/auto-fit-number';
 
 // Função utilitária local para formatar data yyyy-MM-dd
@@ -116,6 +117,8 @@ export function DashboardContent() {
   const [wallets, setWallets] = useState<Array<{ id: string; name: string; type: string }>>([]);
   // agora permitimos selecionar múltiplas carteiras; array vazio = todas as carteiras
   const [selectedWallet, setSelectedWallet] = useState<string[]>([]);
+  // permitimos selecionar múltiplos tipos de pagamento; array vazio = todos os tipos
+  const [selectedPaymentTypes, setSelectedPaymentTypes] = useState<PaymentType[]>([]);
   const [limiteDiario, setLimiteDiario] = useState<number>(0);
   const [tagNames, setTagNames] = useState<Record<string, string>>({});
   const { currentDate, setCurrentDate } = useMonth();
@@ -144,7 +147,8 @@ export function DashboardContent() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1;
         const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
-        const res = await fetch(`/api/dashboard/cards?year=${year}&month=${month}${walletParam}`, { cache: 'no-store', signal: controller.signal });
+        const paymentTypeParam = selectedPaymentTypes && selectedPaymentTypes.length > 0 ? `&paymentType=${selectedPaymentTypes.join(',')}` : '';
+        const res = await fetch(`/api/dashboard/cards?year=${year}&month=${month}${walletParam}${paymentTypeParam}`, { cache: 'no-store', signal: controller.signal });
         if (!res.ok) return;
         const data = await res.json();
         // Atualizar todos os 5 cards de uma vez
@@ -161,7 +165,7 @@ export function DashboardContent() {
     fetchCards();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWallet, currentDate]);
+  }, [selectedWallet, selectedPaymentTypes, currentDate]);
 
   // Carregar gráficos e dados agregados via API única (/api/dashboard/charts)
   useEffect(() => {
@@ -173,7 +177,8 @@ export function DashboardContent() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1;
         const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
-        const res = await fetch(`/api/dashboard/charts?year=${year}&month=${month}${walletParam}`, { cache: 'no-store', signal: controller.signal });
+        const paymentTypeParam = selectedPaymentTypes && selectedPaymentTypes.length > 0 ? `&paymentType=${selectedPaymentTypes.join(',')}` : '';
+        const res = await fetch(`/api/dashboard/charts?year=${year}&month=${month}${walletParam}${paymentTypeParam}`, { cache: 'no-store', signal: controller.signal });
         if (!res.ok) return;
         const data = await res.json();
         // Construir novos valores localmente e aplicar todos juntos para evitar renders parciais
@@ -181,13 +186,14 @@ export function DashboardContent() {
           const s = data.summary || {};
           return (prev => {
             const merged: typeof prev = { ...prev };
-            if (s.expensesByCategory && Array.isArray(s.expensesByCategory) && s.expensesByCategory.length > 0) merged.expensesByCategory = s.expensesByCategory;
-            if (s.incomesByCategory && Array.isArray(s.incomesByCategory) && s.incomesByCategory.length > 0) merged.incomesByCategory = s.incomesByCategory;
-            if (s.monthlyData && Array.isArray(s.monthlyData) && s.monthlyData.length > 0) merged.monthlyData = s.monthlyData;
-            if (s.topExpenseCategories && Array.isArray(s.topExpenseCategories) && s.topExpenseCategories.length > 0) merged.topExpenseCategories = s.topExpenseCategories;
-            if (s.expenseDiffAll && Array.isArray(s.expenseDiffAll) && s.expenseDiffAll.length > 0) merged.expenseDiffAll = s.expenseDiffAll;
-            if (s.dailyBalanceData && Array.isArray(s.dailyBalanceData) && s.dailyBalanceData.length > 0) merged.dailyBalanceData = s.dailyBalanceData;
-            if (s.balanceProjectionData && Array.isArray(s.balanceProjectionData) && s.balanceProjectionData.length > 0) merged.balanceProjectionData = s.balanceProjectionData;
+            // Sempre atualizar os dados, mesmo quando vazios, para refletir os filtros
+            if (s.expensesByCategory && Array.isArray(s.expensesByCategory)) merged.expensesByCategory = s.expensesByCategory;
+            if (s.incomesByCategory && Array.isArray(s.incomesByCategory)) merged.incomesByCategory = s.incomesByCategory;
+            if (s.monthlyData && Array.isArray(s.monthlyData)) merged.monthlyData = s.monthlyData;
+            if (s.topExpenseCategories && Array.isArray(s.topExpenseCategories)) merged.topExpenseCategories = s.topExpenseCategories;
+            if (s.expenseDiffAll && Array.isArray(s.expenseDiffAll)) merged.expenseDiffAll = s.expenseDiffAll;
+            if (s.dailyBalanceData && Array.isArray(s.dailyBalanceData)) merged.dailyBalanceData = s.dailyBalanceData;
+            if (s.balanceProjectionData && Array.isArray(s.balanceProjectionData)) merged.balanceProjectionData = s.balanceProjectionData;
             return merged;
           })(summary);
         })();
@@ -212,7 +218,7 @@ export function DashboardContent() {
     fetchCharts();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWallet, currentDate]);
+  }, [selectedWallet, selectedPaymentTypes, currentDate]);
 
   // Carregar dados do mês atual e anterior para top 5 categorias
   useEffect(() => {
@@ -462,6 +468,12 @@ export function DashboardContent() {
               wallets={wallets}
               value={selectedWallet}
               onChange={(v) => setSelectedWallet(v)}
+            />
+          </div>
+          <div className="w-full sm:w-auto">
+            <PaymentTypeMultiSelect
+              value={selectedPaymentTypes}
+              onChange={(v) => setSelectedPaymentTypes(v)}
             />
           </div>
           <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">

@@ -4,6 +4,20 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import ExcelJS from 'exceljs';
 
+// Payment type labels for export
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+  DEBIT: 'Débito',
+  CREDIT: 'Cartão de Crédito',
+  PIX_TRANSFER: 'PIX/Transferência',
+  CASH: 'Dinheiro',
+  OTHER: 'Outros'
+};
+
+const getPaymentTypeLabel = (paymentType: string | null | undefined): string => {
+  if (!paymentType) return '';
+  return PAYMENT_TYPE_LABELS[paymentType] || paymentType;
+};
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,6 +33,7 @@ export async function GET(req: Request) {
   const endDate = qp.get('endDate');
   const categoryIds = qp.get('categoryIds') ? qp.get('categoryIds')!.split(',').filter(Boolean) : undefined;
   const walletIds = qp.get('walletIds') ? qp.get('walletIds')!.split(',').filter(Boolean) : undefined;
+  const creditCardIds = qp.get('creditCardIds') ? qp.get('creditCardIds')!.split(',').filter(Boolean) : undefined;
   const tags = qp.get('tags') ? qp.get('tags')!.split(',').filter(Boolean) : undefined;
 
   // Normalize date-only query params to UTC day boundaries to avoid
@@ -73,8 +88,8 @@ export async function GET(req: Request) {
     ],
   };
 
-  const incomesRaw = type === 'expense' ? [] : await prisma.income.findMany({ where: { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames.length ? { tags: { hasSome: tagNames } } : {} ] }, include: { category: true, wallet: true } });
-  const expensesRaw = type === 'income' ? [] : await prisma.expense.findMany({ where: { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, tagNames.length ? { tags: { hasSome: tagNames } } : {} ] }, include: { category: true, wallet: true } });
+  const incomesRaw = type === 'expense' ? [] : await prisma.income.findMany({ where: { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, creditCardIds ? { creditCardId: { in: creditCardIds } } : {}, tagNames.length ? { tags: { hasSome: tagNames } } : {} ] }, include: { category: true, wallet: true, creditCard: true } });
+  const expensesRaw = type === 'income' ? [] : await prisma.expense.findMany({ where: { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {}, creditCardIds ? { creditCardId: { in: creditCardIds } } : {}, tagNames.length ? { tags: { hasSome: tagNames } } : {} ] }, include: { category: true, wallet: true, creditCard: true } });
 
   // helper to expand fixed occurrences (copied/adapted)
   const expandFixedOccurrencesLocal = async (rows: any[], kind: 'income' | 'expense') => {
@@ -145,6 +160,7 @@ export async function GET(req: Request) {
       startDate || endDate ? { date: dateFilter } : {},
       categoryIds ? { categoryId: { in: categoryIds } } : {},
       walletIds ? { walletId: { in: walletIds } } : {},
+      creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
       tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
     ],
   };
@@ -155,6 +171,7 @@ export async function GET(req: Request) {
       startDate || endDate ? { date: dateFilter } : {},
       categoryIds ? { categoryId: { in: categoryIds } } : {},
       walletIds ? { walletId: { in: walletIds } } : {},
+      creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
       tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
     ],
   };
@@ -220,6 +237,8 @@ export async function GET(req: Request) {
     { header: 'Descrição', key: 'description', width: 40 },
     { header: 'Categoria', key: 'category', width: 20 },
     { header: 'Carteira', key: 'wallet', width: 20 },
+    { header: 'Cartão', key: 'creditCard', width: 20 },
+    { header: 'Tipo Pgto', key: 'paymentType', width: 15 },
     { header: 'Tags', key: 'tags', width: 30 },
     { header: 'Fixa', key: 'fixed', width: 8 },
     { header: 'Valor', key: 'amount', width: 14 },
@@ -242,6 +261,8 @@ export async function GET(req: Request) {
       description: r.description,
       category: r.category?.name ?? null,
       wallet: r.wallet?.name ?? null,
+      creditCard: r.creditCard?.name ?? null,
+      paymentType: getPaymentTypeLabel(r.paymentType),
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : null,
       fixed: r.isFixed ? 'Sim' : 'Não',
       // write expenses as negative values so spreadsheet shows them as debits

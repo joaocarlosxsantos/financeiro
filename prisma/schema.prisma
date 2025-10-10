@@ -37,6 +37,7 @@ model User {
   expenses           Expense[]
   incomes            Income[]
   wallets            Wallet[]
+  creditCards        CreditCard[]
   groups             Group[]
   members            Member[]
   bills              Bill[]
@@ -70,6 +71,7 @@ model Expense {
   amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
   type        ExpenseType
+  paymentType PaymentType @default(DEBIT)
   isFixed     Boolean     @default(false)
   startDate   DateTime? // Para despesas fixas
   endDate     DateTime? // Para despesas fixas
@@ -80,42 +82,66 @@ model Expense {
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   walletId    String?
   wallet      Wallet?     @relation(fields: [walletId], references: [id])
+  creditCardId String?
+  creditCard  CreditCard? @relation(fields: [creditCardId], references: [id])
   tags        String[] // Tags secundárias
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
 
 model Income {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   description String
-  amount      Decimal    @db.Decimal(10, 2)
+  amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
   type        IncomeType
-  isFixed     Boolean    @default(false)
+  paymentType PaymentType @default(DEBIT)
+  isFixed     Boolean     @default(false)
   startDate   DateTime? // Para rendas fixas
   endDate     DateTime? // Para rendas fixas
   dayOfMonth  Int? // Para rendas fixas (dia do mês)
   categoryId  String?
-  category    Category?  @relation(fields: [categoryId], references: [id])
+  category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   walletId    String?
-  wallet      Wallet?    @relation(fields: [walletId], references: [id])
+  wallet      Wallet?     @relation(fields: [walletId], references: [id])
+  creditCardId String?
+  creditCard  CreditCard? @relation(fields: [creditCardId], references: [id])
   tags        String[] // Tags secundárias
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model Wallet {
-  id        String    @id @default(cuid())
-  name      String
-  type      String // Ex: "carteira", "banco", "cartao"
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses  Expense[]
-  incomes   Income[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String       @id @default(cuid())
+  name        String
+  type        String       // Ex: "carteira", "banco", "cartao"
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    Expense[]
+  incomes     Income[]
+  creditCards CreditCard[] @relation("CreditCardBank")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([userId, name])
+}
+
+model CreditCard {
+  id          String    @id @default(cuid())
+  name        String    // Nome do cartão
+  limit       Decimal   @db.Decimal(10, 2) // Limite do cartão
+  closingDay  Int       // Dia do fechamento da fatura (1-31)
+  dueDay      Int       // Dia do vencimento da fatura (1-31)
+  bankId      String?   // Banco vinculado (pode ser nulo)
+  bank        Wallet?   @relation("CreditCardBank", fields: [bankId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    Expense[]
+  incomes     Income[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([userId, name])
 }
@@ -134,6 +160,14 @@ enum ExpenseType {
 enum IncomeType {
   FIXED
   VARIABLE
+}
+
+enum PaymentType {
+  DEBIT        // Débito (carteira)
+  CREDIT       // Crédito (cartão de crédito)
+  PIX_TRANSFER // PIX/Transferência (carteira)
+  CASH         // Dinheiro (carteira)
+  OTHER        // Outros (carteira)
 }
 
 // --- Controle de Contas models ---
