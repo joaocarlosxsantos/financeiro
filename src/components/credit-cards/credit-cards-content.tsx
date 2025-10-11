@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, Trash2, Plus, CreditCard as CreditCardIcon } from 'lucide-react';
-import { AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Edit, Trash2, Plus, CreditCard as CreditCardIcon, ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle, XCircle, TrendingUp, Target } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Loader } from '@/components/ui/loader';
 import { Progress } from '@/components/ui/progress';
+import { useMonth } from '@/components/providers/month-provider';
 
 interface CreditCard {
   id: string;
@@ -41,6 +43,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('todos');
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,6 +59,24 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
     closingDay?: string; 
     dueDay?: string; 
   }>({});
+
+  const { currentDate, setCurrentDate } = useMonth();
+
+  // Funções para navegação de mês
+  const handlePrevMonth = () => {
+    const prev = new Date(currentDate);
+    prev.setMonth(prev.getMonth() - 1);
+    setCurrentDate(prev);
+  };
+
+  const handleNextMonth = () => {
+    const next = new Date(currentDate);
+    next.setMonth(next.getMonth() + 1);
+    setCurrentDate(next);
+  };
+
+  const monthLabel = currentDate.toLocaleDateString('pt-BR', { month: 'long' });
+  const year = currentDate.getFullYear();
 
 
 
@@ -210,25 +231,251 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
     return 'bg-green-500';
   };
 
+  // Calcular estatísticas
+  const totalCards = creditCards.length;
+  const activeCards = creditCards.filter(card => (card.usagePercentage || 0) > 0).length;
+  const totalLimit = creditCards.reduce((acc, card) => acc + card.limit, 0);
+  const totalUsed = creditCards.reduce((acc, card) => acc + (card.usedAmount || 0), 0);
+  const highUsageCards = creditCards.filter(card => (card.usagePercentage || 0) >= 70).length;
+
+  // Filtrar cartões por aba
+  const getFilteredCards = () => {
+    switch (activeTab) {
+      case 'ativos':
+        return creditCards.filter(card => (card.usagePercentage || 0) > 0);
+      case 'inativos':
+        return creditCards.filter(card => (card.usagePercentage || 0) === 0);
+      case 'alto-uso':
+        return creditCards.filter(card => (card.usagePercentage || 0) >= 70);
+      default:
+        return creditCards;
+    }
+  };
+
+  const renderCardsList = () => {
+    const filteredCards = getFilteredCards();
+    
+    if (filteredCards.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <CreditCardIcon className="h-12 w-12 text-gray-300 dark:text-foreground mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-foreground">
+              {activeTab === 'todos' ? 'Nenhum cartão de crédito cadastrado' : `Nenhum cartão ${activeTab}`}
+            </p>
+            <Button className="mt-4" onClick={() => {
+              resetForm();
+              setShowForm(true);
+            }}>
+              <Plus className="h-4 w-4 mr-2" />
+              {activeTab === 'todos' ? 'Adicionar Primeiro Cartão' : 'Novo Cartão'}
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        {filteredCards.map((creditCard) => (
+          <Card key={creditCard.id} className="shadow-lg">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">{creditCard.name}</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(creditCard)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(creditCard.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              {creditCard.bank && (
+                <p className="text-sm text-gray-500 dark:text-foreground">{creditCard.bank.name}</p>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Limite usado</span>
+                  <span className="font-medium">
+                    {(creditCard.usagePercentage || 0).toFixed(1)}%
+                  </span>
+                </div>
+                <Progress
+                  value={creditCard.usagePercentage || 0}
+                  className="h-2"
+                />
+                <div className="flex justify-between text-sm text-gray-600 dark:text-foreground">
+                  <span>
+                    R$ {(creditCard.usedAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                  <span>
+                    R$ {creditCard.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="pt-2 border-t space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Fechamento:</span>
+                  <span>Dia {creditCard.closingDay}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Vencimento:</span>
+                  <span>Dia {creditCard.dueDay}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Disponível:</span>
+                  <span className="font-medium text-green-600">
+                    R$ {(creditCard.availableLimit || (creditCard.limit - (creditCard.usedAmount || 0))).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Cartões de Crédito</h1>
-          <p className="text-gray-600 dark:text-foreground">Gerencie seus cartões de crédito e limites</p>
+    <div className="space-y-6">
+      {/* Header Padronizado */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Cartões de Crédito</h1>
+        <p className="text-muted-foreground">Gerencie seus cartões de crédito e controle seus limites</p>
+      </div>
+
+      {/* Navegação de Mês + Botão Principal */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center space-x-2 px-3 h-10 rounded-md border">
+            <Calendar className="h-4 w-4" />
+            <span className="capitalize">{monthLabel} {year}</span>
+          </div>
+          <Button variant="outline" size="icon" onClick={handleNextMonth}>
+            <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setShowForm(true);
-          }}
-          className="w-full sm:w-auto"
-        >
+        <Button onClick={() => {
+          resetForm();
+          setShowForm(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Cartão
         </Button>
       </div>
+
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Cartões</CardTitle>
+            <CreditCardIcon className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{totalCards}</div>
+            <p className="text-xs text-muted-foreground">Cartões cadastrados</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Limite Total</CardTitle>
+            <Target className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {totalLimit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </div>
+            <p className="text-xs text-muted-foreground">Limite disponível total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Valor Usado</CardTitle>
+            <TrendingUp className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {totalUsed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </div>
+            <p className="text-xs text-muted-foreground">Total utilizado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Alto Uso</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{highUsageCards}</div>
+            <p className="text-xs text-muted-foreground">Cartões com uso ≥ 70%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sistema de Abas */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="todos" className="flex items-center gap-2">
+            <CreditCardIcon className="h-4 w-4" />
+            Todos
+          </TabsTrigger>
+          <TabsTrigger value="ativos" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Ativos
+          </TabsTrigger>
+          <TabsTrigger value="inativos" className="flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
+            Inativos
+          </TabsTrigger>
+          <TabsTrigger value="alto-uso" className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Alto Uso
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Conteúdo das Abas */}
+        <TabsContent value="todos" className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Todos os Cartões</h3>
+            <p className="text-sm text-muted-foreground">Visualize todos os seus cartões de crédito cadastrados</p>
+          </div>
+          {renderCardsList()}
+        </TabsContent>
+
+        <TabsContent value="ativos" className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Cartões Ativos</h3>
+            <p className="text-sm text-muted-foreground">Cartões com saldo utilizado</p>
+          </div>
+          {renderCardsList()}
+        </TabsContent>
+
+        <TabsContent value="inativos" className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Cartões Inativos</h3>
+            <p className="text-sm text-muted-foreground">Cartões sem uso no momento</p>
+          </div>
+          {renderCardsList()}
+        </TabsContent>
+
+        <TabsContent value="alto-uso" className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Alto Uso</h3>
+            <p className="text-sm text-muted-foreground">Cartões com uso igual ou superior a 70% do limite</p>
+          </div>
+          {renderCardsList()}
+        </TabsContent>
+      </Tabs>
 
       {/* Modal de formulário */}
       <Modal
@@ -333,143 +580,13 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         </form>
       </Modal>
 
-      {/* Mensagem de erro */}
-      {error && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-              <AlertTriangle className="h-4 w-4" />
-              <span>{error}</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setError(null)}
-                className="ml-auto"
-              >
-                ✕
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Lista de cartões com tratamento de erro e recarregar */}
+      {/* Estados de Loading e Erro */}
       {isLoading && <Loader text="Carregando cartões..." />}
-
-      {!isLoading && creditCards.length === 0 && !error && (
-        <Card className="border-dashed">
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <CreditCardIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Nenhum cartão cadastrado
-              </h3>
-              <p className="text-gray-600 dark:text-foreground mb-4">
-                Comece criando seu primeiro cartão de crédito
-              </p>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setShowForm(true);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeiro Cartão
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Grid de cartões */}
-      {!isLoading && creditCards.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {creditCards.map((creditCard) => (
-            <Card key={creditCard.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CreditCardIcon className="h-5 w-5" />
-                    {creditCard.name}
-                  </CardTitle>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(creditCard)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(creditCard.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Informações básicas */}
-                <div className="space-y-2 text-sm">
-                  {creditCard.bank && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-foreground">Banco:</span>
-                      <span className="font-medium">{creditCard.bank.name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-foreground">Fechamento:</span>
-                    <span className="font-medium">Dia {creditCard.closingDay}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-foreground">Vencimento:</span>
-                    <span className="font-medium">Dia {creditCard.dueDay}</span>
-                  </div>
-                </div>
-
-                {/* Limite e uso */}
-                <div className="pt-2 border-t">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">Limite Total</span>
-                    <span className="text-sm font-bold">{formatCurrency(creditCard.limit)}</span>
-                  </div>
-                  
-                  {creditCard.usagePercentage !== undefined && (
-                    <>
-                      <Progress 
-                        value={creditCard.usagePercentage} 
-                        className="h-2 mb-2"
-                        indicatorClassName={getUsageColor(creditCard.usagePercentage)}
-                      />
-                      <div className="flex justify-between text-xs text-gray-600 dark:text-foreground">
-                        <span>Usado: {formatCurrency(creditCard.usedAmount || 0)}</span>
-                        <span>Disponível: {formatCurrency(creditCard.availableLimit || creditCard.limit)}</span>
-                      </div>
-                      <div className="text-center mt-1">
-                        <span className={`text-xs font-medium ${
-                          creditCard.usagePercentage >= 90 ? 'text-red-600' :
-                          creditCard.usagePercentage >= 70 ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`}>
-                          {creditCard.usagePercentage.toFixed(1)}% utilizado
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Botão de recarregar em caso de erro */}
       {error && (
-        <div className="text-center">
-          <Button variant="outline" onClick={load}>
-            Tentar Novamente
+        <div className="text-red-500 text-center">
+          {error}
+          <Button className="ml-2" size="sm" onClick={load}>
+            Tentar novamente
           </Button>
         </div>
       )}
