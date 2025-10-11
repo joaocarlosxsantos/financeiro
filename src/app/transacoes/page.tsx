@@ -1,5 +1,5 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import TransacoesContent from '@/components/transacoes/transacoes-content';
+import TransacoesWrapper from '@/components/transacoes/transacoes-wrapper';
 import PageTitle from '@/components/PageTitle';
 import { getMetadata } from '@/lib/pageTitle';
 
@@ -10,7 +10,7 @@ export default function TransacoesPage() {
     <>
       <PageTitle module="Controle Financeiro" page="Transações" />
       <DashboardLayout>
-        <TransacoesContent />
+        <TransacoesWrapper />
       </DashboardLayout>
     </>
   );

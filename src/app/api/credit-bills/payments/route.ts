@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Marcar como rota dinâmica
+export const dynamic = 'force-dynamic';
+
 // GET - Listar todos os pagamentos de cartão do usuário
 export async function GET(request: NextRequest) {
   try {
