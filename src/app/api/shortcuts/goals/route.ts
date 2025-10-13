@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserByApiKeyFromHeader } from '@/lib/apikey';
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic';
+
 // Helper to parse month YYYY-MM to start/end Date
 function monthRange(month?: string) {
   if (!month) return null;
