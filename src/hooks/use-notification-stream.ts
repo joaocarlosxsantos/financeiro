@@ -63,7 +63,6 @@ export function useNotificationStream(options: UseNotificationStreamOptions = {}
         setReconnectAttempts(0);
         setConnectionError(null);
         onConnect?.();
-        console.log('Notification stream connected');
       };
 
       eventSource.onmessage = (event) => {
@@ -92,7 +91,6 @@ export function useNotificationStream(options: UseNotificationStreamOptions = {}
           
           reconnectTimeoutRef.current = setTimeout(() => {
             if (shouldReconnect.current) {
-              console.log(`Attempting to reconnect... (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
               connect();
             }
           }, reconnectInterval);

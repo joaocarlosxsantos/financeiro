@@ -216,13 +216,11 @@ export async function POST(request: NextRequest) {
         installmentDates,
         user.id
       );
-      console.log('✅ Faturas criadas automaticamente para o gasto:', result.id);
     } catch (billError) {
       console.error('⚠️ Erro ao criar faturas automaticamente:', billError);
       // Não falhar a requisição, apenas logar o erro
     }
 
-    console.log('✅ Gasto de cartão criado com sucesso:', result.id);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error('❌ Erro ao criar gasto no cartão:', error);

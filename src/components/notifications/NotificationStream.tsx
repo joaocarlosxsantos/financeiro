@@ -106,8 +106,7 @@ export function NotificationStream() {
     onConnect: () => console.log('Conectado ao stream de notificações'),
     onDisconnect: () => console.log('Desconectado do stream de notificações'),
     onNotification: (notification) => {
-      console.log('Nova notificação:', notification);
-      
+     
       // Show browser notification if permission granted
       if (Notification.permission === 'granted') {
         new Notification(notification.data?.title || 'Nova Notificação', {

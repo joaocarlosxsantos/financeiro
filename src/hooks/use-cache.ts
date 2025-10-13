@@ -224,7 +224,6 @@ export function useCachedPagination<T>(
       if (cached) {
         // Simular carregamento dos dados do cache
         // (isto precisaria ser integrado diretamente no hook de paginação)
-        console.log('Dados encontrados no cache:', cached);
       }
     }
   }, [cacheKey, enabled, pagination.loading, pagination.data]);

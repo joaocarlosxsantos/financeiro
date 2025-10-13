@@ -271,12 +271,45 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    // Deletar o gasto (cascade vai deletar os billItems)
-    await prisma.creditExpense.delete({
-      where: { id: params.id },
+    // Usar transação para garantir consistência
+    const result = await prisma.$transaction(async (tx: any) => {
+      // 1. Coletar IDs das faturas que serão afetadas
+      const affectedBillIds: string[] = [];
+      for (const item of existingExpense.billItems) {
+        if (item.bill && !affectedBillIds.includes(item.bill.id)) {
+          affectedBillIds.push(item.bill.id);
+        }
+      }
+
+      // 2. Deletar o gasto (cascade vai deletar os billItems automaticamente)
+      await tx.creditExpense.delete({
+        where: { id: params.id },
+      });
+
+      // 3. Recalcular o valor total das faturas afetadas
+      for (const billId of affectedBillIds) {
+        // Somar todos os itens restantes na fatura
+        const totalAmount = await tx.creditBillItem.aggregate({
+          where: { billId },
+          _sum: { amount: true },
+        });
+
+        // Atualizar o valor total da fatura (pode ser 0)
+        await tx.creditBill.update({
+          where: { id: billId },
+          data: {
+            totalAmount: totalAmount._sum.amount || 0,
+          },
+        });
+      }
+
+      return { affectedBills: affectedBillIds.length };
     });
 
-    return NextResponse.json({ message: 'Gasto excluído com sucesso' });
+    return NextResponse.json({ 
+      message: 'Gasto excluído com sucesso',
+      affectedBills: result.affectedBills
+    });
   } catch (error) {
     console.error('Erro ao excluir gasto:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });

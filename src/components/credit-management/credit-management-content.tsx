@@ -27,7 +27,10 @@ export default function CreditManagementContent() {
   const handleNextMonth = () => {
     const now = new Date();
     const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-    if (nextMonth <= now) {
+    
+    // Para abas de gastos e faturas, permitir navegar para meses futuros
+    // Para outras abas, manter a trava no mês atual
+    if (activeTab === 'expenses' || activeTab === 'bills' || nextMonth <= now) {
       setCurrentDate(nextMonth);
     }
   };
@@ -47,7 +50,6 @@ export default function CreditManagementContent() {
   };
 
   const handleFormSuccess = () => {
-    console.log('✅ Gasto salvo com sucesso! Recarregando lista...');
     handleCloseForm();
     setRefreshKey(prev => prev + 1); // Força reload da lista
   };
@@ -80,7 +82,8 @@ export default function CreditManagementContent() {
             size="icon"
             onClick={handleNextMonth}
             aria-label="Próximo mês"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            disabled={activeTab !== 'expenses' && activeTab !== 'bills' && new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1) > new Date()}
+            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
           </Button>

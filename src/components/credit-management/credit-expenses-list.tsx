@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Loader2, Edit, Trash2, CreditCard } from 'lucide-react';
+import { Loader2, Edit, Trash2, CreditCard, RotateCcw } from 'lucide-react';
+import RefundDialog from './refund-dialog';
 
 interface CreditExpense {
   id: string;
@@ -12,6 +13,7 @@ interface CreditExpense {
   amount: number;
   purchaseDate: string;
   installments: number;
+  type?: 'EXPENSE' | 'REFUND';
   creditCard: {
     id: string;
     name: string;
@@ -24,6 +26,18 @@ interface CreditExpense {
   tags: Array<string | {
     id: string;
     name: string;
+  }>;
+  billItems?: Array<{
+    id: string;
+    installmentNumber: number;
+    amount: number;
+    dueDate: string;
+    bill?: {
+      id: string;
+      status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE';
+      paidAmount: number;
+      totalAmount: number;
+    };
   }>;
   createdAt: string;
 }
@@ -38,6 +52,10 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  
+  // Estados para o diálogo de estorno
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [selectedExpenseForRefund, setSelectedExpenseForRefund] = useState<CreditExpense | null>(null);
 
   useEffect(() => {
     const loadExpenses = async () => {
@@ -56,7 +74,6 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
           url += `?start=${startDate}&end=${endDate}`;
         }
 
-        console.log('🔄 Carregando gastos de crédito...', url);
         const response = await fetch(url);
       
       if (!response.ok) {
@@ -65,11 +82,9 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
       }
 
       const data = await response.json();
-      console.log('📦 Dados recebidos da API:', data);
       
       // A API retorna { data: [...], pagination: {...} }
       const expenses = data.data || data;
-      console.log('📋 Gastos processados:', expenses);
       setExpenses(Array.isArray(expenses) ? expenses : []);
     } catch (error) {
       console.error('Erro ao carregar gastos:', error);
@@ -84,6 +99,34 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
 
   const reloadExpenses = () => {
     setReloadKey(prev => prev + 1);
+  };
+
+  const handleRefundClick = async (expense: CreditExpense) => {
+    // Buscar dados completos da compra para o estorno
+    try {
+      const response = await fetch(`/api/credit-expenses/${expense.id}`);
+      if (!response.ok) {
+        throw new Error('Erro ao carregar dados da compra');
+      }
+      
+      const fullExpenseData = await response.json();
+      setSelectedExpenseForRefund(fullExpenseData);
+      setRefundDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao carregar dados da compra:', error);
+      alert('Erro ao carregar dados da compra para estorno');
+    }
+  };
+
+  const handleRefundSuccess = () => {
+    setRefundDialogOpen(false);
+    setSelectedExpenseForRefund(null);
+    reloadExpenses();
+  };
+
+  const handleRefundCancel = () => {
+    setRefundDialogOpen(false);
+    setSelectedExpenseForRefund(null);
   };
 
   const deleteExpense = async (id: string) => {
@@ -185,8 +228,26 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
             {(expenses || []).map((expense) => (
               <tr key={expense.id} className="border-b hover:bg-accent transition-colors">
                 <td className="px-3 py-2 max-w-xs truncate">{expense.description}</td>
-                <td className="px-3 py-2 text-right text-red-600 font-semibold">
-                  {formatCurrency(expense.amount)}
+                <td className="px-3 py-2 text-right font-semibold">
+                  <div className="flex items-center justify-end gap-2">
+                    <span className={expense.type === 'REFUND' ? 'text-green-600' : 'text-red-600'}>
+                      {formatCurrency(expense.amount)}
+                    </span>
+                    {expense.type === 'REFUND' && (
+                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                        ESTORNO
+                      </Badge>
+                    )}
+                    {expense.tags?.some(tag => 
+                      typeof tag === 'string' 
+                        ? tag.includes('refunded') 
+                        : false
+                    ) && expense.type !== 'REFUND' && (
+                      <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                        ESTORNADO
+                      </Badge>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-center">
                   <Badge variant="outline" className="text-xs">
@@ -233,6 +294,19 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                 </td>
                 <td className="px-3 py-2 text-center">
                   <div className="flex items-center justify-center gap-1">
+                    {expense.type !== 'REFUND' && (
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        onClick={() => handleRefundClick(expense)}
+                        title="Estornar compra"
+                        disabled={expense.tags?.some(tag => 
+                          typeof tag === 'string' && tag.includes('refunded_full')
+                        )}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button 
                       size="icon" 
                       variant="ghost" 
@@ -260,6 +334,14 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
           </tbody>
         </table>
       </div>
+
+      {/* Diálogo de estorno */}
+      <RefundDialog
+        expense={selectedExpenseForRefund}
+        open={refundDialogOpen}
+        onClose={handleRefundCancel}
+        onSuccess={handleRefundSuccess}
+      />
     </div>
   );
 }

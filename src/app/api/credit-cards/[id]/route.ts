@@ -121,20 +121,34 @@ export async function DELETE(
   }
 
   try {
-    // Verificar se existem transações vinculadas ao cartão
-    const expensesCount = await prisma.expense.count({
+    // Verificar se existem gastos de crédito vinculados ao cartão
+    const creditExpensesCount = await prisma.creditExpense.count({
       where: { creditCardId: params.id, userId: user.id }
     });
 
-    const incomesCount = await prisma.income.count({
-      where: { creditCardId: params.id, userId: user.id }
+    // Verificar se existem faturas com valor maior que zero
+    const creditBillsWithValueCount = await prisma.creditBill.count({
+      where: { 
+        creditCardId: params.id, 
+        userId: user.id,
+        totalAmount: { gt: 0 }
+      }
     });
 
-    if (expensesCount > 0 || incomesCount > 0) {
+    if (creditExpensesCount > 0 || creditBillsWithValueCount > 0) {
       return NextResponse.json({ 
-        error: 'Não é possível excluir cartão com transações vinculadas' 
+        error: 'Não é possível excluir cartão com gastos ativos ou faturas com valores pendentes' 
       }, { status: 400 });
     }
+
+    // Antes de excluir o cartão, deletar faturas zeradas
+    await prisma.creditBill.deleteMany({
+      where: {
+        creditCardId: params.id,
+        userId: user.id,
+        totalAmount: 0
+      }
+    });
 
     await prisma.creditCard.delete({
       where: { 

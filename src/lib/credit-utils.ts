@@ -87,13 +87,13 @@ export function calculateClosingDate(creditCard: CreditCard, year: number, month
  * Calcula a data de vencimento de uma fatura para um mês específico
  */
 export function calculateDueDate(creditCard: CreditCard, year: number, month: number): Date {
-  // A data de vencimento normalmente é no mês seguinte ao fechamento
-  const dueDate = new Date(year, month + 1, creditCard.dueDay);
+  // A data de vencimento é no mesmo mês do fechamento
+  const dueDate = new Date(year, month, creditCard.dueDay);
   
   // Se o dia de vencimento for maior que os dias do mês, usar o último dia
-  const lastDayOfNextMonth = new Date(year, month + 2, 0).getDate();
-  if (creditCard.dueDay > lastDayOfNextMonth) {
-    dueDate.setDate(lastDayOfNextMonth);
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  if (creditCard.dueDay > lastDayOfMonth) {
+    dueDate.setDate(lastDayOfMonth);
   }
   
   return dueDate;
@@ -106,13 +106,11 @@ export function getBillPeriodForInstallment(
   creditCard: CreditCard,
   installmentDueDate: Date
 ): { year: number; month: number } {
-  // A parcela pertence à fatura do mês anterior ao vencimento
-  let billMonth = installmentDueDate.getMonth() - 1;
-  let billYear = installmentDueDate.getFullYear();
-  if (billMonth < 0) {
-    billYear -= 1;
-    billMonth = 11;
-  }
+  // A parcela pertence à fatura do mesmo mês do vencimento
+  // Se vence dia 7 de novembro, pertence à fatura que fecha dia 1 de novembro
+  const billMonth = installmentDueDate.getMonth();
+  const billYear = installmentDueDate.getFullYear();
+  
   return {
     year: billYear,
     month: billMonth
@@ -141,14 +139,22 @@ export function calculateBillStatus(
   dueDate: Date,
   currentDate: Date = new Date()
 ): 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE' {
+  // Se o valor total é zero ou negativo, a fatura está quitada
+  if (totalAmount <= 0) {
+    return 'PAID';
+  }
+  
+  // Se o valor pago é maior ou igual ao total, está paga
   if (paidAmount >= totalAmount) {
     return 'PAID';
   }
   
+  // Se há pagamento parcial
   if (paidAmount > 0) {
     return currentDate > dueDate ? 'OVERDUE' : 'PARTIAL';
   }
   
+  // Sem pagamento
   return currentDate > dueDate ? 'OVERDUE' : 'PENDING';
 }
 
@@ -162,6 +168,70 @@ export function shouldCreateNewBill(
   const today = currentDate.getDate();
   // Criar fatura se passamos do dia de fechamento
   return today > creditCard.closingDay;
+}
+
+/**
+ * Calcula como distribuir um estorno em faturas futuras
+ */
+export function calculateRefundDistribution(
+  creditCard: CreditCard,
+  refundAmount: number,
+  paidInstallments: number,
+  currentDate: Date = new Date()
+): { 
+  installments: InstallmentInfo[]; 
+  strategy: 'immediate' | 'distributed' 
+} {
+  const amount = Math.abs(refundAmount);
+  
+  // Para estorno completo, não precisamos criar itens de estorno separados
+  // porque já removemos os itens originais das faturas pendentes
+  // O estorno deve apenas ajustar o saldo se necessário
+  
+  // Aplicar estorno na próxima fatura disponível como crédito
+  const installments = calculateInstallmentDates(
+    creditCard,
+    currentDate,
+    1,
+    -amount
+  );
+
+  return {
+    installments,
+    strategy: 'immediate'
+  };
+}
+
+/**
+ * Verifica se uma compra pode ser estornada completamente
+ */
+export function canFullRefund(billItems: Array<{
+  bill?: { status: string };
+}>): boolean {
+  return !billItems.some(item => item.bill?.status === 'PAID');
+}
+
+/**
+ * Calcula o valor máximo que pode ser estornado
+ */
+export function calculateMaxRefundAmount(
+  totalAmount: number,
+  billItems: Array<{
+    amount: number;
+    bill?: { status: string };
+  }>
+): number {
+  let paidAmount = 0;
+  
+  for (const item of billItems) {
+    if (item.bill?.status === 'PAID') {
+      paidAmount += item.amount;
+    }
+  }
+  
+  // Se não há parcelas pagas, pode estornar o valor total
+  // Se há parcelas pagas, pode estornar no máximo o valor pago
+  return paidAmount > 0 ? paidAmount : totalAmount;
 }
 
 /**
@@ -194,38 +264,40 @@ export async function createBillsForInstallments(
       billsToCreate.push(billPeriod);
     }
   }
-  console.log(`🔍 Períodos de faturas a serem criadas:`, billsToCreate);
-  // Criar as faturas se não existirem
+  // Criar ou atualizar as faturas
   for (const period of billsToCreate) {
     const closingDate = calculateClosingDate(creditCard, period.year, period.month);
-    // Verificar se a fatura já existe
-    const existingBill = await prisma.creditBill.findFirst({
+    const dueDate = calculateDueDate(creditCard, period.year, period.month);
+    
+    // Buscar todos os itens que devem entrar nesta fatura
+    const billItems = await prisma.creditBillItem.findMany({
       where: {
-        creditCardId: creditCard.id,
-        closingDate: closingDate,
+        billId: null, // Ainda não associados a uma fatura
+        creditExpense: {
+          creditCardId: creditCard.id,
+        },
       },
     });
-    if (!existingBill) {
-      const dueDate = calculateDueDate(creditCard, period.year, period.month);
-      // Buscar todos os itens que devem entrar nesta fatura
-      // Filtra por período de fechamento usando a mesma lógica
-      const billItems = await prisma.creditBillItem.findMany({
+    
+    // Filtrar items que pertencem a este período de fechamento
+    const itemsForThisBill = billItems.filter((item: CreditBillItem) => {
+      const itemBillPeriod = getBillPeriodForInstallment(creditCard, item.dueDate);
+      return itemBillPeriod.year === period.year && itemBillPeriod.month === period.month;
+    });
+
+    if (itemsForThisBill.length > 0) {
+      const totalAmount = itemsForThisBill.reduce((sum: number, item: CreditBillItem) => sum + Number(item.amount), 0);
+      
+      // Verificar se a fatura já existe
+      const existingBill = await prisma.creditBill.findFirst({
         where: {
-          billId: null, // Ainda não associados a uma fatura
-          creditExpense: {
-            creditCardId: creditCard.id,
-          },
+          creditCardId: creditCard.id,
+          closingDate: closingDate,
         },
       });
-      // Filtrar items que pertencem a este período de fechamento
-      const itemsForThisBill = billItems.filter((item: CreditBillItem) => {
-        const itemBillPeriod = getBillPeriodForInstallment(creditCard, item.dueDate);
-        return itemBillPeriod.year === period.year && itemBillPeriod.month === period.month;
-      });
-      if (itemsForThisBill.length > 0) {
-  const totalAmount = itemsForThisBill.reduce((sum: number, item: CreditBillItem) => sum + Number(item.amount), 0);
-        console.log(`💰 Criando fatura para ${period.year}/${period.month + 1} com ${itemsForThisBill.length} itens e total R$ ${totalAmount}`);
-        // Criar a fatura
+
+      if (!existingBill) {
+        // Criar nova fatura
         const bill = await prisma.creditBill.create({
           data: {
             creditCardId: creditCard.id,
@@ -237,6 +309,7 @@ export async function createBillsForInstallments(
             userId,
           },
         });
+        
         // Associar os itens à fatura
         await prisma.creditBillItem.updateMany({
           where: {
@@ -248,12 +321,46 @@ export async function createBillsForInstallments(
             billId: bill.id,
           },
         });
-        console.log(`✅ Fatura criada automaticamente: ${bill.id} para período ${period.year}/${period.month + 1}`);
       } else {
-        console.log(`ℹ️ Nenhum item encontrado para o período ${period.year}/${period.month + 1}`);
+        
+        // Associar os novos itens à fatura existente
+        await prisma.creditBillItem.updateMany({
+          where: {
+            id: {
+              in: itemsForThisBill.map((item: CreditBillItem) => item.id),
+            },
+          },
+          data: {
+            billId: existingBill.id,
+          },
+        });
+
+        // Recalcular o total da fatura existente
+        const allBillItems = await prisma.creditBillItem.findMany({
+          where: {
+            billId: existingBill.id,
+          },
+        });
+
+        const newTotalAmount = allBillItems.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+        let adjustedAmount = newTotalAmount;
+        
+        // Ajustar valores muito próximos de zero
+        if (Math.abs(adjustedAmount) < 0.01) adjustedAmount = 0;
+
+        // Recalcular status baseado no novo valor
+        const newStatus = calculateBillStatus(adjustedAmount, existingBill.paidAmount, existingBill.dueDate, adjustedAmount);
+
+        // Atualizar a fatura
+        await prisma.creditBill.update({
+          where: { id: existingBill.id },
+          data: {
+            totalAmount: adjustedAmount,
+            status: newStatus,
+          },
+        });
       }
     } else {
-      console.log(`ℹ️ Fatura já existe para o período ${period.year}/${period.month + 1}`);
     }
   }
 }

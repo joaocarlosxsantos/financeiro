@@ -232,10 +232,9 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
   };
 
   // Calcular estatísticas
-  const totalCards = creditCards.length;
-  const activeCards = creditCards.filter(card => (card.usagePercentage || 0) > 0).length;
   const totalLimit = creditCards.reduce((acc, card) => acc + card.limit, 0);
   const totalUsed = creditCards.reduce((acc, card) => acc + (card.usedAmount || 0), 0);
+  const totalAvailable = totalLimit - totalUsed;
   const highUsageCards = creditCards.filter(card => (card.usagePercentage || 0) >= 70).length;
 
   // Filtrar cartões por aba
@@ -372,30 +371,20 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Cartões</CardTitle>
-            <CreditCardIcon className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totalCards}</div>
-            <p className="text-xs text-muted-foreground">Cartões cadastrados</p>
-          </CardContent>
-        </Card>
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Limite Total</CardTitle>
-            <Target className="h-4 w-4 text-green-600" />
+            <Target className="h-4 w-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {totalLimit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            <div className="text-2xl font-bold text-indigo-600">
+              {formatCurrency(totalLimit)}
             </div>
-            <p className="text-xs text-muted-foreground">Limite disponível total</p>
+            <p className="text-xs text-muted-foreground">Soma de todos os limites</p>
           </CardContent>
         </Card>
+        
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -404,9 +393,22 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {totalUsed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              {formatCurrency(totalUsed)}
             </div>
             <p className="text-xs text-muted-foreground">Total utilizado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Limite Disponível</CardTitle>
+            <Target className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(totalAvailable)}
+            </div>
+            <p className="text-xs text-muted-foreground">Total disponível para uso</p>
           </CardContent>
         </Card>
 

@@ -81,15 +81,13 @@ async function processImportInBackground(
   carteiraId: string
 ) {
   try {
-    console.log(`Iniciando processamento em background para usuário ${userId}`);
-    
+   
     // Processar cada lote sequencialmente para evitar sobrecarga
     let totalProcessed = 0;
     const results = [];
 
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
-      console.log(`Processando lote ${i + 1}/${batches.length} (${batch.sourceFile})`);
       
       try {
         const result = await processBatch(userId, batch.registros, carteiraId, batch.sourceFile);
@@ -111,10 +109,8 @@ async function processImportInBackground(
     }
 
     // Atualizar metas apenas após processar todos os lotes
-    console.log('Atualizando metas após processamento completo...');
     await updateGoalsAfterImport(userId);
 
-    console.log(`Processamento concluído: ${totalProcessed} transações criadas`);
     
     // Aqui você poderia enviar uma notificação para o usuário
     // via WebSocket ou sistema de notificações
@@ -348,7 +344,6 @@ async function updateGoalsAfterImport(userId: string) {
     // Aqui você implementaria a lógica para recalcular as metas
     // Por exemplo, verificar se alguma meta foi atingida, atualizar progresso, etc.
     
-    console.log(`Atualizando metas para usuário ${userId}`);
     
     // Exemplo: buscar metas ativas e recalcular progresso
     const activeGoals = await prisma.goal.findMany({
@@ -369,7 +364,6 @@ async function updateGoalsAfterImport(userId: string) {
       }
     }
     
-    console.log('Metas atualizadas com sucesso');
   } catch (error) {
     console.error('Erro ao atualizar metas:', error);
   }

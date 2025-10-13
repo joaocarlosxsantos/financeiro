@@ -29,7 +29,6 @@ export default function RealtimeNotificationsDemo() {
         throw new Error('Falha ao enviar notificação');
       }
 
-      console.log('Notificação enviada com sucesso!');
     } catch (error) {
       console.error('Erro ao enviar notificação:', error);
     } finally {
@@ -57,7 +56,6 @@ export default function RealtimeNotificationsDemo() {
         throw new Error('Falha ao enviar notificação template');
       }
 
-      console.log('Notificação template enviada!');
     } catch (error) {
       console.error('Erro ao enviar notificação template:', error);
     } finally {

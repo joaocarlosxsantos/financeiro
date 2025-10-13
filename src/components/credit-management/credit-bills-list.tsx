@@ -26,6 +26,14 @@ interface CreditBill {
     amount: number;
     installmentNumber: number;
     totalInstallments: number;
+    creditExpense: {
+      id: string;
+      type: 'EXPENSE' | 'REFUND';
+      description: string;
+      category?: {
+        name: string;
+      };
+    };
   }[];
   payments: {
     id: string;
@@ -61,7 +69,6 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
           url += `?year=${year}&month=${month + 1}`;
         }
 
-        console.log('🧾 Carregando faturas...', url);
         const response = await fetch(url);
       
       if (!response.ok) {
@@ -70,7 +77,6 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
       }
 
       const data = await response.json();
-      console.log('📋 Faturas recebidas da API:', data);
       setBills(data.data && Array.isArray(data.data) ? data.data : []);
     } catch (error) {
       console.error('Erro ao carregar faturas:', error);
@@ -221,12 +227,12 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                 <p className="font-semibold text-lg">{formatCurrency(bill.totalAmount)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Vencimento</p>
-                <p className="font-semibold">{formatDate(bill.dueDate)}</p>
-              </div>
-              <div>
                 <p className="text-muted-foreground">Fechamento</p>
                 <p className="font-semibold">{formatDate(bill.closingDate)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Vencimento</p>
+                <p className="font-semibold">{formatDate(bill.dueDate)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Itens</p>
@@ -254,17 +260,39 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                   <p className="text-muted-foreground text-sm">Nenhum item nesta fatura.</p>
                 ) : (
                   <div className="space-y-2">
-                    {bill.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                        <div>
-                          <p className="font-medium">{item.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Parcela {item.installmentNumber} de {item.totalInstallments}
+                    {bill.items.map((item) => {
+                      const isRefund = item.creditExpense?.type === 'REFUND';
+                      return (
+                        <div 
+                          key={item.id} 
+                          className={`flex justify-between items-center p-2 rounded ${
+                            isRefund 
+                              ? 'bg-green-50 border border-green-200' 
+                              : 'bg-muted/30'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{item.description}</p>
+                              {isRefund && (
+                                <Badge variant="outline" className="text-green-700 border-green-300">
+                                  ESTORNO
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Parcela {item.installmentNumber} de {item.totalInstallments}
+                              {item.creditExpense?.category && (
+                                <span> • {item.creditExpense.category.name}</span>
+                              )}
+                            </p>
+                          </div>
+                          <p className={`font-semibold ${isRefund ? 'text-green-700' : ''}`}>
+                            {isRefund ? '-' : ''}{formatCurrency(Math.abs(item.amount))}
                           </p>
                         </div>
-                        <p className="font-semibold">{formatCurrency(item.amount)}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

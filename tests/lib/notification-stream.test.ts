@@ -294,4 +294,3 @@ describe('Notification API Integration', () => {
   });
 });
 
-console.log('✅ Real-time Notifications Tests - All tests would pass with proper setup');

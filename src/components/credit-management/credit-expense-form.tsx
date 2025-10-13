@@ -92,7 +92,6 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
           installments: 1,
           tags: [],
         });
-        console.log('🔄 Formulário limpo para modo de criação');
         return;
       }
       
@@ -107,7 +106,6 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
         }
 
         const expense = await response.json();
-        console.log('🔄 Dados do gasto carregados para edição:', expense);
         
         setForm({
           description: expense.description,
@@ -119,15 +117,6 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
           tags: expense.tags ? expense.tags.map((tag: Tag) => tag.id) : [],
         });
         
-        console.log('✅ Formulário preenchido com:', {
-          description: expense.description,
-          amount: expense.amount.toString(),
-          purchaseDate: expense.purchaseDate.slice(0, 10),
-          categoryId: expense.categoryId || '',
-          creditCardId: expense.creditCardId,
-          installments: expense.installments,
-          tags: expense.tags ? expense.tags.map((tag: Tag) => tag.id) : [],
-        });
       } catch (error) {
         console.error('Erro ao carregar gasto:', error);
         setErrors({ general: 'Erro ao carregar dados do gasto' });
@@ -290,17 +279,13 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
                 isLoading={smartSuggestions.isLoading}
                 isPreselected={true}
                 onAcceptCategory={async () => {
-                  console.log('🎯 DEBUG - Antes de aceitar categoria. Sugestão:', smartSuggestions.suggestions?.category);
                   const categoryId = await smartSuggestions.acceptCategorySuggestion();
-                  console.log('🎯 DEBUG - Category ID retornado:', categoryId);
                   if (categoryId) {
-                    console.log('🎯 DEBUG - Aplicando categoria no form:', categoryId);
                     setForm(f => ({ ...f, categoryId }));
                     // Recarrega categorias para incluir a nova
                     const res = await fetch('/api/categories?type=EXPENSE');
                     if (res.ok) setCategories(await res.json());
                   } else {
-                    console.log('❌ DEBUG - Category ID não retornado ou null');
                   }
                 }}
                 onAcceptTag={async (tagName) => {
@@ -343,11 +328,20 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
             onChange={(e) => setForm(f => ({ ...f, installments: parseInt(e.target.value) }))}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
-              <option key={num} value={num}>
-                {num}x {installmentValue > 0 && `(R$ ${(installmentValue).toFixed(2)} cada)`}
-              </option>
-            ))}
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(num => {
+              const amount = form.amount ? parseFloat(form.amount) : 0;
+              const installmentValue = amount > 0 ? (amount / num) : 0;
+              const formattedValue = installmentValue.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              });
+              
+              return (
+                <option key={num} value={num}>
+                  {num}x {amount > 0 ? formattedValue : 'R$ 0,00'}
+                </option>
+              );
+            })}
           </select>
           {errors.installments && (
             <p className="text-red-500 text-xs mt-1">{errors.installments}</p>
