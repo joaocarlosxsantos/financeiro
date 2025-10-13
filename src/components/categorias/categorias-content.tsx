@@ -90,7 +90,12 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
 
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
-    if (res.ok) setCategories(categories.filter((c) => c.id !== id));
+    if (res.ok) {
+      setCategories(categories.filter((c) => c.id !== id));
+    } else {
+      const error = await res.json();
+      alert(error.error || 'Erro ao excluir categoria');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,7 +226,13 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
                   <Button variant="outline" size="sm" onClick={() => handleEdit(category.id)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(category.id)}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDelete(category.id)}
+                    disabled={category.name === 'Transferência entre Contas' && category.type === 'BOTH'}
+                    title={category.name === 'Transferência entre Contas' && category.type === 'BOTH' ? 'Esta categoria não pode ser excluída' : undefined}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

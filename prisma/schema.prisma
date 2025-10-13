@@ -80,6 +80,7 @@ model Expense {
   startDate   DateTime? // Para despesas fixas
   endDate     DateTime? // Para despesas fixas
   dayOfMonth  Int? // Para despesas fixas (dia do mês)
+  transferId  String? // ID da transferência (para ligar saída e entrada)
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
@@ -102,6 +103,7 @@ model Income {
   startDate   DateTime? // Para rendas fixas
   endDate     DateTime? // Para rendas fixas
   dayOfMonth  Int? // Para rendas fixas (dia do mês)
+  transferId  String? // ID da transferência (para ligar saída e entrada)
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String

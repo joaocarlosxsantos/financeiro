@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
 
   // Aggregate VARIABLE amounts
   const [expVarAgg, incVarAgg] = await Promise.all([
-    prisma.expense.aggregate({ where: { ...expensesWhere, type: 'VARIABLE' }, _sum: { amount: true } }),
-    prisma.income.aggregate({ where: { ...incomesWhere, type: 'VARIABLE' }, _sum: { amount: true } }),
+    prisma.expense.aggregate({ where: { ...expensesWhere, type: 'VARIABLE', transferId: null }, _sum: { amount: true } }),
+    prisma.income.aggregate({ where: { ...incomesWhere, type: 'VARIABLE', transferId: null }, _sum: { amount: true } }),
   ]);
 
   let fixedExpensesSum = 0;
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
 
   // Only compute FIXED contributions if we have a date range
   if (startDateObj && effectiveEnd) {
-    const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
     for (const fe of fixedExpenses) {
       const recStart = (fe.startDate ?? fe.date) as Date | null;
       const recEnd = (fe.endDate ?? null) as Date | null;
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       if (occurs > 0) fixedExpensesSum += Number(fe.amount || 0) * occurs;
     }
 
-    const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
     for (const fi of fixedIncomes) {
       const recStart = (fi.startDate ?? fi.date) as Date | null;
       const recEnd = (fi.endDate ?? null) as Date | null;
@@ -125,13 +125,13 @@ export async function GET(req: NextRequest) {
     // saldo acumulado até endDate: include VARIABLE aggregates and FIXED expanded until endDate
     const prevWhere = { ...whereBase, date: { lte: effectiveEnd || endDateObj } } as any;
     const [prevVarExpAgg, prevVarIncAgg] = await Promise.all([
-      prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE', date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
-      prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE', date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
+      prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE', transferId: null, date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
+      prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE', transferId: null, date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
     ]);
     let prevFixedExp = 0;
     let prevFixedInc = 0;
     // count fixed occurrences from earliest possible to endDateObj
-    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
     for (const fe of fixedExpensesAll) {
       const recStart = (fe.startDate ?? fe.date) as Date | null;
       const recEnd = (fe.endDate ?? null) as Date | null;
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
       const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), effectiveEnd || endDateObj);
       if (occurs > 0) prevFixedExp += Number(fe.amount || 0) * occurs;
     }
-    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
     for (const fi of fixedIncomesAll) {
       const recStart = (fi.startDate ?? fi.date) as Date | null;
       const recEnd = (fi.endDate ?? null) as Date | null;
@@ -151,12 +151,12 @@ export async function GET(req: NextRequest) {
   } else {
     // all time: aggregate VARIABLE and include full FIXED series
     const [allVarExpAgg, allVarIncAgg] = await Promise.all([
-      prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE' }, _sum: { amount: true } }),
-      prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE' }, _sum: { amount: true } }),
+      prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE', transferId: null }, _sum: { amount: true } }),
+      prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE', transferId: null }, _sum: { amount: true } }),
     ]);
     let allFixedExp = 0;
     let allFixedInc = 0;
-    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
     for (const fe of fixedExpensesAll) {
       const recStart = (fe.startDate ?? fe.date) as Date | null;
       const recEnd = (fe.endDate ?? null) as Date | null;
@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
       const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), new Date());
       if (occurs > 0) allFixedExp += Number(fe.amount || 0) * occurs;
     }
-    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
     for (const fi of fixedIncomesAll) {
       const recStart = (fi.startDate ?? fi.date) as Date | null;
       const recEnd = (fi.endDate ?? null) as Date | null;

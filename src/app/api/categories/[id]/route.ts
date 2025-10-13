@@ -28,6 +28,17 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
+    // Verificar se é a categoria de transferência (que não pode ser excluída)
+    const category = await prisma.category.findUnique({
+      where: { id: params.id, userId: user.id },
+    });
+
+    if (category && category.name === 'Transferência entre Contas' && category.type === 'BOTH') {
+      return NextResponse.json({ 
+        error: 'A categoria de transferência entre contas não pode ser excluída' 
+      }, { status: 400 });
+    }
+
     await prisma.category.delete({ where: { id: params.id, userId: user.id } as any });
     return NextResponse.json({ ok: true });
   } catch (e: any) {

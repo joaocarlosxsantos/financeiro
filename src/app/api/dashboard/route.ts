@@ -33,11 +33,21 @@ export async function GET(req: NextRequest) {
 
   const [expenses, incomes] = await Promise.all([
     prisma.expense.findMany({
-      where: { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter },
+      where: { 
+        user: { email: session.user.email }, 
+        transferId: null, // Excluir transferências
+        ...walletFilter, 
+        ...paymentTypeFilter 
+      },
       select: { amount: true },
     }),
     prisma.income.findMany({
-      where: { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter },
+      where: { 
+        user: { email: session.user.email }, 
+        transferId: null, // Excluir transferências
+        ...walletFilter, 
+        ...paymentTypeFilter 
+      },
       select: { amount: true },
     }),
   ]);

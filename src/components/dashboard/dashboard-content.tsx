@@ -69,6 +69,7 @@ import { getWalletColor } from './daily-wallet-chart';
 
 import QuickDespesaForm from '../quick-add/quick-despesa-form';
 import QuickRendaForm from '../quick-add/quick-renda-form';
+import QuickTransferForm from '../quick-add/quick-transfer-form';
 
 import OnboardingTour from '@/components/OnboardingTour';
 
@@ -77,7 +78,7 @@ export function DashboardContent() {
   const [saldoAcumulado, setSaldoAcumulado] = useState<number>(0);
   // Estado para modal de adição rápida e tabs
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [quickTab, setQuickTab] = useState<'despesa' | 'renda'>('despesa');
+  const [quickTab, setQuickTab] = useState<'despesa' | 'renda' | 'transferencia'>('despesa');
   const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance' | 'diff'>(null);
   // Estado para modal de visualização ampliada dos gráficos
   const [chartModal, setChartModal] = useState<
@@ -670,7 +671,7 @@ export function DashboardContent() {
             <button
               type="button"
               onClick={() => setQuickTab('despesa')}
-              className={`border rounded-md py-2 px-4 flex-1 transition-colors text-sm font-medium
+              className={`border rounded-md py-2 px-3 flex-1 transition-colors text-sm font-medium
                 ${
                   quickTab === 'despesa'
                     ? 'bg-primary text-white border-primary shadow'
@@ -683,7 +684,7 @@ export function DashboardContent() {
             <button
               type="button"
               onClick={() => setQuickTab('renda')}
-              className={`border rounded-md py-2 px-4 flex-1 transition-colors text-sm font-medium
+              className={`border rounded-md py-2 px-3 flex-1 transition-colors text-sm font-medium
                 ${
                   quickTab === 'renda'
                     ? 'bg-primary text-white border-primary shadow'
@@ -693,9 +694,28 @@ export function DashboardContent() {
             >
               Ganho
             </button>
+            <button
+              type="button"
+              onClick={() => setQuickTab('transferencia')}
+              className={`border rounded-md py-2 px-3 flex-1 transition-colors text-sm font-medium
+                ${
+                  quickTab === 'transferencia'
+                    ? 'bg-primary text-white border-primary shadow'
+                    : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                }
+              `}
+            >
+              Transferir
+            </button>
           </div>
           <div className="mt-4">
-            {quickTab === 'despesa' ? <QuickDespesaForm /> : <QuickRendaForm />}
+            {quickTab === 'despesa' ? (
+              <QuickDespesaForm />
+            ) : quickTab === 'renda' ? (
+              <QuickRendaForm />
+            ) : (
+              <QuickTransferForm onSuccess={handleQuickAddSuccess} />
+            )}
           </div>
         </div>
       </Modal>

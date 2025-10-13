@@ -36,6 +36,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Criar categoria padrão de transferência entre contas
+    await prisma.category.create({
+      data: {
+        name: 'Transferência entre Contas',
+        color: '#6B7280',
+        icon: '💸',
+        type: 'BOTH',
+        userId: user.id,
+      },
+    });
+
     return NextResponse.json(
       { message: 'Usuário criado com sucesso', userId: user.id },
       { status: 201 },

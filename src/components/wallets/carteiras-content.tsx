@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Trash2, Plus, Wallet as WalletIcon, ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
+import { Edit, Trash2, Plus, Wallet as WalletIcon, ArrowLeft, ArrowRight, Calendar, ArrowUpDown } from 'lucide-react';
 import { AlertTriangle, Building2, Gift, Banknote, Folder, TrendingUp } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Loader } from '@/components/ui/loader';
 import { useMonth } from '@/components/providers/month-provider';
+import { TransferModal } from '@/components/transfers/transfer-modal';
 
 interface Wallet {
   id: string;
@@ -32,6 +33,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
   const [activeTab, setActiveTab] = useState('todas');
 
   const [showForm, setShowForm] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [type, setType] = useState('BANK');
@@ -296,10 +298,16 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Carteira
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowTransferModal(true)}>
+            <ArrowUpDown className="h-4 w-4 mr-2" />
+            Transferir
+          </Button>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Carteira
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Resumo */}
@@ -515,6 +523,15 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
           </Button>
         </div>
       )}
+
+      {/* Modal de Transferência */}
+      <TransferModal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        onSuccess={() => {
+          load(); // Recarregar carteiras após transferência
+        }}
+      />
     </div>
   );
 }
