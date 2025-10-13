@@ -19,26 +19,26 @@ export function sanitizeHtml(input: string): string {
 }
 
 // Função para sanitizar objetos recursivamente
-export function sanitizeObject(obj: any): any {
+export function sanitizeObject<T = unknown>(obj: T): T {
   if (obj === null || obj === undefined) return obj;
-  
+
   if (typeof obj === 'string') {
-    return sanitizeHtml(obj);
+    return sanitizeHtml(obj) as T;
   }
-  
+
   if (Array.isArray(obj)) {
-    return obj.map(sanitizeObject);
+    return obj.map(sanitizeObject) as T;
   }
-  
+
   if (typeof obj === 'object') {
-    const sanitized: any = {};
-    for (const [key, value] of Object.entries(obj)) {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const cleanKey = sanitizeHtml(key);
       sanitized[cleanKey] = sanitizeObject(value);
     }
-    return sanitized;
+    return sanitized as T;
   }
-  
+
   return obj;
 }
 

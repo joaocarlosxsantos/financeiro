@@ -27,15 +27,3 @@ import {
   isBatchImportActive 
 } from '@/lib/notifications/batchContext';
 
-// Exemplo de uso do contexto
-export function exemploUso() {
-  const userId = 'user-123';
-  
-  console.log('Antes:', isBatchImportActive(userId)); // false
-  
-  startBatchImport(userId);
-  console.log('Durante:', isBatchImportActive(userId)); // true
-  
-  endBatchImport();
-  console.log('Depois:', isBatchImportActive(userId)); // false
-}

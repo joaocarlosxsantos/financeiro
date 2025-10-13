@@ -19,7 +19,7 @@ export async function processTransactionAlerts(userId: string, transactionType: 
       if (result.shouldNotify && result.notification) {
         // Para LOW_BALANCE, precisamos verificar carteira específica
         if (result.notification.type === NotificationType.LOW_BALANCE) {
-          const walletId = (result.notification.data as any)?.lowBalanceData?.walletId;
+          const walletId = (result.notification.data as { lowBalanceData?: { walletId?: string } })?.lowBalanceData?.walletId;
           
           if (walletId) {
             // Buscar notificações recentes desta carteira específica (últimas 24h)
@@ -35,8 +35,8 @@ export async function processTransactionAlerts(userId: string, transactionType: 
             });
 
             // Filtrar apenas notificações desta carteira específica
-            const walletNotifications = recentNotifications.filter((notif: any) => {
-              const notifData = notif.data as any;
+            const walletNotifications = recentNotifications.filter((notif: { data: unknown }) => {
+              const notifData = notif.data as { lowBalanceData?: { walletId?: string } };
               return notifData?.lowBalanceData?.walletId === walletId;
             });
 

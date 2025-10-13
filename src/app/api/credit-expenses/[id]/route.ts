@@ -201,8 +201,8 @@ export async function PUT(
           tx.creditBillItem.create({
             data: {
               creditExpenseId: creditExpense.id,
-              installmentNumber: installment.installmentNumber,
-              amount: installment.amount,
+              installmentNumber: installment.installment,
+              amount: installment.value,
               dueDate: installment.dueDate,
             },
           })

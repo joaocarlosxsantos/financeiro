@@ -3,15 +3,21 @@
  * Funções para calcular datas de vencimento, fechamento de faturas, etc.
  */
 
-interface CreditCard {
+export interface CreditCard {
   id: string;
-  closingDay: number;
+  name: string;
+  bankId?: string;
+  brand?: string;
+  limit?: number;
   dueDay: number;
+  closingDay: number;
+  paymentType?: string;
 }
 
-interface InstallmentInfo {
-  installmentNumber: number;
-  amount: number;
+export interface InstallmentInfo {
+  installment: number;
+  totalInstallments: number;
+  value: number;
   dueDate: Date;
 }
 
@@ -53,12 +59,12 @@ export function calculateInstallmentDates(
       : installmentAmount;
     
     installments.push({
-      installmentNumber: i + 1,
-      amount,
-      dueDate
+      installment: i + 1,
+      totalInstallments: installmentCount,
+      value: amount,
+      dueDate: dueDate
     });
   }
-  
   return installments;
 }
 
@@ -101,14 +107,15 @@ export function getBillPeriodForInstallment(
   installmentDueDate: Date
 ): { year: number; month: number } {
   // A parcela pertence à fatura do mês anterior ao vencimento
-  const billMonth = installmentDueDate.getMonth() - 1;
-  const billYear = billMonth < 0 
-    ? installmentDueDate.getFullYear() - 1 
-    : installmentDueDate.getFullYear();
-  
+  let billMonth = installmentDueDate.getMonth() - 1;
+  let billYear = installmentDueDate.getFullYear();
+  if (billMonth < 0) {
+    billYear -= 1;
+    billMonth = 11;
+  }
   return {
     year: billYear,
-    month: billMonth < 0 ? 11 : billMonth
+    month: billMonth
   };
 }
 
@@ -153,7 +160,6 @@ export function shouldCreateNewBill(
   currentDate: Date = new Date()
 ): boolean {
   const today = currentDate.getDate();
-  
   // Criar fatura se passamos do dia de fechamento
   return today > creditCard.closingDay;
 }
@@ -161,84 +167,37 @@ export function shouldCreateNewBill(
 /**
  * Obtém todas as datas de fechamento de faturas para um período
  */
-export function getBillClosingDatesForPeriod(
-  creditCard: CreditCard,
-  startDate: Date,
-  endDate: Date
-): Date[] {
-  const closingDates: Date[] = [];
-  const current = new Date(startDate);
-  
-  while (current <= endDate) {
-    const closingDate = calculateClosingDate(
-      creditCard,
-      current.getFullYear(),
-      current.getMonth()
-    );
-    
-    if (closingDate >= startDate && closingDate <= endDate) {
-      closingDates.push(new Date(closingDate));
-    }
-    
-    current.setMonth(current.getMonth() + 1);
-  }
-  
-  return closingDates;
-}
+type CreditBillItem = {
+  id: string;
+  amount: number;
+  dueDate: Date;
+  creditExpense: { creditCardId: string };
+};
 
-/**
- * Calcula o limite disponível de um cartão
- */
-export function calculateAvailableLimit(
-  cardLimit: number,
-  pendingAmount: number
-): number {
-  return Math.max(0, cardLimit - pendingAmount);
-}
+import type { PrismaClient } from '@prisma/client';
 
-/**
- * Calcula a porcentagem de uso do cartão
- */
-export function calculateUsagePercentage(
-  cardLimit: number,
-  usedAmount: number
-): number {
-  if (cardLimit === 0) return 0;
-  return Math.min(100, (usedAmount / cardLimit) * 100);
-}
-
-/**
- * Cria automaticamente as faturas necessárias para os períodos das parcelas
- * Deve ser chamada após criar um gasto de cartão
- */
 export async function createBillsForInstallments(
-  prisma: any,
+  prisma: PrismaClient,
   creditCard: CreditCard,
   installmentDates: InstallmentInfo[],
   userId: string
 ) {
   const billsToCreate: { year: number; month: number }[] = [];
-  
   // Determinar quais faturas precisam ser criadas usando a função correta
   for (const installment of installmentDates) {
     const billPeriod = getBillPeriodForInstallment(creditCard, installment.dueDate);
-    
     // Verificar se já não foi adicionado
     const exists = billsToCreate.some(
       bill => bill.year === billPeriod.year && bill.month === billPeriod.month
     );
-    
     if (!exists) {
       billsToCreate.push(billPeriod);
     }
   }
-  
   console.log(`🔍 Períodos de faturas a serem criadas:`, billsToCreate);
-  
   // Criar as faturas se não existirem
   for (const period of billsToCreate) {
     const closingDate = calculateClosingDate(creditCard, period.year, period.month);
-    
     // Verificar se a fatura já existe
     const existingBill = await prisma.creditBill.findFirst({
       where: {
@@ -246,10 +205,8 @@ export async function createBillsForInstallments(
         closingDate: closingDate,
       },
     });
-    
     if (!existingBill) {
       const dueDate = calculateDueDate(creditCard, period.year, period.month);
-      
       // Buscar todos os itens que devem entrar nesta fatura
       // Filtra por período de fechamento usando a mesma lógica
       const billItems = await prisma.creditBillItem.findMany({
@@ -260,18 +217,14 @@ export async function createBillsForInstallments(
           },
         },
       });
-      
       // Filtrar items que pertencem a este período de fechamento
-      const itemsForThisBill = billItems.filter((item: any) => {
+      const itemsForThisBill = billItems.filter((item: CreditBillItem) => {
         const itemBillPeriod = getBillPeriodForInstallment(creditCard, item.dueDate);
         return itemBillPeriod.year === period.year && itemBillPeriod.month === period.month;
       });
-      
       if (itemsForThisBill.length > 0) {
-        const totalAmount = itemsForThisBill.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
-        
+  const totalAmount = itemsForThisBill.reduce((sum: number, item: CreditBillItem) => sum + Number(item.amount), 0);
         console.log(`💰 Criando fatura para ${period.year}/${period.month + 1} com ${itemsForThisBill.length} itens e total R$ ${totalAmount}`);
-        
         // Criar a fatura
         const bill = await prisma.creditBill.create({
           data: {
@@ -284,19 +237,17 @@ export async function createBillsForInstallments(
             userId,
           },
         });
-        
         // Associar os itens à fatura
         await prisma.creditBillItem.updateMany({
           where: {
             id: {
-              in: itemsForThisBill.map((item: any) => item.id),
+              in: itemsForThisBill.map((item: CreditBillItem) => item.id),
             },
           },
           data: {
             billId: bill.id,
           },
         });
-        
         console.log(`✅ Fatura criada automaticamente: ${bill.id} para período ${period.year}/${period.month + 1}`);
       } else {
         console.log(`ℹ️ Nenhum item encontrado para o período ${period.year}/${period.month + 1}`);

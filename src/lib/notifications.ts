@@ -10,7 +10,7 @@ export interface NotificationData {
     label: string;
     url: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -175,9 +175,10 @@ export const NotificationTemplates = {
 export function sendTemplatedNotification(
   userId: string, 
   template: keyof typeof NotificationTemplates,
-  ...args: any[]
+  ...args: unknown[]
 ) {
-  const notificationData = (NotificationTemplates[template] as any)(...args);
+  const fn = NotificationTemplates[template] as (...args: unknown[]) => NotificationData;
+  const notificationData = fn(...args);
   return sendRealtimeNotification(userId, notificationData);
 }
 
@@ -187,8 +188,9 @@ export function sendTemplatedNotification(
 export function sendTemplatedAlert(
   userId: string, 
   template: keyof typeof NotificationTemplates,
-  ...args: any[]
+  ...args: unknown[]
 ) {
-  const alertData = (NotificationTemplates[template] as any)(...args);
+  const fn = NotificationTemplates[template] as (...args: unknown[]) => NotificationData;
+  const alertData = fn(...args);
   return sendRealtimeAlert(userId, alertData);
 }
