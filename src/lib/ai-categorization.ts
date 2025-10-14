@@ -79,20 +79,20 @@ function normalizeDescription(description: string): string {
     .toLowerCase()
     .replace(/\*/g, '') // Remove asteriscos
     .replace(/\s+/g, ' ') // Normaliza espaços
-    .replace(/[^\w\s\-]/g, ' ') // Remove caracteres especiais exceto hífen
+    .replace(/[^\w\s\-]/g, ' ') // Remove caracteres especiais exceto hífen  
     .trim();
   
-  // Remove sufixos de localização comuns (bh, sp, rj, mg, etc.)
-  const locationSuffixes = [
-    /\s+(bh|sp|rj|mg|go|df|pr|sc|rs|pe|ba|ce|pb|al|se|pi|ma|ap|ac|ro|rr|am|pa|to)(\s+\w+)*$/i,
-    /\s+\d{5}[-\s]?\d{3}$/i, // CEP
-    /\s+(centro|shopping|mall|plaza|outlet)(\s+\w+)*$/i,
-    /\s+(norte|sul|leste|oeste|centro)(\s+\w+)*$/i,
-    /\s+(ltda|me|eireli|s\.a\.|sa)$/i // Sufixos empresariais
+  // Remove sufixos empresariais e códigos desnecessários
+  const noisePattterns = [
+    /\s+(ltda|me|eireli|s\.a\.|sa|epp)$/i,
+    /\s+\d{4,}$/i, // Remove códigos longos no final
+    /\s+(bh|sp|rj|mg|go|df|pr|sc|rs|pe|ba|ce|pb|al|se|pi|ma|ap|ac|ro|rr|am|pa|to)$/i,
+    /\s+(centro|shopping|mall|plaza|outlet)$/i,
+    /\s+(norte|sul|leste|oeste)$/i
   ];
   
-  for (const suffix of locationSuffixes) {
-    normalized = normalized.replace(suffix, '').trim();
+  for (const pattern of noisePattterns) {
+    normalized = normalized.replace(pattern, '').trim();
   }
   
   return normalized;
@@ -108,54 +108,84 @@ function extractMerchantInfo(description: string): {
 } {
   const desc = description.toLowerCase();
   
-  // Padrões para extrair informações
-  const patterns = {
-    // Compras com cartão
-    cardPurchase: /(?:compra|compras)\s+(?:débito|debito|crédito|credito|cartão|cartao)\s*[-:]?\s*(.+)$/i,
-    // PIX/Transferências
-    pix: /pix\s+(?:para|de|enviado|recebido)?\s*[-:]?\s*(.+)$/i,
-    // Estabelecimentos conhecidos
-    establishments: {
-      'uber': { category: 'Transporte', type: 'ride_sharing' },
-      '99': { category: 'Transporte', type: 'ride_sharing' },
-      'ifood': { category: 'Alimentação', type: 'food_delivery' },
-      'mercado livre': { category: 'Compras Online', type: 'marketplace' },
-      'amazon': { category: 'Compras Online', type: 'marketplace' },
-      'netflix': { category: 'Assinaturas', type: 'streaming' },
-      'spotify': { category: 'Assinaturas', type: 'music' },
-      'nubank': { category: 'Serviços Bancários', type: 'bank' },
-      'pagseguro': { category: 'Pagamentos', type: 'payment_service' },
-      'mercado': { category: 'Supermercado', type: 'grocery' },
-      'farmacia': { category: 'Saúde', type: 'pharmacy' },
-      'posto': { category: 'Combustível', type: 'gas_station' }
-    }
+  // Estabelecimentos conhecidos do dia a dia
+  const knownEstablishments = {
+    // Transporte
+    'uber': 'Transporte',
+    '99pop': 'Transporte', 
+    '99': 'Transporte',
+    'taxi': 'Transporte',
+    
+    // Delivery de comida
+    'ifood': 'Alimentação',
+    'uber eats': 'Alimentação',
+    'rappi': 'Alimentação',
+    
+    // Supermercados
+    'carrefour': 'Supermercado',
+    'pao de acucar': 'Supermercado',
+    'extra': 'Supermercado',
+    'big': 'Supermercado',
+    'atacadao': 'Supermercado',
+    'walmart': 'Supermercado',
+    'gbarbosa': 'Supermercado',
+    
+    // Streaming/Assinaturas
+    'netflix': 'Assinaturas',
+    'spotify': 'Assinaturas',
+    'amazon prime': 'Assinaturas',
+    'disney': 'Assinaturas',
+    'youtube': 'Assinaturas',
+    
+    // Marketplace
+    'mercado livre': 'Compras Online',
+    'amazon': 'Compras Online',
+    'magazine': 'Compras Online',
+    'americanas': 'Compras Online',
+    
+    // Farmácias
+    'drogasil': 'Saúde',
+    'pacheco': 'Saúde',
+    'raia': 'Saúde',
+    'droga raia': 'Saúde',
+    'farmacia': 'Saúde',
+    'drogaria': 'Saúde'
   };
   
   // Verifica estabelecimentos conhecidos
-  for (const [key, info] of Object.entries(patterns.establishments)) {
-    if (desc.includes(key)) {
+  for (const [establishment, category] of Object.entries(knownEstablishments)) {
+    if (desc.includes(establishment)) {
       return {
-        merchant: key.charAt(0).toUpperCase() + key.slice(1),
-        category_hint: info.category
+        merchant: establishment.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' '),
+        category_hint: category
       };
     }
   }
   
-  // Extrai merchant de compras com cartão
-  const cardMatch = description.match(patterns.cardPurchase);
-  if (cardMatch) {
-    const merchant = cardMatch[1].trim();
+  // PIX - mantém simples, só o nome da pessoa
+  if (desc.includes('pix')) {
+    const pixPatterns = [
+      /pix\s+(?:para|enviado|de|recebido)?\s*[-:]?\s*([a-zA-Z\s]+)/i,
+      /transferencia\s+pix\s*[-:]?\s*([a-zA-Z\s]+)/i
+    ];
+    
+    for (const pattern of pixPatterns) {
+      const match = description.match(pattern);
+      if (match) {
+        const name = match[1].trim().split(' ').slice(0, 2).join(' '); // Máximo 2 palavras
+        if (name.length > 2 && !name.includes('*')) {
+          return {
+            merchant: `PIX - ${formatPersonName(name)}`,
+            category_hint: 'Transferência'
+          };
+        }
+      }
+    }
+    
     return {
-      merchant: formatMerchantName(merchant),
-      category_hint: 'Compras'
-    };
-  }
-  
-  // Extrai informações de PIX
-  const pixMatch = description.match(patterns.pix);
-  if (pixMatch) {
-    return {
-      merchant: formatMerchantName(pixMatch[1].trim()),
+      merchant: 'PIX',
       category_hint: 'Transferência'
     };
   }
@@ -181,44 +211,55 @@ function formatMerchantName(name: string): string {
 }
 
 /**
- * Melhora a descrição da transação
+ * Formata nome de pessoa para PIX
+ */
+function formatPersonName(name: string): string {
+  if (!name) return '';
+  
+  // Remove caracteres especiais e números
+  name = name.replace(/[^a-zA-Z\s]/g, '').trim();
+  
+  // Capitaliza apenas a primeira letra de cada palavra
+  return name
+    .split(' ')
+    .filter(word => word.length > 1) // Remove palavras muito curtas
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .trim();
+}
+
+/**
+ * Melhora a descrição da transação - mantém simples e limpa
  */
 function enhanceDescription(originalDesc: string, merchantInfo: any): string {
   if (!originalDesc) return 'Transação';
   
-  // Se temos informações do comerciante, usa elas
+  // Se temos informações do comerciante, usa elas (já formatado)
   if (merchantInfo.merchant) {
     return merchantInfo.merchant;
   }
   
-  // Melhora descrições genéricas
-  const improvements: Record<string, string> = {
-    'pix': 'Transferência PIX',
-    'ted': 'Transferência TED',
-    'doc': 'Transferência DOC',
-    'saque': 'Saque em Dinheiro',
-    'deposito': 'Depósito',
-    'tarifa': 'Tarifa Bancária',
-    'juros': 'Juros',
-    'rendimento': 'Rendimento de Investimento',
-    'fgts': 'FGTS',
-    'salario': 'Salário',
-    'aposentadoria': 'Aposentadoria',
-    'pensao': 'Pensão'
-  };
-  
   const desc = originalDesc.toLowerCase();
-  for (const [key, improvement] of Object.entries(improvements)) {
-    if (desc.includes(key)) {
-      return improvement;
-    }
+  
+  // Apenas melhora casos muito específicos e básicos
+  if (desc.includes('saque')) return 'Saque';
+  if (desc.includes('deposito')) return 'Depósito';
+  if (desc.includes('tarifa')) return 'Tarifa Bancária';
+  if (desc.includes('rendimento')) return 'Rendimento';
+  if (desc.includes('salario')) return 'Salário';
+  if (desc.includes('ted')) return 'TED';
+  if (desc.includes('doc')) return 'DOC';
+  
+  // Caso contrário, retorna a descrição original sem modificações excessivas
+  // Remove apenas códigos numéricos longos no final
+  let cleaned = originalDesc.replace(/\s+\d{6,}$/g, '').trim();
+  
+  // Se ficou muito curto, retorna a original
+  if (cleaned.length < 3) {
+    cleaned = originalDesc;
   }
   
-  // Se não encontrou melhoria, capitaliza a original
-  return originalDesc
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+  return cleaned;
 }
 
 /**
@@ -231,36 +272,28 @@ function suggestCategoryFromDescription(
 ): CategorySuggestion {
   const desc = description.toLowerCase();
   
-  // Mapeamento inteligente de categorias
+  // Mapeamento simplificado e prático de categorias do dia a dia
   const categoryMappings = {
     // Despesas
     EXPENSE: {
-      'alimentação': ['comida', 'restaurante', 'lanchonete', 'ifood', 'uber eats', 'bar', 'padaria', 'pizza', 'burguer', 'lanche', 'refeição', 'jantar', 'almoço'],
-      'supermercado': ['mercado', 'supermercado', 'supermercados', 'carrefour', 'pão de açúcar', 'extra', 'compras', 'feira', 'hipermercado', 'atacadista', 'walmart', 'big', 'gbarbosa', 'bh supermercados', 'super', 'atacadão', 'sam club', 'hortifruti', 'açougue', 'verdurão'],
-      'transporte': ['uber', '99', 'taxi', 'combustível', 'posto', 'gasolina', 'passagem', 'onibus', 'metro'],
-      'saúde': ['farmácia', 'drogaria', 'hospital', 'médico', 'dentista', 'consulta', 'exame', 'remedio'],
-      'educação': ['escola', 'faculdade', 'curso', 'livro', 'educação', 'universidade', 'material'],
-      'lazer': ['cinema', 'teatro', 'parque', 'show', 'evento', 'diversão', 'passeio', 'viagem'],
-      'tecnologia': ['google', 'apple', 'microsoft', 'amazon', 'software', 'app', 'celular', 'computador'],
-      'assinaturas': ['netflix', 'spotify', 'amazon prime', 'disney+', 'assinatura', 'mensalidade'],
-      'casa': ['aluguel', 'condomínio', 'luz', 'água', 'gás', 'internet', 'telefone', 'energia', 'conta'],
-      'roupas': ['roupa', 'calçado', 'sapato', 'tênis', 'camisa', 'vestido', 'blusa', 'calça'],
-      'investimentos': ['aplicação', 'investimento', 'tesouro', 'ações', 'fundo', 'poupança'],
-      'impostos': ['imposto', 'iptu', 'ipva', 'ir', 'taxa', 'governo'],
-      'cartão de crédito': ['fatura', 'cartão', 'crédito', 'mastercard', 'visa'],
-      'transferência': ['pix', 'ted', 'doc', 'transferência', 'envio'],
-      'serviços': ['banco', 'tarifa', 'serviço', 'manutenção', 'reparo'],
+      'supermercado': ['mercado', 'supermercado', 'carrefour', 'extra', 'big', 'atacadao', 'walmart', 'gbarbosa', 'pao de acucar', 'feira', 'hortifruti', 'acougue'],
+      'alimentação': ['ifood', 'uber eats', 'rappi', 'restaurante', 'lanchonete', 'bar', 'padaria', 'pizza', 'burguer', 'mcdonald', 'subway', 'bk'],
+      'transporte': ['uber', '99', '99pop', 'taxi', 'posto', 'gasolina', 'combustivel', 'shell', 'petrobras', 'ipiranga'],
+      'farmácia': ['farmacia', 'drogaria', 'drogasil', 'pacheco', 'raia', 'droga raia', 'remedio'],
+      'assinaturas': ['netflix', 'spotify', 'amazon prime', 'disney', 'youtube', 'globoplay', 'paramount'],
+      'casa': ['aluguel', 'condominio', 'luz', 'energia', 'cemig', 'copasa', 'agua', 'gas', 'internet', 'vivo', 'claro', 'tim', 'oi'],
+      'transferência': ['pix', 'ted', 'doc', 'transferencia'],
+      'compras online': ['mercado livre', 'amazon', 'magazine', 'americanas', 'casas bahia', 'extra.com'],
+      'cartão de crédito': ['fatura', 'nubank', 'inter', 'itau', 'bradesco', 'santander', 'bb'],
       'outros': []
     },
     // Receitas
     INCOME: {
-      'salário': ['salário', 'salario', 'ordenado', 'pagamento', 'trabalho', 'empresa'],
-      'freelance': ['freelance', 'freela', 'trabalho extra', 'projeto', 'consultoria'],
-      'vendas': ['venda', 'vendas', 'mercado livre', 'produto', 'cliente'],
-      'investimentos': ['rendimento', 'dividendos', 'juros', 'aplicação', 'lucro', 'ganho'],
-      'benefícios': ['fgts', 'pis', 'auxílio', 'benefício', 'governo', 'seguro'],
-      'aposentadoria': ['aposentadoria', 'pensão', 'inss', 'previdência'],
-      'transferência': ['pix', 'ted', 'doc', 'transferência', 'recebimento'],
+      'salário': ['salario', 'salário', 'pagamento', 'empresa', 'trabalho'],
+      'transferência': ['pix', 'ted', 'doc', 'transferencia', 'recebimento'],
+      'vendas': ['venda', 'mercado livre', 'vendas'],
+      'investimentos': ['rendimento', 'dividendos', 'juros', 'aplicacao'],
+      'benefícios': ['fgts', 'pis', 'auxilio', 'inss'],
       'outros': []
     }
   };
@@ -304,54 +337,22 @@ function suggestCategoryFromDescription(
  * Calcula a confiança da categoria baseada nas palavras-chave
  */
 function calculateCategoryConfidence(description: string, keywords: string[]): number {
-  if (keywords.length === 0) return 0.5; // Confiança padrão para "outros"
+  if (keywords.length === 0) return 0.4;
   
-  let matches = 0;
-  let totalScore = 0;
-  let partialMatches = 0;
+  const desc = description.toLowerCase();
+  let maxScore = 0;
   
   for (const keyword of keywords) {
     const keywordLower = keyword.toLowerCase();
     
-    // Match exato (pontuação completa)
-    if (description.includes(keywordLower)) {
-      matches++;
-      totalScore += Math.min(keyword.length / 3, 3.0); // Pontuação aumentada para matches exatos
-    }
-    // Match parcial (palavra contém ou é contida)
-    else {
-      // Verifica se alguma palavra da descrição contém a keyword ou vice-versa
-      const descWords = description.split(/\s+/);
-      for (const word of descWords) {
-        if (word.length >= 3 && keywordLower.length >= 3) {
-          // Palavra da descrição contém keyword (ex: "supermercados" contém "mercado")
-          if (word.includes(keywordLower) || keywordLower.includes(word)) {
-            partialMatches++;
-            totalScore += Math.min(keyword.length / 6, 1.5); // Metade da pontuação para matches parciais
-            break;
-          }
-          // Similaridade por início de palavra (ex: "super" matches "supermercado")
-          if (word.startsWith(keywordLower.substring(0, Math.min(4, keywordLower.length))) ||
-              keywordLower.startsWith(word.substring(0, Math.min(4, word.length)))) {
-            partialMatches++;
-            totalScore += Math.min(keyword.length / 8, 1.0); // Pontuação menor para matches de prefixo
-            break;
-          }
-        }
-      }
+    // Match exato = alta confiança
+    if (desc.includes(keywordLower)) {
+      maxScore = Math.max(maxScore, 0.9);
     }
   }
   
-  const totalMatches = matches + (partialMatches * 0.5); // Matches parciais valem metade
-  
-  if (totalMatches === 0) return 0.3; // Confiança mínima mais alta
-  
-  // Fórmula melhorada: prioriza matches exatos, mas considera parciais
-  const matchRatio = totalMatches / Math.min(keywords.length, 8); // Permite mais palavras-chave
-  const scoreBonus = totalScore / Math.max(totalMatches, 1);
-  const confidence = Math.min(matchRatio * 0.6 + scoreBonus * 0.4 + 0.2, 1.0);
-  
-  return Math.max(confidence, 0.3);
+  // Se não encontrou correspondência, baixa confiança
+  return maxScore > 0 ? maxScore : 0.4;
 }
 
 /**
@@ -391,28 +392,24 @@ function findSimilarCategory(
 }
 
 /**
- * Sugere tags baseadas no contexto
+ * Sugere tags apenas para casos esporádicos específicos
  */
 function suggestTags(description: string, merchantInfo: any): string[] {
   const tags: string[] = [];
   const desc = description.toLowerCase();
   
-  // Tags baseadas no método de pagamento
-  if (desc.includes('pix')) tags.push('PIX');
-  if (desc.includes('cartão') || desc.includes('cartao')) tags.push('Cartão');
-  if (desc.includes('dinheiro')) tags.push('Dinheiro');
+  // Tags apenas para situações específicas e esporádicas
+  if (desc.includes('emergencia') || desc.includes('urgente')) tags.push('Emergência');
+  if (desc.includes('viagem') || desc.includes('turismo')) tags.push('Viagem');
+  if (desc.includes('presente') || desc.includes('gift')) tags.push('Presente');
+  if (desc.includes('desconto') || desc.includes('promocao')) tags.push('Promoção');
+  if (desc.includes('parcelado') || desc.includes('parcela')) tags.push('Parcelado');
+  if (desc.includes('bonus') || desc.includes('premiacao')) tags.push('Bônus');
+  if (desc.includes('reembolso') || desc.includes('devolucao')) tags.push('Reembolso');
+  if (desc.includes('multa') || desc.includes('juros')) tags.push('Multa/Juros');
   
-  // Tags baseadas no tipo de estabelecimento
-  if (merchantInfo.merchant) {
-    tags.push(merchantInfo.merchant);
-  }
-  
-  // Tags baseadas em contexto
-  if (desc.includes('online')) tags.push('Online');
-  if (desc.includes('delivery')) tags.push('Delivery');
-  if (desc.includes('mensalidade') || desc.includes('assinatura')) tags.push('Recorrente');
-  
-  return tags.slice(0, 3); // Limita a 3 tags
+  // Máximo 2 tags para não poluir
+  return tags.slice(0, 2);
 }
 
 /**
@@ -420,26 +417,19 @@ function suggestTags(description: string, merchantInfo: any): string[] {
  */
 function getCategoryColor(categoryName: string): string {
   const colorMap: Record<string, string> = {
-    'alimentação': '#EF4444',
     'supermercado': '#10B981',
+    'alimentação': '#EF4444', 
     'transporte': '#3B82F6',
-    'saúde': '#EF4444',
-    'educação': '#8B5CF6',
-    'lazer': '#F59E0B',
-    'tecnologia': '#06B6D4',
+    'farmácia': '#EC4899',
     'assinaturas': '#8B5CF6',
     'casa': '#84CC16',
-    'roupas': '#EC4899',
-    'investimentos': '#10B981',
-    'impostos': '#EF4444',
-    'cartão de crédito': '#F97316',
     'transferência': '#6B7280',
-    'serviços': '#6B7280',
+    'compras online': '#F59E0B',
+    'cartão de crédito': '#F97316',
     'salário': '#10B981',
-    'freelance': '#3B82F6',
     'vendas': '#F59E0B',
+    'investimentos': '#10B981',
     'benefícios': '#8B5CF6',
-    'aposentadoria': '#10B981',
     'outros': '#6B7280'
   };
   

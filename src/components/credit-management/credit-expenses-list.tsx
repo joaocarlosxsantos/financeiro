@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Loader2, Edit, Trash2, CreditCard, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Loader2, Edit, Trash2, CreditCard, RotateCcw, AlertTriangle, Plus, X, Check } from 'lucide-react';
 import RefundDialog from './refund-dialog';
 import { Modal } from '../ui/modal';
 
@@ -57,13 +59,22 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
   // Estados para o diálogo de estorno
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [selectedExpenseForRefund, setSelectedExpenseForRefund] = useState<CreditExpense | null>(null);
+  
+  // Estados para criação de categorias e tags
+  const [categories, setCategories] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [showTagForm, setShowTagForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newTagName, setNewTagName] = useState('');
 
   useEffect(() => {
-    const loadExpenses = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        // Carregar gastos
         let url = '/api/credit-expenses';
         
         // Se uma data específica for fornecida, filtra por mês
@@ -75,30 +86,41 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
           url += `?start=${startDate}&end=${endDate}`;
         }
 
-        const response = await fetch(url);
+        const [expensesRes, categoriesRes, tagsRes] = await Promise.all([
+          fetch(url),
+          fetch('/api/categories'),
+          fetch('/api/tags')
+        ]);
       
-      if (!response.ok) {
-        console.error('❌ Erro HTTP:', response.status, response.statusText);
-        throw new Error('Erro ao carregar gastos de crédito');
+        if (!expensesRes.ok) {
+          console.error('❌ Erro HTTP:', expensesRes.status, expensesRes.statusText);
+          throw new Error('Erro ao carregar gastos de crédito');
+        }
+
+        const expensesData = await expensesRes.json();
+        const expenses = expensesData.data || expensesData;
+        setExpenses(Array.isArray(expenses) ? expenses : []);
+
+        // Carregar categorias e tags se as requisições foram bem-sucedidas
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          setCategories(categoriesData);
+        }
+        
+        if (tagsRes.ok) {
+          const tagsData = await tagsRes.json();
+          setTags(tagsData);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        setError(error instanceof Error ? error.message : 'Erro desconhecido');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      
-      // A API retorna { data: [...], pagination: {...} }
-      const expenses = data.data || data;
-      setExpenses(Array.isArray(expenses) ? expenses : []);
-    } catch (error) {
-      console.error('Erro ao carregar gastos:', error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
-  };
-    
-    loadExpenses();
-  }, [currentDate, reloadKey]);
-
-  const reloadExpenses = () => {
+    loadData();
+  }, [currentDate, reloadKey]);  const reloadExpenses = () => {
     setReloadKey(prev => prev + 1);
   };
 
@@ -162,6 +184,56 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
 
   const deletingExpense = confirmingDelete ? expenses.find((e) => e.id === confirmingDelete) : null;
 
+  // Funções para criar categoria e tag
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCategoryName.trim(),
+          type: 'EXPENSE',
+          color: 'var(--c-3b82f6)'
+        })
+      });
+
+      if (response.ok) {
+        const newCategory = await response.json();
+        setCategories(prev => [...prev, newCategory]);
+        setNewCategoryName('');
+        setShowCategoryForm(false);
+      }
+    } catch (error) {
+      console.error('Erro ao criar categoria:', error);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) return;
+    
+    try {
+      const response = await fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newTagName.trim(),
+          color: 'var(--c-6b7280)'
+        })
+      });
+
+      if (response.ok) {
+        const newTag = await response.json();
+        setTags(prev => [...prev, newTag]);
+        setNewTagName('');
+        setShowTagForm(false);
+      }
+    } catch (error) {
+      console.error('Erro ao criar tag:', error);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -170,7 +242,15 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR');
+    const dateObj = new Date(date);
+    return dateObj.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
   if (loading) {
@@ -221,105 +301,242 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-muted bg-background">
+      {/* Seção de criação rápida de categorias e tags */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-dashed border-muted-foreground/30">
+        {/* Criar categoria */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-medium text-muted-foreground">Criar Nova Categoria</Label>
+            <span className="text-xs text-muted-foreground">
+              {categories.filter(cat => cat.type === 'EXPENSE' || cat.type === 'BOTH').length} disponíveis
+            </span>
+          </div>
+          {!showCategoryForm ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCategoryForm(true)}
+              className="w-full justify-start"
+            >
+              <Plus className="h-3 w-3 mr-2" />
+              Nova Categoria de Despesa
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nome da categoria"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="text-xs h-8"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateCategory()}
+              />
+              <Button size="sm" onClick={handleCreateCategory} className="h-8 w-8 p-0">
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  setShowCategoryForm(false);
+                  setNewCategoryName('');
+                }}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Criar tag */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-medium text-muted-foreground">Criar Nova Tag</Label>
+            <span className="text-xs text-muted-foreground">
+              {tags.length} disponíveis
+            </span>
+          </div>
+          {!showTagForm ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTagForm(true)}
+              className="w-full justify-start"
+            >
+              <Plus className="h-3 w-3 mr-2" />
+              Nova Tag
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nome da tag"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                className="text-xs h-8"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateTag()}
+              />
+              <Button size="sm" onClick={handleCreateTag} className="h-8 w-8 p-0">
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  setShowTagForm(false);
+                  setNewTagName('');
+                }}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border border-muted bg-background shadow-sm">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="bg-muted text-muted-foreground">
-              <th className="px-3 py-2 text-left font-semibold">Descrição</th>
-              <th className="px-3 py-2 text-right font-semibold">Valor</th>
-              <th className="px-3 py-2 text-center font-semibold">Parcelas</th>
-              <th className="px-3 py-2 text-center font-semibold">Data</th>
-              <th className="px-3 py-2 text-center font-semibold">Cartão</th>
-              <th className="px-3 py-2 text-center font-semibold">Categoria</th>
-              <th className="px-3 py-2 text-center font-semibold">Tags</th>
-              <th className="px-3 py-2 text-center font-semibold">Ações</th>
+            <tr className="bg-muted/60 text-muted-foreground border-b">
+              <th className="px-4 py-3 text-left font-semibold min-w-[200px]">Descrição</th>
+              <th className="px-4 py-3 text-right font-semibold min-w-[120px]">Valor</th>
+              <th className="px-4 py-3 text-center font-semibold min-w-[100px]">Parcelas</th>
+              <th className="px-4 py-3 text-center font-semibold min-w-[160px]">Data/Hora</th>
+              <th className="px-4 py-3 text-center font-semibold min-w-[120px]">Cartão</th>
+              <th className="px-4 py-3 text-center font-semibold min-w-[130px]">Categoria</th>
+              <th className="px-4 py-3 text-center font-semibold min-w-[150px]">Tags</th>
+              <th className="px-4 py-3 text-center font-semibold min-w-[120px]">Ações</th>
             </tr>
           </thead>
           <tbody>
             {(expenses || []).map((expense) => (
-              <tr key={expense.id} className="border-b hover:bg-accent transition-colors">
-                <td className="px-3 py-2 max-w-xs truncate">{expense.description}</td>
-                <td className="px-3 py-2 text-right font-semibold">
-                  <div className="flex items-center justify-end gap-2">
-                    <span className={expense.type === 'REFUND' ? 'text-green-600' : 'text-red-600'}>
-                      {formatCurrency(expense.amount)}
-                    </span>
-                    {expense.type === 'REFUND' && (
-                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                        ESTORNO
-                      </Badge>
-                    )}
-                    {expense.tags?.some(tag => 
-                      typeof tag === 'string' 
-                        ? tag.includes('refunded') 
-                        : false
-                    ) && expense.type !== 'REFUND' && (
-                      <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
-                        ESTORNADO
-                      </Badge>
-                    )}
+              <tr key={expense.id} className="border-b hover:bg-accent/50 transition-colors">
+                <td className="px-4 py-3">
+                  <div className="font-medium text-foreground truncate max-w-[200px]" title={expense.description}>
+                    {expense.description}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    ID: {expense.id.slice(-8)}
                   </div>
                 </td>
-                <td className="px-3 py-2 text-center">
-                  <Badge variant="outline" className="text-xs">
-                    {expense.installments}x de {formatCurrency(expense.amount / expense.installments)}
-                  </Badge>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`font-semibold ${expense.type === 'REFUND' ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(expense.amount)}
+                    </span>
+                    <div className="flex gap-1">
+                      {expense.type === 'REFUND' && (
+                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                          ESTORNO
+                        </Badge>
+                      )}
+                      {expense.tags?.some(tag => 
+                        typeof tag === 'string' 
+                          ? tag.includes('refunded') 
+                          : false
+                      ) && expense.type !== 'REFUND' && (
+                        <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                          ESTORNADO
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </td>
-                <td className="px-3 py-2 text-center">
-                  {formatDate(expense.purchaseDate)}
+                <td className="px-4 py-3 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <Badge variant="outline" className="text-xs font-medium">
+                      {expense.installments}x
+                    </Badge>
+                    <div className="text-xs text-muted-foreground">
+                      {formatCurrency(expense.amount / expense.installments)}
+                    </div>
+                  </div>
                 </td>
-                <td className="px-3 py-2 text-center">
-                  <Badge variant="secondary" className="text-xs">
+                <td className="px-4 py-3 text-center">
+                  <div className="text-xs font-mono">
+                    {formatDate(expense.purchaseDate)}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <Badge variant="secondary" className="text-xs font-medium">
                     {expense.creditCard.name}
                   </Badge>
                 </td>
-                <td className="px-3 py-2 text-center">
-                  {expense.category ? (
-                    <Badge variant="outline" className="text-xs">
-                      {expense.category.name}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
+                <td className="px-4 py-3 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    {expense.category ? (
+                      <Badge variant="outline" className="text-xs font-medium">
+                        {expense.category.name}
+                      </Badge>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-muted-foreground">Sem categoria</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => setShowCategoryForm(true)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </td>
-                <td className="px-3 py-2 text-center">
-                  {expense.tags && expense.tags.length > 0 ? (
-                    <div className="flex items-center justify-center gap-1 flex-wrap">
-                      {expense.tags.map((tag: any, index: number) => {
-                        const tagKey = typeof tag === 'string' ? tag : (tag?.id || `tag-${index}`);
-                        const tagName = typeof tag === 'string' ? tag : (tag?.name || 'Tag sem nome');
-                        
-                        return (
-                          <span
-                            key={tagKey}
-                            className="inline-block px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-                          >
-                            {tagName}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
+                <td className="px-4 py-3 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    {expense.tags && expense.tags.length > 0 ? (
+                      <div className="flex items-center justify-center gap-1 flex-wrap max-w-[140px]">
+                        {expense.tags.map((tag: any, index: number) => {
+                          const tagKey = typeof tag === 'string' ? tag : (tag?.id || `tag-${index}`);
+                          const tagName = typeof tag === 'string' ? tag : (tag?.name || 'Tag sem nome');
+                          
+                          return (
+                            <Badge
+                              key={tagKey}
+                              variant="secondary"
+                              className="text-xs px-2 py-0.5"
+                            >
+                              {tagName}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-muted-foreground">Sem tags</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => setShowTagForm(true)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </td>
-                <td className="px-3 py-2 text-center">
+                <td className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-1">
                     {expense.type !== 'REFUND' && (
                       <Button 
-                        size="icon" 
+                        size="sm" 
                         variant="ghost" 
                         onClick={() => handleRefundClick(expense)}
                         title="Estornar compra"
                         disabled={expense.tags?.some(tag => 
                           typeof tag === 'string' && tag.includes('refunded_full')
                         )}
+                        className="h-8 w-8 p-0"
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <RotateCcw className="h-3 w-3" />
                       </Button>
                     )}
                     <Button 
-                      size="icon" 
+                      size="sm" 
                       variant="ghost" 
                       onClick={() => {
                         if (onEdit) {
@@ -328,15 +545,19 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                           alert('Funcionalidade de edição não configurada');
                         }
                       }}
+                      title="Editar gasto"
+                      className="h-8 w-8 p-0"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                     <Button 
-                      size="icon" 
+                      size="sm" 
                       variant="ghost" 
                       onClick={() => deleteExpense(expense.id)}
+                      title="Excluir gasto"
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </td>

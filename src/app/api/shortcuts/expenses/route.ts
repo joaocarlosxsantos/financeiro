@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       description: z.string().min(1, 'Descrição é obrigatória'),
       amount: z.number().positive('Valor deve ser positivo'),
       date: z.string().optional(),
-      type: z.enum(['FIXED', 'VARIABLE']),
+      type: z.enum(['RECURRING', 'PUNCTUAL']),
       isFixed: z.boolean().optional(),
       startDate: z.string().optional().nullable(),
       endDate: z.string().optional().nullable(),

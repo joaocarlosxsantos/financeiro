@@ -15,10 +15,13 @@ export async function POST(req: NextRequest) {
     valor: number; 
     categoriaId?: string; 
     categoriaSugerida?: string; 
+    categoriaRecomendada?: string; // Categoria sugerida pela IA
+    shouldCreateCategory?: boolean; // Se deve criar a categoria recomendada
+    tagsRecomendadas?: string[]; // Tags sugeridas pela IA
     descricao?: string; 
     descricaoSimplificada?: string; 
     isSaldoInicial?: boolean;
-    tags?: string[]; // Suporte para múltiplas tags
+    tags?: string[]; // Tags selecionadas pelo usuário ou recomendadas pela IA
   };
   if (!Array.isArray(registros) || !carteiraId) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
@@ -64,19 +67,33 @@ export async function POST(req: NextRequest) {
     categoriasCache[key] = saldoCategoria;
   }
 
-  // Para criar novas categorias em lote
+  // Para criar novas categorias e tags em lote
   const novasCategorias: { name: string; type: 'INCOME' | 'EXPENSE' }[] = [];
+  const novasTags: string[] = [];
+  
   const registrosAtualizados = registros.map((reg) => {
     const tipo: 'INCOME' | 'EXPENSE' = reg.valor > 0 ? 'INCOME' : 'EXPENSE';
     let categoriaId = reg.categoriaId;
     let categoriaNome = '';
-    if (!categoriaId && reg.categoriaSugerida) {
-      categoriaNome = reg.categoriaSugerida;
+    
+    // Prioridade: categoriaId selecionada pelo usuário, senão categoriaRecomendada da IA
+    if (categoriaId && categoriaId.length > 40) {
+      // É um ID válido, manter
     } else if (categoriaId && categoriaId.length <= 40) {
+      // É um nome de categoria
       categoriaNome = categoriaId;
+    } else if (!categoriaId && reg.categoriaRecomendada && reg.shouldCreateCategory) {
+      // Usuário não selecionou nada, usar recomendação da IA
+      categoriaNome = reg.categoriaRecomendada;
+      categoriaId = undefined; // Será definido após criação
+    } else if (!categoriaId && reg.categoriaSugerida) {
+      // Fallback para categoriaSugerida (sistema antigo)
+      categoriaNome = reg.categoriaSugerida;
     }
+    
     categoriaNome = categoriaNome ? normalizeNome(categoriaNome) : '';
     let categoriaObj = null;
+    
     // Se for lançamento de saldo inicial, força categoria 'Saldo'
     if (reg.isSaldoInicial || categoriaNome === 'saldo') {
       categoriaObj = saldoCategoria;
@@ -85,8 +102,9 @@ export async function POST(req: NextRequest) {
     } else if (categoriaNome) {
       const key = `${categoriaNome}|${tipo}`;
       categoriaObj = categoriasCache[key];
+      
       // Só cria categoria se o nome for válido (não id, não vazio, não string aleatória)
-      const isProvavelId = /^[a-z0-9]{20,}$/.test(categoriaNome); // ids do prisma geralmente são grandes
+      const isProvavelId = /^[a-z0-9]{20,}$/.test(categoriaNome);
       if (
         !categoriaObj &&
         categoriaNome &&
@@ -101,8 +119,27 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    // Se não encontrou categoria válida, deixa undefined
-    return { ...reg, categoriaId: categoriaObj ? categoriaObj.id : undefined, tipo };
+    
+    // Processar tags recomendadas pela IA se o usuário não definiu tags manualmente
+    let tagsFinais = reg.tags || [];
+    if ((!reg.tags || reg.tags.length === 0) && reg.tagsRecomendadas && reg.tagsRecomendadas.length > 0) {
+      // Usuário não definiu tags, usar recomendações da IA
+      tagsFinais = [...reg.tagsRecomendadas];
+      
+      // Adicionar tags que precisam ser criadas à lista de novas tags
+      for (const tagRecomendada of reg.tagsRecomendadas) {
+        if (!novasTags.includes(tagRecomendada)) {
+          novasTags.push(tagRecomendada);
+        }
+      }
+    }
+    
+    return { 
+      ...reg, 
+      categoriaId: categoriaObj ? categoriaObj.id : undefined, 
+      tipo,
+      tags: tagsFinais
+    };
   });
 
   // Cria novas categorias em lote (evita duplicidade)
@@ -142,8 +179,8 @@ export async function POST(req: NextRequest) {
     return `rgb(${Math.abs(r)},${Math.abs(g)},${Math.abs(b)})`;
   }
 
+  // Criar novas categorias em lote
   for (const nova of novasCategorias) {
-    // Sempre criar como BOTH e cor baseada no nome
     const nomeNorm = normalizeNome(nova.name);
     const key = `${nomeNorm}|BOTH`;
     if (!categoriasCache[key]) {
@@ -151,11 +188,15 @@ export async function POST(req: NextRequest) {
       const cat = await prisma.category.create({
         data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
       });
-  categoriasCache[key] = cat;
-  criadas.push(cat as any);
+      categoriasCache[key] = cat;
+      criadas.push(cat as any);
+      
+      // Associar categoria criada aos registros correspondentes
       for (const reg of registrosAtualizados) {
         let categoriaNome = '';
-        if (reg.categoriaSugerida) {
+        if (reg.categoriaRecomendada) {
+          categoriaNome = normalizeNome(reg.categoriaRecomendada);
+        } else if (reg.categoriaSugerida) {
           categoriaNome = normalizeNome(reg.categoriaSugerida);
         } else if (reg.categoriaId && reg.categoriaId.length <= 40) {
           categoriaNome = normalizeNome(reg.categoriaId);
@@ -167,16 +208,45 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Atualiza os registros com os ids corretos das categorias criadas
+  // Buscar tags existentes do usuário
+  const tagsExistentes = await prisma.tag.findMany({ 
+    where: { userId: user.id },
+    select: { id: true, name: true }
+  });
+  
+  // Criar cache de tags para busca rápida
+  const tagsCache: Record<string, string> = {}; // nome -> id
+  for (const tag of tagsExistentes) {
+    tagsCache[normalizeNome(tag.name)] = tag.id;
+  }
+  
+  // Criar novas tags em lote
+  const tagsCriadas: Record<string, string> = {}; // nome -> id
+  for (const nomeTag of novasTags) {
+    const nomeNorm = normalizeNome(nomeTag);
+    if (!tagsCache[nomeNorm] && !tagsCriadas[nomeNorm]) {
+      const tag = await prisma.tag.create({
+        data: { name: nomeTag, userId: user.id }
+      });
+      tagsCriadas[nomeNorm] = tag.id;
+      tagsCache[nomeNorm] = tag.id; // Adicionar ao cache também
+    }
+  }
+
+  // Atualiza os registros com os ids corretos das categorias e tags criadas
   const registrosFinal = (registrosAtualizados as ImportRow[]).map((reg) => {
     let categoriaId = reg.categoriaId;
-    // Normaliza nome para busca
+    
+    // Processar categoria
     let categoriaNome = '';
-    if (reg.categoriaSugerida) {
+    if (reg.categoriaRecomendada) {
+      categoriaNome = normalizeNome(reg.categoriaRecomendada);
+    } else if (reg.categoriaSugerida) {
       categoriaNome = normalizeNome(reg.categoriaSugerida);
     } else if (categoriaId && categoriaId.length <= 40) {
       categoriaNome = normalizeNome(categoriaId);
     }
+    
     // Se for saldo inicial, sempre força o id da categoria Saldo
     if (reg.isSaldoInicial || categoriaNome === 'saldo') {
       const catSaldo = Object.values(categoriasCache).find(
@@ -198,7 +268,19 @@ export async function POST(req: NextRequest) {
         categoriaId = undefined;
       }
     }
-    return { ...reg, categoriaId };
+    
+    // Processar tags - converter nomes para IDs
+    let tagsIds: string[] = [];
+    if (reg.tags && reg.tags.length > 0) {
+      tagsIds = reg.tags
+        .map(tagName => {
+          const nomeNorm = normalizeNome(tagName);
+          return tagsCache[nomeNorm];
+        })
+        .filter(Boolean); // Remove tags não encontradas
+    }
+    
+    return { ...reg, categoriaId, tags: tagsIds };
   });
 
   // Salva lançamentos em transação atômica
@@ -224,7 +306,7 @@ export async function POST(req: NextRequest) {
           amount: Math.abs(reg.valor),
           date: dataObj,
           description: reg.descricaoSimplificada || reg.descricao,
-          type: 'VARIABLE' as const,
+          type: 'PUNCTUAL' as const,
           walletId: carteiraId,
           userId: user.id,
           categoryId: categoriaId || undefined,

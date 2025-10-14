@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Trash2, Plus, CreditCard as CreditCardIcon, ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
+import { Edit, Trash2, Plus, CreditCard as CreditCardIcon, Calendar } from 'lucide-react';
 import { AlertTriangle, Building2, CheckCircle, XCircle, TrendingUp, Target } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Loader } from '@/components/ui/loader';
 import { Progress } from '@/components/ui/progress';
-import { useMonth } from '@/components/providers/month-provider';
+
 
 interface CreditCard {
   id: string;
@@ -27,6 +27,8 @@ interface CreditCard {
   usedAmount?: number;
   availableLimit?: number;
   usagePercentage?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Wallet {
@@ -60,23 +62,28 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
     dueDay?: string; 
   }>({});
 
-  const { currentDate, setCurrentDate } = useMonth();
-
-  // Funções para navegação de mês
-  const handlePrevMonth = () => {
-    const prev = new Date(currentDate);
-    prev.setMonth(prev.getMonth() - 1);
-    setCurrentDate(prev);
+  // Função para formatar data/hora no padrão solicitado
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
-  const handleNextMonth = () => {
-    const next = new Date(currentDate);
-    next.setMonth(next.getMonth() + 1);
-    setCurrentDate(next);
-  };
-
-  const monthLabel = currentDate.toLocaleDateString('pt-BR', { month: 'long' });
-  const year = currentDate.getFullYear();
+  // Data atual para exibição
+  const currentDateTime = new Date().toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
 
 
@@ -340,6 +347,24 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                     R$ {(creditCard.availableLimit || (creditCard.limit - (creditCard.usedAmount || 0))).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
+                
+                {/* Informações de data - formato dd/MM/yyyy hh:mm:ss */}
+                {(creditCard.createdAt || creditCard.updatedAt) && (
+                  <div className="pt-2 border-t space-y-1">
+                    {creditCard.createdAt && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Criado em:</span>
+                        <span className="font-mono">{formatDateTime(creditCard.createdAt)}</span>
+                      </div>
+                    )}
+                    {creditCard.updatedAt && creditCard.updatedAt !== creditCard.createdAt && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Atualizado em:</span>
+                        <span className="font-mono">{formatDateTime(creditCard.updatedAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -356,19 +381,13 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <p className="text-muted-foreground">Gerencie seus cartões de crédito e controle seus limites</p>
       </div>
 
-      {/* Navegação de Mês + Botão Principal */}
+      {/* Header com data atual e botão principal */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center space-x-2 px-3 h-10 rounded-md border">
+          <div className="flex items-center space-x-2 px-3 h-10 rounded-md border bg-background">
             <Calendar className="h-4 w-4" />
-            <span className="capitalize">{monthLabel} {year}</span>
+            <span className="text-sm font-mono">{currentDateTime}</span>
           </div>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
-            <ArrowRight className="h-5 w-5" />
-          </Button>
         </div>
         <Button onClick={() => {
           resetForm();

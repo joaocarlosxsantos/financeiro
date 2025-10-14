@@ -36,15 +36,15 @@ export async function GET(req: NextRequest) {
 
   const whereBase = { user: { email: session.user.email }, ...walletFilter };
 
-  // variable aggregates
+  // PUNCTUAL aggregates
   const [expVarAgg, incVarAgg] = await Promise.all([
-    prisma.expense.aggregate({ where: { ...whereBase, type: 'VARIABLE', ...(startDateObj && endDateObj ? { date: { gte: startDateObj, lte: endDateObj } } : {}) }, _sum: { amount: true } }),
-    prisma.income.aggregate({ where: { ...whereBase, type: 'VARIABLE', ...(startDateObj && endDateObj ? { date: { gte: startDateObj, lte: endDateObj } } : {}) }, _sum: { amount: true } }),
+    prisma.expense.aggregate({ where: { ...whereBase, type: 'PUNCTUAL', ...(startDateObj && endDateObj ? { date: { gte: startDateObj, lte: endDateObj } } : {}) }, _sum: { amount: true } }),
+    prisma.income.aggregate({ where: { ...whereBase, type: 'PUNCTUAL', ...(startDateObj && endDateObj ? { date: { gte: startDateObj, lte: endDateObj } } : {}) }, _sum: { amount: true } }),
   ]);
 
   // fixed lists (include dayOfMonth)
-  const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { id: true, amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-  const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'FIXED' }, select: { id: true, amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+  const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'RECURRING' }, select: { id: true, amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
+  const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'RECURRING' }, select: { id: true, amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
 
   // precise occurrences for FIXED records (considers dayOfMonth or fallback to record date)
   const countFixedOccurrences = (

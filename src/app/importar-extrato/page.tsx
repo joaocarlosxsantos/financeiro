@@ -124,30 +124,29 @@ export default function ImportarExtratoPage() {
 
     try {
       const isMultiple = uploadedFiles.length > 1;
-      const endpoint = isMultiple ? '/api/importar-extrato/batch' : '/api/importar-extrato/save';
+      const endpoint = isMultiple ? '/api/importar-extrato/batch' : '/api/importar-extrato/salvar';
       
       let requestBody;
       
       if (isMultiple) {
         // Preparar dados para processamento em lote
-        const allTransactions = uploadedFiles
+        const batches = uploadedFiles
           .filter(f => f.status === 'ready')
-          .flatMap(f => f.preview || [])
-          .map(transaction => ({
-            ...transaction,
-            walletId: selectedWallet
+          .map(f => ({
+            registros: f.preview || [],
+            sourceFile: f.file.name
           }));
 
         requestBody = {
-          transactions: allTransactions,
-          walletId: selectedWallet
+          batches,
+          carteiraId: selectedWallet
         };
       } else {
         // Processamento individual
         const transactions = registrosEditados || uploadedFiles[0]?.preview || [];
         requestBody = {
           registros: transactions,
-          walletId: selectedWallet
+          carteiraId: selectedWallet
         };
       }
 
@@ -218,7 +217,7 @@ export default function ImportarExtratoPage() {
   const isMultipleFiles = uploadedFiles.length > 1;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout maxWidth="max-w-7xl">
       <PageTitle module="Controle Financeiro" page="Importar Extrato" />
       <div className="space-y-6">
         {/* Painel de Notificações */}

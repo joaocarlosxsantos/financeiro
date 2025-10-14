@@ -8,9 +8,10 @@ import { NotificationCenter } from '@/components/notifications/notification-cent
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   
@@ -88,7 +89,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <NotificationCenter className="text-muted-foreground hover:text-foreground" />
           </div>
         </div>
-        <div className="w-full max-w-5xl mx-auto p-4 sm:p-8">{children}</div>
+        <div className={`w-full ${maxWidth} mx-auto p-4 sm:p-8`}>{children}</div>
       </main>
     </div>
   );

@@ -44,8 +44,8 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
   const walletParam = walletId ? `&walletId=${encodeURIComponent(walletId)}` : '';
       // Buscar despesas variáveis e fixas do período com paginação automática
       const [expVar, expFix] = await Promise.all([
-        fetchAll(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
-        fetchAll(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
+        fetchAll(`/api/expenses?type=PUNCTUAL&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
+        fetchAll(`/api/expenses?type=RECURRING&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
       ]);
       const allExpenses = [...expVar, ...expFix];
 

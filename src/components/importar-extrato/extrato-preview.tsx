@@ -6,7 +6,8 @@ import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Check, X, Info } from 'lucide-react';
+import { Sparkles, Check, X, Info, Wand2 } from 'lucide-react';
+import { normalizeDescription } from '@/lib/description-normalizer';
 
 interface ExtratoPreviewProps {
   preview: any[];
@@ -42,14 +43,24 @@ export function ExtratoPreview({
   // Descobre a data do primeiro lançamento do extrato
   const dataPrimeiroLancamento = React.useMemo(() => {
     if (!registros.length) return null;
-    // Considera que o campo 'data' está no formato 'dd/mm/yyyy' ou 'yyyy-mm-dd'
+    // Considera que o campo 'data' pode estar no formato 'dd/mm/yyyy', 'yyyy-mm-dd' ou 'YYYYMMDD'
     const datas = registros
       .map((r) => {
-        if (r.data && r.data.includes('/')) {
+        if (!r.data) return null;
+        
+        if (r.data.includes('/')) {
+          // Formato DD/MM/YYYY
           const [d, m, y] = r.data.split('/');
           return new Date(Number(y), Number(m) - 1, Number(d));
-        } else if (r.data && r.data.includes('-')) {
+        } else if (r.data.includes('-')) {
+          // Formato ISO YYYY-MM-DD
           return new Date(r.data);
+        } else if (r.data.length === 8 && /^\d{8}$/.test(r.data)) {
+          // Formato YYYYMMDD
+          const year = Number(r.data.substring(0, 4));
+          const month = Number(r.data.substring(4, 6)) - 1; // Month is 0-indexed
+          const day = Number(r.data.substring(6, 8));
+          return new Date(year, month, day);
         }
         return null;
       })
@@ -63,30 +74,53 @@ export function ExtratoPreview({
       stableSortByDateAsc(preview.map((r) => {
         // Se a categoria sugerida já existe, preenche com o id dela
         let categoriaId: string | undefined = undefined;
+        let shouldCreateCategory = false;
+        
         if (r.categoriaSugerida && categorias.length > 0) {
           const match = categorias.find(
             (c: any) => c.name.toLowerCase() === r.categoriaSugerida.toLowerCase(),
           );
-          if (match) categoriaId = match.id;
-          else categoriaId = r.categoriaSugerida;
+          if (match) {
+            categoriaId = match.id;
+          } else {
+            // Categoria não existe, marcar para criação
+            shouldCreateCategory = true;
+          }
         } else if (r.categoriaSugerida) {
-          categoriaId = r.categoriaSugerida;
+          shouldCreateCategory = true;
         }
+        
         // Se categoriaId for string vazia, deixa como undefined
         if (categoriaId === '') categoriaId = undefined;
+        
         return {
           ...r,
           categoriaId,
           tags: [], // Array de tags vazio inicialmente
           categoriaSugerida: r.categoriaSugerida || '',
+          shouldCreateCategory,
         };
       }),
       (it: any) => {
         if (!it || !it.data) return undefined;
-        if (typeof it.data === 'string' && it.data.includes('/')) {
-          const [d, m, y] = it.data.split('/');
-          return new Date(Number(y), Number(m) - 1, Number(d));
+        
+        if (typeof it.data === 'string') {
+          if (it.data.includes('/')) {
+            // Formato DD/MM/YYYY
+            const [d, m, y] = it.data.split('/');
+            return new Date(Number(y), Number(m) - 1, Number(d));
+          } else if (it.data.includes('-')) {
+            // Formato ISO YYYY-MM-DD
+            return new Date(it.data);
+          } else if (it.data.length === 8 && /^\d{8}$/.test(it.data)) {
+            // Formato YYYYMMDD
+            const year = Number(it.data.substring(0, 4));
+            const month = Number(it.data.substring(4, 6)) - 1; // Month is 0-indexed
+            const day = Number(it.data.substring(6, 8));
+            return new Date(year, month, day);
+          }
         }
+        
         return it.data ? new Date(it.data) : undefined;
       },
     ));
@@ -115,6 +149,14 @@ export function ExtratoPreview({
 
   function handleEdit(index: number, field: string, value: string | string[]) {
     setRegistros((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
+
+  // Função para normalizar todas as descrições
+  function handleNormalizeAllDescriptions() {
+    setRegistros((prev) => prev.map(registro => ({
+      ...registro,
+      descricaoMelhorada: normalizeDescription(registro.descricao)
+    })));
   }
 
   // Função para criar categoria automaticamente
@@ -173,23 +215,32 @@ export function ExtratoPreview({
   // Função para aceitar sugestão da IA
   function handleAcceptAISuggestion(index: number) {
     const registro = registros[index];
-    if (!registro.categoriaSugerida) return;
+    if (!registro.categoriaRecomendada) return;
 
-    // Verifica se categoria existe
-    const existingCategory = categorias.find(cat => 
-      cat.name.toLowerCase() === registro.categoriaSugerida.toLowerCase()
-    );
-
-    if (existingCategory) {
-      handleEdit(index, 'categoriaId', existingCategory.id);
+    // Se já tem ID da categoria, usar diretamente
+    if (registro.categoriaId) {
+      handleEdit(index, 'categoriaId', registro.categoriaId);
     } else {
-      handleEdit(index, 'categoriaId', registro.categoriaSugerida);
+      // Verifica se categoria existe
+      const existingCategory = categorias.find(cat => 
+        cat.name.toLowerCase() === registro.categoriaRecomendada.toLowerCase()
+      );
+
+      if (existingCategory) {
+        handleEdit(index, 'categoriaId', existingCategory.id);
+      } else {
+        // Marca para criar a categoria durante importação
+        handleEdit(index, 'categoriaId', registro.categoriaRecomendada);
+      }
     }
+    
+    // Remove a sugestão após aceitar
+    handleEdit(index, 'categoriaRecomendada', '');
   }
 
   // Função para rejeitar sugestão da IA
   function handleRejectAISuggestion(index: number) {
-    handleEdit(index, 'categoriaSugerida', '');
+    handleEdit(index, 'categoriaRecomendada', '');
     setRegistros(prev => prev.map((r, i) => 
       i === index ? { ...r, shouldCreateCategory: false } : r
     ));
@@ -241,15 +292,53 @@ export function ExtratoPreview({
     return iconMap[categoryName.toLowerCase()] || null;
   }
 
-  function handleSaveComSaldo() {
+  async function handleSaveComSaldo() {
     let novosRegistros = [...registros];
+
+    // Processar sugestões da IA automaticamente se o usuário não fez seleções
+    for (const registro of novosRegistros) {
+      // Se usuário não selecionou categoria e existe recomendação da IA
+      if (!registro.categoriaId && registro.categoriaRecomendada && registro.shouldCreateCategory) {
+        try {
+          const categoryType = registro.valor < 0 ? 'EXPENSE' : 'INCOME';
+          const newCategory = await handleCreateCategory(registro.categoriaRecomendada, categoryType);
+          if (newCategory) {
+            registro.categoriaId = newCategory.id;
+            registro.shouldCreateCategory = false;
+          }
+        } catch (error) {
+          console.error('Erro ao criar categoria automaticamente:', error);
+        }
+      } else if (!registro.categoriaId && registro.categoriaRecomendada && !registro.shouldCreateCategory) {
+        // Se categoria já existe, apenas definir o nome para o backend resolver
+        registro.categoriaId = registro.categoriaRecomendada;
+      }
+
+      // Criar tags que precisam ser criadas
+      if (registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0) {
+        const tagsToCreate = registro.tagsRecomendadas.filter((tagName: string) => 
+          !tags.some((existingTag: any) => existingTag.name.toLowerCase() === tagName.toLowerCase())
+        );
+        
+        for (const tagName of tagsToCreate) {
+          try {
+            await handleCreateTag(tagName);
+          } catch (error) {
+            console.error('Erro ao criar tag automaticamente:', error);
+          }
+        }
+        
+        // Adicionar todas as tags recomendadas às tags do registro
+        registro.tags = [...(registro.tags || []), ...registro.tagsRecomendadas];
+      }
+    }
+
     if (saldoAnterior && dataPrimeiroLancamento) {
       // Gera data do saldo inicial: um dia antes do primeiro lançamento
       const dataSaldo = new Date(dataPrimeiroLancamento);
       dataSaldo.setDate(dataSaldo.getDate() - 1);
       // Formata para yyyy-mm-dd
-  // format YYYY-MM-DD using local date parts to avoid timezone shifts
-  const dataFormatada = formatYmd(dataSaldo);
+      const dataFormatada = formatYmd(dataSaldo);
       // Busca categoria "Saldo" (ou cria string caso não exista)
       let categoriaId = '';
       const catSaldo = categorias.find((c: any) => c.name.toLowerCase() === 'saldo');
@@ -283,8 +372,8 @@ export function ExtratoPreview({
         </Badge>
       </div>
       
-      <div className="bg-blue-50 p-3 rounded-lg">
-        <div className="flex items-center gap-2 text-sm text-blue-700">
+      <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
           <Info className="w-4 h-4" />
           <span>
             A IA analisou suas transações e sugeriu categorias, melhorou descrições e identificou estabelecimentos.
@@ -293,16 +382,30 @@ export function ExtratoPreview({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border text-sm">
+      <div className="overflow-x-auto rounded-lg border border-border bg-background shadow-sm">
+        <table className="min-w-full">
           <thead>
-            <tr>
-              <th className="border px-2 py-1">Data</th>
-              <th className="border px-2 py-1">Valor</th>
-              <th className="border px-2 py-1 min-w-[250px]">Descrição</th>
-              <th className="border px-2 py-1 min-w-[200px]">Categoria</th>
-              <th className="border px-2 py-1 min-w-[160px]">Tag</th>
-              <th className="border px-2 py-1 min-w-[120px]">Info IA</th>
+            <tr className="bg-muted text-muted-foreground">
+              <th className="px-4 py-4 text-left font-semibold w-28">Data</th>
+              <th className="px-4 py-4 text-right font-semibold w-32">Valor</th>
+              <th className="px-4 py-4 text-left font-semibold min-w-[350px]">
+                <div className="flex items-center justify-between">
+                  <span>Descrição</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleNormalizeAllDescriptions}
+                    className="h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors border border-purple-200 hover:border-purple-300"
+                    title="Simplificar todas as descrições automaticamente"
+                  >
+                    <Wand2 className="w-3 h-3 mr-1" />
+                    Simplificar tudo
+                  </Button>
+                </div>
+              </th>
+              <th className="px-4 py-4 text-left font-semibold min-w-[180px]">Categoria</th>
+              <th className="px-4 py-4 text-left font-semibold min-w-[160px]">Tags</th>
             </tr>
           </thead>
           <tbody>

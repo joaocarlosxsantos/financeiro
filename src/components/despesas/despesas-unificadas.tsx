@@ -1,4 +1,4 @@
-// Componente unificado de despesas variáveis e fixas
+// Componente unificado de despesas pontuais e recorrentes
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -47,7 +47,7 @@ interface Despesa {
   creditCardName?: string;
   paymentType?: string;
   tags: string[];
-  isFixed: boolean;
+  isRecurring: boolean;
   endDate?: Date | null;
 }
 
@@ -71,7 +71,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
     paymentType: 'DEBIT',
     walletId: '',
     tags: [] as string[],
-    isFixed: false,
+    isRecurring: false,
     endDate: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
     }
   });
 
-  // Carregar despesas fixas e variáveis juntas
+  // Carregar despesas recorrentes e pontuais juntas
   useEffect(() => {
     async function load() {
       setIsLoading(true);
@@ -106,8 +106,8 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
-        fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-        fetch(`/api/expenses?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/expenses?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/expenses?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
       if (walletsRes.ok) setWallets(await walletsRes.json());
@@ -129,7 +129,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
           creditCardName: e.creditCard?.name,
           paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
-          isFixed: false,
+          isRecurring: false,
         }));
       }
       if (fixasRes.ok) {
@@ -148,10 +148,10 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
           creditCardName: e.creditCard?.name,
           paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
-          isFixed: true,
+          isRecurring: true,
         }));
       }
-      // Combinar variáveis e fixas e ordenar apenas por data (desc).
+      // Combinar pontuais e recorrentes e ordenar apenas por data (desc).
       // Preservar ordem original quando as datas forem iguais (stable by index).
       const combined = [...despesasVar, ...despesasFix];
       setDespesas(stableSortByDateDesc(combined, (it) => it?.date));
@@ -189,7 +189,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         paymentType: d.paymentType || 'DEBIT',
         walletId: d.walletId || '',
         tags: d.tags || [],
-        isFixed: d.isFixed,
+        isRecurring: d.isRecurring,
         endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
       });
       setErrors({});
@@ -275,8 +275,8 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       description: string;
       amount: number;
       date: string;
-      type: 'FIXED' | 'VARIABLE';
-      isFixed: boolean;
+      type: 'RECURRING' | 'PUNCTUAL';
+      isRecurring: boolean;
       endDate?: string | null;
       categoryId: string | null;
       paymentType: string;
@@ -289,8 +289,8 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       description: form.description,
       amount: Number(form.amount),
       date: form.date,
-      type: form.isFixed ? 'FIXED' : 'VARIABLE',
-      isFixed: form.isFixed,
+      type: form.isRecurring ? 'RECURRING' : 'PUNCTUAL',
+      isRecurring: form.isRecurring,
       endDate: form.endDate || null,
       categoryId: finalCategoryId || null,
       paymentType: form.paymentType,
@@ -313,7 +313,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       });
     }
     if (res.ok) {
-      // Ler objeto retornado e atualizar localmente quando for VARIABLE
+      // Ler objeto retornado e atualizar localmente quando for PUNCTUAL
       const returned = await res.json();
       // capturar se estávamos editando antes de resetar
       const wasEditing = editingId;
@@ -327,7 +327,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         paymentType: 'DEBIT',
         walletId: '',
         tags: [],
-        isFixed: false,
+        isRecurring: false,
         endDate: '',
       });
       setErrors({});
@@ -347,11 +347,11 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         creditCardName: e.creditCard?.name,
         paymentType: e.paymentType || 'DEBIT',
         tags: e.tags || [],
-        isFixed: Boolean(e.isFixed),
+        isRecurring: Boolean(e.isRecurring),
       });
 
-      // If VARIABLE, update local state directly to avoid pagination issues
-      if (!returned?.isFixed) {
+      // If PUNCTUAL, update local state directly to avoid pagination issues
+      if (!returned?.isRecurring) {
         // build item either from returned or fallback to payload + editingId
         const item = returned
           ? toDespesa(returned)
@@ -370,12 +370,12 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
               creditCardName: undefined,
               paymentType: payload.paymentType || 'DEBIT',
               tags: payload.tags || [],
-              isFixed: false,
+              isRecurring: false,
             } as Despesa);
 
         // If this was a create and API didn't return an id, fallback to full reload
         if (!item.id && !wasEditing) {
-          // fallback to reload (same as FIXED behaviour)
+          // fallback to reload (same as RECURRING behaviour)
         } else {
           setDespesas((prev) => {
             if (wasEditing) {
@@ -393,14 +393,14 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
           return;
         }
       } else {
-        // For FIXED, fallback to full reload (expansions may be needed)
+        // For RECURRING, fallback to full reload (expansions may be needed)
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const start = new Date(year, month, 1).toISOString().slice(0, 10);
         const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
         const [variaveisRes, fixasRes] = await Promise.all([
-          fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/expenses?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+          fetch(`/api/expenses?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+          fetch(`/api/expenses?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
         ]);
         let despesasVar: Despesa[] = [];
         let despesasFix: Despesa[] = [];
@@ -420,7 +420,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
             creditCardName: e.creditCard?.name,
             paymentType: e.paymentType || 'DEBIT',
             tags: e.tags || [],
-            isFixed: false,
+            isRecurring: false,
           }));
         }
         if (fixasRes.ok) {
@@ -440,7 +440,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
             creditCardName: e.creditCard?.name,
             paymentType: e.paymentType || 'DEBIT',
             tags: e.tags || [],
-            isFixed: true,
+            isRecurring: true,
           }));
         }
         const combinedAfter = [...despesasVar, ...despesasFix];
@@ -652,16 +652,16 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"
-                    id="isFixed"
-                    checked={form.isFixed}
-                    onChange={(e) => setForm((f) => ({ ...f, isFixed: e.target.checked }))}
+                    id="isRecurring"
+                    checked={form.isRecurring}
+                    onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))}
                     className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150"
                   />
-                  <Label htmlFor="isFixed" className="ml-1 select-none cursor-pointer text-sm">
-                    Gasto Fixo?
+                  <Label htmlFor="isRecurring" className="ml-1 select-none cursor-pointer text-sm">
+                    Despesa Recorrente?
                   </Label>
                 </div>
-                {form.isFixed && (
+                {form.isRecurring && (
                   <div>
                     <Label htmlFor="endDate">Data final (opcional)</Label>
                     <Input
@@ -709,7 +709,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                 paymentType: 'DEBIT',
                 walletId: '',
                 tags: [],
-                isFixed: false,
+                isRecurring: false,
                 endDate: '',
               });
             }}
@@ -728,7 +728,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         </div>
         {/* Lista de despesas */}
         {isLoading ? (
-          <Loader text="Carregando gastos..." />
+          <Loader text="Carregando despesas..." />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-muted bg-background">
             <table className="min-w-full text-sm">
@@ -741,7 +741,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                   <th className="px-3 py-2 text-center font-semibold">Tags</th>
                   <th className="px-3 py-2 text-center font-semibold">Pagamento</th>
                   <th className="px-3 py-2 text-center font-semibold">Conta/Cartão</th>
-                  <th className="px-3 py-2 text-center font-semibold">Fixa</th>
+                  <th className="px-3 py-2 text-center font-semibold">Recorrente</th>
                   <th className="px-3 py-2 text-center font-semibold">Ações</th>
                 </tr>
               </thead>
@@ -786,10 +786,10 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                         : 'Sem carteira'}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {despesa.isFixed ? (
+                      {despesa.isRecurring ? (
                         <span
                           className="inline-block w-3 h-3 rounded-full bg-primary"
-                          title="Fixa"
+                          title="Recorrente"
                         />
                       ) : null}
                     </td>
@@ -822,7 +822,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                         paymentType: 'DEBIT',
                         walletId: '',
                         tags: [],
-                        isFixed: false,
+                        isRecurring: false,
                         endDate: '',
                       });
                   setEditingId(null);

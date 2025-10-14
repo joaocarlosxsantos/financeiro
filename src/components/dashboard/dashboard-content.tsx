@@ -307,10 +307,10 @@ export function DashboardContent() {
       };
   const walletParam = selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
       const [expVar, expFix, incVar, incFix, tagsList] = await Promise.all([
-        fetchAll(`/api/expenses?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
-        fetchAll(`/api/expenses?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
-        fetchAll(`/api/incomes?type=VARIABLE&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
-        fetchAll(`/api/incomes?type=FIXED&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
+        fetchAll(`/api/expenses?type=PUNCTUAL&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
+        fetchAll(`/api/expenses?type=RECURRING&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
+        fetchAll(`/api/incomes?type=PUNCTUAL&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
+        fetchAll(`/api/incomes?type=RECURRING&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`, fetchOpts),
         fetch('/api/tags', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : [])),
       ]);
 
@@ -372,11 +372,11 @@ export function DashboardContent() {
       try {
         const [prevExpVar, prevExpFix] = await Promise.all([
           fetchAll(
-            `/api/expenses?type=VARIABLE&start=${prevStartStr}&end=${prevEndStr}${walletParam}&perPage=200&_=${Date.now()}`,
+            `/api/expenses?type=PUNCTUAL&start=${prevStartStr}&end=${prevEndStr}${walletParam}&perPage=200&_=${Date.now()}`,
             { cache: 'no-store', credentials: 'same-origin' },
           ),
           fetchAll(
-            `/api/expenses?type=FIXED&start=${prevStartStr}&end=${prevEndStr}${walletParam}&perPage=200&_=${Date.now()}`,
+            `/api/expenses?type=RECURRING&start=${prevStartStr}&end=${prevEndStr}${walletParam}&perPage=200&_=${Date.now()}`,
             { cache: 'no-store', credentials: 'same-origin' },
           ),
         ]);
@@ -607,7 +607,7 @@ export function DashboardContent() {
         </Card>
         {/* Limite Diário */}
         <Card
-          className="group relative order-4 flex flex-col h-full min-h-[150px] overflow-hidden"
+          className="group relative order-5 flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Limite Diário"
           data-tour="card-daily-limit"
         >
@@ -631,7 +631,7 @@ export function DashboardContent() {
         </Card>
         {/* Saldo Acumulado */}
         <Card
-          className="group relative order-5 col-span-2 md:col-span-2 lg:col-span-1 flex flex-col h-full min-h-[150px] overflow-hidden"
+          className="group relative order-4 col-span-2 md:col-span-2 lg:col-span-1 flex flex-col h-full min-h-[150px] overflow-hidden"
           aria-label="Saldo Acumulado"
           data-tour="card-accumulated"
         >

@@ -1,4 +1,4 @@
-// Componente unificado de rendas variáveis e fixas
+// Componente unificado de receitas pontuais e recorrentes
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -52,7 +52,7 @@ interface Renda {
   creditCardName?: string;
   paymentType?: string;
   tags: string[];
-  isFixed: boolean;
+  isRecurring: boolean;
   endDate?: Date | null;
 }
 
@@ -77,7 +77,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
     walletId: '',
     creditCardId: '',
     tags: [] as string[],
-    isFixed: false,
+    isRecurring: false,
     endDate: '',
   });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
     }
   });
 
-  // Carregar rendas fixas e variáveis juntas
+  // Carregar rendas recorrentes e pontuais juntas
   useEffect(() => {
     async function load() {
       setIsLoading(true);
@@ -108,23 +108,23 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
   const { formatYmd } = await import('@/lib/utils');
   const start = formatYmd(new Date(year, month, 1));
   const end = formatYmd(new Date(year, month + 1, 0));
-      const [catsRes, walletsRes, tagsRes, creditCardsRes, variaveisRes, fixasRes] = await Promise.all([
+      const [catsRes, walletsRes, tagsRes, creditCardsRes, pontuaisRes, recorrentesRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
         fetch('/api/credit-cards', { cache: 'no-store' }),
-        fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       if (catsRes.ok) setCategories(await catsRes.json());
       if (walletsRes.ok) setWallets(await walletsRes.json());
       if (tagsRes.ok) setTags(await tagsRes.json());
       if (creditCardsRes.ok) setCreditCards(await creditCardsRes.json());
-      let rendasVar: Renda[] = [];
-      let rendasFix: Renda[] = [];
-      if (variaveisRes.ok) {
-        const data = await variaveisRes.json();
-        rendasVar = data.map((e: any) => ({
+      let rendasPontuais: Renda[] = [];
+      let rendasRecorrentes: Renda[] = [];
+      if (pontuaisRes.ok) {
+        const data = await pontuaisRes.json();
+        rendasPontuais = data.map((e: any) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),
@@ -139,16 +139,16 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           creditCardName: e.creditCard?.name,
           paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
-          isFixed: false,
+          isRecurring: false,
         }));
       }
-      if (fixasRes.ok) {
-        const data = await fixasRes.json();
-        rendasFix = data.map((e: any) => ({
+      if (recorrentesRes.ok) {
+        const data = await recorrentesRes.json();
+        rendasRecorrentes = data.map((e: any) => ({
           id: e.id,
           description: e.description,
           amount: Number(e.amount),
-          // Quando a API expande FIXED ela retorna cada ocorrência com `date` — prefira isso.
+          // Quando a API expande RECURRING ela retorna cada ocorrência com `date` — prefira isso.
           date: e.date ? parseApiDate(e.date) : e.startDate ? parseApiDate(e.startDate) : undefined,
           endDate: e.endDate ? parseApiDate(e.endDate) : undefined,
           dayOfMonth: e.dayOfMonth,
@@ -160,11 +160,11 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           creditCardName: e.creditCard?.name,
           paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
-          isFixed: true,
+          isRecurring: true,
         }));
       }
-      // Combinar variáveis e fixas e ordenar apenas por data (desc). Preservar ordem original quando datas empatam.
-      const combined = [...rendasVar, ...rendasFix];
+      // Combinar pontuais e recorrentes e ordenar apenas por data (desc). Preservar ordem original quando datas empatam.
+      const combined = [...rendasPontuais, ...rendasRecorrentes];
       setRendas(stableSortByDateDesc(combined, (it) => it?.date));
       setIsLoading(false);
     }
@@ -201,7 +201,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         walletId: d.walletId || '',
         creditCardId: d.creditCardId || '',
         tags: d.tags || [],
-        isFixed: d.isFixed,
+        isRecurring: d.isRecurring,
         endDate: d.endDate ? (d.endDate instanceof Date ? formatYmd(d.endDate) : d.endDate) : '',
       });
       setErrors({});
@@ -288,8 +288,8 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
       description: form.description,
       amount: Number(form.amount),
       date: form.date,
-      type: form.isFixed ? ('FIXED' as 'FIXED' | 'VARIABLE') : ('VARIABLE' as 'FIXED' | 'VARIABLE'),
-      isFixed: form.isFixed,
+      type: form.isRecurring ? ('RECURRING' as 'RECURRING' | 'PUNCTUAL') : ('PUNCTUAL' as 'RECURRING' | 'PUNCTUAL'),
+      isRecurring: form.isRecurring,
       endDate: form.endDate || null,
       categoryId: finalCategoryId || null,
       paymentType: form.paymentType,
@@ -332,12 +332,12 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         walletId: '',
         creditCardId: '',
         tags: [],
-        isFixed: false,
+        isRecurring: false,
         endDate: '',
       });
       setErrors({});
 
-      // If the API returned the created/updated item and it's VARIABLE, update local state
+      // If the API returned the created/updated item and it's PUNCTUAL, update local state
       if (returned) {
         const item = {
           id: returned.id,
@@ -352,11 +352,11 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           creditCardName: returned.creditCard?.name,
           paymentType: returned.paymentType || 'DEBIT',
           tags: returned.tags || [],
-          isFixed: returned.type === 'FIXED' || returned.isFixed === true,
+          isRecurring: returned.type === 'RECURRING' || returned.isRecurring === true,
         } as Renda;
 
-        if (!item.isFixed) {
-          // VARIABLE: update or insert into local state and keep stable ordering
+        if (!item.isRecurring) {
+          // PUNCTUAL: update or insert into local state and keep stable ordering
           setRendas((prev) => {
             if (wasEditing) {
               const idx = prev.findIndex((r) => String(r.id) === String(item.id));
@@ -374,17 +374,17 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           // done — no need to re-fetch
           return;
         }
-        // else: fallthrough to full reload for FIXED
+        // else: fallthrough to full reload for RECURRING
       }
 
-      // For FIXED (or if API didn't return item), reload both lists (use perPage=200)
+      // For RECURRING (or if API didn't return item), reload both lists (use perPage=200)
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const start = new Date(year, month, 1).toISOString().slice(0, 10);
       const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
       const [variaveisRes, fixasRes] = await Promise.all([
-        fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-        fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+        fetch(`/api/incomes?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
       let rendasVar: Renda[] = [];
       let rendasFix: Renda[] = [];
@@ -403,7 +403,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           creditCardName: e.creditCard?.name,
           paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
-          isFixed: false,
+          isRecurring: false,
         }));
       }
       if (fixasRes.ok) {
@@ -422,7 +422,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           creditCardName: e.creditCard?.name,
           paymentType: e.paymentType || 'DEBIT',
           tags: e.tags || [],
-          isFixed: true,
+          isRecurring: true,
         }));
       }
       // Ao recarregar após criação/edição, aplicar a ordenação estável por data
@@ -655,16 +655,16 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"
-                    id="isFixed"
-                    checked={form.isFixed}
-                    onChange={(e) => setForm((f) => ({ ...f, isFixed: e.target.checked }))}
+                    id="isRecurring"
+                    checked={form.isRecurring}
+                    onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))}
                     className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150"
                   />
-                  <Label htmlFor="isFixed" className="ml-1 select-none cursor-pointer text-sm">
-                    Renda Fixa?
+                  <Label htmlFor="isRecurring" className="ml-1 select-none cursor-pointer text-sm">
+                    Receita Recorrente?
                   </Label>
                 </div>
-                {form.isFixed && (
+                {form.isRecurring && (
                   <div>
                     <Label htmlFor="endDate">Data final (opcional)</Label>
                     <Input
@@ -699,14 +699,14 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
               Ganhos
             </h1>
             <p className="text-gray-600 dark:text-foreground">
-              Gerencie todas as suas rendas (fixas e variáveis) do mês
+              Gerencie todas as suas receitas (recorrentes e pontuais) do mês
             </p>
           </div>
           <Button
               onClick={() => {
                 setShowForm(true);
                 setEditingId(null);
-                setForm({
+                  setForm({
                     description: '',
                     amount: '',
                     date: today,
@@ -715,13 +715,13 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     walletId: '',
                     creditCardId: '',
                     tags: [],
-                    isFixed: false,
+                    isRecurring: false,
                     endDate: '',
                   });
               }}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Adicionar Ganho
+            Adicionar Receita
           </Button>
         </div>
         {/* Busca */}
@@ -734,7 +734,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         </div>
         {/* Lista de rendas */}
         {isLoading ? (
-          <Loader text="Carregando ganhos..." />
+          <Loader text="Carregando receitas..." />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-muted bg-background">
             <table className="min-w-full text-sm">
@@ -747,7 +747,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   <th className="px-3 py-2 text-center font-semibold">Tags</th>
                   <th className="px-3 py-2 text-center font-semibold">Pagamento</th>
                   <th className="px-3 py-2 text-center font-semibold">Conta/Cartão</th>
-                  <th className="px-3 py-2 text-center font-semibold">Fixa</th>
+                  <th className="px-3 py-2 text-center font-semibold">Recorrente</th>
                   <th className="px-3 py-2 text-center font-semibold">Ações</th>
                 </tr>
               </thead>
@@ -799,10 +799,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                       )}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {renda.isFixed ? (
+                      {renda.isRecurring ? (
                         <span
                           className="inline-block w-3 h-3 rounded-full bg-primary"
-                          title="Fixa"
+                          title="Recorrente"
                         />
                       ) : null}
                     </td>
@@ -836,7 +836,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     walletId: '',
                     creditCardId: '',
                     tags: [],
-                    isFixed: false,
+                    isRecurring: false,
                     endDate: '',
                   });
                   setEditingId(null);
@@ -844,7 +844,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar Primeiro Ganho
+                Adicionar Primeira Receita
               </Button>
             </CardContent>
           </Card>

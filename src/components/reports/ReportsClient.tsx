@@ -34,7 +34,7 @@ type Row = {
   creditCardId?: string | null;
   paymentType?: string | null;
   tags?: string[];
-  isFixed?: boolean;
+  isRecurring?: boolean;
 };
 
 export default function ReportsClient() {
@@ -285,7 +285,7 @@ export default function ReportsClient() {
           creditCardId: it.creditCard?.id ?? it.creditCardId ?? null,
           paymentType: it.paymentType ?? null,
           tags: Array.isArray(it.tags) ? it.tags.map((tv: string) => tagLookup[String(tv)] ?? String(tv)) : [],
-          isFixed: Boolean(it.isFixed),
+          isRecurring: Boolean(it.isRecurring),
         };
       });
       setData(rows);
@@ -355,7 +355,7 @@ export default function ReportsClient() {
             Cartão: it.creditCard?.name ?? it.creditCardName ?? '',
             'Tipo Pgto': getPaymentTypeLabel(it.paymentType),
             Tags: Array.isArray(it.tags) ? it.tags.map((tv: string) => tagLookup[String(tv)] ?? String(tv)).join(', ') : '',
-            Fixa: Boolean(it.isFixed) ? 'Sim' : 'Não',
+            Recorrente: Boolean(it.isRecurring) ? 'Sim' : 'Não',
             Valor: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(signedAmount)),
           };
         });
@@ -695,7 +695,7 @@ export default function ReportsClient() {
                   <th className="p-2">Cartão</th>
                   <th className="p-2">Tipo Pgto</th>
                   <th className="p-2">Tags</th>
-                  <th className="p-2">Fixa</th>
+                  <th className="p-2">Recorrente</th>
                   <th className="p-2">Valor</th>
                 </tr>
               </thead>
@@ -733,7 +733,7 @@ export default function ReportsClient() {
                         '-'
                       )}
                     </td>
-                    <td className="p-2">{d.isFixed ? 'Sim' : 'Não'}</td>
+                    <td className="p-2">{d.isRecurring ? 'Sim' : 'Não'}</td>
                     <td className="p-2">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',

@@ -23,7 +23,7 @@ export default function QuickDespesaForm() {
     walletId: '',
     paymentType: 'DEBIT' as PaymentType,
     tags: [] as string[],
-    isFixed: false,
+    isRecurring: false,
   });
 
   const amountRef = useRef<HTMLInputElement | null>(null);
@@ -173,8 +173,8 @@ export default function QuickDespesaForm() {
       description: form.description,
       amount: Number(form.amount),
       date: form.date,
-      type: form.isFixed ? 'FIXED' : 'VARIABLE',
-      isFixed: form.isFixed,
+      type: form.isRecurring ? 'RECURRING' : 'PUNCTUAL',
+      isRecurring: form.isRecurring,
       categoryId: finalCategoryId || null,
       walletId: form.walletId || null,
       paymentType: form.paymentType,
@@ -372,8 +372,8 @@ export default function QuickDespesaForm() {
           />
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <input type="checkbox" id="isFixed" checked={form.isFixed} onChange={(e) => setForm((f) => ({ ...f, isFixed: e.target.checked }))} className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150" />
-          <Label htmlFor="isFixed" className="ml-1 select-none cursor-pointer text-sm">Gasto Fixo?</Label>
+          <input type="checkbox" id="isRecurring" checked={form.isRecurring} onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))} className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150" />
+          <Label htmlFor="isRecurring" className="ml-1 select-none cursor-pointer text-sm">Despesa Recorrente?</Label>
         </div>
       </div>
 

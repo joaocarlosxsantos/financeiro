@@ -32,16 +32,16 @@ export async function GET(req: NextRequest) {
   const perPage = Number.isFinite(perPageParam) && perPageParam > 0 ? Math.min(perPageParam, 200) : 50;
   const start = url.searchParams.get('start');
   const end = url.searchParams.get('end');
-  const type = url.searchParams.get('type'); // FIXED | VARIABLE
+  const type = url.searchParams.get('type'); // RECURRING | PUNCTUAL
 
   const where: any = { userId: user.id };
   if (type) where.type = type as any;
   const startD = start ? parseFlexibleDate(start) : undefined;
   const endD = end ? parseFlexibleDate(end) : undefined;
-  if ((!type || type === 'VARIABLE') && startD && endD) {
+  if ((!type || type === 'PUNCTUAL') && startD && endD) {
     where.date = { gte: startD, lte: endD };
   }
-  if (type === 'FIXED' && startD && endD) {
+  if (type === 'RECURRING' && startD && endD) {
     where.AND = [
       { OR: [{ startDate: null }, { startDate: { lte: endD } }] },
       { OR: [{ endDate: null }, { endDate: { gte: startD } }] },
@@ -72,8 +72,8 @@ export async function GET(req: NextRequest) {
     if (minAmount) where.amount.gte = Number(minAmount);
     if (maxAmount) where.amount.lte = Number(maxAmount);
   }
-  // Pagination for VARIABLE or when not expanding FIXED occurrences
-  if (!type || type === 'VARIABLE') {
+  // Pagination for PUNCTUAL or when not expanding RECURRING occurrences
+  if (!type || type === 'PUNCTUAL') {
     const total = await prisma.income.count({ where });
     // Ordenar apenas por data (desc). Remover tie-break por createdAt para
     // evitar que atualizações na linha mudem a ordem inesperadamente.
@@ -91,11 +91,11 @@ export async function GET(req: NextRequest) {
     headers.set('X-Per-Page', String(perPage));
     return NextResponse.json(incomes, { headers });
   }
-  // Se for FIXED e foram informadas datas, expandir em instâncias mensais dentro do período
-  if (type === 'FIXED' && startD && endD) {
-    const fixedRecords = await prisma.income.findMany({ where, include: { category: true, wallet: true } });
+  // Se for RECURRING e foram informadas datas, expandir em instâncias mensais dentro do período
+  if (type === 'RECURRING' && startD && endD) {
+    const recurringRecords = await prisma.income.findMany({ where, include: { category: true, wallet: true } });
     const expanded: any[] = [];
-    for (const i of fixedRecords) {
+    for (const i of recurringRecords) {
       const recStart = i.startDate ?? i.date ?? startD;
       const recEnd = i.endDate ?? endD;
       const from = recStart > startD ? recStart : startD;
@@ -162,9 +162,9 @@ export async function POST(req: NextRequest) {
     description: z.string().min(1, 'Descrição é obrigatória'),
     amount: z.number().positive('Valor deve ser positivo'),
     date: z.string().optional(),
-    type: z.enum(['FIXED', 'VARIABLE']),
+    type: z.enum(['RECURRING', 'PUNCTUAL']),
     paymentType: z.enum(['DEBIT', 'CREDIT', 'PIX_TRANSFER', 'CASH', 'OTHER']).optional(),
-    isFixed: z.boolean().optional(),
+    isRecurring: z.boolean().optional(),
     startDate: z.string().optional().nullable(),
     endDate: z.string().optional().nullable(),
     dayOfMonth: z.number().optional().nullable(),
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
     date,
     type,
     paymentType = 'DEBIT',
-    isFixed = false,
+    isRecurring = false,
     startDate,
     endDate,
     dayOfMonth,
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
       date: date ? (parseFlexibleDate(date) ?? new Date()) : new Date(),
       type,
       paymentType,
-      isFixed,
+      isRecurring,
       startDate: startDate ? parseFlexibleDate(startDate) : undefined,
       endDate: endDate ? parseFlexibleDate(endDate) : undefined,
       dayOfMonth,

@@ -178,7 +178,19 @@ async function processBatch(
 
         // Resolver categoria
         let categoryId = registro.categoriaId;
-        if (!categoryId && registro.categoriaSugerida) {
+        
+        // Prioridade: categoriaId selecionada pelo usuário, senão categoriaRecomendada da IA
+        if (!categoryId && registro.categoriaRecomendada && registro.shouldCreateCategory) {
+          // Usuário não selecionou nada, usar recomendação da IA
+          categoryId = await resolveOrCreateCategory(
+            tx, 
+            userId, 
+            registro.categoriaRecomendada, 
+            isIncome ? 'INCOME' : 'EXPENSE',
+            categoriesCache
+          );
+        } else if (!categoryId && registro.categoriaSugerida) {
+          // Fallback para categoriaSugerida (sistema antigo)
           categoryId = await resolveOrCreateCategory(
             tx, 
             userId, 
@@ -190,8 +202,15 @@ async function processBatch(
 
         // Resolver tags
         const tagIds = [];
-        if (registro.tags && Array.isArray(registro.tags)) {
-          for (const tagName of registro.tags) {
+        let tagsToProcess = registro.tags || [];
+        
+        // Se usuário não definiu tags manualmente, usar recomendações da IA
+        if ((!registro.tags || registro.tags.length === 0) && registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0) {
+          tagsToProcess = registro.tagsRecomendadas;
+        }
+        
+        if (tagsToProcess && Array.isArray(tagsToProcess)) {
+          for (const tagName of tagsToProcess) {
             const tagId = await resolveOrCreateTag(tx, userId, tagName, tagsCache);
             if (tagId) tagIds.push(tagId);
           }

@@ -201,6 +201,19 @@ async function handler(req: NextRequest) {
           { status: 400 },
         );
       }
+      // Busca tags do usuário uma só vez para todas as transações
+      let tagsUsuario: any[] = [];
+      if (user) {
+        try {
+          tagsUsuario = await prisma.tag.findMany({
+            where: { userId: user.id },
+            select: { id: true, name: true }
+          });
+        } catch (error) {
+          console.error('Erro ao buscar tags:', error);
+        }
+      }
+
       preview = await Promise.all(transactions.map(async (t: any) => {
         // Normaliza data OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
         let rawDate = t.DTPOSTED || t.date || '';
@@ -208,6 +221,7 @@ async function handler(req: NextRequest) {
         if (rawDate && typeof rawDate === 'string') {
           const match = rawDate.match(/(\d{4})(\d{2})(\d{2})/);
           if (match) {
+            // Retorna no formato dd/MM/yyyy para a API de salvar processar corretamente
             data = `${match[3]}/${match[2]}/${match[1]}`; // dd/MM/yyyy
           }
         }
@@ -215,10 +229,11 @@ async function handler(req: NextRequest) {
         const descricao = String(
           t.MEMO || t.memo || t.NAME || t.name || t.PAYEE || t.payee || '',
         ).trim();
-        
+
         // Usa IA para análise da transação
-        let aiAnalysis = null;
-        let categoriaSugerida = '';
+        let aiAnalysis: any = null;
+        let categoriaRecomendada = '';
+        let categoriaId = '';
         let descricaoMelhorada = descricao;
         let tagsRecomendadas: string[] = [];
         let shouldCreateCategory = false;
@@ -226,37 +241,61 @@ async function handler(req: NextRequest) {
         try {
           if (user && descricao) {
             aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
-            categoriaSugerida = aiAnalysis.suggestedCategory;
+            
+            // Verifica se categoria sugerida existe
+            const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+            const categoriaExistente = categoriasUsuario.find(
+              (cat) =>
+                removeAcentos(cat.name.toLowerCase()) ===
+                removeAcentos(aiAnalysis.suggestedCategory.toLowerCase()),
+            );
+            
+            if (categoriaExistente) {
+              // Categoria existe - usar ela
+              categoriaRecomendada = categoriaExistente.name;
+              categoriaId = categoriaExistente.id;
+              shouldCreateCategory = false;
+            } else {
+              // Categoria não existe - sugerir criação
+              categoriaRecomendada = aiAnalysis.suggestedCategory;
+              shouldCreateCategory = true;
+            }
+            
             descricaoMelhorada = aiAnalysis.enhancedDescription;
-            tagsRecomendadas = aiAnalysis.suggestedTags;
-            shouldCreateCategory = aiAnalysis.shouldCreateCategory;
+            
+            // Verifica tags e filtra apenas as que não existem
+            const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
+              return !tagsUsuario.some(tagExistente => 
+                removeAcentos(tagExistente.name.toLowerCase()) === 
+                removeAcentos(tagSugerida.toLowerCase())
+              );
+            });
+            
+            // Tags recomendadas são apenas as que precisam ser criadas
+            tagsRecomendadas = tagsNaoExistentes;
           }
         } catch (error) {
           console.error('Erro na análise IA:', error);
           // Fallback para método antigo se IA falhar
           const descricaoSimplificada = simplificarDescricao(descricao);
-          categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+          const categoriaSugerida = sugerirCategoria(descricaoSimplificada);
           descricaoMelhorada = descricaoSimplificada || descricao;
-        }
-        
-        // Se não encontrou com IA, usa método antigo
-        if (!categoriaSugerida) {
-          const descricaoSimplificada = simplificarDescricao(descricao);
-          categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-          descricaoMelhorada = descricaoSimplificada || descricao;
-        }
-        
-        // Verifica se categoria existe nas do usuário
-        if (categoriaSugerida && categoriasUsuario.length > 0) {
+          
+          // Verifica se categoria do fallback existe
           const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-          const match = categoriasUsuario.find(
+          const categoriaExistente = categoriasUsuario.find(
             (cat) =>
               removeAcentos(cat.name.toLowerCase()) ===
               removeAcentos(categoriaSugerida.toLowerCase()),
           );
-          if (match) {
-            categoriaSugerida = match.name;
+          
+          if (categoriaExistente) {
+            categoriaRecomendada = categoriaExistente.name;
+            categoriaId = categoriaExistente.id;
             shouldCreateCategory = false;
+          } else {
+            categoriaRecomendada = categoriaSugerida;
+            shouldCreateCategory = true;
           }
         }
         
@@ -266,7 +305,8 @@ async function handler(req: NextRequest) {
           descricao,
           descricaoOriginal: descricao,
           descricaoMelhorada,
-          categoriaSugerida,
+          categoriaRecomendada,
+          categoriaId,
           tagsRecomendadas,
           shouldCreateCategory,
           aiAnalysis: aiAnalysis ? {

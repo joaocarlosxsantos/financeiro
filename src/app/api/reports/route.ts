@@ -112,14 +112,14 @@ export async function GET(req: Request) {
       ],
     };
 
-    // Helper to expand fixed records into occurrences within the interval
-    const expandFixedOccurrences = async (rows: any[], kind: 'income' | 'expense') => {
+    // Helper to expand recurring records into occurrences within the interval
+    const expandRecurringOccurrences = async (rows: any[], kind: 'income' | 'expense') => {
       const occurrences: any[] = [];
       const sDate = parsedStartDate;
       const eDate = parsedEndDate;
       for (const r of rows) {
-        // For non-fixed records, only include if within requested date interval (if provided)
-        if (!r.isFixed) {
+        // For non-recurring records, only include if within requested date interval (if provided)
+        if (!r.isRecurring) {
           const rowDate = r.date ? new Date(r.date) : null;
           if (rowDate) {
             if ((sDate && rowDate < sDate) || (eDate && rowDate > eDate)) {
@@ -210,7 +210,7 @@ export async function GET(req: Request) {
         }
       }
       incomesFetched = incomes;
-      const incOcc = await expandFixedOccurrences(incomes, 'income');
+      const incOcc = await expandRecurringOccurrences(incomes, 'income');
       results.push(...incOcc);
     }
 
@@ -240,7 +240,7 @@ export async function GET(req: Request) {
         }
       }
       expensesFetched = expenses;
-      const expOcc = await expandFixedOccurrences(expenses, 'expense');
+      const expOcc = await expandRecurringOccurrences(expenses, 'expense');
       results.push(...expOcc);
     }
 
@@ -249,15 +249,15 @@ export async function GET(req: Request) {
 
     // totals: compute sums that respect all filters (date, category, wallet, tags)
     // Approach:
-    // - For variable (non-fixed) records, use DB aggregate with date filter applied
-    // - For fixed records, compute occurrences within the interval and sum their amounts
-    const computeFixedSum = (rows: any[]) => {
+    // - For punctual (non-recurring) records, use DB aggregate with date filter applied
+    // - For recurring records, compute occurrences within the interval and sum their amounts
+    const computeRecurringSum = (rows: any[]) => {
       let sum = 0;
   const sDate = parsedStartDate;
   const eDate = parsedEndDate;
       const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
       for (const r of rows) {
-        if (!r.isFixed) continue;
+        if (!r.isRecurring) continue;
         const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
         const seriesEnd = r.endDate ? new Date(r.endDate) : null;
         const from = sDate && sDate > seriesStart ? sDate : seriesStart;
@@ -287,14 +287,14 @@ export async function GET(req: Request) {
       return sum;
     };
 
-    // helper used only for debug: build a breakdown of occurrences per fixed row
-    const buildFixedBreakdown = (rows: any[]) => {
+    // helper used only for debug: build a breakdown of occurrences per recurring row
+    const buildRecurringBreakdown = (rows: any[]) => {
   const sDate = parsedStartDate;
   const eDate = parsedEndDate;
       const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
       const breakdown: any[] = [];
       for (const r of rows) {
-        if (!r.isFixed) continue;
+        if (!r.isRecurring) continue;
         const occurrences: string[] = [];
         const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
         const seriesEnd = r.endDate ? new Date(r.endDate) : null;
@@ -323,21 +323,21 @@ export async function GET(req: Request) {
       return breakdown;
     };
 
-    // variable incomes/expenses aggregate (DB) — apply same category/wallet/tag filters plus date
-    const variableIncomeWhere: any = {
+    // punctual incomes/expenses aggregate (DB) — apply same category/wallet/tag filters plus date
+    const punctualIncomeWhere: any = {
       AND: [
         { userId: user.id },
-        { isFixed: false },
+        { isRecurring: false },
         startDate || endDate ? { date: dateFilter } : {},
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
         ...(tags ? [buildTagFilter(tagNames, tags)] : []),
       ],
     };
-    const variableExpenseWhere: any = {
+    const punctualExpenseWhere: any = {
       AND: [
         { userId: user.id },
-        { isFixed: false },
+        { isRecurring: false },
         startDate || endDate ? { date: dateFilter } : {},
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
@@ -346,19 +346,19 @@ export async function GET(req: Request) {
     };
 
     const [incomeAgg, expenseAgg] = await Promise.all([
-      prisma.income.aggregate({ where: variableIncomeWhere, _sum: { amount: true } }),
-      prisma.expense.aggregate({ where: variableExpenseWhere, _sum: { amount: true } }),
+      prisma.income.aggregate({ where: punctualIncomeWhere, _sum: { amount: true } }),
+      prisma.expense.aggregate({ where: punctualExpenseWhere, _sum: { amount: true } }),
     ]);
 
-    const variableIncomeSum = Number(incomeAgg._sum.amount ?? 0);
-    const variableExpenseSum = Number(expenseAgg._sum.amount ?? 0);
+    const punctualIncomeSum = Number(incomeAgg._sum.amount ?? 0);
+    const punctualExpenseSum = Number(expenseAgg._sum.amount ?? 0);
 
-    // fixed sums: compute from fetched rows (these were already filtered by category/wallet/tags when loaded)
-  const fixedIncomeSum = computeFixedSum(incomesFetched.filter((i: any) => i.isFixed));
-  const fixedExpenseSum = computeFixedSum(expensesFetched.filter((e: any) => e.isFixed));
+    // recurring sums: compute from fetched rows (these were already filtered by category/wallet/tags when loaded)
+  const recurringIncomeSum = computeRecurringSum(incomesFetched.filter((i: any) => i.isRecurring));
+  const recurringExpenseSum = computeRecurringSum(expensesFetched.filter((e: any) => e.isRecurring));
 
-    const totalIncomes = variableIncomeSum + fixedIncomeSum;
-    const totalExpenses = variableExpenseSum + fixedExpenseSum;
+    const totalIncomes = punctualIncomeSum + recurringIncomeSum;
+    const totalExpenses = punctualExpenseSum + recurringExpenseSum;
 
     // fallback raw DB aggregates (kept for debugging / comparison)
     // const incomeAgg = await prisma.income.aggregate({ where: commonWhere, _sum: { amount: true } });
@@ -382,29 +382,29 @@ export async function GET(req: Request) {
       const occurrenceCount = results.length;
       const incomeOccurrences = results.filter((r) => r.kind === 'income');
       const expenseOccurrences = results.filter((r) => r.kind === 'expense');
-      // sample few fixed occurrences that contributed (if any)
-      const fixedSamples = results.filter((r) => r.isFixed).slice(0, 20).map((r) => ({ id: r.id, occurrenceId: r.occurrenceId ?? null, date: r.date, amount: r.amount }));
+      // sample few recurring occurrences that contributed (if any)
+      const recurringSamples = results.filter((r) => r.isRecurring).slice(0, 20).map((r) => ({ id: r.id, occurrenceId: r.occurrenceId ?? null, date: r.date, amount: r.amount }));
       const debugPayload = {
-        variableIncomeSum,
-        variableExpenseSum,
-        fixedIncomeSum,
-        fixedExpenseSum,
+        punctualIncomeSum,
+        punctualExpenseSum,
+        recurringIncomeSum,
+        recurringExpenseSum,
         totals,
         parsedStartDate: parsedStartDate ? parsedStartDate.toISOString() : null,
         parsedEndDate: parsedEndDate ? parsedEndDate.toISOString() : null,
         counts: { incomesFetched: incomesFetched.length, expensesFetched: expensesFetched.length, occurrenceCount, incomeOccurrences: incomeOccurrences.length, expenseOccurrences: expenseOccurrences.length },
-        fixedSamples,
-        // include small samples of fetched fixed records so we can see if fixed rows exist and their fields
-        fetchedFixed: {
-          incomes: incomesFetched.filter((i: any) => i.isFixed).slice(0, 50),
-          expenses: expensesFetched.filter((e: any) => e.isFixed).slice(0, 50),
+        recurringSamples,
+        // include small samples of fetched recurring records so we can see if recurring rows exist and their fields
+        fetchedRecurring: {
+          incomes: incomesFetched.filter((i: any) => i.isRecurring).slice(0, 50),
+          expenses: expensesFetched.filter((e: any) => e.isRecurring).slice(0, 50),
         },
-        fixedBreakdown: {
-          incomes: buildFixedBreakdown(incomesFetched),
-          expenses: buildFixedBreakdown(expensesFetched),
+        recurringBreakdown: {
+          incomes: buildRecurringBreakdown(incomesFetched),
+          expenses: buildRecurringBreakdown(expensesFetched),
         },
         // sample of expanded occurrences (first 50) with canonical ISO dates
-        occurrencesSample: results.slice(0, 50).map((r) => ({ id: r.id, occurrenceId: r.occurrenceId ?? null, date: r.date ? new Date(r.date).toISOString() : null, kind: r.kind, isFixed: Boolean(r.isFixed) })),
+        occurrencesSample: results.slice(0, 50).map((r) => ({ id: r.id, occurrenceId: r.occurrenceId ?? null, date: r.date ? new Date(r.date).toISOString() : null, kind: r.kind, isRecurring: Boolean(r.isRecurring) })),
         // sample of raw fetched rows (first 20) for inspection of stored dates
         fetchedSamples: {
           incomes: incomesFetched.slice(0, 20).map((r) => ({ id: r.id, date: r.date ? new Date(r.date).toISOString() : null, startDate: r.startDate ? new Date(r.startDate).toISOString() : null, endDate: r.endDate ? new Date(r.endDate).toISOString() : null })),

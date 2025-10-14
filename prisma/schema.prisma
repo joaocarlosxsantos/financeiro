@@ -76,10 +76,10 @@ model Expense {
   date        DateTime
   type        ExpenseType
   paymentType PaymentType @default(DEBIT) // Agora só aceita DEBIT, PIX_TRANSFER, CASH, OTHER
-  isFixed     Boolean     @default(false)
-  startDate   DateTime? // Para despesas fixas
-  endDate     DateTime? // Para despesas fixas
-  dayOfMonth  Int? // Para despesas fixas (dia do mês)
+  isRecurring Boolean     @default(false)
+  startDate   DateTime? // Para despesas recorrentes
+  endDate     DateTime? // Para despesas recorrentes
+  dayOfMonth  Int? // Para despesas recorrentes (dia do mês)
   transferId  String? // ID da transferência (para ligar saída e entrada)
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
@@ -99,10 +99,10 @@ model Income {
   date        DateTime
   type        IncomeType
   paymentType PaymentType @default(DEBIT) // Agora só aceita DEBIT, PIX_TRANSFER, CASH, OTHER
-  isFixed     Boolean     @default(false)
-  startDate   DateTime? // Para rendas fixas
-  endDate     DateTime? // Para rendas fixas
-  dayOfMonth  Int? // Para rendas fixas (dia do mês)
+  isRecurring Boolean     @default(false)
+  startDate   DateTime? // Para receitas recorrentes
+  endDate     DateTime? // Para receitas recorrentes
+  dayOfMonth  Int? // Para receitas recorrentes (dia do mês)
   transferId  String? // ID da transferência (para ligar saída e entrada)
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
@@ -156,13 +156,13 @@ enum CategoryType {
 }
 
 enum ExpenseType {
-  FIXED
-  VARIABLE
+  RECURRING
+  PUNCTUAL
 }
 
 enum IncomeType {
-  FIXED
-  VARIABLE
+  RECURRING
+  PUNCTUAL
 }
 
 enum PaymentType {
@@ -337,7 +337,7 @@ enum NotificationType {
   LOW_BALANCE           // Saldo baixo
   GOAL_AT_RISK          // Meta em risco
   DUPLICATE_TRANSACTION // Possível transação duplicada
-  RECURRING_DUE         // Lembrete de gasto fixo
+  RECURRING_DUE         // Lembrete de transação recorrente
   MONTHLY_SUMMARY       // Resumo mensal
   ACHIEVEMENT          // Conquista/meta atingida
   SYSTEM              // Notificação do sistema

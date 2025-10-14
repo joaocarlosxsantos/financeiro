@@ -97,7 +97,7 @@ export async function GET(req: Request) {
     const eDate = parsedEndDate;
     const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
     for (const r of rows) {
-        if (!r.isFixed) {
+        if (!r.isRecurring) {
         // for non-fixed records, include only if within requested date interval (if provided)
         const rowDate = r.date ? new Date(r.date) : null;
         if (rowDate) {
@@ -155,7 +155,7 @@ export async function GET(req: Request) {
   const variableIncomeWhere: any = {
     AND: [
       { userId: user.id },
-      { isFixed: false },
+      { isRecurring: false },
       startDate || endDate ? { date: dateFilter } : {},
       categoryIds ? { categoryId: { in: categoryIds } } : {},
       walletIds ? { walletId: { in: walletIds } } : {},
@@ -165,7 +165,7 @@ export async function GET(req: Request) {
   const variableExpenseWhere: any = {
     AND: [
       { userId: user.id },
-      { isFixed: false },
+      { isRecurring: false },
       startDate || endDate ? { date: dateFilter } : {},
       categoryIds ? { categoryId: { in: categoryIds } } : {},
       walletIds ? { walletId: { in: walletIds } } : {},
@@ -188,7 +188,7 @@ export async function GET(req: Request) {
     const eDate = parsedEndDate;
     const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
     for (const r of rows) {
-      if (!r.isFixed) continue;
+      if (!r.isRecurring) continue;
       const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
       const seriesEnd = r.endDate ? new Date(r.endDate) : null;
       const from = sDate && sDate > seriesStart ? sDate : seriesStart;
@@ -217,8 +217,8 @@ export async function GET(req: Request) {
     return sum;
   };
 
-  const fixedIncomeSum = computeFixedSum(incomesRaw.filter((i: any) => i.isFixed));
-  const fixedExpenseSum = computeFixedSum(expensesRaw.filter((e: any) => e.isFixed));
+  const fixedIncomeSum = computeFixedSum(incomesRaw.filter((i: any) => i.isRecurring));
+  const fixedExpenseSum = computeFixedSum(expensesRaw.filter((e: any) => e.isRecurring));
 
   const totalIncomes = variableIncomeSum + fixedIncomeSum;
   const totalExpenses = variableExpenseSum + fixedExpenseSum;
@@ -237,7 +237,7 @@ export async function GET(req: Request) {
     { header: 'Cartão', key: 'creditCard', width: 20 },
     { header: 'Tipo Pgto', key: 'paymentType', width: 15 },
     { header: 'Tags', key: 'tags', width: 30 },
-    { header: 'Fixa', key: 'fixed', width: 8 },
+    { header: 'Recorrente', key: 'recurring', width: 10 },
     { header: 'Valor', key: 'amount', width: 14 },
   ];
 
@@ -261,7 +261,7 @@ export async function GET(req: Request) {
       creditCard: r.creditCard?.name ?? null,
       paymentType: getPaymentTypeLabel(r.paymentType),
       tags: Array.isArray(r.tags) ? r.tags.join(', ') : null,
-      fixed: r.isFixed ? 'Sim' : 'Não',
+      recurring: r.isRecurring ? 'Sim' : 'Não',
       // write expenses as negative values so spreadsheet shows them as debits
       amount: r.kind === 'expense' ? -Math.abs(Number(r.amount ?? 0)) : Number(r.amount ?? 0),
     } as any);

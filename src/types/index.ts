@@ -23,8 +23,8 @@ export interface Expense {
   description: string;
   amount: number;
   date: Date;
-  type: 'FIXED' | 'VARIABLE';
-  isFixed: boolean;
+  type: 'RECURRING' | 'PUNCTUAL';
+  isRecurring: boolean;
   startDate: Date | null;
   endDate: Date | null;
   dayOfMonth: number | null;
@@ -40,8 +40,8 @@ export interface Income {
   description: string;
   amount: number;
   date: Date;
-  type: 'FIXED' | 'VARIABLE';
-  isFixed: boolean;
+  type: 'RECURRING' | 'PUNCTUAL';
+  isRecurring: boolean;
   startDate: Date | null;
   endDate: Date | null;
   dayOfMonth: number | null;

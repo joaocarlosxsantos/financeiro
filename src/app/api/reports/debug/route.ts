@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         if (rowDate) {
           if ((sDate && rowDate < sDate) || (eDate && rowDate > eDate)) continue;
         }
-        out.push({ ...r, kind: r.type === 'FIXED' ? 'income' : 'expense' });
+        out.push({ ...r, kind: r.type === 'RECURRING' ? 'income' : 'expense' });
         continue;
       }
       const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);

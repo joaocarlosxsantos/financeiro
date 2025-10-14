@@ -109,7 +109,7 @@ export function MultiTagSelector({
             e.target.value = ''; // Reset do select
           }
         }}
-        className="text-xs border border-gray-300 rounded px-2 py-1 w-full"
+        className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
       >
         <option value="">+ Adicionar tag...</option>
         {availableTags
@@ -125,8 +125,8 @@ export function MultiTagSelector({
       {suggestedTags && suggestedTags.length > 0 && (
         <div className="space-y-1">
           <div className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-blue-500" />
-            <span className="text-xs text-blue-600">Sugeridas pela IA:</span>
+            <Sparkles className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+            <span className="text-xs text-blue-600 dark:text-blue-400">Sugeridas pela IA:</span>
           </div>
           <div className="flex flex-wrap gap-1">
             {suggestedTags.map((suggestedTag, index) => {
@@ -140,8 +140,8 @@ export function MultiTagSelector({
                 <Badge
                   key={index}
                   variant="outline"
-                  className={`text-xs cursor-pointer hover:bg-blue-50 flex items-center gap-1 ${
-                    isAlreadySelected ? 'bg-blue-100 border-blue-300' : ''
+                  className={`text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 flex items-center gap-1 border-blue-300 dark:border-blue-600 text-blue-600 dark:text-blue-400 ${
+                    isAlreadySelected ? 'bg-blue-100 dark:bg-blue-950/30 border-blue-400 dark:border-blue-500' : ''
                   }`}
                   onClick={() => {
                     if (!isAlreadySelected) {

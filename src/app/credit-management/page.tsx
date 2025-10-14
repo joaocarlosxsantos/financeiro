@@ -9,7 +9,7 @@ export default function CreditManagementPage() {
   return (
     <>
       <PageTitle module="Controle Financeiro" page="Cartão de Crédito" />
-      <DashboardLayout>
+      <DashboardLayout maxWidth="max-w-7xl">
         <CreditManagementContent />
       </DashboardLayout>
     </>

@@ -53,10 +53,10 @@ export default function TransacoesContent() {
 
       try {
         const [expensesVar, expensesFix, incomesVar, incomesFix] = await Promise.all([
-          fetch(`/api/expenses?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/expenses?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/incomes?type=VARIABLE&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/incomes?type=FIXED&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' })
+          fetch(`/api/expenses?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+          fetch(`/api/expenses?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+          fetch(`/api/incomes?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
+          fetch(`/api/incomes?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' })
         ]);
 
         let totalGastos = 0;
