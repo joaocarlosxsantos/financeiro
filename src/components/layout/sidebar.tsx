@@ -71,6 +71,7 @@ const navigationFinanceiro = {
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LucideLayoutDashboard },
       { name: 'Relatórios', href: '/reports', icon: BarChart3 },
+      { name: 'Relatório Inteligente', href: '/smart-report', icon: Activity },
     ]
   },
   movimentacoes: {
