@@ -198,9 +198,16 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este cartão de crédito?')) {
-      return;
-    }
+    // Abrir modal de confirmação
+    setConfirmingDelete(id);
+  };
+
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+
+  const confirmDelete = async () => {
+    if (!confirmingDelete) return;
+    const id = confirmingDelete;
+    setConfirmingDelete(null);
 
     try {
       const res = await fetch(`/api/credit-cards/${id}`, {
@@ -217,6 +224,8 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
       setError('Erro ao excluir cartão');
     }
   };
+
+  const deletingCard = confirmingDelete ? creditCards.find((c) => c.id === confirmingDelete) : null;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -591,6 +600,40 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
             Tentar novamente
           </Button>
         </div>
+      )}
+
+      {/* Modal de confirmação de exclusão */}
+      {confirmingDelete && (
+        <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tem certeza que deseja excluir este cartão de crédito? Esta ação é irreversível e removerá todos os
+                registros relacionados.
+              </p>
+              {deletingCard && (
+                <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{deletingCard.name}</p>
+              )}
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

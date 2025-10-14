@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Loader2, Edit, Trash2, CreditCard, RotateCcw } from 'lucide-react';
+import { Loader2, Edit, Trash2, CreditCard, RotateCcw, AlertTriangle } from 'lucide-react';
 import RefundDialog from './refund-dialog';
+import { Modal } from '../ui/modal';
 
 interface CreditExpense {
   id: string;
@@ -129,10 +130,16 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
     setSelectedExpenseForRefund(null);
   };
 
-  const deleteExpense = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este gasto? Esta ação não pode ser desfeita.')) {
-      return;
-    }
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+
+  const handleDelete = (id: string) => {
+    setConfirmingDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmingDelete) return;
+    const id = confirmingDelete;
+    setConfirmingDelete(null);
 
     try {
       const response = await fetch(`/api/credit-expenses/${id}`, {
@@ -150,6 +157,10 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
       alert('Erro ao excluir gasto. Tente novamente.');
     }
   };
+
+  const deleteExpense = handleDelete; // Manter compatibilidade com código existente
+
+  const deletingExpense = confirmingDelete ? expenses.find((e) => e.id === confirmingDelete) : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -342,6 +353,40 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         onClose={handleRefundCancel}
         onSuccess={handleRefundSuccess}
       />
+
+      {/* Modal de confirmação de exclusão */}
+      {confirmingDelete && (
+        <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tem certeza que deseja excluir este {deletingExpense?.type === 'REFUND' ? 'estorno' : 'gasto'}? Esta ação é irreversível e removerá todos os
+                registros relacionados.
+              </p>
+              {deletingExpense && (
+                <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{deletingExpense.description}</p>
+              )}
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
