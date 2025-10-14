@@ -231,7 +231,7 @@ async function processBatch(
     const errors: string[] = [];
 
     // Processar em lotes muito pequenos para evitar timeout de transação
-    const BATCH_SIZE = 10; // Processar apenas 10 registros por vez
+    const BATCH_SIZE = 5; // Processar apenas 5 registros por vez para evitar timeout
     
     for (let batchStart = 0; batchStart < registros.length; batchStart += BATCH_SIZE) {
       const batchEnd = Math.min(batchStart + BATCH_SIZE, registros.length);
@@ -240,9 +240,11 @@ async function processBatch(
       console.log(`Processing sub-batch ${batchStart + 1}-${batchEnd} of ${registros.length}`);
       
       // Processar cada sub-lote em sua própria transação com timeout maior
+      const transactionStart = Date.now();
       await prisma.$transaction(async (tx: any) => {      
         for (let idx = 0; idx < batchRegistros.length; idx++) {
           const registro = batchRegistros[idx];
+          const recordStart = Date.now();
           try {
             // Pular saldos iniciais
             if (registro.isSaldoInicial) continue;
@@ -324,20 +326,26 @@ async function processBatch(
           }
 
             created++;
+            const recordTime = Date.now() - recordStart;
+            console.log(`✅ Record ${batchStart + idx + 1} processed in ${recordTime}ms`);
           
           } catch (recordError) {
-            console.error(`❌ Record ${batchStart + idx + 1} failed:`, recordError);
+            const recordTime = Date.now() - recordStart;
+            console.error(`❌ Record ${batchStart + idx + 1} failed after ${recordTime}ms:`, recordError);
             errors.push(`Erro no registro: ${registro.descricao || 'sem descrição'}`);
           }
         }
       }, {
-        maxWait: 10000, // 10 segundos de espera máxima
-        timeout: 15000, // 15 segundos de timeout
+        maxWait: 20000, // 20 segundos de espera máxima
+        timeout: 30000, // 30 segundos de timeout
       });
       
-      // Pequena pausa entre sub-lotes
+      const transactionTime = Date.now() - transactionStart;
+      console.log(`⏱️ Transaction for batch ${batchStart + 1}-${batchEnd} completed in ${transactionTime}ms`);
+      
+      // Pausa maior entre sub-lotes para evitar sobrecarga
       if (batchEnd < registros.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 

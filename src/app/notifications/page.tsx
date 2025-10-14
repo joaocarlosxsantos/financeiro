@@ -9,7 +9,7 @@ export default function NotificationsPage() {
   return (
     <>
       <PageTitle module="Controle Financeiro" page="Notificações" />
-      <DashboardLayout>
+      <DashboardLayout maxWidth="max-w-6xl">
         <NotificationsPageClient />
       </DashboardLayout>
     </>

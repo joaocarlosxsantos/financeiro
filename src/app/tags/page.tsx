@@ -5,7 +5,7 @@ import PageTitle from '@/components/PageTitle';
 
 export default function TagsPage() {
   return (
-    <DashboardLayout>
+    <DashboardLayout maxWidth="max-w-6xl">
       <PageTitle module="Controle Financeiro" page="Tags" />
       <TagsContent />
     </DashboardLayout>

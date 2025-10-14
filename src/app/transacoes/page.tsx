@@ -9,7 +9,7 @@ export default function TransacoesPage() {
   return (
     <>
       <PageTitle module="Controle Financeiro" page="Transações" />
-      <DashboardLayout>
+      <DashboardLayout maxWidth="max-w-7xl">
         <TransacoesWrapper />
       </DashboardLayout>
     </>

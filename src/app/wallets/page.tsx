@@ -7,7 +7,7 @@ export const metadata = getMetadata({ module: 'Controle Financeiro', page: 'Cart
 
 export default function WalletsPage() {
   return (
-    <DashboardLayout>
+    <DashboardLayout maxWidth="max-w-6xl">
       <PageTitle module="Controle Financeiro" page="Carteiras" />
       <CarteirasContent />
     </DashboardLayout>

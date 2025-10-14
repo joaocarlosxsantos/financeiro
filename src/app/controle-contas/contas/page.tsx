@@ -251,7 +251,7 @@ export default function Page() {
   const handleAddModalClose = useCallback(() => setAddModalOpen(false), []);
 
   return (
-    <div className="flex flex-col gap-12 w-full max-w-7xl mx-auto">
+    <div className="flex flex-col gap-12 w-full max-w-7xl mx-auto p-4 sm:p-8">
       <PageTitle module="Controle de Contas" page="Contas" />
   {toastMsg && <Toast open={true} message={toastMsg} onClose={handleToastClose} inline={false} />}
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 rounded-3xl border border-neutral-200/70 bg-white p-6 md:p-10 shadow-xl dark:border-neutral-800 dark:bg-neutral-900/80">

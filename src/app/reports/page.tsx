@@ -7,7 +7,7 @@ export const metadata = getMetadata({ module: 'Controle Financeiro', page: 'Rela
 
 export default function ReportsPage() {
   return (
-    <DashboardLayout>
+    <DashboardLayout maxWidth="max-w-7xl">
   {/* componente cliente: garante que document.title seja atualizado no navegador (client-side) */}
   <PageTitle module="Controle Financeiro" page="Relatórios" />
 
