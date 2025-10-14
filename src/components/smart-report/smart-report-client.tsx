@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MonthSelector } from '@/components/ui/month-selector';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -19,9 +19,13 @@ import {
   ArrowUp,
   ArrowDown,
   CreditCard,
-  Wallet
+  Wallet,
+  Info,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { formatDateBrasilia, getNowBrasilia } from '@/lib/datetime-brasilia';
+import { getMonthYear } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { FinancialHealthChart } from './financial-health-chart';
 import { ExpenseBreakdownChart } from './expense-breakdown-chart';
@@ -75,28 +79,70 @@ interface SmartInsight {
 }
 
 export default function SmartReportClient() {
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = getNowBrasilia();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [currentDate, setCurrentDate] = useState(() => getNowBrasilia());
   
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [insights, setInsights] = useState<SmartInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUsingDemoData, setIsUsingDemoData] = useState(false);
+
+  // Funções de navegação do mês
+  const today = new Date();
+  const isAtCurrentMonth =
+    currentDate.getFullYear() === today.getFullYear() &&
+    currentDate.getMonth() === today.getMonth();
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() - 1);
+      return newDate;
+    });
+  };
+
+  const handleNextMonth = () => {
+    if (!isAtCurrentMonth) {
+      setCurrentDate(prev => {
+        const newDate = new Date(prev);
+        newDate.setMonth(prev.getMonth() + 1);
+        return newDate;
+      });
+    }
+  };
 
   useEffect(() => {
     fetchFinancialData();
-  }, [selectedMonth]);
+  }, [currentDate]);
 
   const fetchFinancialData = async () => {
     setLoading(true);
+    const selectedMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    console.log('Iniciando busca de dados financeiros para o mês:', selectedMonth);
+    
     try {
-      const response = await fetch(`/api/smart-report?month=${selectedMonth}`);
+      const url = `/api/smart-report?month=${selectedMonth}`;
+      console.log('Fazendo requisição para:', url);
+      
+      const response = await fetch(url);
+      console.log('Status da resposta:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Erro ao buscar dados financeiros');
+        const errorText = await response.text();
+        console.error('Erro na resposta da API:', errorText);
+        throw new Error(`Erro ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
+      console.log('Dados recebidos da API:', data);
+      
+      // Verificar se os dados parecem válidos (não são apenas zeros ou dados padrão)
+      const hasValidData = data.totalIncome > 0 || data.totalExpenses > 0 || (data.expensesByCategory && data.expensesByCategory.length > 0);
+      
+      if (!hasValidData) {
+        console.warn('API retornou dados vazios ou inválidos. Total Income:', data.totalIncome, 'Total Expenses:', data.totalExpenses, 'Categories:', data.expensesByCategory?.length);
+      } else {
+        console.log('✅ Dados válidos recebidos da API');
+      }
       
       // Converter strings para números quando necessário e garantir valores padrão
       const processedData: FinancialData = {
@@ -125,55 +171,38 @@ export default function SmartReportClient() {
       
       setFinancialData(processedData);
       setInsights(generatedInsights);
+      setIsUsingDemoData(false);
+      console.log('✅ SMART REPORT - Usando dados reais do usuário');
     } catch (error) {
       console.error('Erro ao buscar dados financeiros:', error);
+      console.error('URL da requisição:', `/api/smart-report?month=${selectedMonth}`);
+      console.warn('🔴 SMART REPORT - Erro na API, mostrando dados vazios');
       
-      // Fallback para dados simulados em caso de erro
-      const mockData: FinancialData = {
-        totalIncome: 8500.00,
-        totalExpenses: 6200.00,
-        balance: 2300.00,
-        previousMonthBalance: 1800.00,
-        savingsRate: 27.1,
-        expensesByCategory: [
-          { categoryName: 'Alimentação', amount: 1500.00, percentage: 24.2 },
-          { categoryName: 'Transporte', amount: 800.00, percentage: 12.9 },
-          { categoryName: 'Moradia', amount: 2000.00, percentage: 32.3 },
-          { categoryName: 'Lazer', amount: 600.00, percentage: 9.7 },
-          { categoryName: 'Saúde', amount: 450.00, percentage: 7.3 },
-          { categoryName: 'Outros', amount: 850.00, percentage: 13.7 }
-        ],
-        creditCardUsage: 2500.00,
-        creditCardLimit: 5000.00,
-        recurringExpenses: 3200.00,
+      // Criar dados vazios em vez de dados demo
+      const emptyData: FinancialData = {
+        totalIncome: 0,
+        totalExpenses: 0,
+        balance: 0,
+        previousMonthBalance: 0,
+        savingsRate: 0,
+        expensesByCategory: [],
+        creditCardUsage: 0,
+        creditCardLimit: 0,
+        recurringExpenses: 0,
         largestExpense: {
-          description: 'Aluguel - Apartamento',
-          amount: 1800.00,
-          category: 'Moradia'
+          description: 'Nenhuma despesa encontrada',
+          amount: 0,
+          category: 'N/A'
         },
-        unusualTransactions: [
-          { description: 'Compra excepcional - Eletrônicos', amount: 899.00, date: '2024-10-10' },
-          { description: 'Jantar especial', amount: 250.00, date: '2024-10-15' }
-        ],
-        healthScore: 78,
-        previousHealthScores: [
-          { month: '2024-05', score: 65 },
-          { month: '2024-06', score: 68 },
-          { month: '2024-07', score: 72 },
-          { month: '2024-08', score: 75 },
-          { month: '2024-09', score: 76 },
-          { month: '2024-10', score: 78 }
-        ],
-        budgetGoals: [
-          { category: 'Alimentação', budgeted: 1200.00, spent: 1500.00, remaining: -300.00 },
-          { category: 'Transporte', budgeted: 900.00, spent: 800.00, remaining: 100.00 },
-          { category: 'Lazer', budgeted: 500.00, spent: 600.00, remaining: -100.00 }
-        ]
+        unusualTransactions: [],
+        healthScore: 0,
+        previousHealthScores: [],
+        budgetGoals: []
       };
 
-      const generatedInsights = generateSmartInsights(mockData);
-      setFinancialData(mockData);
-      setInsights(generatedInsights);
+      setFinancialData(emptyData);
+      setInsights([]);
+      setIsUsingDemoData(true);
     } finally {
       setLoading(false);
     }
@@ -303,15 +332,44 @@ export default function SmartReportClient() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Análise de {new Date(selectedMonth).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            Relatórios Inteligentes
           </h2>
         </div>
-        <MonthSelector 
-          value={selectedMonth} 
-          onChange={setSelectedMonth}
-          className="w-full sm:w-auto"
-        />
+        <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePreviousMonth}
+            aria-label="Mês anterior"
+            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+          >
+            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+          </Button>
+          <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 rounded-md w-full sm:w-auto justify-center border bg-white/90 border-slate-300/70 text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100">
+            <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+            <span className="font-medium text-sm sm:text-base">
+              {(() => {
+                const label = getMonthYear(currentDate);
+                // Capitaliza o mês
+                return label.charAt(0).toUpperCase() + label.slice(1);
+              })()}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNextMonth}
+            disabled={isAtCurrentMonth}
+            aria-disabled={isAtCurrentMonth}
+            aria-label="Próximo mês"
+            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm disabled:opacity-50"
+          >
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+          </Button>
+        </div>
       </div>
+
+
 
       {/* Score de Saúde Financeira */}
       <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
@@ -350,7 +408,7 @@ export default function SmartReportClient() {
       </Card>
 
       {/* Métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
@@ -417,6 +475,44 @@ export default function SmartReportClient() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Cartão de Crédito
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {financialData.creditCardLimit > 0 
+                ? ((financialData.creditCardUsage / financialData.creditCardLimit) * 100).toFixed(1)
+                : 0}%
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              R$ {financialData.creditCardUsage.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} usado
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Gastos Recorrentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              R$ {financialData.recurringExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {financialData.totalExpenses > 0 
+                ? ((financialData.recurringExpenses / financialData.totalExpenses) * 100).toFixed(1)
+                : 0}% do total
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Insights Inteligentes */}
@@ -425,7 +521,7 @@ export default function SmartReportClient() {
           <Lightbulb className="h-5 w-5" />
           Insights Inteligentes
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {insights.map((insight, index) => (
             <Card key={index} className={cn(
               "border-l-4",
@@ -458,12 +554,12 @@ export default function SmartReportClient() {
       {/* Gráficos e Análises */}
       <div className="space-y-6">
         {/* Gráficos principais */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 space-y-6">
             <FinancialHealthChart data={financialData.previousHealthScores} />
             <BudgetProgressCard budgetGoals={financialData.budgetGoals} />
           </div>
-          <div>
+          <div className="xl:col-span-1">
             <ExpenseBreakdownChart data={financialData.expensesByCategory} />
           </div>
         </div>

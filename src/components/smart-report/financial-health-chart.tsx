@@ -23,7 +23,7 @@ export function FinancialHealthChart({ data }: FinancialHealthChartProps) {
       displayMonth: new Date(item.month + '-01').toLocaleDateString('pt-BR', { 
         month: 'short' 
       }).replace('.', ''),
-      height: Math.max((item.score / 100) * 80, 8), // Altura baseada em percentual de 100, mín 8%
+      height: Math.max((item.score / 100) * 100, 4), // Altura baseada em percentual de 100, mín 4%
       isLastMonth: index === data.length - 1
     }));
   }, [data]);
@@ -112,12 +112,16 @@ export function FinancialHealthChart({ data }: FinancialHealthChartProps) {
             </div>
             
             {/* Linha de referência para 100 pontos */}
-            <div className="absolute top-2 left-0 right-0 border-t border-dashed border-gray-300 dark:border-gray-600 opacity-50"></div>
-            <div className="absolute top-0 right-2 text-xs text-gray-500 dark:text-gray-400">100</div>
+            <div className="absolute top-4 left-0 right-0 border-t border-dashed border-gray-300 dark:border-gray-600 opacity-50"></div>
+            <div className="absolute top-2 right-2 text-xs text-gray-500 dark:text-gray-400">100</div>
             
             {/* Linha de referência para 50 pontos */}
-            <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-gray-300 dark:border-gray-600 opacity-30"></div>
-            <div className="absolute top-1/2 right-2 text-xs text-gray-500 dark:text-gray-400 -translate-y-1/2">50</div>
+            <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-gray-300 dark:border-gray-600 opacity-30 translate-y-2"></div>
+            <div className="absolute top-1/2 right-2 text-xs text-gray-500 dark:text-gray-400 translate-y-2">50</div>
+            
+            {/* Linha de referência para 0 pontos */}
+            <div className="absolute bottom-4 left-0 right-0 border-t border-dashed border-gray-300 dark:border-gray-600 opacity-20"></div>
+            <div className="absolute bottom-2 right-2 text-xs text-gray-500 dark:text-gray-400">0</div>
           </div>
 
           {/* Legenda melhorada */}

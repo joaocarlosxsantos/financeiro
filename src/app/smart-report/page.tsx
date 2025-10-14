@@ -7,7 +7,7 @@ export const metadata = getMetadata({ module: 'Controle Financeiro', page: 'Rela
 
 export default function SmartReportPage() {
   return (
-    <DashboardLayout>
+    <DashboardLayout maxWidth="max-w-7xl">
       <PageTitle module="Controle Financeiro" page="Relatório Inteligente" />
       
       <div className="p-6">

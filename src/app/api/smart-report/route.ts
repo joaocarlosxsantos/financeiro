@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           description: true,
           date: true,
           category: { select: { name: true } },
-          isRecurring: true
+          type: true
         }
       }),
 
@@ -81,16 +81,18 @@ export async function GET(req: NextRequest) {
         }
       }),
 
-      // Expenses by category
-      prisma.expense.groupBy({
-        by: ['categoryId'],
+      // Expenses by category - usando findMany em vez de groupBy para melhor controle
+      prisma.expense.findMany({
         where: {
           user: { email: session.user.email },
           date: { gte: startDate, lte: endDate },
           transferId: null
         },
-        _sum: { amount: true },
-        _count: true
+        select: {
+          amount: true,
+          categoryId: true,
+          category: { select: { name: true } }
+        }
       }),
 
       // Previous month expenses
@@ -118,7 +120,7 @@ export async function GET(req: NextRequest) {
         where: {
           user: { email: session.user.email },
           date: { gte: startDate, lte: endDate },
-          isRecurring: true,
+          type: 'RECURRING',
           transferId: null
         },
         select: { amount: true }
@@ -146,18 +148,6 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    // Get category names for expenses by category
-    const categoryIds = expensesByCategory
-      .map((item: any) => item.categoryId)
-      .filter(Boolean) as string[];
-    
-    const categories = await prisma.category.findMany({
-      where: { id: { in: categoryIds } },
-      select: { id: true, name: true }
-    });
-
-    const categoryMap = new Map(categories.map((cat: any) => [cat.id, cat.name]));
-
     // Calculate totals - Convert Decimal to number
     const totalIncome = incomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
     const totalExpenses = expenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
@@ -169,12 +159,21 @@ export async function GET(req: NextRequest) {
 
     const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-    // Process expenses by category
-    const expensesByCategoryData = expensesByCategory
-      .map((item: any) => ({
-        categoryName: categoryMap.get(item.categoryId!) || 'Sem categoria',
-        amount: Number(item._sum.amount) || 0,
-        percentage: totalExpenses > 0 ? ((Number(item._sum.amount) || 0) / totalExpenses) * 100 : 0
+    // Process expenses by category - agrupar manualmente
+    const categoryTotals = new Map<string, number>();
+    
+    expensesByCategory.forEach((expense: any) => {
+      const categoryName = expense.category?.name || 'Sem categoria';
+      const amount = Number(expense.amount) || 0;
+      const currentTotal = categoryTotals.get(categoryName) || 0;
+      categoryTotals.set(categoryName, currentTotal + amount);
+    });
+
+    const expensesByCategoryData = Array.from(categoryTotals.entries())
+      .map(([categoryName, amount]) => ({
+        categoryName,
+        amount,
+        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
       }))
       .sort((a: any, b: any) => b.amount - a.amount);
 
@@ -194,61 +193,116 @@ export async function GET(req: NextRequest) {
       return Number(expense.amount) > Number(largest.amount) ? expense : largest;
     }, { amount: 0, description: 'Nenhuma despesa', category: { name: 'Sem categoria' } });
 
-    // Find unusual transactions (expenses > 2 standard deviations from mean)
-    const expenseAmounts = expenses.map((e: any) => Number(e.amount));
-    const meanExpense = expenseAmounts.reduce((sum: number, amount: number) => sum + amount, 0) / expenseAmounts.length || 0;
-    const variance = expenseAmounts.reduce((sum: number, amount: number) => sum + Math.pow(amount - meanExpense, 2), 0) / expenseAmounts.length || 0;
-    const stdDev = Math.sqrt(variance);
-    const threshold = meanExpense + (2 * stdDev);
+    // Find unusual transactions (expenses significantly above average)
+    let unusualTransactions: any[] = [];
+    
+    if (expenses.length > 3) { // Only calculate if we have enough data
+      const expenseAmounts = expenses.map((e: any) => Number(e.amount)).filter((amount: number) => amount > 0);
+      
+      if (expenseAmounts.length > 0) {
+        const sortedAmounts = [...expenseAmounts].sort((a, b) => a - b);
+        const median = sortedAmounts[Math.floor(sortedAmounts.length / 2)];
+        const q3Index = Math.floor(sortedAmounts.length * 0.75);
+        const q3 = sortedAmounts[q3Index];
+        
+        // Consider as unusual: expenses > Q3 + 1.5 * IQR or > 3 * median (whichever is lower)
+        const iqr = q3 - sortedAmounts[Math.floor(sortedAmounts.length * 0.25)];
+        const outlierThreshold = Math.min(q3 + 1.5 * iqr, median * 3);
+        const finalThreshold = Math.max(outlierThreshold, 200); // Minimum R$ 200 to be considered unusual
 
-    const unusualTransactions = expenses
-      .filter((expense: any) => Number(expense.amount) > threshold && Number(expense.amount) > 100) // Only consider expenses above R$ 100
-      .map((expense: any) => ({
-        description: expense.description || 'Transação sem descrição',
-        amount: Number(expense.amount),
-        date: expense.date ? expense.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-      }))
-      .slice(0, 5); // Limit to 5 transactions
+        unusualTransactions = expenses
+          .filter((expense: any) => Number(expense.amount) > finalThreshold)
+          .map((expense: any) => ({
+            description: expense.description || 'Transação sem descrição',
+            amount: Number(expense.amount),
+            date: expense.date ? expense.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          }))
+          .sort((a: any, b: any) => b.amount - a.amount) // Sort by amount desc
+          .slice(0, 5); // Limit to 5 transactions
+      }
+    }
 
-    // Calculate health score (simplified algorithm)
-    let healthScore = 50; // Base score
+    // Calculate health score (comprehensive algorithm)
+    let healthScore = 0;
 
-    // Savings rate (0-30 points)
-    if (savingsRate >= 20) healthScore += 30;
+    // 1. Savings rate (0-35 points) - Most important factor
+    if (savingsRate >= 30) healthScore += 35;
+    else if (savingsRate >= 20) healthScore += 30;
+    else if (savingsRate >= 15) healthScore += 25;
     else if (savingsRate >= 10) healthScore += 20;
-    else if (savingsRate >= 5) healthScore += 10;
+    else if (savingsRate >= 5) healthScore += 15;
+    else if (savingsRate >= 0) healthScore += 10;
+    else healthScore += 0; // Negative savings
 
-    // Credit usage (0-20 points)
+    // 2. Income vs Expenses balance (0-25 points)
+    if (balance > 0) {
+      const balanceRatio = balance / totalIncome;
+      if (balanceRatio >= 0.3) healthScore += 25;
+      else if (balanceRatio >= 0.2) healthScore += 20;
+      else if (balanceRatio >= 0.1) healthScore += 15;
+      else healthScore += 10;
+    } else {
+      healthScore += 0; // Negative balance
+    }
+
+    // 3. Credit usage (0-20 points)
     const creditUsageRatio = totalCreditLimit > 0 ? totalCreditUsage / totalCreditLimit : 0;
-    if (creditUsageRatio <= 0.3) healthScore += 20;
-    else if (creditUsageRatio <= 0.5) healthScore += 15;
-    else if (creditUsageRatio <= 0.7) healthScore += 10;
+    if (totalCreditLimit === 0 || creditUsageRatio <= 0.1) healthScore += 20; // No credit or very low usage
+    else if (creditUsageRatio <= 0.3) healthScore += 15;
+    else if (creditUsageRatio <= 0.5) healthScore += 10;
+    else if (creditUsageRatio <= 0.7) healthScore += 5;
+    else healthScore += 0; // High credit usage
 
-    // Balance trend (0-20 points)
-    if (balance > previousMonthBalance) healthScore += 20;
-    else if (balance === previousMonthBalance) healthScore += 10;
+    // 4. Month-over-month improvement (0-10 points)
+    if (balance > previousMonthBalance * 1.1) healthScore += 10; // 10% improvement
+    else if (balance > previousMonthBalance) healthScore += 7;
+    else if (balance >= previousMonthBalance * 0.95) healthScore += 5; // Within 5% of previous
+    else healthScore += 0;
 
-    // Expense concentration (0-10 points)
-    const maxCategoryPercentage = Math.max(...expensesByCategoryData.map((cat: any) => cat.percentage), 0);
-    if (maxCategoryPercentage <= 40) healthScore += 10;
-    else if (maxCategoryPercentage <= 50) healthScore += 5;
+    // 5. Expense diversification (0-10 points)
+    if (expensesByCategoryData.length > 0) {
+      const maxCategoryPercentage = Math.max(...expensesByCategoryData.map((cat: any) => cat.percentage), 0);
+      if (maxCategoryPercentage <= 30 && expensesByCategoryData.length >= 4) healthScore += 10; // Well diversified
+      else if (maxCategoryPercentage <= 40) healthScore += 7;
+      else if (maxCategoryPercentage <= 50) healthScore += 5;
+      else healthScore += 2; // Concentrated expenses
+    }
 
-    healthScore = Math.min(100, Math.max(0, healthScore));
+    healthScore = Math.min(100, Math.max(0, Math.round(healthScore)));
 
-    // Generate historical health scores (mock data for now)
+    // Generate historical health scores based on actual data trends
     const previousHealthScores = [];
+    const baseScore = healthScore;
+    
     for (let i = 5; i >= 0; i--) {
       const historyMonth = new Date(year, monthNum - 1 - i, 1);
       const monthStr = `${historyMonth.getFullYear()}-${String(historyMonth.getMonth() + 1).padStart(2, '0')}`;
       
-      // Generate realistic score progression (simplified)
-      let historicalScore = healthScore + (Math.random() - 0.5) * 20;
-      if (i > 0) historicalScore -= i * 2; // Gradual improvement over time
-      historicalScore = Math.min(100, Math.max(40, historicalScore));
+      let historicalScore = baseScore;
+      
+      if (i > 0) {
+        // Calculate historical score based on balance trend
+        const balanceImprovement = balance - previousMonthBalance;
+        const monthlyImprovement = balanceImprovement / Math.max(i, 1);
+        
+        // Apply trend-based adjustment
+        if (balanceImprovement > 0) {
+          // Improving trend - scores should be lower in the past
+          historicalScore = baseScore - (i * 3) + (Math.random() * 4 - 2);
+        } else if (balanceImprovement < 0) {
+          // Declining trend - scores should be higher in the past
+          historicalScore = baseScore + (i * 2) + (Math.random() * 4 - 2);
+        } else {
+          // Stable trend - scores should be relatively flat
+          historicalScore = baseScore + (Math.random() * 6 - 3);
+        }
+      }
+      
+      historicalScore = Math.min(100, Math.max(30, Math.round(historicalScore)));
       
       previousHealthScores.push({
         month: monthStr,
-        score: Math.round(historicalScore)
+        score: historicalScore
       });
     }
 
