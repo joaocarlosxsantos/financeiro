@@ -164,17 +164,17 @@ function extractMerchantInfo(description: string): {
     }
   }
   
-  // PIX - mantém simples, só o nome da pessoa
+  // PIX - mantém a descrição completa para saber origem/destino
   if (desc.includes('pix')) {
     const pixPatterns = [
-      /pix\s+(?:para|enviado|de|recebido)?\s*[-:]?\s*([a-zA-Z\s]+)/i,
-      /transferencia\s+pix\s*[-:]?\s*([a-zA-Z\s]+)/i
+      /pix\s+(?:para|enviado|de|recebido)?\s*[-:]?\s*(.+)/i,
+      /transferencia\s+pix\s*[-:]?\s*(.+)/i
     ];
     
     for (const pattern of pixPatterns) {
       const match = description.match(pattern);
       if (match) {
-        const name = match[1].trim().split(' ').slice(0, 2).join(' '); // Máximo 2 palavras
+        const name = match[1].trim(); // Mantém o nome completo
         if (name.length > 2 && !name.includes('*')) {
           return {
             merchant: `PIX - ${formatPersonName(name)}`,
@@ -211,18 +211,30 @@ function formatMerchantName(name: string): string {
 }
 
 /**
- * Formata nome de pessoa para PIX
+ * Formata nome de pessoa para PIX - extrai o nome da pessoa dos dados
  */
 function formatPersonName(name: string): string {
   if (!name) return '';
   
-  // Remove caracteres especiais e números
-  name = name.replace(/[^a-zA-Z\s]/g, '').trim();
+  // Remove asteriscos e aspas
+  name = name.replace(/[*"]/g, '').trim();
+  
+  // Extrai apenas o nome da pessoa, removendo códigos numéricos no início
+  // Ex: "00019 91763720 LIVIA ARAUJO" -> "LIVIA ARAUJO"
+  const nameMatch = name.match(/(?:\d+\s+)*([a-zA-Z\s]+)$/);
+  if (nameMatch) {
+    name = nameMatch[1].trim();
+  }
+  
+  // Se não encontrou padrão, usa a string original mas remove números isolados
+  if (!nameMatch || name.length < 3) {
+    name = name.replace(/^\d+\s+/g, '').trim();
+  }
   
   // Capitaliza apenas a primeira letra de cada palavra
   return name
     .split(' ')
-    .filter(word => word.length > 1) // Remove palavras muito curtas
+    .filter(word => word.length > 0 && !/^\d+$/.test(word)) // Remove palavras vazias e números isolados
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
     .trim();
