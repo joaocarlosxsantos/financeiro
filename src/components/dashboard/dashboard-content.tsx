@@ -100,6 +100,10 @@ export function DashboardContent() {
       baselineLinear?: number | undefined;
       baselineRecent?: number | undefined;
     }>;
+    // Versões completas para detalhamento (incluem categoria de transferência)
+    expensesByCategoryComplete?: Array<{ category: string; amount: number; color: string }>;
+    incomesByCategoryComplete?: Array<{ category: string; amount: number; color: string }>;
+    expenseDiffAllComplete?: Array<{ category: string; amount: number; diff: number; prevAmount: number }>;
   };
   const [summary, setSummary] = useState<Summary>({
     expensesByCategory: [],
@@ -110,6 +114,9 @@ export function DashboardContent() {
     expenseDiffAll: [],
     dailyBalanceData: [],
     balanceProjectionData: [],
+    expensesByCategoryComplete: [],
+    incomesByCategoryComplete: [],
+    expenseDiffAllComplete: [],
   });
   // Totais desacoplados do Summary (antes usados pelo gráfico removido)
   const [totalIncome, setTotalIncome] = useState(0);
@@ -738,11 +745,11 @@ export function DashboardContent() {
       >
         {modal === 'income' && (
           <div className="mt-4">
-            {summary.incomesByCategory.length === 0 ? (
+            {(summary.incomesByCategoryComplete || summary.incomesByCategory).length === 0 ? (
               <div className="text-sm text-muted-foreground">Nenhum ganho encontrado.</div>
             ) : (
               <ul className="space-y-2">
-                {[...summary.incomesByCategory]
+                {[...(summary.incomesByCategoryComplete || summary.incomesByCategory)]
                   .sort((a, b) => b.amount - a.amount)
                   .map((item) => (
                     <li key={item.category} className="flex justify-between items-center">
@@ -758,11 +765,11 @@ export function DashboardContent() {
         )}
         {modal === 'expense' && (
           <div className="mt-4">
-            {summary.expensesByCategory.length === 0 ? (
+            {(summary.expensesByCategoryComplete || summary.expensesByCategory).length === 0 ? (
               <div className="text-sm text-muted-foreground">Nenhum gasto encontrado.</div>
             ) : (
               <ul className="space-y-2">
-                {[...summary.expensesByCategory]
+                {[...(summary.expensesByCategoryComplete || summary.expensesByCategory)]
                   .sort((a, b) => b.amount - a.amount)
                   .map((item) => (
                     <li key={item.category} className="flex justify-between items-center">
@@ -784,7 +791,7 @@ export function DashboardContent() {
                 <div className="text-sm text-muted-foreground">Nenhum ganho encontrado.</div>
               ) : (
                 <ul className="space-y-2">
-                  {[...summary.incomesByCategory]
+                  {[...(summary.incomesByCategoryComplete || summary.incomesByCategory)]
                     .sort((a, b) => b.amount - a.amount)
                     .map((item) => (
                       <li key={item.category} className="flex justify-between items-center">
@@ -803,7 +810,7 @@ export function DashboardContent() {
                 <div className="text-sm text-muted-foreground">Nenhum gasto encontrado.</div>
               ) : (
                 <ul className="space-y-2">
-                  {[...summary.expensesByCategory]
+                  {[...(summary.expensesByCategoryComplete || summary.expensesByCategory)]
                     .sort((a, b) => b.amount - a.amount)
                     .map((item) => (
                       <li key={item.category} className="flex justify-between items-center">
@@ -820,11 +827,11 @@ export function DashboardContent() {
         )}
         {modal === 'diff' && (
           <div className="mt-4">
-            {summary.expenseDiffAll.length === 0 ? (
+            {(summary.expenseDiffAllComplete || summary.expenseDiffAll).length === 0 ? (
               <div className="text-sm text-muted-foreground">Nenhuma variação encontrada.</div>
             ) : (
               <ul className="space-y-2 max-h-[60vh] overflow-auto pr-1">
-                {summary.expenseDiffAll.map((item) => (
+                {(summary.expenseDiffAllComplete || summary.expenseDiffAll).map((item) => (
                   <li
                     key={item.category}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b last:border-b-0 pb-2"

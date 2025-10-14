@@ -128,6 +128,8 @@ export async function GET(req: NextRequest) {
   const expensesByCategory: Record<string, { amount: number; color: string }> = {};
   for (const e of expenses) {
     const cat = e.category?.name || 'Sem categoria';
+    // Excluir categoria de transferência dos gráficos
+    if (cat === 'Transferência entre Contas') continue;
     const color = e.category?.color || 'hsl(var(--muted-foreground))';
     if (!expensesByCategory[cat]) expensesByCategory[cat] = { amount: 0, color };
     expensesByCategory[cat].amount += Number(e.amount);

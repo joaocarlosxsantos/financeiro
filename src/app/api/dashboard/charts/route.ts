@@ -85,12 +85,15 @@ export async function GET(req: NextRequest) {
   const days: string[] = [];
   for (let d = 1; d <= effectiveEnd.getDate(); d++) days.push(toYmd(new Date(year, month - 1, d)));
 
-  const categories = Array.from(new Set(allExpenses.map((e) => e.category?.name || 'Sem categoria')));
+  const categories = Array.from(new Set(allExpenses.map((e) => e.category?.name || 'Sem categoria')))
+    .filter(c => c !== 'Transferência entre Contas'); // Excluir categoria de transferência
   const dailyByCategory = days.map((date) => {
     const row: Record<string, any> = { date };
     for (const c of categories) row[c] = 0;
     for (const e of allExpenses.filter((x) => x.date && toYmd(new Date(x.date)) === date)) {
       const key = e.category?.name || 'Sem categoria';
+      // Excluir categoria de transferência dos gráficos diários
+      if (key === 'Transferência entre Contas') continue;
       row[key] += Number(e.amount || 0);
     }
     return row;
@@ -149,6 +152,8 @@ export async function GET(req: NextRequest) {
   const expenseMap = new Map<string, { amount: number; color: string }>();
   for (const e of allExpensesThisMonth) {
     const key = e.category?.name || 'Sem categoria';
+    // Excluir categoria de transferência dos gráficos
+    if (key === 'Transferência entre Contas') continue;
     // fallback consistente com frontend: despesas usam muted-foreground quando não há cor
     const color = e.category?.color || 'hsl(var(--muted-foreground))';
     const cur = expenseMap.get(key) || { amount: 0, color };
@@ -158,6 +163,20 @@ export async function GET(req: NextRequest) {
     expenseMap.set(key, cur);
   }
   const expensesByCategory = Array.from(expenseMap.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }));
+  
+  // Criar versão completa (com transferências) para detalhamento
+  const expenseMapComplete = new Map<string, { amount: number; color: string }>();
+  for (const e of allExpensesThisMonth) {
+    const key = e.category?.name || 'Sem categoria';
+    // fallback consistente com frontend: despesas usam muted-foreground quando não há cor
+    const color = e.category?.color || 'hsl(var(--muted-foreground))';
+    const cur = expenseMapComplete.get(key) || { amount: 0, color };
+    cur.amount += Number(e.amount || 0);
+    // se categoria tiver cor explícita, preferir ela
+    if (e.category?.color) cur.color = e.category.color;
+    expenseMapComplete.set(key, cur);
+  }
+  const expensesByCategoryComplete = Array.from(expenseMapComplete.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }));
 
   // incomesByCategory for the current month
   const [incVarThis, incFixThis] = await Promise.all([
@@ -168,6 +187,8 @@ export async function GET(req: NextRequest) {
   const incomeMap = new Map<string, { amount: number; color: string }>();
   for (const i of allIncomesThisMonth) {
     const key = i.category?.name || 'Sem categoria';
+    // Excluir categoria de transferência dos gráficos
+    if (key === 'Transferência entre Contas') continue;
     // fallback consistente: rendas usam --success quando não há cor
     const color = i.category?.color || 'hsl(var(--success))';
     const cur = incomeMap.get(key) || { amount: 0, color };
@@ -176,24 +197,54 @@ export async function GET(req: NextRequest) {
     incomeMap.set(key, cur);
   }
   const incomesByCategory = Array.from(incomeMap.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }));
+  
+  // Criar versão completa (com transferências) para detalhamento
+  const incomeMapComplete = new Map<string, { amount: number; color: string }>();
+  for (const i of allIncomesThisMonth) {
+    const key = i.category?.name || 'Sem categoria';
+    // fallback consistente: rendas usam --success quando não há cor
+    const color = i.category?.color || 'hsl(var(--success))';
+    const cur = incomeMapComplete.get(key) || { amount: 0, color };
+    cur.amount += Number(i.amount || 0);
+    if (i.category?.color) cur.color = i.category.color;
+    incomeMapComplete.set(key, cur);
+  }
+  const incomesByCategoryComplete = Array.from(incomeMapComplete.entries()).map(([category, v]) => ({ category, amount: v.amount, color: v.color }));
 
   // Prev month amounts
   const prevMonth = new Date(year, month - 2, 1);
   const prevStartDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), 1);
   const prevMonthEndDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
-  const [pExpVar, pExpFix] = await Promise.all([
+  const [pExpVar, pExpFix, pExpVarComplete, pExpFixComplete] = await Promise.all([
+    // Dados filtrados (sem transferências) para gráficos
     prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
     prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
+    // Dados completos (com transferências) para detalhamento
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
   ]);
   const prevAll = [...pExpVar, ...pExpFix];
   const prevMap = new Map<string, number>();
   for (const e of prevAll) {
     const key = e.category?.name || 'Sem categoria';
+    // Excluir categoria de transferência dos gráficos
+    if (key === 'Transferência entre Contas') continue;
     prevMap.set(key, (prevMap.get(key) || 0) + Number(e.amount || 0));
   }
   const categoriesWithDiff = expensesByCategory.map((c) => ({ category: c.category, amount: c.amount, prevAmount: prevMap.get(c.category) || 0, diff: c.amount - (prevMap.get(c.category) || 0) }));
   const expenseDiffAll = categoriesWithDiff.filter((c) => c.diff !== 0).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
   const topExpenseCategories = expenseDiffAll.slice(0, 5);
+  
+  // Criar versão completa das diferenças (com transferências) para o detalhamento
+  const prevAllComplete = [...pExpVarComplete, ...pExpFixComplete];
+  const prevMapComplete = new Map<string, number>();
+  for (const e of prevAllComplete) {
+    const key = e.category?.name || 'Sem categoria';
+    // Não excluir transferências na versão completa
+    prevMapComplete.set(key, (prevMapComplete.get(key) || 0) + Number(e.amount || 0));
+  }
+  const categoriesWithDiffComplete = expensesByCategoryComplete.map((c) => ({ category: c.category, amount: c.amount, prevAmount: prevMapComplete.get(c.category) || 0, diff: c.amount - (prevMapComplete.get(c.category) || 0) }));
+  const expenseDiffAllComplete = categoriesWithDiffComplete.filter((c) => c.diff !== 0).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
   // dailyBalanceData and balanceProjectionData simplified: compute cumulative balance across days
   // Need previous balance until day before start — include occurrences from RECURRING records
@@ -396,6 +447,10 @@ export async function GET(req: NextRequest) {
     expenseDiffAll: Array.isArray(expenseDiffAll) ? expenseDiffAll : [],
     dailyBalanceData: Array.isArray(dailyBalanceData) ? dailyBalanceData : [],
     balanceProjectionData: Array.isArray(balanceProjectionData) ? balanceProjectionData : [],
+    // Versões completas para detalhamento (incluem categoria de transferência)
+    expensesByCategoryComplete: Array.isArray(expensesByCategoryComplete) ? expensesByCategoryComplete : [],
+    incomesByCategoryComplete: Array.isArray(incomesByCategoryComplete) ? incomesByCategoryComplete : [],
+    expenseDiffAllComplete: Array.isArray(expenseDiffAllComplete) ? expenseDiffAllComplete : [],
   };
 
   const payload = {

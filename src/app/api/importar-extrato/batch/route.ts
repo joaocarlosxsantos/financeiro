@@ -16,28 +16,49 @@ interface BatchImportData {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('🎯 Batch import API called');
+  
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
+    console.log('❌ Authentication failed - no session');
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
+  
+  console.log('✅ User authenticated:', session.user.email);
 
   try {
     const { batches, carteiraId, processInBackground = true }: BatchImportData = await req.json();
 
+    console.log('📦 Batch request received:', {
+      batchesLength: Array.isArray(batches) ? batches.length : 'NOT_ARRAY',
+      carteiraId,
+      processInBackground,
+      firstBatchSample: batches?.[0] ? {
+        sourceFile: batches[0].sourceFile,
+        registrosLength: batches[0].registros?.length
+      } : 'NO_BATCHES'
+    });
+
     if (!Array.isArray(batches) || !carteiraId) {
+      console.log('❌ Invalid data:', { batchesIsArray: Array.isArray(batches), carteiraId });
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
     // Buscar usuário
+    console.log('👤 Looking for user:', session.user.email);
     const user = await prisma.user.findUnique({ 
       where: { email: session.user.email } 
     });
     
     if (!user) {
+      console.log('❌ User not found');
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
+    
+    console.log('✅ User found:', user.id);
 
     // Verificar se a carteira existe e pertence ao usuário
+    console.log('💼 Looking for wallet:', carteiraId);
     const wallet = await prisma.wallet.findFirst({
       where: { 
         id: carteiraId, 
@@ -46,14 +67,20 @@ export async function POST(req: NextRequest) {
     });
 
     if (!wallet) {
+      console.log('❌ Wallet not found');
       return NextResponse.json({ error: 'Carteira não encontrada' }, { status: 404 });
     }
+    
+    console.log('✅ Wallet found:', wallet.name);
 
     if (processInBackground) {
       // Processar em background para não travar a interface
-      processImportInBackground(user.id, batches, carteiraId);
-      
       const totalTransactions = batches.reduce((acc, batch) => acc + batch.registros.length, 0);
+      
+      // Executar em background usando Promise para garantir que execute
+      processImportInBackground(user.id, batches, carteiraId).catch(error => {
+        console.error('💥 Erro no processamento em background:', error);
+      });
       
       return NextResponse.json({ 
         message: 'Processamento iniciado em segundo plano',
@@ -80,43 +107,86 @@ async function processImportInBackground(
   batches: Array<{ registros: any[]; sourceFile: string }>, 
   carteiraId: string
 ) {
+  console.log('🚀 BACKGROUND PROCESS STARTED:', {
+    userId,
+    carteiraId,
+    totalBatches: batches.length,
+    totalRecords: batches.reduce((acc, b) => acc + b.registros.length, 0)
+  });
+
   try {
-   
-    // Processar cada lote sequencialmente para evitar sobrecarga
     let totalProcessed = 0;
     const results = [];
 
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
+      console.log(`� Processing batch ${i + 1}/${batches.length}: ${batch.sourceFile}`);
       
       try {
         const result = await processBatch(userId, batch.registros, carteiraId, batch.sourceFile);
-        results.push(result);
-        totalProcessed += result.created;
+        if (result) {
+          console.log(`✅ Batch ${i + 1} completed:`, { created: result.created, errors: result.errors.length });
+          results.push(result);
+          totalProcessed += result.created;
+        }
         
-        // Pequena pausa entre lotes para não sobrecarregar o sistema
+        // Pequena pausa entre lotes
         if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       } catch (batchError) {
-        console.error(`Erro no lote ${i + 1}:`, batchError);
+        console.error(`❌ Batch ${i + 1} failed:`, batchError);
         results.push({ 
           sourceFile: batch.sourceFile, 
           created: 0, 
-          error: 'Erro ao processar lote' 
+          errors: [batchError instanceof Error ? batchError.message : 'Unknown error']
         });
       }
     }
 
-    // Atualizar metas apenas após processar todos os lotes
-    await updateGoalsAfterImport(userId);
+    console.log('🎯 BACKGROUND PROCESS COMPLETED:', { totalProcessed });
 
-    
-    // Aqui você poderia enviar uma notificação para o usuário
-    // via WebSocket ou sistema de notificações
+    // Criar notificação para o usuário
+    try {
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: 'SYSTEM',
+          title: 'Importação Concluída',
+          message: `${totalProcessed} transações foram importadas com sucesso`,
+          priority: 'HIGH',
+          data: {
+            totalBatches: batches.length,
+            totalProcessed,
+            results
+          }
+        }
+      });
+      console.log('📬 Success notification created');
+    } catch (notificationError) {
+      console.error('❌ Failed to create notification:', notificationError);
+    }
     
   } catch (error) {
-    console.error('Erro no processamento em background:', error);
+    console.error('💥 CRITICAL ERROR in background process:', error);
+    
+    // Criar notificação de erro
+    try {
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: 'SYSTEM',
+          title: 'Erro na Importação',
+          message: 'Ocorreu um erro durante o processamento em segundo plano',
+          priority: 'HIGH',
+          data: {
+            error: error instanceof Error ? error.message : 'Erro desconhecido'
+          }
+        }
+      });
+    } catch (notificationError) {
+      console.error('❌ Failed to create error notification:', notificationError);
+    }
   }
 }
 
@@ -131,12 +201,11 @@ async function processImportSync(
 
   for (const batch of batches) {
     const result = await processBatch(userId, batch.registros, carteiraId, batch.sourceFile);
-    results.push(result);
-    totalProcessed += result.created;
+    if (result) {
+      results.push(result);
+      totalProcessed += result.created;
+    }
   }
-
-  // Atualizar metas apenas após processar todos os lotes
-  await updateGoalsAfterImport(userId);
 
   return {
     message: 'Importação concluída',
@@ -152,124 +221,142 @@ async function processBatch(
   carteiraId: string, 
   sourceFile: string
 ) {
-  // Cache de categorias para evitar múltiplas consultas
-  const categoriesCache = await getCategoriesCache(userId);
-  const tagsCache = await getTagsCache(userId);
-  
-  let created = 0;
-  const errors: string[] = [];
+  console.log(`🆔 Processing batch: ${sourceFile} (${registros.length} records)`);
 
-  // Processar em transação para garantir consistência
-  await prisma.$transaction(async (tx: any) => {
-    for (const registro of registros) {
-      try {
-        // Pular saldos iniciais
-        if (registro.isSaldoInicial) continue;
+  try {
+    // Cache de categorias
+    const categoriesCache = await getCategoriesCache(userId);
+    
+    let created = 0;
+    const errors: string[] = [];
 
-        const data = parsePtBrDate(registro.data);
-        if (!data) {
-          errors.push(`Data inválida: ${registro.data}`);
-          continue;
-        }
+    // Processar em lotes muito pequenos para evitar timeout de transação
+    const BATCH_SIZE = 10; // Processar apenas 10 registros por vez
+    
+    for (let batchStart = 0; batchStart < registros.length; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, registros.length);
+      const batchRegistros = registros.slice(batchStart, batchEnd);
+      
+      console.log(`Processing sub-batch ${batchStart + 1}-${batchEnd} of ${registros.length}`);
+      
+      // Processar cada sub-lote em sua própria transação com timeout maior
+      await prisma.$transaction(async (tx: any) => {      
+        for (let idx = 0; idx < batchRegistros.length; idx++) {
+          const registro = batchRegistros[idx];
+          try {
+            // Pular saldos iniciais
+            if (registro.isSaldoInicial) continue;
 
-        // Determinar se é receita ou despesa
-        const isIncome = registro.valor > 0;
-        const amount = Math.abs(registro.valor);
+            const data = parsePtBrDate(registro.data);
+            if (!data) {
+              errors.push(`Data inválida: ${registro.data}`);
+              continue;
+            }
 
-        // Resolver categoria
-        let categoryId = registro.categoriaId;
-        
-        // Prioridade: categoriaId selecionada pelo usuário, senão categoriaRecomendada da IA
-        if (!categoryId && registro.categoriaRecomendada && registro.shouldCreateCategory) {
-          // Usuário não selecionou nada, usar recomendação da IA
-          categoryId = await resolveOrCreateCategory(
-            tx, 
-            userId, 
-            registro.categoriaRecomendada, 
-            isIncome ? 'INCOME' : 'EXPENSE',
-            categoriesCache
-          );
-        } else if (!categoryId && registro.categoriaSugerida) {
-          // Fallback para categoriaSugerida (sistema antigo)
-          categoryId = await resolveOrCreateCategory(
-            tx, 
-            userId, 
-            registro.categoriaSugerida, 
-            isIncome ? 'INCOME' : 'EXPENSE',
-            categoriesCache
-          );
-        }
+            // Determinar se é receita ou despesa
+            const isIncome = registro.valor > 0;
+            const amount = Math.abs(registro.valor);
 
-        // Resolver tags
-        const tagIds = [];
-        let tagsToProcess = registro.tags || [];
-        
-        // Se usuário não definiu tags manualmente, usar recomendações da IA
-        if ((!registro.tags || registro.tags.length === 0) && registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0) {
-          tagsToProcess = registro.tagsRecomendadas;
-        }
-        
-        if (tagsToProcess && Array.isArray(tagsToProcess)) {
-          for (const tagName of tagsToProcess) {
-            const tagId = await resolveOrCreateTag(tx, userId, tagName, tagsCache);
-            if (tagId) tagIds.push(tagId);
+          // Resolver categoria
+          let categoryId = registro.categoriaId;
+          
+          // Prioridade: categoriaId selecionada pelo usuário, senão categoriaRecomendada da IA
+          if (!categoryId && registro.categoriaRecomendada && registro.shouldCreateCategory) {
+            // Usuário não selecionou nada, usar recomendação da IA
+            categoryId = await resolveOrCreateCategory(
+              tx, 
+              userId, 
+              registro.categoriaRecomendada, 
+              isIncome ? 'INCOME' : 'EXPENSE',
+              categoriesCache
+            );
+          } else if (!categoryId && registro.categoriaSugerida) {
+            // Fallback para categoriaSugerida (sistema antigo)
+            categoryId = await resolveOrCreateCategory(
+              tx, 
+              userId, 
+              registro.categoriaSugerida, 
+              isIncome ? 'INCOME' : 'EXPENSE',
+              categoriesCache
+            );
+          }
+
+          // Resolver tags (como string array, não relações)
+          let tagsArray: string[] = [];
+          let tagsToProcess = registro.tags || [];
+          
+          // Se usuário não definiu tags manualmente, usar recomendações da IA
+          if ((!registro.tags || registro.tags.length === 0) && registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0) {
+            tagsToProcess = registro.tagsRecomendadas;
+          }
+          
+          if (tagsToProcess && Array.isArray(tagsToProcess)) {
+            tagsArray = tagsToProcess.filter(tag => tag && typeof tag === 'string');
+          }
+
+          // Criar transação
+          if (isIncome) {
+            await tx.income.create({
+              data: {
+                description: registro.descricao || registro.descricaoSimplificada || 'Importado',
+                amount,
+                date: data,
+                type: 'PUNCTUAL',
+                userId,
+                walletId: carteiraId,
+                categoryId: categoryId || null,
+                tags: tagsArray
+              }
+            });
+          } else {
+            await tx.expense.create({
+              data: {
+                description: registro.descricao || registro.descricaoSimplificada || 'Importado',
+                amount,
+                date: data,
+                type: 'PUNCTUAL',
+                userId,
+                walletId: carteiraId,
+                categoryId: categoryId || null,
+                tags: tagsArray
+              }
+            });
+          }
+
+            created++;
+          
+          } catch (recordError) {
+            console.error(`❌ Record ${batchStart + idx + 1} failed:`, recordError);
+            errors.push(`Erro no registro: ${registro.descricao || 'sem descrição'}`);
           }
         }
-
-        // Criar transação
-        if (isIncome) {
-          await tx.income.create({
-            data: {
-              description: registro.descricao || registro.descricaoSimplificada || 'Importado',
-              amount,
-              date: data,
-              userId,
-              walletId: carteiraId,
-              categoryId: categoryId || null,
-              tags: tagIds.length > 0 ? {
-                connect: tagIds.map(id => ({ id }))
-              } : undefined,
-              metadata: {
-                sourceFile,
-                imported: true,
-                importedAt: new Date().toISOString()
-              }
-            }
-          });
-        } else {
-          await tx.expense.create({
-            data: {
-              description: registro.descricao || registro.descricaoSimplificada || 'Importado',
-              amount,
-              date: data,
-              userId,
-              walletId: carteiraId,
-              categoryId: categoryId || null,
-              tags: tagIds.length > 0 ? {
-                connect: tagIds.map(id => ({ id }))
-              } : undefined,
-              metadata: {
-                sourceFile,
-                imported: true,
-                importedAt: new Date().toISOString()
-              }
-            }
-          });
-        }
-
-        created++;
-      } catch (recordError) {
-        console.error('Erro ao processar registro:', recordError);
-        errors.push(`Erro no registro: ${registro.descricao || 'sem descrição'}`);
+      }, {
+        maxWait: 10000, // 10 segundos de espera máxima
+        timeout: 15000, // 15 segundos de timeout
+      });
+      
+      // Pequena pausa entre sub-lotes
+      if (batchEnd < registros.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
-  });
 
-  return {
-    sourceFile,
-    created,
-    errors
-  };
+    console.log(`✅ Batch completed - ${sourceFile}: ${created} created, ${errors.length} errors`);
+
+    return {
+      sourceFile,
+      created,
+      errors
+    };
+    
+  } catch (error) {
+    console.error(`💥 Critical error in batch ${sourceFile}:`, error);
+    return {
+      sourceFile,
+      created: 0,
+      errors: [`Erro crítico: ${error instanceof Error ? error.message : 'Erro desconhecido'}`]
+    };
+  }
 }
 
 // Funções auxiliares
@@ -290,19 +377,6 @@ async function getCategoriesCache(userId: string) {
   for (const cat of categories) {
     const key = `${cat.name.trim().toLowerCase()}|${cat.type}`;
     cache[key] = cat;
-  }
-  
-  return cache;
-}
-
-async function getTagsCache(userId: string) {
-  const tags = await prisma.tag.findMany({ 
-    where: { userId } 
-  });
-  
-  const cache: Record<string, any> = {};
-  for (const tag of tags) {
-    cache[tag.name.trim().toLowerCase()] = tag;
   }
   
   return cache;
@@ -332,58 +406,4 @@ async function resolveOrCreateCategory(
 
   cache[key] = newCategory;
   return newCategory.id;
-}
-
-async function resolveOrCreateTag(
-  tx: any, 
-  userId: string, 
-  tagName: string,
-  cache: Record<string, any>
-) {
-  const key = tagName.trim().toLowerCase();
-  
-  if (cache[key]) {
-    return cache[key].id;
-  }
-
-  // Criar nova tag
-  const newTag = await tx.tag.create({
-    data: {
-      name: tagName.trim(),
-      userId
-    }
-  });
-
-  cache[key] = newTag;  
-  return newTag.id;
-}
-
-async function updateGoalsAfterImport(userId: string) {
-  try {
-    // Aqui você implementaria a lógica para recalcular as metas
-    // Por exemplo, verificar se alguma meta foi atingida, atualizar progresso, etc.
-    
-    
-    // Exemplo: buscar metas ativas e recalcular progresso
-    const activeGoals = await prisma.goal.findMany({
-      where: { 
-        userId,
-        status: 'ACTIVE'
-      }
-    });
-
-    for (const goal of activeGoals) {
-      // Lógica específica para cada tipo de meta
-      // Isso dependeria da estrutura das suas metas
-      
-      // Exemplo básico:
-      if (goal.type === 'SAVINGS') {
-        // Calcular total economizado baseado nas transações
-        // Atualizar progresso da meta
-      }
-    }
-    
-  } catch (error) {
-    console.error('Erro ao atualizar metas:', error);
-  }
 }
