@@ -1,6 +1,6 @@
- 'use client';
+'use client';
 import React from 'react';
-import { Sidebar } from '@/components/layout/sidebar';
+import { SidebarStable as Sidebar } from '@/components/layout/sidebar-stable';
 import { useState } from 'react';
 import { Menu } from 'lucide-react';
 

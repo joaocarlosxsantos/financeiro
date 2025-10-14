@@ -1,0 +1,65 @@
+/**
+ * CSS-only mobile detection to avoid JavaScript re-renders
+ * This eliminates the "loading" effect when navigating between pages
+ */
+
+.sidebar-mobile-only {
+  display: none;
+}
+
+.sidebar-desktop-only {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .sidebar-mobile-only {
+    display: block;
+  }
+  
+  .sidebar-desktop-only {
+    display: none;
+  }
+  
+  .sidebar-mobile-layout {
+    padding: 1.5rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  .sidebar-desktop-layout {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar-mobile-layout {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .sidebar-desktop-layout {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Elimina transições que podem causar "loading" visual */
+.sidebar-no-transitions * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Layout fixo para evitar mudanças durante hidratação */
+.sidebar-stable-layout {
+  width: 18rem; /* w-72 */
+  height: 100vh;
+  position: relative;
+}
+
+@media (max-width: 767px) {
+  .sidebar-stable-layout {
+    width: 100%;
+    max-width: 24rem; /* max-w-sm */
+  }
+}

@@ -83,18 +83,33 @@ export function MultipleExtratoPreview({
     onSave(allTransactions);
   };
 
+  const getCurrentTabInfo = () => {
+    if (activeTab === 'consolidado') {
+      return { name: 'Consolidado', count: allTransactions.length, index: 0 };
+    }
+    const fileIndex = files.findIndex(f => f.id === activeTab);
+    const file = files.find(f => f.id === activeTab);
+    return { 
+      name: file?.file.name || 'Arquivo', 
+      count: file?.preview?.length || 0, 
+      index: fileIndex + 1 
+    };
+  };
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho com Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className={stats.totalFiles > 5 ? 'border-blue-200 bg-blue-50/50' : ''}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Arquivos</CardTitle>
             <FileText className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{stats.totalFiles}</div>
-            <p className="text-xs text-muted-foreground">Extratos processados</p>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalFiles > 5 ? 'Muitos extratos' : 'Extratos processados'}
+            </p>
           </CardContent>
         </Card>
 
@@ -155,21 +170,131 @@ export function MultipleExtratoPreview({
         </Card>
       )}
 
-      {/* Abas para visualização */}
+      {/* Resumo detalhado quando há muitos arquivos */}
+      {files.length > 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Resumo dos Arquivos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-40 overflow-y-auto">
+              {files.map((file, index) => (
+                <div key={file.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate" title={file.file.name}>
+                        {file.file.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {file.preview?.length || 0} transações
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <button
+                      onClick={() => setActiveTab(file.id)}
+                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors"
+                    >
+                      Ver
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Abas para visualização - Otimizada para muitos arquivos */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${files.length + 1}, 1fr)` }}>
-          <TabsTrigger value="consolidado">
-            Consolidado ({allTransactions.length})
-          </TabsTrigger>
-          {files.map((file) => (
-            <TabsTrigger key={file.id} value={file.id}>
-              {file.file.name.length > 20 
-                ? `${file.file.name.substring(0, 17)}...`
-                : file.file.name
-              } ({file.preview?.length || 0})
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* Indicador da aba ativa quando há muitos arquivos */}
+        {files.length > 5 && (
+          <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                <span className="text-sm font-medium">Visualizando:</span>
+                <span className="text-sm text-primary font-semibold">{getCurrentTabInfo().name}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {getCurrentTabInfo().count} transações
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {getCurrentTabInfo().index} de {files.length + 1}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="relative">
+          {/* Container com scroll horizontal para as abas */}
+          <div 
+            className="flex items-center space-x-1 overflow-x-auto pb-2 scroll-smooth" 
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'hsl(var(--muted-foreground) / 0.3) transparent',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            {/* Aba Consolidada - sempre visível primeiro */}
+            <button
+              onClick={() => setActiveTab('consolidado')}
+              className={`
+                flex-shrink-0 inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                disabled:pointer-events-none disabled:opacity-50
+                ${activeTab === 'consolidado' 
+                  ? 'bg-primary text-primary-foreground shadow-sm' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                }
+              `}
+            >
+              📊 Consolidado ({allTransactions.length})
+            </button>
+            
+            {/* Separador visual */}
+            <div className="flex-shrink-0 w-px h-6 bg-border"></div>
+            
+            {/* Abas dos arquivos individuais */}
+            {files.map((file, index) => {
+              const fileName = file.file.name;
+              const displayName = fileName.length > 15 
+                ? `${fileName.substring(0, 12)}...${fileName.split('.').pop()}`
+                : fileName;
+              
+              return (
+                <button
+                  key={file.id}
+                  onClick={() => setActiveTab(file.id)}
+                  className={`
+                    flex-shrink-0 inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ring-offset-background transition-all
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                    disabled:pointer-events-none disabled:opacity-50
+                    ${activeTab === file.id 
+                      ? 'bg-primary text-primary-foreground shadow-sm' 
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                    }
+                  `}
+                  title={`${fileName} - ${file.preview?.length || 0} transações`}
+                >
+                  <span className="mr-1">📄</span>
+                  <span className="truncate max-w-24 sm:max-w-32">{displayName}</span>
+                  <span className="ml-1 text-xs opacity-75 hidden sm:inline">({file.preview?.length || 0})</span>
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Indicador de scroll quando há muitos arquivos */}
+          {files.length > 5 && (
+            <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none flex items-center justify-end pr-1">
+              <div className="text-xs text-muted-foreground">→</div>
+            </div>
+          )}
+        </div>
 
         {/* Aba Consolidada */}
         <TabsContent value="consolidado" className="space-y-4">
@@ -223,25 +348,53 @@ export function MultipleExtratoPreview({
       </Tabs>
 
       {/* Botão de Salvar Global */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-          <div>
-            <p className="font-medium">
-              Pronto para importar {allTransactions.length} transações
-            </p>
-            <p className="text-sm text-muted-foreground">
-              de {files.length} arquivo(s) para a carteira selecionada
-            </p>
-          </div>
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t shadow-lg">
+        <div className="flex flex-col gap-4">
+          {/* Resumo detalhado para muitos arquivos */}
+          {files.length > 3 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-lg font-bold text-blue-600">{files.length}</div>
+                <div className="text-xs text-blue-600">Arquivos</div>
+              </div>
+              <div className="p-2 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="text-lg font-bold text-purple-600">{allTransactions.length}</div>
+                <div className="text-xs text-purple-600">Transações</div>
+              </div>
+              <div className="p-2 bg-green-50 rounded-lg border border-green-200">
+                <div className="text-lg font-bold text-green-600">
+                  {stats.totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                </div>
+                <div className="text-xs text-green-600">Receitas</div>
+              </div>
+              <div className="p-2 bg-red-50 rounded-lg border border-red-200">
+                <div className="text-lg font-bold text-red-600">
+                  {stats.totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                </div>
+                <div className="text-xs text-red-600">Despesas</div>
+              </div>
+            </div>
+          )}
           
-          <Button 
-            onClick={handleSaveAll}
-            disabled={!selectedWallet || saving || allTransactions.length === 0}
-            size="lg"
-            className="w-full sm:w-auto"
-          >
-            {saving ? 'Salvando...' : `Importar ${allTransactions.length} Transações`}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div>
+              <p className="font-medium">
+                Pronto para importar {allTransactions.length} transações
+              </p>
+              <p className="text-sm text-muted-foreground">
+                de {files.length} arquivo{files.length !== 1 ? 's' : ''} para a carteira selecionada
+              </p>
+            </div>
+            
+            <Button 
+              onClick={handleSaveAll}
+              disabled={!selectedWallet || saving || allTransactions.length === 0}
+              size="lg"
+              className="w-full sm:w-auto"
+            >
+              {saving ? 'Salvando...' : `Importar ${allTransactions.length} Transações`}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

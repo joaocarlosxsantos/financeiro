@@ -1,8 +1,7 @@
 'use client';
-import { Sidebar } from './sidebar';
+import { SidebarStable as Sidebar } from './sidebar-stable';
 import { useState, useEffect } from 'react';
 import { Menu, Bell } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import { cn } from '@/lib/utils';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 
@@ -13,10 +12,8 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
   
   // Abrir sidebar em mobile quando um evento customizado for disparado (ex: pelo tour)
-  // Isso permite que componentes externos peçam para abrir o drawer móvel sem acoplar estados.
   useEffect(() => {
     function handleOpen() {
       setSidebarOpen(true);
@@ -25,16 +22,9 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
     return () => window.removeEventListener('openSidebar', handleOpen as EventListener);
   }, []);
 
-  // Fecha sidebar mobile ao redimensionar para desktop
-  useEffect(() => {
-    if (!isMobile && sidebarOpen) {
-      setSidebarOpen(false);
-    }
-  }, [isMobile, sidebarOpen]);
-
   // Previne scroll do body quando sidebar mobile está aberta
   useEffect(() => {
-    if (sidebarOpen && isMobile) {
+    if (sidebarOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -43,7 +33,7 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [sidebarOpen, isMobile]);
+  }, [sidebarOpen]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -68,11 +58,7 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
 
       <main className="flex-1 overflow-auto w-full">
         {/* Topbar mobile otimizada */}
-        <div className={cn(
-          "md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30 shadow-sm",
-          // Mobile: Altura maior para melhor usabilidade
-          "h-16 px-4"
-        )}>
+        <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30 shadow-sm h-16 px-4">
           <div className="flex items-center">
             <button
               aria-label="Abrir menu"

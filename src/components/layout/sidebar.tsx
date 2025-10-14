@@ -17,8 +17,8 @@ import {
   FolderOpen, Users, Bell, Menu, X, PieChart, Activity
 } from 'lucide-react';
 
-// Componente para ícone de expansão que evita hydration mismatch
-const ExpandIcon = ({ isExpanded, isMobile }: { isExpanded: boolean; isMobile: boolean }) => {
+// Componente para ícone de expansão que evita hydration mismatch - memoizado
+const ExpandIcon = React.memo(({ isExpanded, isMobile }: { isExpanded: boolean; isMobile: boolean }) => {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -34,10 +34,12 @@ const ExpandIcon = ({ isExpanded, isMobile }: { isExpanded: boolean; isMobile: b
       )} 
     />
   );
-};
+});
 
-// Componente para conteúdo expansível que evita hydration mismatch
-const ExpandedContent = ({ 
+ExpandIcon.displayName = 'ExpandIcon';
+
+// Componente para conteúdo expansível que evita hydration mismatch - memoizado
+const ExpandedContent = React.memo(({ 
   isExpanded, 
   children 
 }: { 
@@ -53,7 +55,7 @@ const ExpandedContent = ({
   return (
     <div 
       className={cn(
-        "overflow-hidden transition-all duration-300 ease-in-out",
+        "overflow-hidden",
         // Inicia sempre colapsado para evitar mismatch, depois aplica o estado real
         mounted && isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
       )}
@@ -61,7 +63,9 @@ const ExpandedContent = ({
       {children}
     </div>
   );
-};
+});
+
+ExpandedContent.displayName = 'ExpandedContent';
 
 // Estrutura hierárquica reorganizada para melhor UX
 const navigationFinanceiro = {
@@ -151,11 +155,11 @@ interface NavSection {
   href?: string;
 }
 
-const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry; active: boolean; onClick?: () => void; isSubItem?: boolean }) => {
+const NavItem = React.memo(({ item, active, onClick, isSubItem = false }: { item: NavEntry; active: boolean; onClick?: () => void; isSubItem?: boolean }) => {
   const isMobile = useIsMobile();
   
-  // Gerar data-tour baseado no href
-  const getDataTour = (href: string) => {
+  // Gerar data-tour baseado no href - memoizado
+  const getDataTour = React.useCallback((href: string) => {
     const tourMap: Record<string, string> = {
       '/dashboard': 'sidebar-dashboard',
       '/transacoes': 'sidebar-transactions',
@@ -172,7 +176,7 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
       '/notifications/settings': 'sidebar-notifications'
     };
     return tourMap[href] || '';
-  };
+  }, []);
   
   return (
     <Link
@@ -181,7 +185,7 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
       aria-current={active ? 'page' : undefined}
       data-tour={getDataTour(item.href)}
       className={cn(
-        'relative group flex items-center gap-3 rounded-xl text-sm font-medium outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/60',
+        'relative group flex items-center gap-3 rounded-xl text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
         // Mobile-optimized spacing and touch targets
         isMobile ? 'py-3 px-4 min-h-[48px]' : 'py-2',
         isSubItem && !isMobile ? 'px-4 ml-6' : !isSubItem ? 'px-3' : 'px-4 ml-4',
@@ -193,7 +197,7 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
       )}
     >
       <span className={cn(
-        'relative flex items-center justify-center rounded-md transition-all duration-200',
+        'relative flex items-center justify-center rounded-md',
         // Mobile-optimized icon container
         isMobile ? (isSubItem ? 'h-7 w-7' : 'h-8 w-8') : (isSubItem ? 'h-6 w-6' : 'h-7 w-7'),
         active
@@ -218,10 +222,12 @@ const NavItem = ({ item, active, onClick, isSubItem = false }: { item: NavEntry;
       </span>
     </Link>
   );
-};
+});
 
-// Componente para seção expansível
-const NavSection = ({ 
+NavItem.displayName = 'NavItem';
+
+// Componente para seção expansível - memoizado
+const NavSection = React.memo(({ 
   section, 
   isExpanded, 
   onToggle, 
@@ -294,7 +300,49 @@ const NavSection = ({
       </ExpandedContent>
     </div>
   );
-};
+});
+
+NavSection.displayName = 'NavSection';
+
+// Componente para item de navegação memoizado
+const NavigationItem = React.memo(({ 
+  sectionKey, 
+  section, 
+  isExpanded, 
+  toggleSection, 
+  pathname, 
+  onItemClick 
+}: {
+  sectionKey: string;
+  section: NavSection;
+  isExpanded: boolean;
+  toggleSection: (key: string) => void;
+  pathname: string;
+  onItemClick?: () => void;
+}) => {
+  const handleToggle = React.useCallback(() => {
+    toggleSection(sectionKey);
+  }, [toggleSection, sectionKey]);
+
+  // Adiciona atributos data-tour para o tour guiado
+  let tourAttr = {};
+  if ('href' in section && section.href === '/dashboard') tourAttr = { 'data-tour': 'sidebar-dashboard' };
+  else if (sectionKey === 'financeiro') tourAttr = { 'data-tour': 'sidebar-incomes' };
+
+  return (
+    <div {...tourAttr}>
+      <NavSection
+        section={section}
+        isExpanded={isExpanded}
+        onToggle={handleToggle}
+        pathname={pathname}
+        onItemClick={onItemClick}
+      />
+    </div>
+  );
+});
+
+NavigationItem.displayName = 'NavigationItem';
 
 // Small module selector dropdown
 function ModuleSelector({ module, onSelect }: { module: ModuleKey; onSelect: (m: ModuleKey) => void }) {
@@ -368,7 +416,7 @@ const getSectionFromPathname = (pathname: string, navigation: Record<string, Nav
   return null;
 };
 
-export function Sidebar({ onClose }: { onClose?: () => void }) {
+export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -386,7 +434,10 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   };
   const [module, setModule] = useState<ModuleKey>(readStored);
 
-  const currentNavigation = module === 'financeiro' ? navigationFinanceiro : navigationAccounts;
+  const currentNavigation = React.useMemo(
+    () => module === 'financeiro' ? navigationFinanceiro : navigationAccounts,
+    [module]
+  );
   
   // Estado para controlar seções expandidas
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
@@ -422,31 +473,33 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     }
   }, [module]);
   
-  // Toggle seção
-  const toggleSection = (sectionKey: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionKey)) {
-      newExpanded.delete(sectionKey);
-    } else {
-      newExpanded.add(sectionKey);
-    }
-    setExpandedSections(newExpanded);
-    saveExpandedState(newExpanded);
-  };
+  // Toggle seção - memoizado
+  const toggleSection = React.useCallback((sectionKey: string) => {
+    setExpandedSections(current => {
+      const newExpanded = new Set(current);
+      if (newExpanded.has(sectionKey)) {
+        newExpanded.delete(sectionKey);
+      } else {
+        newExpanded.add(sectionKey);
+      }
+      saveExpandedState(newExpanded);
+      return newExpanded;
+    });
+  }, [saveExpandedState]);
 
-  // when module changes, redirect to the module dashboard
-  const switchModule = (m: ModuleKey) => {
+  // when module changes, redirect to the module dashboard - memoizado
+  const switchModule = React.useCallback((m: ModuleKey) => {
     if (m === module) return;
     setModule(m);
     try {
       if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', m);
     } catch {}
-  if (m === 'financeiro') router.push('/dashboard');
-  else if (m === 'accounts') router.push('/controle-contas');
+    if (m === 'financeiro') router.push('/dashboard');
+    else if (m === 'accounts') router.push('/controle-contas');
     if (onClose) onClose();
-  };
+  }, [module, router, onClose]);
 
-  // sync module when pathname changes (e.g., user navigates via links)
+  // sync module when pathname changes (e.g., user navigates via links) - otimizado
   React.useEffect(() => {
     // If navigating to the user page, preserve the module stored in localStorage (origin of the click)
     if (pathname.startsWith('/user')) {
@@ -459,25 +512,35 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       } catch {}
     }
 
-    if (pathname.startsWith('/controle-contas') && module !== 'accounts') {
+    const shouldBeAccounts = pathname.startsWith('/controle-contas');
+    if (shouldBeAccounts && module !== 'accounts') {
       setModule('accounts');
       try { if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', 'accounts'); } catch {}
-    } else if (!pathname.startsWith('/controle-contas') && module !== 'financeiro') {
+    } else if (!shouldBeAccounts && module !== 'financeiro') {
       setModule('financeiro');
       try { if (typeof window !== 'undefined') window.localStorage.setItem('activeModule', 'financeiro'); } catch {}
     }
   }, [pathname, module]);
 
-  // Atualizar seções expandidas quando a página mudar
-  React.useEffect(() => {
-    const activeSection = getSectionFromPathname(pathname, currentNavigation);
-    if (activeSection && !expandedSections.has(activeSection)) {
-      const newExpanded = new Set(expandedSections);
-      newExpanded.add(activeSection);
-      setExpandedSections(newExpanded);
-      saveExpandedState(newExpanded);
+  // Atualizar seções expandidas quando a página mudar - otimizado com callback
+  const updateExpandedSections = React.useCallback((pathname: string, navigation: Record<string, NavSection>) => {
+    const activeSection = getSectionFromPathname(pathname, navigation);
+    if (activeSection) {
+      setExpandedSections(current => {
+        if (!current.has(activeSection)) {
+          const newExpanded = new Set(current);
+          newExpanded.add(activeSection);
+          saveExpandedState(newExpanded);
+          return newExpanded;
+        }
+        return current;
+      });
     }
-  }, [pathname, currentNavigation, expandedSections, saveExpandedState]);
+  }, [saveExpandedState]);
+
+  React.useEffect(() => {
+    updateExpandedSections(pathname, currentNavigation);
+  }, [pathname, currentNavigation, updateExpandedSections]);
 
   return (
     <div className={cn(
@@ -533,24 +596,17 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         // Mobile: More padding for easier touch navigation
         isMobile ? "px-4 py-6" : "px-3 py-4"
       )}>
-        {Object.entries(currentNavigation).map(([sectionKey, section]) => {
-          // Adiciona atributos data-tour para o tour guiado
-          let tourAttr = {};
-          if ('href' in section && section.href === '/dashboard') tourAttr = { 'data-tour': 'sidebar-dashboard' };
-          else if (sectionKey === 'financeiro') tourAttr = { 'data-tour': 'sidebar-incomes' };
-          
-          return (
-            <div key={sectionKey} {...tourAttr}>
-              <NavSection
-                section={section}
-                isExpanded={expandedSections.has(sectionKey)}
-                onToggle={() => toggleSection(sectionKey)}
-                pathname={pathname}
-                onItemClick={onClose}
-              />
-            </div>
-          );
-        })}
+        {Object.entries(currentNavigation).map(([sectionKey, section]) => (
+          <NavigationItem
+            key={sectionKey}
+            sectionKey={sectionKey}
+            section={section}
+            isExpanded={expandedSections.has(sectionKey)}
+            toggleSection={toggleSection}
+            pathname={pathname}
+            onItemClick={onClose}
+          />
+        ))}
       </nav>
 
       {/* Usuário / Ações */}
@@ -627,4 +683,6 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
     </div>
   );
-}
+});
+
+Sidebar.displayName = 'Sidebar';

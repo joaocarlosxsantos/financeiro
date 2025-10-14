@@ -263,3 +263,25 @@ input[type='date']::-webkit-calendar-picker-indicator {
   color: hsl(var(--foreground));
   }
 }
+
+/* Remove indicadores de loading durante navegação */
+@layer base {
+  /* Remove loading padrão do Next.js */
+  #__next-route-loading-indicator,
+  .next-route-loading-indicator,
+  [data-nextjs-router-loading],
+  .router-loading,
+  .loading-overlay,
+  .page-loading,
+  .route-loading {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+  
+  /* Remove qualquer transição de loading na navegação */
+  .page-transition-loading,
+  .navigation-loading {
+    display: none !important;
+  }
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { NotificationStream } from '@/components/notifications/NotificationStream';
 import { Zap, Send, TestTube, Wifi } from 'lucide-react';
 
@@ -64,7 +65,8 @@ export default function RealtimeNotificationsDemo() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <DashboardLayout>
+      <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center space-x-3 mb-8">
         <div className="bg-blue-100 p-3 rounded-full">
           <Zap className="h-8 w-8 text-blue-600" />
@@ -283,6 +285,7 @@ export default function RealtimeNotificationsDemo() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
