@@ -8,6 +8,7 @@ import { ExtratoUpload } from '@/components/importar-extrato/extrato-upload';
 import { ExtratoPreview } from '@/components/importar-extrato/extrato-preview';
 import { MultipleExtratoPreview } from '@/components/importar-extrato/multiple-extrato-preview';
 import { ImportNotificationsPanel } from '@/components/importar-extrato/import-notifications-panel';
+import { PdfHelp } from '@/components/importar-extrato/pdf-help';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import PageTitle from '@/components/PageTitle';
 import { useImportNotifications } from '@/hooks/use-import-notifications';
@@ -224,11 +225,14 @@ export default function ImportarExtratoPage() {
         {/* Painel de Notificações */}
         <ImportNotificationsPanel />
         
+        {/* Ajuda para PDFs */}
+        {step === 'upload' && <PdfHelp />}
+        
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Importar Extrato</h1>
             <p className="text-muted-foreground">
-              Importe um ou vários arquivos OFX de extratos bancários
+              Importe um ou vários arquivos OFX ou TXT (texto extraído de extrato PDF)
             </p>
           </div>
           

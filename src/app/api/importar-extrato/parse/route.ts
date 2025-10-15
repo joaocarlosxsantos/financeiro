@@ -144,10 +144,276 @@ import { NextRequest, NextResponse } from 'next/server';
 // import Papa from 'papaparse';
 // @ts-ignore
 import * as ofxParser from 'ofx-parser';
+// Removido: import de biblioteca PDF problemática
+// Implementação alternativa será feita usando text-only approach
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
+
+
+
+// Função para normalizar texto mal formatado
+function normalizeText(text: string) {
+  // Junta todas as letras e remove quebras de linha estranhas
+  const joined = text.replace(/\n/g, '');
+  // Remove espaços entre caracteres individuais e espaços duplicados
+  return joined.replace(/\s+/g, '').trim();
+}
+
+// Função para parsing de texto mal formatado (genérica para qualquer PDF)
+function parseMalformedText(text: string) {
+  const transactions: any[] = [];
+  console.log('Usando parsing para texto mal formatado');
+  
+  // Normaliza o texto primeiro
+  const normalizedText = normalizeText(text);
+  console.log('Texto normalizado (500 chars):', normalizedText.substring(0, 500));
+  
+  // Padrões genéricos para extrair transações baseados no formato normalizado (sem espaços)
+  const patterns = [
+    // Padrão principal: DESCRICAO2025-10-13-R$92,74 (com sinal negativo)
+    /([A-ZÀ-Ú0-9]+?)(\d{4}-\d{2}-\d{2})-R\$([\d.,]+)/g,
+    // Padrão para receitas: DESCRICAO2025-10-01R$1000,00 (sem sinal negativo)
+    /([A-ZÀ-Ú0-9]+?)(\d{4}-\d{2}-\d{2})R\$([\d.,]+)/g
+  ];
+  
+  for (const pattern of patterns) {
+    let match;
+    pattern.lastIndex = 0;
+    
+    while ((match = pattern.exec(normalizedText)) !== null) {
+      const [fullMatch, descRaw, dateStr, amountRaw] = match;
+      
+      // Limpa e formata a descrição
+      const description = descRaw.trim().replace(/\s{2,}/g, ' ');
+      
+      // Pula cabeçalhos e textos irrelevantes
+      if (description.length < 3 || 
+          description.includes('Extrato') || 
+          description.includes('Nome') ||
+          description.includes('CPF') ||
+          description.includes('Saldo') ||
+          description.includes('Período')) {
+        continue;
+      }
+      
+      // Converte data para formato brasileiro
+      const [year, month, day] = dateStr.split('-');
+      const data = `${day}/${month}/${year}`;
+      
+      // Converte valor
+      let valor = parseFloat(amountRaw.replace(/\./g, '').replace(',', '.'));
+      
+      // Define se é receita ou despesa baseado no padrão
+      if (fullMatch.includes('-R$')) {
+        // Tem sinal negativo = despesa
+        valor = -Math.abs(valor);
+      } else {
+        // Sem sinal negativo = pode ser receita, mas vamos assumir despesa por padrão
+        // A menos que contenha palavras que indiquem receita
+        if (description.toLowerCase().includes('benefício') || 
+            description.toLowerCase().includes('recarga') ||
+            description.toLowerCase().includes('crédito') ||
+            description.toLowerCase().includes('depósito')) {
+          valor = Math.abs(valor);
+        } else {
+          valor = -Math.abs(valor);
+        }
+      }
+      
+      // Melhora o nome da descrição
+      let descricao = description;
+      // Adiciona espaços entre palavras de forma mais inteligente
+      // Primeiro detecta padrões de palavras completas concatenadas
+      descricao = description
+        .replace(/([A-Z]{2,})([A-Z][a-z])/g, '$1 $2') // SUPERMERCADOS BH -> SUPERMERCADOS BH
+        .replace(/([a-z])([A-Z])/g, '$1 $2') // camelCase -> camel Case
+        .replace(/([A-Z])([A-Z][a-z])/g, '$1$2') // Corrige casos como S UPERMERCADOS
+        .replace(/\s+/g, ' ') // Remove espaços duplos
+        .trim();
+      
+      transactions.push({
+        data,
+        valor,
+        descricao
+      });
+      
+      console.log('Transação extraída:', { data, valor, descricao, original: description });
+    }
+  }
+  
+  console.log(`Total de transações extraídas: ${transactions.length}`);
+  return transactions;
+}
+
+// Função para parsing de PDF com registros por data
+function parsePdfGroupedByDate(text: string) {
+  const transactions: any[] = [];
+  
+  // Processa texto normalmente
+  const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+  
+  let currentDate = '';
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Tenta encontrar uma data no formato dd/MM/yyyy ou dd/MM/yy
+    const dateMatch = line.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (dateMatch) {
+      let [, day, month, year] = dateMatch;
+      // Normaliza o ano para 4 dígitos se necessário
+      if (year.length === 2) {
+        const currentYear = new Date().getFullYear();
+        const currentCentury = Math.floor(currentYear / 100) * 100;
+        year = String(currentCentury + parseInt(year));
+      }
+      currentDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      continue;
+    }
+    
+    // Se temos uma data atual, tenta extrair transações desta linha
+    if (currentDate && line.length > 0) {
+      // Procura por valor no final da linha (formato: R$ 123,45 ou -123,45 ou 123,45-)
+      const valorMatch = line.match(/(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/);
+      if (valorMatch) {
+        let [, descricao, , valorStr, negativeFlag] = valorMatch;
+        descricao = descricao.trim().replace(/^R\$\s*/, '');
+        
+        // Converte valor para número
+        let valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+        if (negativeFlag === '-' || valorStr.startsWith('-')) {
+          valor = -Math.abs(valor);
+        }
+        
+        if (descricao && !isNaN(valor)) {
+          transactions.push({
+            data: currentDate,
+            valor,
+            descricao: descricao.trim()
+          });
+        }
+      }
+    }
+  }
+  
+  return transactions;
+}
+
+// Função para parsing de PDF com cada linha tendo data, descrição e valor
+function parsePdfIndividualLines(text: string) {
+  const transactions: any[] = [];
+  const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+  
+  for (const line of lines) {
+    // Procura padrão: data descrição valor
+    // Exemplo: "01/01/2025 COMPRA SUPERMERCADO ABC -150,00"
+    const lineMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/);
+    if (lineMatch) {
+      let [, dateStr, descricao, , valorStr, negativeFlag] = lineMatch;
+      
+      // Normaliza a data
+      const dateParts = dateStr.split('/');
+      if (dateParts.length === 3) {
+        let [day, month, year] = dateParts;
+        if (year.length === 2) {
+          const currentYear = new Date().getFullYear();
+          const currentCentury = Math.floor(currentYear / 100) * 100;
+          year = String(currentCentury + parseInt(year));
+        }
+        const normalizedDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+        
+        // Converte valor para número
+        let valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+        if (negativeFlag === '-' || valorStr.startsWith('-')) {
+          valor = -Math.abs(valor);
+        }
+        
+        if (descricao.trim() && !isNaN(valor)) {
+          transactions.push({
+            data: normalizedDate,
+            valor,
+            descricao: descricao.trim()
+          });
+        }
+      }
+    }
+  }
+  
+  return transactions;
+}
+
+
+
+// Função principal para processar texto extraído de PDF
+async function parsePdfExtract(text: string) {
+  try {
+    // Primeiro verifica se é texto mal formatado e usa normalização
+    const lines = text.split('\n');
+    const singleCharLines = lines.filter(line => line.trim().length === 1).length;
+    const ratio = singleCharLines / lines.length;
+    
+    if (ratio > 0.5) {
+      console.log('Detectado texto mal formatado, usando normalização');
+      return parseMalformedText(text);
+    }
+    
+    // Tenta primeiro o formato agrupado por data
+    let transactions = parsePdfGroupedByDate(text);
+    
+    // Se não encontrou transações, tenta o formato individual
+    if (transactions.length === 0) {
+      transactions = parsePdfIndividualLines(text);
+    }
+    
+    // Se ainda não encontrou, tenta padrões mais flexíveis
+    if (transactions.length === 0) {
+      // Busca por qualquer linha que contenha data e valor
+      const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+      
+      for (const line of lines) {
+        // Padrão mais flexível: qualquer data + qualquer valor na linha
+        const flexibleMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}).*?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/);
+        if (flexibleMatch) {
+          const [, dateStr, valorStr] = flexibleMatch;
+          
+          // Extrai descrição (tudo entre data e valor)
+          const descricaoMatch = line.match(/\d{1,2}\/\d{1,2}\/\d{2,4}\s+(.*?)\s+-?\d{1,3}(?:\.\d{3})*,\d{2}/);
+          const descricao = descricaoMatch ? descricaoMatch[1].trim() : 'Transação';
+          
+          // Normaliza data
+          const dateParts = dateStr.split('/');
+          if (dateParts.length === 3) {
+            let [day, month, year] = dateParts;
+            if (year.length === 2) {
+              const currentYear = new Date().getFullYear();
+              const currentCentury = Math.floor(currentYear / 100) * 100;
+              year = String(currentCentury + parseInt(year));
+            }
+            const normalizedDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+            
+            // Converte valor
+            const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+            
+            if (!isNaN(valor)) {
+              transactions.push({
+                data: normalizedDate,
+                valor,
+                descricao
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return transactions;
+  } catch (error) {
+    console.error('Erro ao processar texto de PDF:', error);
+    throw new Error('Erro ao processar texto do arquivo PDF');
+  }
+}
 
 async function handler(req: NextRequest) {
   // Busca categorias do usuário logado (se autenticado)
@@ -179,9 +445,52 @@ async function handler(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get('file') as File;
   if (!file) return NextResponse.json({ error: 'Arquivo não enviado' }, { status: 400 });
-  const text = await file.text();
+  
   let preview: any[] = [];
-  if (file.name.endsWith('.ofx') || text.trim().startsWith('<OFX')) {
+  let transactions: any[] = [];
+  
+  // Processa PDF (convertido para texto pelo usuário)
+  if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+    return NextResponse.json(
+      { 
+        error: 'PDFs ainda não são suportados diretamente. Por favor, copie o texto do PDF e cole em um arquivo .txt para importar.',
+        suggestion: 'Para extrair o texto do PDF: 1) Abra o PDF, 2) Selecione todo o texto (Ctrl+A), 3) Copie (Ctrl+C), 4) Cole em um arquivo .txt, 5) Importe o arquivo .txt'
+      },
+      { status: 400 }
+    );
+  }
+  
+  // Processa texto (incluindo texto extraído de PDF)
+  if (file.name.endsWith('.txt') || file.type === 'text/plain') {
+    try {
+      const text = await file.text();
+      console.log('Processando arquivo TXT. Tamanho:', text.length);      
+      transactions = await parsePdfExtract(text);
+      
+      if (transactions.length === 0) {
+        return NextResponse.json(
+          { 
+            error: 'Nenhuma transação foi encontrada no texto. Verifique se o arquivo contém dados no formato esperado (data, descrição, valor).',
+            debug: {
+              fileSize: text.length,
+              sample: text.substring(0, 200),
+              isAlelo: text.toLowerCase().includes('alelo') || text.includes('Benefício'),
+              hasDate: /20\d{2}-\d{2}-\d{2}/.test(text)
+            }
+          },
+          { status: 400 }
+        );
+      }
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Erro ao processar arquivo de texto', details: String(error) },
+        { status: 400 }
+      );
+    }
+  }
+  // Processa OFX
+  else if (file.name.endsWith('.ofx') || (await file.text()).trim().startsWith('<OFX')) {
+    const text = await file.text();
     // Parse OFX
     try {
       const parsed = await ofxParser.parse(text);
@@ -324,6 +633,129 @@ async function handler(req: NextRequest) {
       );
     }
   }
+  
+  // Processa transações do PDF (aplicando a mesma lógica de IA que OFX)
+  if (transactions.length > 0) {
+    console.log(`Processando ${transactions.length} transações para preview com IA`);
+    
+    // Busca tags do usuário uma só vez para todas as transações
+    let tagsUsuario: any[] = [];
+    if (user) {
+      try {
+        tagsUsuario = await prisma.tag.findMany({
+          where: { userId: user.id },
+          select: { id: true, name: true }
+        });
+      } catch (error) {
+        console.error('Erro ao buscar tags:', error);
+      }
+    }
+
+    try {
+      preview = await Promise.all(transactions.map(async (t: any) => {
+      const data = t.data;
+      const valor = t.valor;
+      const descricao = t.descricao;
+
+      // Usa IA para análise da transação
+      let aiAnalysis: any = null;
+      let categoriaRecomendada = '';
+      let categoriaId = '';
+      let descricaoMelhorada = descricao;
+      let tagsRecomendadas: string[] = [];
+      let shouldCreateCategory = false;
+      
+      try {
+        if (user && descricao) {
+          aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
+          
+          // Verifica se categoria sugerida existe
+          const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+          const categoriaExistente = categoriasUsuario.find(
+            (cat) =>
+              removeAcentos(cat.name.toLowerCase()) ===
+              removeAcentos(aiAnalysis.suggestedCategory.toLowerCase()),
+          );
+          
+          if (categoriaExistente) {
+            // Categoria existe - usar ela
+            categoriaRecomendada = categoriaExistente.name;
+            categoriaId = categoriaExistente.id;
+            shouldCreateCategory = false;
+          } else {
+            // Categoria não existe - sugerir criação
+            categoriaRecomendada = aiAnalysis.suggestedCategory;
+            shouldCreateCategory = true;
+          }
+          
+          descricaoMelhorada = aiAnalysis.enhancedDescription;
+          
+          // Verifica tags e filtra apenas as que não existem
+          const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
+            return !tagsUsuario.some(tagExistente => 
+              removeAcentos(tagExistente.name.toLowerCase()) === 
+              removeAcentos(tagSugerida.toLowerCase())
+            );
+          });
+          
+          // Tags recomendadas são apenas as que precisam ser criadas
+          tagsRecomendadas = tagsNaoExistentes;
+        }
+      } catch (error) {
+        console.error('Erro na análise IA:', error);
+        // Fallback para método antigo se IA falhar
+        const descricaoSimplificada = simplificarDescricao(descricao);
+        const categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+        descricaoMelhorada = descricaoSimplificada || descricao;
+        
+        // Verifica se categoria do fallback existe
+        const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const categoriaExistente = categoriasUsuario.find(
+          (cat) =>
+            removeAcentos(cat.name.toLowerCase()) ===
+            removeAcentos(categoriaSugerida.toLowerCase()),
+        );
+        
+        if (categoriaExistente) {
+          categoriaRecomendada = categoriaExistente.name;
+          categoriaId = categoriaExistente.id;
+          shouldCreateCategory = false;
+        } else {
+          categoriaRecomendada = categoriaSugerida;
+          shouldCreateCategory = true;
+        }
+      }
+      
+      return {
+        data,
+        valor,
+        descricao,
+        descricaoOriginal: descricao,
+        descricaoMelhorada,
+        categoriaRecomendada,
+        categoriaId,
+        tagsRecomendadas,
+        shouldCreateCategory,
+        aiAnalysis: aiAnalysis ? {
+          confidence: aiAnalysis.confidence,
+          merchant: aiAnalysis.merchant,
+          location: aiAnalysis.location,
+          categoryType: aiAnalysis.categoryType
+        } : null,
+      };
+    }));
+    } catch (error) {
+      console.error('Erro ao processar transações PDF para preview:', error);
+      return NextResponse.json(
+        { error: 'Erro ao processar transações para preview', details: String(error) },
+        { status: 400 }
+      );
+    }
+  }
+  
+  console.log(`Preview final: ${preview?.length || 0} transações`);
+  console.log('Primeiras 3 transações do preview:', preview?.slice(0, 3));
+  
   if (!preview || preview.length === 0) {
     return NextResponse.json(
       { error: 'Nenhum lançamento encontrado no arquivo.', preview: [] },
