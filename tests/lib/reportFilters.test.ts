@@ -13,7 +13,7 @@ describe('filterRows util', () => {
       walletName: 'Wallet 1',
       walletId: 'w1',
       tags: ['t1'],
-      isFixed: false,
+      isRecurring: false,
     },
     {
       id: 'r2',
@@ -26,7 +26,7 @@ describe('filterRows util', () => {
       walletName: 'Wallet 2',
       walletId: 'w2',
       tags: ['t2'],
-      isFixed: false,
+      isRecurring: false,
     },
   ];
 
@@ -71,7 +71,7 @@ describe('filterRows util', () => {
         walletName: 'Wallet 3',
         walletId: 'w3',
         tags: ['ViagEm'],
-        isFixed: false,
+        isRecurring: false,
       },
     ];
 

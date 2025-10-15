@@ -50,9 +50,9 @@ export async function GET(req: NextRequest) {
         const agg = await prisma.expense.aggregate({ _sum: { amount: true }, where });
         current += Number(agg._sum.amount ?? 0);
 
-        // add fixed occurrences simplification: if expense.isFixed true and overlaps range, add amount
+        // add fixed occurrences simplification: if expense.isRecurring true and overlaps range, add amount
         if (g.type === 'RECURRING' && range) {
-          const fixedWhere: any = { userId: user.id, isFixed: true };
+          const fixedWhere: any = { userId: user.id, isRecurring: true };
           if (g.categoryId) fixedWhere.categoryId = g.categoryId;
           if (g.categoryIds && g.categoryIds.length > 0) fixedWhere.categoryId = { in: g.categoryIds };
           if (g.tagName) fixedWhere.tags = { has: g.tagName };
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         current += Number(agg._sum.amount ?? 0);
 
         if (g.type === 'RECURRING' && range) {
-          const fixedWhere: any = { userId: user.id, isFixed: true };
+          const fixedWhere: any = { userId: user.id, isRecurring: true };
           if (g.categoryId) fixedWhere.categoryId = g.categoryId;
           if (g.categoryIds && g.categoryIds.length > 0) fixedWhere.categoryId = { in: g.categoryIds };
           if (g.tagName) fixedWhere.tags = { has: g.tagName };

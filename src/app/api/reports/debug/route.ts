@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const sDate = startDate ? new Date(startDate) : null;
     const eDate = endDate ? new Date(endDate) : null;
     for (const r of rows) {
-      if (!r.isFixed) {
+      if (!r.isRecurring) {
         const rowDate = r.date ? new Date(r.date) : null;
         if (rowDate) {
           if ((sDate && rowDate < sDate) || (eDate && rowDate > eDate)) continue;

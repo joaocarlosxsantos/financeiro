@@ -5,7 +5,7 @@ function expandFixedOccurrences(rows, startDate, endDate) {
   const sDate = startDate ? new Date(startDate) : null;
   const eDate = endDate ? new Date(endDate) : null;
   for (const r of rows) {
-    if (!r.isFixed) {
+    if (!r.isRecurring) {
       occurrences.push({ ...r, kind: r.kind || 'unknown' });
       continue;
     }
@@ -39,7 +39,7 @@ const sampleRows = [
     description: 'Salário',
     amount: 5000,
     date: '2025-01-15',
-    isFixed: true,
+    isRecurring: true,
     startDate: '2025-01-01',
     endDate: null,
     dayOfMonth: 15,
@@ -50,7 +50,7 @@ const sampleRows = [
     description: 'Assinatura',
     amount: 29.9,
     date: '2025-02-28',
-    isFixed: true,
+    isRecurring: true,
     startDate: '2025-02-01',
     endDate: '2026-02-01',
     dayOfMonth: 31,
@@ -61,7 +61,7 @@ const sampleRows = [
     description: 'Compra pontual',
     amount: 100,
     date: '2025-09-10',
-    isFixed: false,
+    isRecurring: false,
     kind: 'expense'
   }
 ];

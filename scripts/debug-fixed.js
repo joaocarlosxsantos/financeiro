@@ -5,8 +5,8 @@ const fixedRows = [
     description: 'Salário',
     amount: '5099.53',
     date: '2025-08-01T00:00:00.000Z',
-    type: 'FIXED',
-    isFixed: true,
+    type: 'RECURRING',
+    isRecurring: true,
     startDate: null,
     endDate: null,
     dayOfMonth: null,
@@ -16,8 +16,8 @@ const fixedRows = [
     description: 'Saldo Alelo Refeição',
     amount: '1000',
     date: '2025-08-01T00:00:00.000Z',
-    type: 'FIXED',
-    isFixed: true,
+    type: 'RECURRING',
+    isRecurring: true,
     startDate: null,
     endDate: null,
     dayOfMonth: null,
@@ -34,7 +34,7 @@ function computeFixedSum(rows){
   const sDate = startDate || null;
   const eDate = endDate || null;
   for(const r of rows){
-    if(!r.isFixed) continue;
+    if(!r.isRecurring) continue;
     const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
     const seriesEnd = r.endDate ? new Date(r.endDate) : null;
     const from = sDate && sDate > seriesStart ? sDate : seriesStart;
@@ -77,7 +77,7 @@ function buildFixedBreakdown(rows){
   const sDate = startDate || null;
   const eDate = endDate || null;
   for(const r of rows){
-    if(!r.isFixed) continue;
+    if(!r.isRecurring) continue;
     const occurrences = [];
     const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
     const seriesEnd = r.endDate ? new Date(r.endDate) : null;

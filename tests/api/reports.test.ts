@@ -36,10 +36,10 @@ describe('reports totals logic (unit)', () => {
 
     // variable records
   prismaClient.income.findMany.mockResolvedValue([
-      { id: 'i1', description: 'income1', amount: 100, date: new Date().toISOString(), category: null, wallet: null, isFixed: false },
+      { id: 'i1', description: 'income1', amount: 100, date: new Date().toISOString(), category: null, wallet: null, isRecurring: false },
     ]);
   prismaClient.expense.findMany.mockResolvedValue([
-      { id: 'e1', description: 'expense1', amount: 50, date: new Date().toISOString(), category: null, wallet: null, isFixed: false },
+      { id: 'e1', description: 'expense1', amount: 50, date: new Date().toISOString(), category: null, wallet: null, isRecurring: false },
     ]);
   prismaClient.income.aggregate.mockResolvedValue({ _sum: { amount: 100 } });
   prismaClient.expense.aggregate.mockResolvedValue({ _sum: { amount: 50 } });

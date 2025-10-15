@@ -79,8 +79,8 @@ export async function GET(req: NextRequest) {
   function expandFixedRecords(records: (PrismaExpense | PrismaIncome)[], upto: Date) {
     const expanded: (PrismaExpense | PrismaIncome)[] = [];
     for (const r of records) {
-      // Se for FIXED, NÃO incluir o registro original (evita duplicação) — gerar apenas ocorrências mensais
-      if (r.isFixed) {
+      // Se for RECURRING, NÃO incluir o registro original (evita duplicação) — gerar apenas ocorrências mensais
+      if (r.isRecurring) {
         const recStart = r.startDate ? parseInputDateBrasilia(r.startDate) : r.date ? parseInputDateBrasilia(r.date) : createBrasiliaDate(1900, 1, 1);
         const recEnd = r.endDate ? parseInputDateBrasilia(r.endDate) : upto;
         const minDate = createBrasiliaDate(1900, 1, 1);

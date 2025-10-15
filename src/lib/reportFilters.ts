@@ -11,7 +11,7 @@ export type ReportRow = {
   creditCardName?: string | null;
   creditCardId?: string | null;
   tags?: string[];
-  isFixed?: boolean;
+  isRecurring?: boolean;
 };
 
 export function filterRows(

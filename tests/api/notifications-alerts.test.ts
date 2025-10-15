@@ -4,7 +4,7 @@ jest.mock('next-auth', () => ({
 }));
 
 // Mock Prisma
-const mockPrisma = {
+const alertsMockPrisma = {
   user: { findUnique: jest.fn() },
   alertConfiguration: { 
     findMany: jest.fn(), 
@@ -18,7 +18,7 @@ const mockPrisma = {
 };
 
 jest.mock('@/lib/prisma', () => ({
-  prisma: mockPrisma,
+  prisma: alertsMockPrisma,
 }));
 
 const mockAuth = require('next-auth');
@@ -67,11 +67,11 @@ describe('/api/notifications/alerts', () => {
       ];
 
       mockAuth.getServerSession.mockResolvedValue({ user: { email: 'test@example.com' } });
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.alertConfiguration.findMany.mockResolvedValue(mockConfigs);
-      mockPrisma.category.findMany.mockResolvedValue([]);
-      mockPrisma.wallet.findMany.mockResolvedValue([]);
-      mockPrisma.goal.findMany.mockResolvedValue([]);
+      alertsMockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      alertsMockPrisma.alertConfiguration.findMany.mockResolvedValue(mockConfigs);
+      alertsMockPrisma.category.findMany.mockResolvedValue([]);
+      alertsMockPrisma.wallet.findMany.mockResolvedValue([]);
+      alertsMockPrisma.goal.findMany.mockResolvedValue([]);
       
       // Simular chamada da API
       alertsModule.GET.mockResolvedValue({
@@ -100,8 +100,8 @@ describe('/api/notifications/alerts', () => {
       };
 
       mockAuth.getServerSession.mockResolvedValue({ user: { email: 'test@example.com' } });
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.alertConfiguration.create.mockResolvedValue(mockConfig);
+      alertsMockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      alertsMockPrisma.alertConfiguration.create.mockResolvedValue(mockConfig);
       
       const mockRequestData = {
         type: 'EXPENSE_LIMIT',

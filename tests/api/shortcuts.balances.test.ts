@@ -1,32 +1,32 @@
-const mockedPrisma = {
+const balancesMockPrisma = {
   income: { groupBy: jest.fn() },
   expense: { groupBy: jest.fn() },
   wallet: { findMany: jest.fn() },
   user: { findUnique: jest.fn() },
 };
 
-jest.mock('@/lib/prisma', () => ({ prisma: mockedPrisma }));
+jest.mock('@/lib/prisma', () => ({ prisma: balancesMockPrisma }));
 
 describe('GET /api/shortcuts/balances', () => {
   beforeEach(() => {
-    mockedPrisma.income.groupBy.mockReset();
-    mockedPrisma.expense.groupBy.mockReset();
-    mockedPrisma.wallet.findMany.mockReset();
-    mockedPrisma.user.findUnique.mockReset();
+    balancesMockPrisma.income.groupBy.mockReset();
+    balancesMockPrisma.expense.groupBy.mockReset();
+    balancesMockPrisma.wallet.findMany.mockReset();
+    balancesMockPrisma.user.findUnique.mockReset();
   });
 
   it('returns balances for wallets', async () => {
     // Mock wallets with incomes and expenses (no precomputed balance)
-    mockedPrisma.wallet.findMany.mockResolvedValue([
+    balancesMockPrisma.wallet.findMany.mockResolvedValue([
       {
         id: 'w1',
         name: 'Carteira',
         type: 'carteira',
-        incomes: [{ amount: 200, date: new Date().toISOString(), isFixed: false }],
-        expenses: [{ amount: 50, date: new Date().toISOString(), isFixed: false }],
+        incomes: [{ amount: 200, date: new Date().toISOString(), isRecurring: false }],
+        expenses: [{ amount: 50, date: new Date().toISOString(), isRecurring: false }],
       },
     ]);
-  mockedPrisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'user@example.com' });
+    balancesMockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'user@example.com' });
 
     // isolate module and provide a minimal mock for next/server to avoid environment globals
     let GET: any;

@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         date: body.date ? new Date(body.date) : undefined,
         type: body.type,
         paymentType: paymentType,
-        isFixed: body.isFixed,
+        isRecurring: body.isRecurring,
         startDate: body.startDate ? new Date(body.startDate) : undefined,
         endDate: body.endDate ? new Date(body.endDate) : undefined,
         dayOfMonth: body.dayOfMonth,
