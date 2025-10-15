@@ -42,13 +42,8 @@ export default function QuickRendaForm() {
     transactionType: 'INCOME',
     categories: categories,
     tags: tags,
-    debounceMs: 800,
-    onCategoryPreselect: (categoryId) => {
-      setForm(f => ({ ...f, categoryId }));
-    },
-    onTagsPreselect: (tagIds) => {
-      setForm(f => ({ ...f, tags: [...f.tags, ...tagIds.filter(id => !f.tags.includes(id))] }));
-    }
+    debounceMs: 800
+    // Removido callbacks de pré-seleção para evitar aplicação automática
   });
 
   useEffect(() => {
@@ -253,7 +248,6 @@ export default function QuickRendaForm() {
               <SmartSuggestionsCard
                 suggestions={smartSuggestions.suggestions}
                 isLoading={smartSuggestions.isLoading}
-                isPreselected={true}
                 onAcceptCategory={async () => {
                   const categoryId = await smartSuggestions.acceptCategorySuggestion();
                   if (categoryId) {

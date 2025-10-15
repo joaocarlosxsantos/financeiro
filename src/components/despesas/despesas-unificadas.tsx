@@ -84,13 +84,8 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
     transactionType: 'EXPENSE',
     categories: categories,
     tags: tags,
-    debounceMs: 1000,
-    onCategoryPreselect: (categoryId) => {
-      setForm(f => ({ ...f, categoryId }));
-    },
-    onTagsPreselect: (tagIds) => {
-      setForm(f => ({ ...f, tags: [...f.tags, ...tagIds.filter(id => !f.tags.includes(id))] }));
-    }
+    debounceMs: 1000
+    // Removido callbacks de pré-seleção para evitar aplicação automática
   });
 
   // Carregar despesas recorrentes e pontuais juntas
@@ -482,7 +477,6 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
                       <SmartSuggestionsCard
                         suggestions={smartSuggestions.suggestions}
                         isLoading={smartSuggestions.isLoading}
-                        isPreselected={true}
                         onAcceptCategory={async () => {
                           const categoryId = await smartSuggestions.acceptCategorySuggestion();
                           if (categoryId) {

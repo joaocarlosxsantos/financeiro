@@ -74,18 +74,8 @@ export function useSmartSuggestions({
               tags: filteredTags
             });
             
-            // Pré-seleciona automaticamente categoria se existir e não foi dispensada
-            if (filteredCategory && !filteredCategory.isNew && onCategoryPreselect) {
-              const existingCategory = categories.find(
-                cat => cat.name.toLowerCase() === filteredCategory.name.toLowerCase()
-              );
-              if (existingCategory) {
-                onCategoryPreselect(existingCategory.id);
-              }
-            }
-            
-            // Pré-seleção automática desabilitada para evitar loop de re-seleção
-            // As tags serão sugeridas apenas visualmente, sem pré-seleção automática
+            // Pré-seleção automática removida - apenas sugerimos visualmente
+            // O usuário deve clicar explicitamente em "Aplicar" para aceitar as sugestões
           } else {
             setSuggestions(null);
           }

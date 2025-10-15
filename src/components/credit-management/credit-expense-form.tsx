@@ -60,17 +60,8 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
     transactionType: 'EXPENSE',
     categories: categories,
     tags: tags,
-    debounceMs: 800,
-    onCategoryPreselect: (categoryId) => {
-      if (!expenseId) { // Só aplica sugestões no modo criação
-        setForm(f => ({ ...f, categoryId }));
-      }
-    },
-    onTagsPreselect: (tagIds) => {
-      if (!expenseId) { // Só aplica sugestões no modo criação
-        setForm(f => ({ ...f, tags: [...f.tags, ...tagIds.filter(id => !f.tags.includes(id))] }));
-      }
-    }
+    debounceMs: 800
+    // Removido callbacks de pré-seleção para evitar aplicação automática
   });
 
   useEffect(() => {
@@ -277,7 +268,6 @@ export default function CreditExpenseForm({ onSuccess, onCancel, expenseId }: Cr
               <SmartSuggestionsCard
                 suggestions={smartSuggestions.suggestions}
                 isLoading={smartSuggestions.isLoading}
-                isPreselected={true}
                 onAcceptCategory={async () => {
                   const categoryId = await smartSuggestions.acceptCategorySuggestion();
                   if (categoryId) {
