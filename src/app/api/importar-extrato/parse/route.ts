@@ -144,8 +144,6 @@ import { NextRequest, NextResponse } from 'next/server';
 // import Papa from 'papaparse';
 // @ts-ignore
 import * as ofxParser from 'ofx-parser';
-// Removido: import de biblioteca PDF problemática
-// Implementação alternativa será feita usando text-only approach
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -449,16 +447,7 @@ async function handler(req: NextRequest) {
   let preview: any[] = [];
   let transactions: any[] = [];
   
-  // Processa PDF (convertido para texto pelo usuário)
-  if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
-    return NextResponse.json(
-      { 
-        error: 'PDFs ainda não são suportados diretamente. Por favor, copie o texto do PDF e cole em um arquivo .txt para importar.',
-        suggestion: 'Para extrair o texto do PDF: 1) Abra o PDF, 2) Selecione todo o texto (Ctrl+A), 3) Copie (Ctrl+C), 4) Cole em um arquivo .txt, 5) Importe o arquivo .txt'
-      },
-      { status: 400 }
-    );
-  }
+
   
   // Processa texto (incluindo texto extraído de PDF)
   if (file.name.endsWith('.txt') || file.type === 'text/plain') {

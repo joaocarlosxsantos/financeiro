@@ -56,12 +56,12 @@ export function ExtratoUpload({
             {multiple ? 'Clique para selecionar arquivos' : 'Clique para selecionar o arquivo'}
           </span>
           <span className="text-sm text-muted-foreground mt-2">
-            {multiple ? 'Múltiplos arquivos OFX ou TXT' : 'OFX ou TXT (texto extraído de PDF)'}
+            {multiple ? 'Múltiplos arquivos OFX ou TXT' : 'OFX ou TXT'}
           </span>
           <input
             ref={inputRef}
             type="file"
-            accept=".ofx,.txt,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            accept=".ofx,.txt,text/plain"
             multiple={multiple}
             onChange={handleFileSelection}
             className="hidden"
