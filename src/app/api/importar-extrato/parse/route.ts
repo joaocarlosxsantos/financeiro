@@ -299,14 +299,16 @@ function parsePdfGroupedByDate(text: string) {
   return transactions;
 }
 
-// Função para parsing de PDF com cada linha tendo data, descrição e valor
+// Função para parsing de PDF com cada linha tendo data, descrição e valor (formato DD/MM/YYYY)
 function parsePdfIndividualLines(text: string) {
   const transactions: any[] = [];
+  console.log('Tentando parsing linha por linha (formato DD/MM/YYYY)');
+  
   const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
   
+  // Formato tradicional: data descrição valor na mesma linha
   for (const line of lines) {
-    // Procura padrão: data descrição valor
-    // Exemplo: "01/01/2025 COMPRA SUPERMERCADO ABC -150,00"
+    // Padrão tradicional: "01/01/2025 COMPRA SUPERMERCADO ABC -150,00"
     const lineMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/);
     if (lineMatch) {
       let [, dateStr, descricao, , valorStr, negativeFlag] = lineMatch;
@@ -334,23 +336,134 @@ function parsePdfIndividualLines(text: string) {
             valor,
             descricao: descricao.trim()
           });
+          
+          console.log('Transação DD/MM extraída:', { data: normalizedDate, valor, descricao: descricao.trim() });
         }
       }
     }
   }
   
+  console.log(`Total de transações DD/MM extraídas: ${transactions.length}`);
   return transactions;
 }
 
-// Função específica para parsing de extratos Alelo
-function parseAleloExtract(text: string) {
+// Função específica para parsing de arquivos TXT de extrato (formato como Alelo)
+function parseTxtExtract(text: string) {
   const transactions: any[] = [];
-  console.log('Tentando parsing de extrato Alelo');
+  console.log('Tentando parsing de arquivo TXT de extrato');
   
-  // Verifica se é um extrato Alelo
-  if (!text.includes('Extrato Alelo') && !text.includes('Seu Benefício Caiu')) {
-    return [];
+  // Remove caracteres especiais e normaliza o texto
+  const normalizedText = text.replace(/•/g, '').replace(/\r/g, '');
+  const lines = normalizedText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Ignora cabeçalhos e informações do cartão
+    if (line.includes('Extrato') || 
+        line.includes('•••') || 
+        line.includes('Periodo') || 
+        line.includes('Nome do Portador') || 
+        line.includes('CPF:') || 
+        line.includes('Saldo R$') || 
+        line.includes('Último benefício') ||
+        line.includes('about:blank') ||
+        line.includes('Consulta de Saldo') ||
+        line.includes('MeuAlelo') ||
+        line.match(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}$/)) {
+      continue;
+    }
+    
+    // Procura por data no formato YYYY-MM-DD
+    const dateMatch = line.match(/^(\d{4}-\d{2}-\d{2})$/);
+    if (dateMatch && i > 0 && i + 1 < lines.length) {
+      const dateStr = dateMatch[1];
+      const [year, month, day] = dateStr.split('-');
+      const data = `${day}/${month}/${year}`;
+      
+      // Linha anterior deve ser a descrição
+      const descricaoLine = lines[i - 1];
+      
+      // Linha seguinte deve ser o valor
+      const valorLine = lines[i + 1];
+      
+      // Verifica se o padrão está correto
+      if (descricaoLine && valorLine) {
+        // Processa o valor
+        // Processa o valor (aceita tanto "- R$" quanto "-R$" quanto "R$")
+        let valorMatch = valorLine.match(/^(-\s*)?R\$\s*([\d.,]+)$/);
+        if (valorMatch) {
+          const isNegative = !!valorMatch[1];
+          const valueStr = valorMatch[2];
+          let valor = parseFloat(valueStr.replace(/\./g, '').replace(',', '.'));
+          
+          // Trata o sinal
+          if (isNegative) {
+            valor = -Math.abs(valor);
+          } else {
+            // Se não tem sinal negativo, verifica se é receita baseado na descrição
+            if (descricaoLine.toLowerCase().includes('benefício') || 
+                descricaoLine.toLowerCase().includes('recarga') ||
+                descricaoLine.toLowerCase().includes('crédito') ||
+                descricaoLine.toLowerCase().includes('depósito')) {
+              valor = Math.abs(valor); // Receita
+            } else {
+              // Para extratos de cartão alimentação, sem sinal negativo geralmente são despesas
+              valor = -Math.abs(valor);
+            }
+          }
+          
+          // Processa a descrição
+          let descricao = descricaoLine.trim();
+          
+          // Melhora descrições específicas
+          if (descricao.toLowerCase().includes('seu benefício caiu')) {
+            descricao = 'Benefício Alimentação';
+          } else if (descricao.toLowerCase().includes('supermercado')) {
+            descricao = descricao.replace(/SUPERMERCADO/gi, 'Supermercado');
+          } else if (descricao.toLowerCase().includes('outback')) {
+            descricao = descricao.replace(/OUTBACK.*/, 'Outback Steakhouse');
+          } else if (descricao.toLowerCase().includes('mcdonalds')) {
+            descricao = 'McDonalds';
+          }
+          
+          // Sugere categoria baseada na descrição
+          let categoriaRecomendada = 'Alimentação';
+          if (descricao.toLowerCase().includes('benefício')) {
+            categoriaRecomendada = 'Receitas';
+          } else if (descricao.toLowerCase().includes('supermercado')) {
+            categoriaRecomendada = 'Supermercado';
+          } else if (descricao.toLowerCase().includes('restaurante') || 
+                     descricao.toLowerCase().includes('outback') ||
+                     descricao.toLowerCase().includes('mcdonalds') ||
+                     descricao.toLowerCase().includes('comercio') ||
+                     descricao.toLowerCase().includes('lanchonete') ||
+                     descricao.toLowerCase().includes('padaria')) {
+            categoriaRecomendada = 'Alimentação';
+          }
+          
+          transactions.push({
+            data,
+            valor,
+            descricao,
+            categoriaRecomendada,
+            shouldCreateCategory: true
+          });
+          
+          console.log('Transação TXT extraída:', { data, valor, descricao, categoriaRecomendada });
+        }
+      }
+    }
   }
+  
+  console.log(`Total de transações TXT extraídas: ${transactions.length}`);
+  return transactions;
+}
+
+// Função para parsing de extrato com formato estruturado (data YYYY-MM-DD com descrição e valor em linhas separadas)
+function parseStructuredExtract(text: string) {
+  const transactions: any[] = [];
+  console.log('Tentando parsing de extrato estruturado (formato YYYY-MM-DD)');
   
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
@@ -408,9 +521,9 @@ function parseAleloExtract(text: string) {
           .replace(/\s+/g, ' ')
           .trim();
         
-        // Melhora descrições específicas do Alelo
+        // Melhora descrições específicas
         if (descricao.toLowerCase().includes('seu benefício caiu')) {
-          descricao = 'Benefício Alimentação Alelo';
+          descricao = 'Benefício Alimentação';
         } else if (descricao.toLowerCase().includes('supermercado')) {
           // Mantém o nome do supermercado mas padroniza
           descricao = descricao.replace(/SUPERMERCADO/gi, 'Supermercado');
@@ -418,7 +531,7 @@ function parseAleloExtract(text: string) {
           descricao = descricao.replace(/OUTBACK.*/, 'Outback Steakhouse');
         }
         
-        // Para extratos Alelo, sugere categoria relacionada à alimentação
+        // Sugere categoria relacionada à alimentação para esse formato
         let categoria = 'Alimentação';
         if (descricao.toLowerCase().includes('benefício')) {
           categoria = 'Receitas'; // Para os benefícios/receitas
@@ -434,28 +547,23 @@ function parseAleloExtract(text: string) {
           data,
           valor,
           descricao,
-          categoria: categoria // Adiciona sugestão de categoria específica para Alelo
+          categoriaRecomendada: categoria,
+          shouldCreateCategory: true
         });
         
-        console.log('Transação Alelo extraída:', { data, valor, descricao });
+        console.log('Transação estruturada extraída:', { data, valor, descricao });
       }
     }
   }
   
-  console.log(`Total de transações Alelo extraídas: ${transactions.length}`);
+  console.log(`Total de transações estruturadas extraídas: ${transactions.length}`);
   return transactions;
 }
 
+
 async function parsePdfExtract(text: string) {
   try {
-    // Primeiro tenta identificar se é um extrato Alelo
-    let transactions = parseAleloExtract(text);
-    if (transactions.length > 0) {
-      console.log('Extrato Alelo identificado e processado');
-      return transactions;
-    }
-    
-    // Depois verifica se é texto mal formatado e usa normalização
+    // Verifica se é texto mal formatado e usa normalização
     const lines = text.split('\n');
     const singleCharLines = lines.filter(line => line.trim().length === 1).length;
     const ratio = singleCharLines / lines.length;
@@ -466,11 +574,16 @@ async function parsePdfExtract(text: string) {
     }
     
     // Tenta primeiro o formato agrupado por data
-    transactions = parsePdfGroupedByDate(text);
+    let transactions = parsePdfGroupedByDate(text);
     
-    // Se não encontrou transações, tenta o formato individual
+    // Se não encontrou transações, tenta o formato individual (DD/MM/YYYY)
     if (transactions.length === 0) {
       transactions = parsePdfIndividualLines(text);
+    }
+    
+    // Se ainda não encontrou, tenta o formato estruturado (YYYY-MM-DD)
+    if (transactions.length === 0) {
+      transactions = parseStructuredExtract(text);
     }
     
     // Se ainda não encontrou, tenta padrões mais flexíveis
@@ -561,8 +674,16 @@ async function handler(req: NextRequest) {
   if (file.name.endsWith('.txt') || file.type === 'text/plain') {
     try {
       const text = await file.text();
-      console.log('Processando arquivo TXT. Tamanho:', text.length);      
-      transactions = await parsePdfExtract(text);
+      console.log('Processando arquivo TXT. Tamanho:', text.length);
+      
+      // Tenta primeiro o parsing específico para TXT de extrato
+      transactions = parseTxtExtract(text) || [];
+      
+      // Se não encontrou transações com o parser TXT, tenta os parsers de PDF
+      if (transactions.length === 0) {
+        console.log('Parser TXT não encontrou transações, tentando parsers de PDF...');
+        transactions = await parsePdfExtract(text);
+      }
       
       if (transactions.length === 0) {
         return NextResponse.json(
@@ -571,8 +692,9 @@ async function handler(req: NextRequest) {
             debug: {
               fileSize: text.length,
               sample: text.substring(0, 200),
-              isAlelo: text.toLowerCase().includes('alelo') || text.includes('Benefício'),
-              hasDate: /20\d{2}-\d{2}-\d{2}/.test(text)
+              hasExtractKeywords: text.toLowerCase().includes('extrato') || text.includes('Benefício'),
+              hasDate: /20\d{2}-\d{2}-\d{2}/.test(text) || /\d{2}\/\d{2}\/\d{4}/.test(text),
+              lines: text.split('\n').length
             }
           },
           { status: 400 }
@@ -754,16 +876,16 @@ async function handler(req: NextRequest) {
       const valor = t.valor;
       const descricao = t.descricao;
 
-      // Usa IA para análise da transação
+      // Usa IA para análise da transação (ou categoria já sugerida pelo parser)
       let aiAnalysis: any = null;
-      let categoriaRecomendada = '';
+      let categoriaRecomendada = t.categoriaRecomendada || ''; // Pode já vir do parser específico (ex: Alelo)
       let categoriaId = '';
       let descricaoMelhorada = descricao;
       let tagsRecomendadas: string[] = [];
-      let shouldCreateCategory = false;
+      let shouldCreateCategory = t.shouldCreateCategory || false; // Pode já vir definido
       
       try {
-        if (user && descricao) {
+        if (user && descricao && !categoriaRecomendada) { // Só usa IA se não há categoria sugerida
           aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
           
           // Verifica se categoria sugerida existe
@@ -800,25 +922,44 @@ async function handler(req: NextRequest) {
         }
       } catch (error) {
         console.error('Erro na análise IA:', error);
-        // Fallback para método antigo se IA falhar
-        const descricaoSimplificada = simplificarDescricao(descricao);
-        const categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-        descricaoMelhorada = descricaoSimplificada || descricao;
-        
-        // Verifica se categoria do fallback existe
+        // Fallback para método antigo se IA falhar e não há categoria já sugerida
+        if (!categoriaRecomendada) {
+          const descricaoSimplificada = simplificarDescricao(descricao);
+          const categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+          descricaoMelhorada = descricaoSimplificada || descricao;
+          
+          // Verifica se categoria do fallback existe
+          const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+          const categoriaExistente = categoriasUsuario.find(
+            (cat) =>
+              removeAcentos(cat.name.toLowerCase()) ===
+              removeAcentos(categoriaSugerida.toLowerCase()),
+          );
+          
+          if (categoriaExistente) {
+            categoriaRecomendada = categoriaExistente.name;
+            categoriaId = categoriaExistente.id;
+            shouldCreateCategory = false;
+          } else {
+            categoriaRecomendada = categoriaSugerida;
+            shouldCreateCategory = true;
+          }
+        }
+      }
+      
+      // Se categoria veio do parser específico, verificar se já existe no sistema
+      if (categoriaRecomendada && !categoriaId) {
         const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
         const categoriaExistente = categoriasUsuario.find(
           (cat) =>
             removeAcentos(cat.name.toLowerCase()) ===
-            removeAcentos(categoriaSugerida.toLowerCase()),
+            removeAcentos(categoriaRecomendada.toLowerCase()),
         );
         
         if (categoriaExistente) {
-          categoriaRecomendada = categoriaExistente.name;
           categoriaId = categoriaExistente.id;
           shouldCreateCategory = false;
         } else {
-          categoriaRecomendada = categoriaSugerida;
           shouldCreateCategory = true;
         }
       }

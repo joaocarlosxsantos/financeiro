@@ -134,11 +134,20 @@ export async function POST(req: NextRequest) {
       }
     }
     
+    // Log para debug
+    console.log(`Processando registro inicial: ${reg.descricao || 'sem descrição'}`);
+    console.log(`- categoriaRecomendada: ${reg.categoriaRecomendada || 'nenhuma'}`);
+    console.log(`- categoriaSugerida: ${reg.categoriaSugerida || 'nenhuma'}`);
+    console.log(`- categoriaNome processado: ${categoriaNome || 'nenhum'}`);
+    console.log(`- categoriaObj encontrada: ${categoriaObj ? `${categoriaObj.name} (${categoriaObj.id})` : 'nenhuma'}`);
+    console.log(`- shouldCreateCategory: ${reg.shouldCreateCategory || false}`);
+    
     return { 
       ...reg, 
       categoriaId: categoriaObj ? categoriaObj.id : undefined, 
       tipo,
-      tags: tagsFinais
+      tags: tagsFinais,
+      categoriaNomeProcessado: categoriaNome // Para debug posterior
     };
   });
 
@@ -184,27 +193,19 @@ export async function POST(req: NextRequest) {
     const nomeNorm = normalizeNome(nova.name);
     const key = `${nomeNorm}|BOTH`;
     if (!categoriasCache[key]) {
+      console.log(`Criando nova categoria: ${nova.name} (normalizada: ${nomeNorm})`);
       const cor = corFixaCategoria(nova.name) || corPorNome(nova.name);
       const cat = await prisma.category.create({
         data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
       });
+      
+      // Adicionar ao cache com TODAS as chaves possíveis para garantir que seja encontrada
       categoriasCache[key] = cat;
+      categoriasCache[`${nomeNorm}|INCOME`] = cat;
+      categoriasCache[`${nomeNorm}|EXPENSE`] = cat;
       criadas.push(cat as any);
       
-      // Associar categoria criada aos registros correspondentes
-      for (const reg of registrosAtualizados) {
-        let categoriaNome = '';
-        if (reg.categoriaRecomendada) {
-          categoriaNome = normalizeNome(reg.categoriaRecomendada);
-        } else if (reg.categoriaSugerida) {
-          categoriaNome = normalizeNome(reg.categoriaSugerida);
-        } else if (reg.categoriaId && reg.categoriaId.length <= 40) {
-          categoriaNome = normalizeNome(reg.categoriaId);
-        }
-        if (categoriaNome === nomeNorm) {
-          reg.categoriaId = cat.id;
-        }
-      }
+      console.log(`Categoria criada com ID: ${cat.id}, adicionada ao cache com chaves: ${nomeNorm}|BOTH, ${nomeNorm}|INCOME, ${nomeNorm}|EXPENSE`);
     }
   }
 
@@ -247,14 +248,32 @@ export async function POST(req: NextRequest) {
       categoriaNome = normalizeNome(categoriaId);
     }
     
+    console.log(`Processando registro: ${reg.descricao || 'sem descrição'}, categoria sugerida: ${reg.categoriaRecomendada || reg.categoriaSugerida || 'nenhuma'}, categoria normalizada: ${categoriaNome}`);
+    
     // Se for saldo inicial, sempre força o id da categoria Saldo
     if (reg.isSaldoInicial || categoriaNome === 'saldo') {
       const catSaldo = Object.values(categoriasCache).find(
         (c) => normalizeNome(c.name) === 'saldo',
       );
       if (catSaldo) categoriaId = catSaldo.id;
+    } else if (categoriaNome) {
+      // Busca a categoria no cache com diferentes chaves
+      const keyBoth = `${categoriaNome}|BOTH`;
+      const keyIncome = `${categoriaNome}|INCOME`;
+      const keyExpense = `${categoriaNome}|EXPENSE`;
+      
+      const categoria = categoriasCache[keyBoth] || categoriasCache[keyIncome] || categoriasCache[keyExpense];
+      
+      if (categoria) {
+        categoriaId = categoria.id;
+        console.log(`✅ Categoria encontrada no cache: ${categoria.name} (ID: ${categoria.id})`);
+      } else {
+        console.log(`❌ Categoria não encontrada no cache: ${categoriaNome}. Chaves testadas: ${keyBoth}, ${keyIncome}, ${keyExpense}`);
+        console.log(`Cache disponível:`, Object.keys(categoriasCache));
+        categoriaId = undefined;
+      }
     } else if (categoriaId && categoriaId.length <= 40) {
-      // Pode ser nome, resolve para id
+      // Pode ser nome, resolve para id (fallback)
       const key = `${normalizeNome(categoriaId)}|INCOME`;
       const key2 = `${normalizeNome(categoriaId)}|EXPENSE`;
       const keyBoth = `${normalizeNome(categoriaId)}|BOTH`;
