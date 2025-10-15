@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   function expandFixedRecords(records: (ExpenseRecord | IncomeRecord)[], upto: Date) {
     const expanded: (ExpenseRecord | IncomeRecord)[] = [];
     for (const r of records) {
-      if (r.isFixed) {
+      if (r.isRecurring) {
         const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(1900, 0, 1);
         const recEnd = r.endDate ? new Date(r.endDate) : upto;
         const from = recStart;
