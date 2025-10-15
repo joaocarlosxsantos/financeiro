@@ -611,11 +611,14 @@ export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
 
       {/* Usuário / Ações */}
       <div className={cn(
-        "border-t border-white/10 mt-auto",
-        // Mobile: More padding and larger touch targets
-        isMobile ? "p-6" : "p-4"
+        "border-t border-white/10 mt-auto bg-gradient-to-r from-white/5 to-transparent",
+        // Mobile: Better padding and spacing
+        isMobile ? "p-4" : "p-4"
       )}>
-        <div className="flex items-center gap-3">
+        <div className={cn(
+          "flex items-center gap-3",
+          isMobile ? "min-h-[60px]" : ""
+        )}>
           <Link
             href="/user"
             onClick={() => {
@@ -625,45 +628,58 @@ export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
               if (onClose) onClose();
             }}
             className={cn(
-              "group flex items-center gap-3 flex-1 min-w-0 rounded-xl transition-colors",
-              // Mobile: Add padding for better touch target
-              isMobile ? "p-2 hover:bg-white/5" : ""
+              "group flex items-center gap-3 flex-1 min-w-0 rounded-xl transition-all duration-200",
+              // Mobile: Better touch target and hover states
+              isMobile 
+                ? "p-3 hover:bg-white/10 active:bg-white/15 active:scale-95" 
+                : "p-2 hover:bg-white/5"
             )}
           >
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               {user?.image ? (
                 <Image
                   src={user.image}
-                  alt={user.name || 'User'}
+                  alt={user.name || user.email || 'User'}
                   width={isMobile ? 48 : 40}
                   height={isMobile ? 48 : 40}
                   className={cn(
-                    "rounded-xl object-cover ring-2 ring-white/20 group-hover:ring-primary/50 transition",
+                    "rounded-xl object-cover ring-2 ring-white/20 group-hover:ring-primary/50 transition-all duration-200",
                     isMobile ? "h-12 w-12" : "h-10 w-10"
                   )}
                 />
               ) : (
                 <div className={cn(
-                  "rounded-xl bg-white/10 flex items-center justify-center ring-2 ring-white/10 group-hover:ring-primary/50 transition",
+                  "rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center ring-2 ring-white/10 group-hover:ring-primary/50 transition-all duration-200",
                   isMobile ? "h-12 w-12" : "h-10 w-10"
                 )}>
-                  <User className={cn(isMobile ? "h-6 w-6" : "h-5 w-5", "text-white/70")} />
+                  <User className={cn(
+                    isMobile ? "h-6 w-6" : "h-5 w-5", 
+                    "text-white/90 group-hover:text-white"
+                  )} />
                 </div>
               )}
               <span className={cn(
-                "absolute -bottom-1 -right-1 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse",
-                isMobile ? "h-5 w-5" : "h-4 w-4"
+                "absolute -bottom-1 -right-1 rounded-full bg-emerald-500 ring-2 ring-slate-900/80",
+                isMobile ? "h-4 w-4" : "h-3 w-3"
               )} aria-hidden="true" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className={cn(
-                "font-medium truncate group-hover:text-white",
-                isMobile ? "text-base" : "text-sm"
-              )}>{user?.name || 'Usuário'}</p>
-              <p className={cn(
-                "text-white/60 truncate",
-                isMobile ? "text-sm" : "text-[11px]"
-              )}>{user?.email || 'usuario@email.com'}</p>
+                "font-semibold truncate text-white group-hover:text-primary-200 transition-colors",
+                isMobile ? "text-base leading-tight" : "text-sm"
+              )}>
+                {user?.name || 
+                 (user?.email ? user.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '') || 
+                 'Usuário'}
+              </p>
+              {user?.email && (
+                <p className={cn(
+                  "text-white/60 truncate group-hover:text-white/80 transition-colors",
+                  isMobile ? "text-sm leading-tight mt-1" : "text-[11px] mt-0.5"
+                )}>
+                  {user.email}
+                </p>
+              )}
             </div>
           </Link>
           <Button
@@ -671,13 +687,15 @@ export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
             size="icon"
             onClick={logout}
             className={cn(
-              "rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition",
-              // Mobile: Larger touch target
-              isMobile ? "h-12 w-12" : "h-10 w-10"
+              "rounded-xl bg-white/5 hover:bg-red-500/20 text-white/70 hover:text-red-300 transition-all duration-200 flex-shrink-0",
+              // Mobile: Better touch target and feedback
+              isMobile 
+                ? "h-12 w-12 active:scale-95 hover:bg-red-500/30" 
+                : "h-10 w-10"
             )}
-            aria-label="Sair"
+            aria-label="Sair da conta"
           >
-            <LogOut className={cn(isMobile ? "h-6 w-6" : "h-5 w-5")} />
+            <LogOut className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
           </Button>
         </div>
       </div>

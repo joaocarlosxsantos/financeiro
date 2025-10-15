@@ -163,14 +163,13 @@ export async function POST(req: NextRequest) {
     amount: z.number().positive('Valor deve ser positivo'),
     date: z.string().optional(),
     type: z.enum(['RECURRING', 'PUNCTUAL']),
-    paymentType: z.enum(['DEBIT', 'CREDIT', 'PIX_TRANSFER', 'CASH', 'OTHER']).optional(),
+    paymentType: z.enum(['DEBIT', 'PIX_TRANSFER', 'CASH', 'OTHER']).optional(),
     isRecurring: z.boolean().optional(),
     startDate: z.string().optional().nullable(),
     endDate: z.string().optional().nullable(),
     dayOfMonth: z.number().optional().nullable(),
     categoryId: z.string().optional().nullable(),
-    walletId: z.string().optional().nullable(),
-    creditCardId: z.string().optional().nullable(),
+    walletId: z.string().min(1, 'Carteira é obrigatória'),
     tags: z.array(z.string()).optional(),
   });
   const parse = incomeSchema.safeParse(body);
@@ -189,23 +188,8 @@ export async function POST(req: NextRequest) {
     dayOfMonth,
     categoryId,
     walletId,
-    creditCardId,
     tags = [],
   } = parse.data;
-
-  // Validar que quando for CREDIT, deve ter creditCardId e não walletId
-  if (paymentType === 'CREDIT' && !creditCardId) {
-    return NextResponse.json({ error: 'Cartão de crédito é obrigatório para pagamento à crédito' }, { status: 400 });
-  }
-  if (paymentType === 'CREDIT' && walletId) {
-    return NextResponse.json({ error: 'Não é possível especificar carteira para pagamento à crédito' }, { status: 400 });
-  }
-  if (paymentType !== 'CREDIT' && creditCardId) {
-    return NextResponse.json({ error: 'Cartão de crédito só pode ser usado para pagamento à crédito' }, { status: 400 });
-  }
-  if (paymentType !== 'CREDIT' && !walletId) {
-    return NextResponse.json({ error: 'Carteira é obrigatória para este tipo de pagamento' }, { status: 400 });
-  }
 
   const income = await prisma.income.create({
     data: {
@@ -219,8 +203,7 @@ export async function POST(req: NextRequest) {
       endDate: endDate ? parseFlexibleDate(endDate) : undefined,
       dayOfMonth,
       categoryId,
-      walletId: paymentType === 'CREDIT' ? null : walletId,
-      creditCardId: paymentType === 'CREDIT' ? creditCardId : null,
+      walletId,
       userId: user.id,
       tags,
     },
@@ -229,8 +212,7 @@ export async function POST(req: NextRequest) {
     where: { id: income.id }, 
     include: { 
       category: true, 
-      wallet: true, 
-      creditCard: true 
+      wallet: true
     } 
   });
   

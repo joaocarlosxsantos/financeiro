@@ -171,7 +171,6 @@ export async function POST(req: NextRequest) {
     dayOfMonth: z.number().optional().nullable(),
     categoryId: z.string().optional().nullable(),
     walletId: z.string().optional().nullable(),
-    creditCardId: z.string().optional().nullable(),
     tags: z.array(z.string()).optional(),
   });
   const parse = expenseSchema.safeParse(body);
@@ -190,22 +189,12 @@ export async function POST(req: NextRequest) {
     dayOfMonth,
     categoryId,
     walletId,
-    creditCardId,
     tags = [],
   } = parse.data;
 
-  // Validar que quando for CREDIT, deve ter creditCardId e não walletId
-  if (paymentType === 'CREDIT' && !creditCardId) {
-    return NextResponse.json({ error: 'Cartão de crédito é obrigatório para pagamento à crédito' }, { status: 400 });
-  }
-  if (paymentType === 'CREDIT' && walletId) {
-    return NextResponse.json({ error: 'Não é possível especificar carteira para pagamento à crédito' }, { status: 400 });
-  }
-  if (paymentType !== 'CREDIT' && creditCardId) {
-    return NextResponse.json({ error: 'Cartão de crédito só pode ser usado para pagamento à crédito' }, { status: 400 });
-  }
-  if (paymentType !== 'CREDIT' && !walletId) {
-    return NextResponse.json({ error: 'Carteira é obrigatória para este tipo de pagamento' }, { status: 400 });
+  // Validar que carteira é obrigatória (sistema não trabalha mais com cartões de crédito na despesa)
+  if (!walletId) {
+    return NextResponse.json({ error: 'Carteira é obrigatória' }, { status: 400 });
   }
 
   const expense = await prisma.expense.create({
@@ -220,8 +209,7 @@ export async function POST(req: NextRequest) {
       endDate: endDate ? parseFlexibleDate(endDate) : undefined,
       dayOfMonth,
       categoryId,
-      walletId: paymentType === 'CREDIT' ? null : walletId,
-      creditCardId: paymentType === 'CREDIT' ? creditCardId : null,
+      walletId,
       userId: user.id,
       tags,
     },
@@ -232,8 +220,7 @@ export async function POST(req: NextRequest) {
     where: { id: expense.id }, 
     include: { 
       category: true, 
-      wallet: true, 
-      creditCard: true 
+      wallet: true 
     } 
   });
   

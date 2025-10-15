@@ -27,19 +27,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   
   try {
-    // Validar que quando for CREDIT, deve ter creditCardId e não walletId
-    const paymentType = body.paymentType || 'DEBIT';
-    if (paymentType === 'CREDIT' && !body.creditCardId) {
-      return NextResponse.json({ error: 'Cartão de crédito é obrigatório para pagamento à crédito' }, { status: 400 });
-    }
-    if (paymentType === 'CREDIT' && body.walletId) {
-      return NextResponse.json({ error: 'Não é possível especificar carteira para pagamento à crédito' }, { status: 400 });
-    }
-    if (paymentType !== 'CREDIT' && body.creditCardId) {
-      return NextResponse.json({ error: 'Cartão de crédito só pode ser usado para pagamento à crédito' }, { status: 400 });
-    }
-    if (paymentType !== 'CREDIT' && !body.walletId) {
-      return NextResponse.json({ error: 'Carteira é obrigatória para este tipo de pagamento' }, { status: 400 });
+    // Validar que carteira é obrigatória (sistema não trabalha mais com cartões de crédito na receita)
+    if (!body.walletId) {
+      return NextResponse.json({ error: 'Carteira é obrigatória' }, { status: 400 });
     }
 
     const updated = await prisma.income.update({
@@ -49,14 +39,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         amount: body.amount,
         date: body.date ? new Date(body.date) : undefined,
         type: body.type,
-        paymentType: paymentType,
-        isFixed: body.isFixed,
+        paymentType: body.paymentType || 'DEBIT',
+        isRecurring: body.isRecurring,
         startDate: body.startDate ? new Date(body.startDate) : undefined,
         endDate: body.endDate ? new Date(body.endDate) : undefined,
         dayOfMonth: body.dayOfMonth,
         categoryId: body.categoryId,
-        walletId: paymentType === 'CREDIT' ? null : body.walletId,
-        creditCardId: paymentType === 'CREDIT' ? body.creditCardId : null,
+        walletId: body.walletId,
         tags: normalizedTags,
       },
       include: { category: true, wallet: true },
