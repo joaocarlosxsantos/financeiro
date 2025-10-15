@@ -14,14 +14,16 @@ interface ExtratoPreviewProps {
   wallets: any[];
   selectedWallet: string;
   onWalletChange: (id: string) => void;
-  onSave: (registros: any[]) => void;
+  onSave: (registros: any[], saldoAnterior?: number) => void;
   saving: boolean;
   error: string | null;
   success: boolean;
   fetchWallets?: () => Promise<void>;
+  hideImportSummary?: boolean; // Nova prop para esconder o resumo
 }
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { TransactionRow } from './transaction-row';
+import { ImportSummary } from './import-summary';
 import { Plus } from 'lucide-react';
 
 export function ExtratoPreview({
@@ -34,12 +36,12 @@ export function ExtratoPreview({
   error,
   success,
   fetchWallets,
+  hideImportSummary = false,
 }: ExtratoPreviewProps) {
   const [registros, setRegistros] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
-  const [saldoAnterior, setSaldoAnterior] = useState<string>('');
-  const [createOpen, setCreateOpen] = useState(false);
+
   // Descobre a data do primeiro lançamento do extrato
   const dataPrimeiroLancamento = React.useMemo(() => {
     if (!registros.length) return null;
@@ -292,7 +294,7 @@ export function ExtratoPreview({
     return iconMap[categoryName.toLowerCase()] || null;
   }
 
-  async function handleSaveComSaldo() {
+  async function handleSaveComSaldo(saldoAnterior?: number) {
     let novosRegistros = [...registros];
 
     // Processar sugestões da IA automaticamente se o usuário não fez seleções
@@ -333,7 +335,8 @@ export function ExtratoPreview({
       }
     }
 
-    if (saldoAnterior && dataPrimeiroLancamento) {
+    // Adicionar saldo anterior se informado
+    if (saldoAnterior && dataPrimeiroLancamento && !isNaN(saldoAnterior) && saldoAnterior !== 0) {
       // Gera data do saldo inicial: um dia antes do primeiro lançamento
       const dataSaldo = new Date(dataPrimeiroLancamento);
       dataSaldo.setDate(dataSaldo.getDate() - 1);
@@ -359,7 +362,7 @@ export function ExtratoPreview({
         ...novosRegistros,
       ];
     }
-    onSave(novosRegistros);
+    onSave(novosRegistros, saldoAnterior);
   }
 
   return (
@@ -426,59 +429,23 @@ export function ExtratoPreview({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-2">
-        <Label className="font-medium">Selecione a carteira para vincular os lançamentos:</Label>
-        <div className="flex gap-2 items-center">
-          <Select value={selectedWallet} onChange={(e) => onWalletChange(e.target.value)}>
-            <option value="">Selecione...</option>
-            {wallets.map((w: any) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </Select>
-          <Button variant="default" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Criar carteira
-          </Button>
-        </div>
-        {/* Campo de saldo anterior */}
-        {selectedWallet && dataPrimeiroLancamento && (
-          <div className="flex flex-col gap-1 mt-2">
-            <Label>
-              Saldo do dia anterior a {dataPrimeiroLancamento.toLocaleDateString('pt-BR')}:
-            </Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="Informe o saldo anterior"
-              value={saldoAnterior}
-              onChange={(e) => setSaldoAnterior(e.target.value)}
-              className="max-w-xs"
-            />
-            <span className="text-xs text-gray-500">
-              Esse valor será lançado como renda variável na data do primeiro dia do extrato.
-            </span>
-          </div>
-        )}
-        <Button onClick={handleSaveComSaldo} disabled={!selectedWallet || saving}>
-          {saving ? 'Salvando...' : 'Salvar lançamentos'}
-        </Button>
-        <WalletCreateModal
-          open={createOpen}
-          onClose={() => setCreateOpen(false)}
-          onCreated={async (id: string) => {
-            setCreateOpen(false);
-            if (id && typeof id === 'string' && id.length) {
-              // recarrega carteiras se função disponível e seleciona a criada
-              if (fetchWallets) await fetchWallets();
-              onWalletChange(id);
-            }
-          }}
+      {!hideImportSummary && (
+        <ImportSummary
+          wallets={wallets}
+          selectedWallet={selectedWallet}
+          onWalletChange={onWalletChange}
+          onSave={handleSaveComSaldo}
+          saving={saving}
+          error={error}
+          success={success}
+          fetchWallets={fetchWallets}
+          totalFiles={1}
+          totalTransactions={registros.length}
+          totalIncome={registros.filter(r => r.valor > 0).reduce((acc, r) => acc + r.valor, 0)}
+          totalExpense={registros.filter(r => r.valor < 0).reduce((acc, r) => acc + Math.abs(r.valor), 0)}
+          firstTransactionDate={dataPrimeiroLancamento}
         />
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        {success && <div className="text-green-600 text-sm">Importação realizada com sucesso!</div>}
-      </div>
+      )}
     </div>
   );
 }

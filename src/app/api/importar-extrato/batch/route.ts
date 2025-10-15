@@ -11,6 +11,7 @@ interface BatchImportData {
     sourceFile: string;
   }>;
   carteiraId: string;
+  saldoAnterior?: number;
 }
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { batches, carteiraId }: BatchImportData = await req.json();
+    const { batches, carteiraId, saldoAnterior }: BatchImportData = await req.json();
 
     if (!Array.isArray(batches) || !carteiraId) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Processar usando a mesma lógica da importação normal
-    const result = await processAllRegistros(user, allRegistros, carteiraId);
+    const result = await processAllRegistros(user, allRegistros, carteiraId, saldoAnterior);
 
     return NextResponse.json(result);
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Usar exatamente a mesma lógica da importação normal
-async function processAllRegistros(user: any, registros: any[], carteiraId: string) {
+async function processAllRegistros(user: any, registros: any[], carteiraId: string, saldoAnterior?: number) {
   function parsePtBrDate(str: string) {
     if (!str) return null;
     const [d, m, y] = str.split('/');
@@ -165,6 +166,32 @@ async function processAllRegistros(user: any, registros: any[], carteiraId: stri
     // Separar lançamentos em incomes e expenses
     const incomes = [];
     const expenses = [];
+    
+    // Adicionar saldo anterior se informado
+    if (saldoAnterior && !isNaN(saldoAnterior) && saldoAnterior !== 0) {
+      // Encontrar a data mais antiga dos registros
+      const datesFromRegistros = registros
+        .map(r => parsePtBrDate(r.data))
+        .filter(Boolean) as Date[];
+      
+      if (datesFromRegistros.length > 0) {
+        const earliestDate = new Date(Math.min(...datesFromRegistros.map(d => d.getTime())));
+        // Data do saldo: um dia antes da primeira transação  
+        const saldoDate = new Date(earliestDate);
+        saldoDate.setDate(saldoDate.getDate() - 1);
+        
+        incomes.push({
+          amount: Math.abs(saldoAnterior),
+          date: saldoDate,
+          description: 'Saldo inicial',
+          type: 'PUNCTUAL' as const,
+          walletId: carteiraId,
+          userId: user.id,
+          categoryId: saldoCategoria.id,
+          tags: []
+        });
+      }
+    }
     
     for (const reg of registrosFinal) {
       const dataObj = parsePtBrDate(reg.data);

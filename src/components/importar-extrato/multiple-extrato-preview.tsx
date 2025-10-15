@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ExtratoPreview } from './extrato-preview';
+import { ImportSummary } from './import-summary';
 import { FileText, Package, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface UploadedFile {
@@ -22,7 +23,7 @@ interface MultipleExtratoPreviewProps {
   wallets: any[];
   selectedWallet: string;
   onWalletChange: (walletId: string) => void;
-  onSave: (allTransactions: any[]) => void;
+  onSave: (allTransactions: any[], saldoAnterior?: number) => void;
   saving: boolean;
   error: string | null;
   success: boolean;
@@ -52,6 +53,30 @@ export function MultipleExtratoPreview({
     ];
   }, [] as any[]);
 
+  // Função para converter data de string para Date
+  const parseTransactionDate = (dateString: string): Date | null => {
+    if (!dateString) return null;
+    
+    if (dateString.includes('/')) {
+      // Formato DD/MM/YYYY
+      const [d, m, y] = dateString.split('/');
+      return new Date(Number(y), Number(m) - 1, Number(d));
+    } else if (dateString.includes('-')) {
+      // Formato ISO YYYY-MM-DD
+      return new Date(dateString);
+    } else if (dateString.length === 8 && /^\d{8}$/.test(dateString)) {
+      // Formato YYYYMMDD
+      const year = Number(dateString.substring(0, 4));
+      const month = Number(dateString.substring(4, 6)) - 1; // Month is 0-indexed
+      const day = Number(dateString.substring(6, 8));
+      return new Date(year, month, day);
+    }
+    
+    // Fallback para outros formatos
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
   // Estatísticas consolidadas
   const stats = {
     totalFiles: files.length,
@@ -64,10 +89,24 @@ export function MultipleExtratoPreview({
       .reduce((acc: number, t: any) => acc + Math.abs(t.valor), 0),
     dateRange: {
       start: allTransactions.length > 0 
-        ? new Date(Math.min(...allTransactions.map((t: any) => new Date(t.data).getTime())))
+        ? (() => {
+            const validDates = allTransactions
+              .map((t: any) => parseTransactionDate(t.data))
+              .filter(Boolean) as Date[];
+            return validDates.length > 0 
+              ? new Date(Math.min(...validDates.map(d => d.getTime())))
+              : null;
+          })()
         : null,
       end: allTransactions.length > 0 
-        ? new Date(Math.max(...allTransactions.map((t: any) => new Date(t.data).getTime())))
+        ? (() => {
+            const validDates = allTransactions
+              .map((t: any) => parseTransactionDate(t.data))
+              .filter(Boolean) as Date[];
+            return validDates.length > 0 
+              ? new Date(Math.max(...validDates.map(d => d.getTime())))
+              : null;
+          })()
         : null
     }
   };
@@ -81,6 +120,33 @@ export function MultipleExtratoPreview({
 
   const handleSaveAll = () => {
     onSave(allTransactions);
+  };
+
+  const handleSaveAllWithBalance = (saldoAnterior?: number) => {
+    let transactionsWithBalance = [...allTransactions];
+    
+    // Adicionar saldo anterior se informado
+    if (saldoAnterior && stats.dateRange.start && !isNaN(saldoAnterior) && saldoAnterior !== 0) {
+      // Data do saldo: um dia antes da primeira transação
+      const dataSaldo = new Date(stats.dateRange.start);
+      dataSaldo.setDate(dataSaldo.getDate() - 1);
+      
+      const saldoInicial = {
+        data: dataSaldo.toISOString().split('T')[0], // Formato YYYY-MM-DD
+        valor: saldoAnterior,
+        descricao: 'Saldo inicial',
+        descricaoSimplificada: 'Saldo inicial',
+        categoriaId: 'Saldo',
+        categoriaSugerida: 'Saldo',
+        tags: [],
+        isSaldoInicial: true,
+        sourceFile: 'Sistema'
+      };
+      
+      transactionsWithBalance = [saldoInicial, ...transactionsWithBalance];
+    }
+    
+    onSave(allTransactions, saldoAnterior);
   };
 
   const getCurrentTabInfo = () => {
@@ -317,6 +383,7 @@ export function MultipleExtratoPreview({
             error={error}
             success={success}
             fetchWallets={fetchWallets ? async () => { await fetchWallets(); } : undefined}
+            hideImportSummary={true}
           />
         </TabsContent>
 
@@ -342,61 +409,28 @@ export function MultipleExtratoPreview({
               error={null}
               success={false}
               fetchWallets={fetchWallets ? async () => { await fetchWallets(); } : undefined}
+              hideImportSummary={true}
             />
           </TabsContent>
         ))}
       </Tabs>
 
-      {/* Botão de Salvar Global */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 border-t shadow-lg">
-        <div className="flex flex-col gap-4">
-          {/* Resumo detalhado para muitos arquivos */}
-          {files.length > 3 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-              <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-lg font-bold text-blue-600">{files.length}</div>
-                <div className="text-xs text-blue-600">Arquivos</div>
-              </div>
-              <div className="p-2 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="text-lg font-bold text-purple-600">{allTransactions.length}</div>
-                <div className="text-xs text-purple-600">Transações</div>
-              </div>
-              <div className="p-2 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-lg font-bold text-green-600">
-                  {stats.totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
-                </div>
-                <div className="text-xs text-green-600">Receitas</div>
-              </div>
-              <div className="p-2 bg-red-50 rounded-lg border border-red-200">
-                <div className="text-lg font-bold text-red-600">
-                  {stats.totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
-                </div>
-                <div className="text-xs text-red-600">Despesas</div>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-            <div>
-              <p className="font-medium">
-                Pronto para importar {allTransactions.length} transações
-              </p>
-              <p className="text-sm text-muted-foreground">
-                de {files.length} arquivo{files.length !== 1 ? 's' : ''} para a carteira selecionada
-              </p>
-            </div>
-            
-            <Button 
-              onClick={handleSaveAll}
-              disabled={!selectedWallet || saving || allTransactions.length === 0}
-              size="lg"
-              className="w-full sm:w-auto"
-            >
-              {saving ? 'Salvando...' : `Importar ${allTransactions.length} Transações`}
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Componente de resumo unificado */}
+      <ImportSummary
+        wallets={wallets}
+        selectedWallet={selectedWallet}
+        onWalletChange={onWalletChange}
+        onSave={handleSaveAllWithBalance}
+        saving={saving}
+        error={error}
+        success={success}
+        fetchWallets={fetchWallets ? async () => { await fetchWallets(); } : undefined}
+        totalFiles={files.length}
+        totalTransactions={allTransactions.length}
+        totalIncome={stats.totalIncome}
+        totalExpense={stats.totalExpense}
+        firstTransactionDate={stats.dateRange.start}
+      />
     </div>
   );
 }

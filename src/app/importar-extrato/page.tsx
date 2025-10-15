@@ -117,7 +117,7 @@ export default function ImportarExtratoPage() {
   };
 
   // Função para salvar (pode ser individual ou múltiplo)
-  const handleSave = async (registrosEditados?: any[]) => {
+  const handleSave = async (registrosEditados?: any[], saldoAnterior?: number) => {
     setSaving(true);
     setError(null);
     setSuccess(false);
@@ -139,10 +139,11 @@ export default function ImportarExtratoPage() {
 
         requestBody = {
           batches,
-          carteiraId: selectedWallet
+          carteiraId: selectedWallet,
+          saldoAnterior
         };
       } else {
-        // Processamento individual
+        // Processamento individual - registrosEditados já inclui o saldo anterior se informado
         const transactions = registrosEditados || uploadedFiles[0]?.preview || [];
         requestBody = {
           registros: transactions,
@@ -248,7 +249,6 @@ export default function ImportarExtratoPage() {
             </h3>
             <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
               • Selecione um ou vários arquivos de extrato<br/>
-              • Processamento otimizado para não travar o sistema<br/>
               • Metas atualizadas apenas após todo o processamento<br/>
               • Visualização consolidada de todas as transações
             </p>
