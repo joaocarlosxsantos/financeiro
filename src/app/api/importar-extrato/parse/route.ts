@@ -342,12 +342,120 @@ function parsePdfIndividualLines(text: string) {
   return transactions;
 }
 
+// Função específica para parsing de extratos Alelo
+function parseAleloExtract(text: string) {
+  const transactions: any[] = [];
+  console.log('Tentando parsing de extrato Alelo');
+  
+  // Verifica se é um extrato Alelo
+  if (!text.includes('Extrato Alelo') && !text.includes('Seu Benefício Caiu')) {
+    return [];
+  }
+  
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Procura por data no formato YYYY-MM-DD
+    const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
+    if (!dateMatch) continue;
+    
+    const dateStr = dateMatch[1];
+    const [year, month, day] = dateStr.split('-');
+    const data = `${day}/${month}/${year}`;
+    
+    // Procura pela linha anterior que deve conter a descrição
+    let descricao = 'Transação';
+    if (i > 0) {
+      const prevLine = lines[i - 1];
+      // Se a linha anterior não contém data nem valor, é provavelmente a descrição
+      if (!prevLine.match(/\d{4}-\d{2}-\d{2}/) && !prevLine.match(/R\$\s*[\d.,]+/)) {
+        descricao = prevLine;
+      }
+    }
+    
+    // Procura pela próxima linha que deve conter o valor
+    let valor = 0;
+    if (i + 1 < lines.length) {
+      const nextLine = lines[i + 1];
+      
+      // Procura por valor com ou sem sinal negativo
+      const valueMatch = nextLine.match(/(-\s*)?R\$\s*([\d.,]+)/);
+      if (valueMatch) {
+        const isNegative = !!valueMatch[1];
+        const valueStr = valueMatch[2];
+        valor = parseFloat(valueStr.replace(/\./g, '').replace(',', '.'));
+        
+        if (isNegative) {
+          valor = -Math.abs(valor);
+        } else {
+          // Para valores positivos, verifica se é um benefício/receita
+          if (descricao.toLowerCase().includes('benefício') || 
+              descricao.toLowerCase().includes('seu benefício caiu') ||
+              descricao.toLowerCase().includes('recarga') ||
+              descricao.toLowerCase().includes('crédito') ||
+              descricao.toLowerCase().includes('depósito')) {
+            valor = Math.abs(valor);
+          } else {
+            // Por padrão, considera como despesa mesmo sem sinal negativo
+            valor = -Math.abs(valor);
+          }
+        }
+        
+        // Limpa e normaliza a descrição
+        descricao = descricao
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Melhora descrições específicas do Alelo
+        if (descricao.toLowerCase().includes('seu benefício caiu')) {
+          descricao = 'Benefício Alimentação Alelo';
+        } else if (descricao.toLowerCase().includes('supermercado')) {
+          // Mantém o nome do supermercado mas padroniza
+          descricao = descricao.replace(/SUPERMERCADO/gi, 'Supermercado');
+        } else if (descricao.toLowerCase().includes('outback')) {
+          descricao = descricao.replace(/OUTBACK.*/, 'Outback Steakhouse');
+        }
+        
+        // Para extratos Alelo, sugere categoria relacionada à alimentação
+        let categoria = 'Alimentação';
+        if (descricao.toLowerCase().includes('benefício')) {
+          categoria = 'Receitas'; // Para os benefícios/receitas
+        } else if (descricao.toLowerCase().includes('supermercado')) {
+          categoria = 'Supermercado';
+        } else if (descricao.toLowerCase().includes('restaurante') || 
+                   descricao.toLowerCase().includes('outback') ||
+                   descricao.toLowerCase().includes('comercio')) {
+          categoria = 'Alimentação';
+        }
+        
+        transactions.push({
+          data,
+          valor,
+          descricao,
+          categoria: categoria // Adiciona sugestão de categoria específica para Alelo
+        });
+        
+        console.log('Transação Alelo extraída:', { data, valor, descricao });
+      }
+    }
+  }
+  
+  console.log(`Total de transações Alelo extraídas: ${transactions.length}`);
+  return transactions;
+}
 
-
-// Função principal para processar texto extraído de PDF
 async function parsePdfExtract(text: string) {
   try {
-    // Primeiro verifica se é texto mal formatado e usa normalização
+    // Primeiro tenta identificar se é um extrato Alelo
+    let transactions = parseAleloExtract(text);
+    if (transactions.length > 0) {
+      console.log('Extrato Alelo identificado e processado');
+      return transactions;
+    }
+    
+    // Depois verifica se é texto mal formatado e usa normalização
     const lines = text.split('\n');
     const singleCharLines = lines.filter(line => line.trim().length === 1).length;
     const ratio = singleCharLines / lines.length;
@@ -358,7 +466,7 @@ async function parsePdfExtract(text: string) {
     }
     
     // Tenta primeiro o formato agrupado por data
-    let transactions = parsePdfGroupedByDate(text);
+    transactions = parsePdfGroupedByDate(text);
     
     // Se não encontrou transações, tenta o formato individual
     if (transactions.length === 0) {
