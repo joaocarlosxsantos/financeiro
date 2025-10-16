@@ -610,8 +610,8 @@ export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
 
       {/* Usuário / Ações */}
       <div className={cn(
-        "border-t border-white/10 mt-auto bg-gradient-to-r from-white/5 to-transparent",
-        // Mobile: Better padding and spacing
+        "border-t border-white/10 bg-gradient-to-r from-white/5 to-transparent fixed bottom-0 left-0 w-full z-10",
+        // Mobile: Melhorar padding e espaçamento
         isMobile ? "p-4" : "p-4"
       )}>
         <div className={cn(
@@ -628,7 +628,7 @@ export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
             }}
             className={cn(
               "group flex items-center gap-3 flex-1 min-w-0 rounded-xl transition-all duration-200",
-              // Mobile: Better touch target and hover states
+              // Mobile: Melhorar área de toque e estados de hover
               isMobile 
                 ? "p-3 hover:bg-white/10 active:bg-white/15 active:scale-95" 
                 : "p-2 hover:bg-white/5"
@@ -681,21 +681,15 @@ export const Sidebar = React.memo(({ onClose }: { onClose?: () => void }) => {
               )}
             </div>
           </Link>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={logout}
             className={cn(
-              "rounded-xl bg-white/5 hover:bg-red-500/20 text-white/70 hover:text-red-300 transition-all duration-200 flex-shrink-0",
-              // Mobile: Better touch target and feedback
-              isMobile 
-                ? "h-12 w-12 active:scale-95 hover:bg-red-500/30" 
-                : "h-10 w-10"
+              "text-white/60 hover:text-white transition-colors",
+              isMobile ? "text-sm" : "text-xs"
             )}
-            aria-label="Sair da conta"
           >
-            <LogOut className={cn(isMobile ? "h-5 w-5" : "h-4 w-4")} />
-          </Button>
+            Sair
+          </button>
         </div>
       </div>
     </div>
