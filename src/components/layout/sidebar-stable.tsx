@@ -300,7 +300,7 @@ function getSectionFromPathname(pathname: string, navigation: Record<string, Nav
 export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   // Module state sem localStorage para evitar hydration issues
   const [module, setModule] = useState<ModuleKey>('financeiro');
@@ -435,7 +435,7 @@ export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) 
               <User className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white truncate">Usuário</p>
+              <p className="text-sm font-medium text-white truncate">{user?.name || user?.email || 'Usuário'}</p>
               <p className="text-xs text-white/60 truncate">Configurações</p>
             </div>
           </Link>
