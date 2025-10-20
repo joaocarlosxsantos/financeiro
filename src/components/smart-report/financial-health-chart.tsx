@@ -23,7 +23,7 @@ export function FinancialHealthChart({ data }: FinancialHealthChartProps) {
       displayMonth: new Date(item.month + '-01').toLocaleDateString('pt-BR', { 
         month: 'short' 
       }).replace('.', ''),
-      height: Math.max((item.score / 100) * 100, 4), // Altura baseada em percentual de 100, mín 4%
+  height: (item.score / 100) * 100, // Altura proporcional ao score
       isLastMonth: index === data.length - 1
     }));
   }, [data]);
@@ -75,36 +75,32 @@ export function FinancialHealthChart({ data }: FinancialHealthChartProps) {
         <div className="space-y-6">
           {/* Gráfico de barras melhorado */}
           <div className="relative bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-4">
-            <div className="flex items-end justify-between h-40 gap-2 sm:gap-3">
+            <div className="relative h-40 flex items-end justify-between gap-2 sm:gap-3">
               {chartData.map((item, index) => (
-                <div key={item.month} className="flex flex-col items-center flex-1 group">
-                  <div className="relative w-full max-w-[60px] flex flex-col items-center">
-                    {/* Valor acima da barra - sempre visível em mobile */}
-                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      {item.score}
-                    </div>
-                    {/* Barra */}
-                    <div 
-                      className={cn(
-                        "w-full rounded-t-lg transition-all duration-500 hover:scale-105 border-b-3 shadow-sm",
-                        getScoreColor(item.score),
-                        getScoreBorderColor(item.score),
-                        item.isLastMonth && "ring-2 ring-blue-500/40 ring-offset-2 dark:ring-offset-gray-900"
-                      )}
-                      style={{ height: `${item.height}%`, minHeight: '16px' }}
-                    />
-                    {/* Score dentro da barra para barras maiores */}
-                    {item.height > 25 && (
-                      <div 
-                        className="absolute text-xs font-bold text-white mix-blend-difference hidden sm:block"
-                        style={{ bottom: `${Math.max(item.height / 2, 12)}%` }}
-                      >
+                <div key={item.month} className="flex flex-col items-center flex-1 group h-full relative">
+                  {/* Barra posicionada proporcionalmente */}
+                  <div
+                    className={cn(
+                      "absolute left-1/2 -translate-x-1/2 w-8 rounded-t-lg transition-all duration-500 hover:scale-105 border-b-3 shadow-sm flex flex-col items-center",
+                      getScoreColor(item.score),
+                      getScoreBorderColor(item.score),
+                      item.isLastMonth && "ring-2 ring-blue-500/40 ring-offset-2 dark:ring-offset-gray-900"
+                    )}
+                    style={{
+                      bottom: 0,
+                      height: `${item.score * 1.6}px`, // 100 pontos = 160px, 50 pontos = 80px, etc
+                      minHeight: '2px',
+                    }}
+                  >
+                    {/* Score dentro da barra */}
+                    {item.score > 10 && (
+                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-bold text-gray-700 dark:text-gray-200">
                         {item.score}
-                      </div>
+                      </span>
                     )}
                   </div>
                   {/* Mês */}
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-3 text-center font-medium">
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-xs text-gray-600 dark:text-gray-400 mt-3 text-center font-medium">
                     {item.displayMonth}
                   </div>
                 </div>
