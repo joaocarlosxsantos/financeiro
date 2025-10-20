@@ -99,7 +99,7 @@ function extractPersonNameFromTransfer(description: string): string | null {
 // Função para detectar se é estabelecimento/empresa
 function isEstablishment(name: string): boolean {
   const establishmentKeywords = [
-    // Sufixos jurídicos - mais específicos para evitar falsos positivos
+  // Sufixos jurídicos - mais específicos para evitar falsos positivos
     'LTDA', 'LTD', ' SA', 'S/A', ' ME', 'EPP', 'EIRELI',
     // Tipos de estabelecimentos
     'LOJA', 'MAGAZINE', 'SUPERMERCADO', 'FARMACIA', 'POSTO',
@@ -121,7 +121,7 @@ function isEstablishment(name: string): boolean {
   // Se contém palavra-chave de estabelecimento
   // Verificar keywords de estabelecimento de forma mais precisa
   if (establishmentKeywords.some(keyword => {
-    // Para sufixos jurídicos, verificar se é palavra isolada no final
+  // Para sufixos jurídicos, verificar se é palavra isolada no final
     if ([' SA', ' ME', 'LTDA', 'LTD', 'S/A', 'EPP', 'EIRELI'].includes(keyword)) {
       return upperName.endsWith(keyword) || upperName.includes(keyword + ' ');
     }

@@ -377,7 +377,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
       const month = currentDate.getMonth();
       const start = new Date(year, month, 1).toISOString().slice(0, 10);
       const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-      const [variaveisRes, fixasRes] = await Promise.all([
+  const [variaveisRes, recorrentesRes] = await Promise.all([
         fetch(`/api/incomes?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
         fetch(`/api/incomes?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
       ]);
@@ -401,8 +401,8 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
           isRecurring: false,
         }));
       }
-      if (fixasRes.ok) {
-        const data = await fixasRes.json();
+      if (recorrentesRes.ok) {
+        const data = await recorrentesRes.json();
         rendasFix = data.map((e: any) => ({
           id: e.id,
           description: e.description,

@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
     const key = `${nomeNorm}|BOTH`;
     if (!categoriasCache[key]) {
       console.log(`Criando nova categoria: ${nova.name} (normalizada: ${nomeNorm})`);
-      const cor = corFixaCategoria(nova.name) || corPorNome(nova.name);
+  const cor = corFixaCategoria(nova.name) || corPorNome(nova.name);
       const cat = await prisma.category.create({
         data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
       });

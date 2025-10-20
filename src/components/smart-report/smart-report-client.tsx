@@ -80,6 +80,7 @@ interface FinancialData {
   topIncomes?: Array<{ amount: number; description: string; date?: string }>;
   topExpenses?: Array<{ amount: number; description: string; date?: string }>;
   percentFixedExpenses?: number;
+  percentRecurringExpenses?: number;
   percentVariableExpenses?: number;
   topIncomeDays?: Array<{ date: string; amount: number }>;
   topExpenseDays?: Array<{ date: string; amount: number }>;
@@ -187,7 +188,7 @@ export default function SmartReportClient() {
         recurringExpenseCount: Number(data.recurringExpenseCount) || 0,
         topIncomes: data.topIncomes || [],
         topExpenses: data.topExpenses || [],
-        percentFixedExpenses: Number(data.percentFixedExpenses) || 0,
+  percentRecurringExpenses: Number(data.percentRecurringExpenses) || 0,
         percentVariableExpenses: Number(data.percentVariableExpenses) || 0,
         topIncomeDays: data.topIncomeDays || [],
         topExpenseDays: data.topExpenseDays || [],
@@ -610,8 +611,8 @@ export default function SmartReportClient() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <Info className="h-4 w-4 text-blue-500" /> Fixo:
-              <span className="font-bold">{financialData.percentFixedExpenses?.toFixed(1)}%</span>
+              <Info className="h-4 w-4 text-blue-500" /> Recorrente:
+              <span className="font-bold">{financialData.percentRecurringExpenses?.toFixed(1)}%</span>
               <span className="ml-2">Variável: <span className="font-bold">{financialData.percentVariableExpenses?.toFixed(1)}%</span></span>
             </div>
             <div className="flex items-center gap-2 text-sm">

@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     tomorrow.setHours(23, 59, 59, 999);
 
     const payload = creditCards.map((card: any) => {
-      // Expandir gastos e ganhos fixos
+  // Expandir gastos e ganhos recorrentes
       const expensesExpanded = expandFixedRecords(card.expenses || [], tomorrow);
       const incomesExpanded = expandFixedRecords(card.incomes || [], tomorrow);
       

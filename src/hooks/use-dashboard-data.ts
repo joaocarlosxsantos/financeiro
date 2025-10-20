@@ -42,7 +42,7 @@ export function useDailyExpenseData({ year, month, walletId }: UseDailyExpenseDa
   const endStr = toYmd(effectiveEnd);
   // aceitar walletId CSV (ex: "id1,id2") ou id único
   const walletParam = walletId ? `&walletId=${encodeURIComponent(walletId)}` : '';
-      // Buscar despesas variáveis e fixas do período com paginação automática
+  // Buscar despesas variáveis e recorrentes do período com paginação automática
       const [expVar, expFix] = await Promise.all([
         fetchAll(`/api/expenses?type=PUNCTUAL&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),
         fetchAll(`/api/expenses?type=RECURRING&start=${startStr}&end=${endStr}${walletParam}&perPage=200`),

@@ -170,7 +170,7 @@ const NavItem = React.memo(({ item, active, onClick, isSubItem = false }: {
     >
       <span className={cn(
         'relative flex items-center justify-center rounded-md',
-        'h-7 w-7', // Tamanho fixo
+  'h-7 w-7', // Tamanho fixo
         active
           ? 'bg-white/20 ring-1 ring-white/30 scale-105'
           : 'group-hover:bg-white/10'
@@ -360,7 +360,7 @@ export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) 
 
   return (
     <div className="sidebar-stable-layout flex flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm sidebar-no-transitions">
-      {/* Cabeçalho fixo */}
+  {/* Cabeçalho fixo */}
       <div className="flex items-center justify-between border-b border-white/10 h-16 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">

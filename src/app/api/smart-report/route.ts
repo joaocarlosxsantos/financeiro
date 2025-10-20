@@ -191,9 +191,9 @@ export async function GET(req: NextRequest) {
   const previousMonthBalance = prevTotalIncome - prevTotalExpenses;
 
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
-  // Percentual de despesas fixas (recorrentes) vs variáveis
-  const percentFixedExpenses = totalExpenses > 0 ? (filteredRecurringExpenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0) / totalExpenses) * 100 : 0;
-  const percentVariableExpenses = 100 - percentFixedExpenses;
+  // Percentual de despesas recorrentes vs variáveis
+  const percentRecurringExpenses = totalExpenses > 0 ? (filteredRecurringExpenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0) / totalExpenses) * 100 : 0;
+  const percentVariableExpenses = 100 - percentRecurringExpenses;
 
   // Processar despesas por categoria incluindo recorrentes
 
@@ -461,7 +461,7 @@ export async function GET(req: NextRequest) {
       recurringExpenseCount,
       topIncomes,
       topExpenses,
-      percentFixedExpenses,
+  percentRecurringExpenses,
       percentVariableExpenses,
       topIncomeDays,
       topExpenseDays,

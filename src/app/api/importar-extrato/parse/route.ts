@@ -62,7 +62,7 @@ function sugerirCategoria(descricaoSimplificada: string): string {
     desc.includes('ações') ||
     desc.includes('acao') ||
     desc.includes('ações') ||
-    desc.includes('renda fixa') ||
+  desc.includes('renda recorrente') ||
     desc.includes('renda variável') ||
     desc.includes('renda variavel') ||
     desc.includes('investimento') ||

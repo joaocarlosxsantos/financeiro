@@ -97,7 +97,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
   const { formatYmd } = await import('@/lib/utils');
   const start = formatYmd(new Date(year, month, 1));
   const end = formatYmd(new Date(year, month + 1, 0));
-      const [catsRes, walletsRes, tagsRes, variaveisRes, fixasRes] = await Promise.all([
+  const [catsRes, walletsRes, tagsRes, variaveisRes, recorrentesRes] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/tags', { cache: 'no-store' }),
@@ -127,8 +127,8 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
           isRecurring: false,
         }));
       }
-      if (fixasRes.ok) {
-        const data = await fixasRes.json();
+      if (recorrentesRes.ok) {
+        const data = await recorrentesRes.json();
         despesasFix = data.map((e: any) => ({
           id: e.id,
           description: e.description,
@@ -393,7 +393,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
         const month = currentDate.getMonth();
         const start = new Date(year, month, 1).toISOString().slice(0, 10);
         const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-        const [variaveisRes, fixasRes] = await Promise.all([
+  const [variaveisRes, recorrentesRes] = await Promise.all([
           fetch(`/api/expenses?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
           fetch(`/api/expenses?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
         ]);
@@ -418,8 +418,8 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
             isRecurring: false,
           }));
         }
-        if (fixasRes.ok) {
-          const data = await fixasRes.json();
+        if (recorrentesRes.ok) {
+          const data = await recorrentesRes.json();
           despesasFix = data.map((e: any) => ({
             id: e.id,
             description: e.description,
@@ -688,7 +688,7 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Gastos</h1>
             <p className="text-gray-600 dark:text-foreground">
-              Gerencie todos os seus gastos (fixos e variáveis) do mês
+              Gerencie todos os seus gastos (recorrentes e variáveis) do mês
             </p>
           </div>
           <Button
