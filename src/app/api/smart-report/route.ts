@@ -537,7 +537,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Erro ao buscar dados do relatório inteligente:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

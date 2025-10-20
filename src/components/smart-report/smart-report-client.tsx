@@ -135,31 +135,24 @@ export default function SmartReportClient() {
   const fetchFinancialData = async () => {
     setLoading(true);
     const selectedMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    console.log('Iniciando busca de dados financeiros para o mês:', selectedMonth);
     
     try {
       const url = `/api/smart-report?month=${selectedMonth}`;
-      console.log('Fazendo requisição para:', url);
       
       const response = await fetch(url);
-      console.log('Status da resposta:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Erro na resposta da API:', errorText);
         throw new Error(`Erro ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('Dados recebidos da API:', data);
       
       // Verificar se os dados parecem válidos (não são apenas zeros ou dados padrão)
       const hasValidData = data.totalIncome > 0 || data.totalExpenses > 0 || (data.expensesByCategory && data.expensesByCategory.length > 0);
       
       if (!hasValidData) {
-        console.warn('API retornou dados vazios ou inválidos. Total Income:', data.totalIncome, 'Total Expenses:', data.totalExpenses, 'Categories:', data.expensesByCategory?.length);
       } else {
-        console.log('✅ Dados válidos recebidos da API');
       }
       
       // Converter strings para números quando necessário e garantir valores padrão
@@ -208,11 +201,7 @@ export default function SmartReportClient() {
       setFinancialData(processedData);
       setInsights(generatedInsights);
       setIsUsingDemoData(false);
-      console.log('✅ SMART REPORT - Usando dados reais do usuário');
     } catch (error) {
-      console.error('Erro ao buscar dados financeiros:', error);
-      console.error('URL da requisição:', `/api/smart-report?month=${selectedMonth}`);
-      console.warn('🔴 SMART REPORT - Erro na API, mostrando dados vazios');
       
       // Criar dados vazios em vez de dados demo
       const emptyData: FinancialData = {
