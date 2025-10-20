@@ -67,6 +67,24 @@ interface FinancialData {
     spent: number;
     remaining: number;
   }>;
+  // Novas métricas avançadas
+  dailyIncomeAvg?: number;
+  dailyExpenseAvg?: number;
+  projectedIncome?: number;
+  projectedExpense?: number;
+  projectedBalance?: number;
+  incomeCount?: number;
+  expenseCount?: number;
+  recurringIncomeCount?: number;
+  recurringExpenseCount?: number;
+  topIncomes?: Array<{ amount: number; description: string; date?: string }>;
+  topExpenses?: Array<{ amount: number; description: string; date?: string }>;
+  percentFixedExpenses?: number;
+  percentVariableExpenses?: number;
+  topIncomeDays?: Array<{ date: string; amount: number }>;
+  topExpenseDays?: Array<{ date: string; amount: number }>;
+  avgIncome3m?: number;
+  avgExpense3m?: number;
 }
 
 interface SmartInsight {
@@ -163,7 +181,25 @@ export default function SmartReportClient() {
         unusualTransactions: data.unusualTransactions || [],
         healthScore: Number(data.healthScore) || 0,
         previousHealthScores: data.previousHealthScores || [],
-        budgetGoals: data.budgetGoals || []
+        budgetGoals: data.budgetGoals || [],
+        // Novas métricas avançadas
+        dailyIncomeAvg: Number(data.dailyIncomeAvg) || 0,
+        dailyExpenseAvg: Number(data.dailyExpenseAvg) || 0,
+        projectedIncome: Number(data.projectedIncome) || 0,
+        projectedExpense: Number(data.projectedExpense) || 0,
+        projectedBalance: Number(data.projectedBalance) || 0,
+        incomeCount: Number(data.incomeCount) || 0,
+        expenseCount: Number(data.expenseCount) || 0,
+        recurringIncomeCount: Number(data.recurringIncomeCount) || 0,
+        recurringExpenseCount: Number(data.recurringExpenseCount) || 0,
+        topIncomes: data.topIncomes || [],
+        topExpenses: data.topExpenses || [],
+        percentFixedExpenses: Number(data.percentFixedExpenses) || 0,
+        percentVariableExpenses: Number(data.percentVariableExpenses) || 0,
+        topIncomeDays: data.topIncomeDays || [],
+        topExpenseDays: data.topExpenseDays || [],
+        avgIncome3m: Number(data.avgIncome3m) || 0,
+        avgExpense3m: Number(data.avgExpense3m) || 0,
       };
       
       // Gerar insights baseados nos dados processados
@@ -407,169 +443,270 @@ export default function SmartReportClient() {
         </CardContent>
       </Card>
 
-      {/* Métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-4">
-        <Card>
+
+  {/* Métricas principais */}
+
+  {financialData && (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Receitas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+            R$ {financialData.totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <TrendingDown className="h-4 w-4" />
+            Despesas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+            R$ {financialData.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            Saldo
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={`text-2xl font-bold ${financialData.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>R$ {financialData.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {financialData.balance > financialData.previousMonthBalance ? (
+              <ArrowUp className="h-3 w-3 text-green-600" />
+            ) : (
+              <ArrowDown className="h-3 w-3 text-red-600" />
+            )}
+            vs. mês anterior
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <PiggyBank className="h-4 w-4" />
+            Taxa de Poupança
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {financialData.savingsRate.toFixed(1)}%
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Meta: 20%
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Cartão de Crédito
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+            {financialData.creditCardLimit > 0 
+              ? ((financialData.creditCardUsage / financialData.creditCardLimit) * 100).toFixed(1)
+              : 0}%
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            R$ {financialData.creditCardUsage.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} usado
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Gastos Recorrentes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+            R$ {financialData.recurringExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {financialData.totalExpenses > 0 
+              ? ((financialData.recurringExpenses / financialData.totalExpenses) * 100).toFixed(1)
+              : 0}% do total
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )}
+
+
+  {/* Novas métricas avançadas - grid separado */}
+  {financialData && (
+    <div className="w-full mt-8">
+      <h4 className="text-base font-semibold text-slate-700 dark:text-slate-100 mb-4 flex items-center gap-2">
+        <Info className="h-5 w-5 text-blue-500" /> Métricas Avançadas do Mês
+      </h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Bloco 1: Médias e Projeções */}
+        <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Receitas
+            <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-100 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" /> Médias & Projeções
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <TrendingUp className="h-4 w-4 text-green-600" /> Média diária receitas:
+              <span className="font-bold text-green-700 dark:text-green-300">R$ {financialData.dailyIncomeAvg?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <TrendingDown className="h-4 w-4 text-red-600" /> Média diária despesas:
+              <span className="font-bold text-red-700 dark:text-red-300">R$ {financialData.dailyExpenseAvg?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4 text-blue-500" /> Projeção saldo mês:
+              <span className={`font-bold ${financialData.projectedBalance && financialData.projectedBalance >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>R$ {financialData.projectedBalance?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Proj. receitas: R$ {financialData.projectedIncome?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Proj. despesas: R$ {financialData.projectedExpense?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          </CardContent>
+        </Card>
+
+        {/* Card: Top receitas */}
+        <Card className="p-4 flex flex-col justify-between h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
+              <ArrowUp className="h-5 w-5 text-green-600" /> Top Receitas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              R$ {financialData.totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <ul className="text-xs mb-2">
+              {financialData.topIncomes?.length ? financialData.topIncomes.map((inc, i) => (
+                <li key={i} className="mb-1">R$ {inc.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{inc.description}</span></li>
+              )) : <span className="text-gray-400">Nenhuma</span>}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Card: Top despesas */}
+        <Card className="p-4 flex flex-col justify-between h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+              <ArrowDown className="h-5 w-5 text-red-600" /> Top Despesas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="text-xs mb-2">
+              {financialData.topExpenses?.length ? financialData.topExpenses.map((exp, i) => (
+                <li key={i} className="mb-1">R$ {exp.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{exp.description}</span></li>
+              )) : <span className="text-gray-400">Nenhuma</span>}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Bloco 3: Percentuais e contagens */}
+        <Card className="p-4 flex flex-col justify-between h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-100 flex items-center gap-2">
+              <Info className="h-5 w-5 text-blue-500" /> Percentuais & Contagens
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Info className="h-4 w-4 text-blue-500" /> Fixo:
+              <span className="font-bold">{financialData.percentFixedExpenses?.toFixed(1)}%</span>
+              <span className="ml-2">Variável: <span className="font-bold">{financialData.percentVariableExpenses?.toFixed(1)}%</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <ArrowUp className="h-4 w-4 text-green-600" /> Qtd. receitas:
+              <span className="font-bold">{financialData.incomeCount}</span>
+              <ArrowDown className="h-4 w-4 text-red-600 ml-2" /> Qtd. despesas:
+              <span className="font-bold">{financialData.expenseCount}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Activity className="h-4 w-4 text-orange-500" /> Recorrentes:
+              <span className="font-bold">{financialData.recurringIncomeCount}</span> receitas / <span className="font-bold">{financialData.recurringExpenseCount}</span> despesas
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Card: Dias topo receitas + média receitas 3m */}
+        <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <TrendingDown className="h-4 w-4" />
-              Despesas
+            <CardTitle className="text-base font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-green-600" /> Dias Topo Receitas & Média 3m
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-              R$ {financialData.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div className="font-semibold text-green-700 dark:text-green-300 mb-1">Dias topo receitas</div>
+            <ul className="text-xs mb-2">
+              {financialData.topIncomeDays?.length ? financialData.topIncomeDays.map((d, i) => (
+                <li key={i}>R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{d.date}</span></li>
+              )) : <span className="text-gray-400">Nenhum</span>}
+            </ul>
+            <div className="flex items-center gap-2 text-sm mt-2">
+              <TrendingUp className="h-4 w-4 text-green-600" /> Média receitas 3m:
+              <span className="font-bold text-green-700 dark:text-green-300">R$ {financialData.avgIncome3m?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Card: Dias topo despesas + média despesas 3m */}
+        <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              Saldo
+            <CardTitle className="text-base font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-red-600" /> Dias Topo Despesas & Média 3m
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${financialData.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              R$ {financialData.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </div>
-            <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {financialData.balance > financialData.previousMonthBalance ? (
-                <ArrowUp className="h-3 w-3 text-green-600" />
-              ) : (
-                <ArrowDown className="h-3 w-3 text-red-600" />
-              )}
-              vs. mês anterior
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <PiggyBank className="h-4 w-4" />
-              Taxa de Poupança
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {financialData.savingsRate.toFixed(1)}%
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Meta: 20%
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Cartão de Crédito
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {financialData.creditCardLimit > 0 
-                ? ((financialData.creditCardUsage / financialData.creditCardLimit) * 100).toFixed(1)
-                : 0}%
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              R$ {financialData.creditCardUsage.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} usado
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Gastos Recorrentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              R$ {financialData.recurringExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {financialData.totalExpenses > 0 
-                ? ((financialData.recurringExpenses / financialData.totalExpenses) * 100).toFixed(1)
-                : 0}% do total
+            <div className="font-semibold text-red-700 dark:text-red-300 mb-1">Dias topo despesas</div>
+            <ul className="text-xs mb-2">
+              {financialData.topExpenseDays?.length ? financialData.topExpenseDays.map((d, i) => (
+                <li key={i}>R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{d.date}</span></li>
+              )) : <span className="text-gray-400">Nenhum</span>}
+            </ul>
+            <div className="flex items-center gap-2 text-sm mt-2">
+              <TrendingDown className="h-4 w-4 text-red-600" /> Média despesas 3m:
+              <span className="font-bold text-red-700 dark:text-red-300">R$ {financialData.avgExpense3m?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           </CardContent>
         </Card>
       </div>
+    </div>
+  )}
 
-      {/* Insights Inteligentes */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Lightbulb className="h-5 w-5" />
-          Insights Inteligentes
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {insights.map((insight, index) => (
-            <Card key={index} className={cn(
-              "border-l-4",
-              insight.type === 'success' && "border-l-green-500 bg-green-50/50 dark:bg-green-950/20",
-              insight.type === 'warning' && "border-l-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20",
-              insight.type === 'danger' && "border-l-red-500 bg-red-50/50 dark:bg-red-950/20",
-              insight.type === 'info' && "border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
-            )}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  {insight.icon}
-                  {insight.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {insight.description}
-                </p>
-                {insight.action && (
-                  <Badge variant="secondary" className="text-xs">
-                    💡 {insight.action}
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
 
       {/* Gráficos e Análises */}
-      <div className="space-y-6">
-        {/* Gráficos principais */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-6">
-            <FinancialHealthChart data={financialData.previousHealthScores} />
-            <BudgetProgressCard budgetGoals={financialData.budgetGoals} />
-          </div>
-          <div className="xl:col-span-1">
-            <ExpenseBreakdownChart data={financialData.expensesByCategory} />
+      {financialData && (
+        <div className="space-y-6">
+          {/* Gráficos principais */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 space-y-6">
+              <FinancialHealthChart data={financialData.previousHealthScores} />
+              <BudgetProgressCard budgetGoals={financialData.budgetGoals} />
+            </div>
+            <div className="xl:col-span-1">
+              <ExpenseBreakdownChart data={financialData.expensesByCategory} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Sugestões Inteligentes */}
-      <SmartSuggestions 
-        financialData={financialData}
-        insights={insights}
-      />
+      {financialData && (
+        <SmartSuggestions 
+          financialData={financialData as FinancialData}
+          insights={insights}
+        />
+      )}
     </div>
   );
 }

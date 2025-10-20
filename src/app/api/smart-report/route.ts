@@ -5,6 +5,21 @@ import { authOptions } from '../../../lib/auth';
 import { getNowBrasilia } from '../../../lib/datetime-brasilia';
 
 export async function GET(req: NextRequest) {
+
+  // Função utilitária para dias com maior valor
+  function getTopDaysByAmount(records: any[], type: 'income' | 'expense') {
+    const map = new Map<string, number>();
+    records.forEach(r => {
+      const d = new Date(r.date);
+      const key = d.toISOString().slice(0, 10);
+      map.set(key, (map.get(key) || 0) + Number(r.amount));
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([date, amount]) => ({ date, amount }));
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -217,27 +232,103 @@ export async function GET(req: NextRequest) {
         .filter((item): item is T => Boolean(item));
     };
 
-    // Expandir despesas e receitas recorrentes para o mês
-    const expandedRecurringExpenses = expandRecurring(recurringExpensesRaw, startDate, endDate);
-    const expandedRecurringIncomes = expandRecurring(recurringIncomesRaw, startDate, endDate);
 
-    // Unir despesas normais e recorrentes
-    const allExpenses = [...expenses, ...expandedRecurringExpenses];
-    const allIncomes = [...incomes, ...expandedRecurringIncomes];
+    // Função para ignorar categoria de transferência
+    const isTransferCategory = (item: any) => {
+      const cat = item.category?.name || item.categoryName || '';
+      return cat.trim().toLowerCase() === 'transferência entre contas';
+    };
+
+    // Filtrar despesas e receitas para ignorar transferências
+    const filteredExpenses = expenses.filter((e: any) => !isTransferCategory(e));
+  const filteredRecurringIncomes = recurringIncomesRaw.filter((i: any) => !isTransferCategory(i));
+      const filteredRecurringExpenses = recurringExpensesRaw.filter((e: any) => !isTransferCategory(e));
+      const filteredIncomes = incomes.filter((i: any) => !isTransferCategory(i));
+
+    // Unir despesas normais e recorrentes (sem transferências)
+    const allExpenses = [...filteredExpenses, ...filteredRecurringExpenses];
+    const allIncomes = [...filteredIncomes, ...filteredRecurringIncomes];
 
 
-    // Calcular totais incluindo recorrentes
-    const totalIncome = allIncomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
-    const totalExpenses = allExpenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
-    const balance = totalIncome - totalExpenses;
+  // Calcular totais incluindo recorrentes
+  const totalIncome = allIncomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
+  const totalExpenses = allExpenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
+  const balance = totalIncome - totalExpenses;
 
-    const prevTotalIncome = prevMonthIncomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
-    const prevTotalExpenses = prevMonthExpenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
-    const previousMonthBalance = prevTotalIncome - prevTotalExpenses;
+  const prevTotalIncome = prevMonthIncomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
+  const prevTotalExpenses = prevMonthExpenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
+  const previousMonthBalance = prevTotalIncome - prevTotalExpenses;
 
-    const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+  // Percentual de despesas fixas (recorrentes) vs variáveis
+  const percentFixedExpenses = totalExpenses > 0 ? (filteredRecurringExpenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0) / totalExpenses) * 100 : 0;
+  const percentVariableExpenses = 100 - percentFixedExpenses;
 
-    // Processar despesas por categoria incluindo recorrentes
+  // Processar despesas por categoria incluindo recorrentes
+
+  // --- NOVAS MÉTRICAS AVANÇADAS ---
+    // Calcular dias do mês selecionado
+    const daysInMonth = endDate.getDate();
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === monthNum;
+    const lastDay = isCurrentMonth ? today.getDate() : daysInMonth;
+
+    // Média diária de receitas e despesas (até hoje se mês atual, senão mês completo)
+    const dailyIncomeAvg = lastDay > 0 ? totalIncome / lastDay : 0;
+    const dailyExpenseAvg = lastDay > 0 ? totalExpenses / lastDay : 0;
+
+    // Projeção de saldo até o fim do mês
+    const projectedIncome = isCurrentMonth ? (dailyIncomeAvg * daysInMonth) : totalIncome;
+    const projectedExpense = isCurrentMonth ? (dailyExpenseAvg * daysInMonth) : totalExpenses;
+    const projectedBalance = projectedIncome - projectedExpense;
+
+    // Quantidade de lançamentos
+    const incomeCount = allIncomes.length;
+    const expenseCount = allExpenses.length;
+  const recurringIncomeCount = filteredRecurringIncomes.length;
+  const recurringExpenseCount = filteredRecurringExpenses.length;
+
+    // Top 3 maiores receitas e despesas
+    // Top receitas e despesas separadas
+    const topIncomes = [...allIncomes].sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 3);
+    const topExpenses = [...allExpenses].sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 3);
+
+    // Dias topo receitas e despesas separadas
+    const topIncomeDays = getTopDaysByAmount(allIncomes, 'income');
+    const topExpenseDays = getTopDaysByAmount(allExpenses, 'expense');
+
+    // Médias dos últimos 3 meses separadas
+    let avgIncome3m = 0, avgExpense3m = 0;
+    try {
+      const promises: any[] = [];
+      for (let i = 1; i <= 3; i++) {
+        const d = new Date(year, monthNum - 1 - i, 1);
+        const y = d.getFullYear();
+        const m = d.getMonth() + 1;
+        const s = new Date(y, m - 1, 1);
+        const e = new Date(y, m, 0, 23, 59, 59, 999);
+        promises.push(
+          prisma.income.findMany({
+            where: { user: { email: session.user.email }, date: { gte: s, lte: e }, transferId: null },
+            select: { amount: true }
+          })
+        );
+        promises.push(
+          prisma.expense.findMany({
+            where: { user: { email: session.user.email }, date: { gte: s, lte: e }, transferId: null },
+            select: { amount: true }
+          })
+        );
+      }
+      const results = await Promise.all(promises);
+      let totalIncome3m = 0, totalExpense3m = 0;
+      for (let i = 0; i < results.length; i += 2) {
+        totalIncome3m += results[i].reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+        totalExpense3m += results[i + 1].reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+      }
+      avgIncome3m = totalIncome3m / 3;
+      avgExpense3m = totalExpense3m / 3;
+    } catch {}
     const categoryTotals = new Map<string, number>();
     allExpenses.forEach((expense: any) => {
       const categoryName = expense.category?.name || 'Sem categoria';
@@ -263,7 +354,7 @@ export async function GET(req: NextRequest) {
     const totalCreditLimit = creditCards.reduce((sum: number, card: any) => sum + Number(card.limit || 0), 0);
 
   // Calcular total de gastos recorrentes expandidos
-  const totalRecurringExpenses = expandedRecurringExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+  const totalRecurringExpenses = filteredRecurringExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
 
     // Find largest expense
     const largestExpense = expenses.reduce((largest: any, expense: any) => {
@@ -423,7 +514,25 @@ export async function GET(req: NextRequest) {
       unusualTransactions,
       healthScore,
       previousHealthScores,
-      budgetGoals
+      budgetGoals,
+      // Novas métricas
+      dailyIncomeAvg,
+      dailyExpenseAvg,
+      projectedIncome,
+      projectedExpense,
+      projectedBalance,
+      incomeCount,
+      expenseCount,
+      recurringIncomeCount,
+      recurringExpenseCount,
+      topIncomes,
+      topExpenses,
+      percentFixedExpenses,
+      percentVariableExpenses,
+      topIncomeDays,
+      topExpenseDays,
+      avgIncome3m,
+      avgExpense3m
     };
 
     return NextResponse.json(responseData);
