@@ -27,22 +27,42 @@ export async function GET(req: NextRequest) {
     const prevMonthStart = new Date(year, monthNum - 2, 1);
     const prevMonthEnd = new Date(year, monthNum - 1, 0, 23, 59, 59, 999);
 
-    // Fetch current month data
+
+    // Buscar lançamentos normais e recorrentes
     const [
       expenses,
+      recurringExpensesRaw,
       incomes,
+      recurringIncomesRaw,
       creditCards,
       expensesByCategory,
       prevMonthExpenses,
       prevMonthIncomes,
-      recurringExpenses,
       goals
     ] = await Promise.all([
-      // Current month expenses
+      // Despesas normais
       prisma.expense.findMany({
         where: {
           user: { email: session.user.email },
           date: { gte: startDate, lte: endDate },
+          transferId: null,
+          type: { not: 'RECURRING' }
+        },
+        select: {
+          id: true,
+          amount: true,
+          description: true,
+          date: true,
+          category: { select: { name: true } },
+          type: true
+        }
+      }),
+
+      // Despesas recorrentes (todas do usuário)
+      prisma.expense.findMany({
+        where: {
+          user: { email: session.user.email },
+          type: 'RECURRING',
           transferId: null
         },
         select: {
@@ -55,15 +75,41 @@ export async function GET(req: NextRequest) {
         }
       }),
 
-      // Current month incomes
+      // Receitas normais
       prisma.income.findMany({
         where: {
           user: { email: session.user.email },
           date: { gte: startDate, lte: endDate },
-          transferId: null
+          transferId: null,
+          type: { not: 'RECURRING' }
         },
-        select: { amount: true }
+        select: { amount: true, date: true, description: true, type: true }
       }),
+
+      // Receitas recorrentes (todas do usuário)
+      (async () => {
+        // Garantir que session.user.email está definido
+        const userEmail = session?.user?.email ?? '';
+        const allRecurring = await prisma.income.findMany({
+          where: {
+            user: { email: userEmail },
+            type: 'RECURRING',
+            transferId: null
+          },
+          select: { amount: true, date: true, description: true, type: true }
+        });
+        const now = new Date();
+        const currentDay = now.getDate();
+        // Filtra apenas receitas recorrentes cujo dia do mês é <= ao dia atual
+        return allRecurring.filter((rec: { date: Date }) => {
+          // Cria a data recorrente com horário 12:00 para evitar problemas de fuso
+          const recDateObj = new Date(rec.date);
+          const recDay = recDateObj.getDate();
+          // Se quiser comparar a data completa, use:
+          // const recDate = new Date(recDateObj.getFullYear(), recDateObj.getMonth(), recDay, 12, 0, 0);
+          return recDay <= currentDay;
+        });
+      })(),
 
       // Credit cards usage
       prisma.creditCard.findMany({
@@ -115,17 +161,6 @@ export async function GET(req: NextRequest) {
         select: { amount: true }
       }),
 
-      // Recurring expenses
-      prisma.expense.findMany({
-        where: {
-          user: { email: session.user.email },
-          date: { gte: startDate, lte: endDate },
-          type: 'RECURRING',
-          transferId: null
-        },
-        select: { amount: true }
-      }),
-
       // Financial goals
       prisma.goal.findMany({
         where: {
@@ -148,9 +183,41 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    // Calculate totals - Convert Decimal to number
-    const totalIncome = incomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
-    const totalExpenses = expenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
+    // Função para expandir lançamentos recorrentes até o dia atual do mês
+    type RecordWithDate = { date: Date };
+    const expandRecurring = <T extends RecordWithDate>(records: T[], startDate: Date, endDate: Date): T[] => {
+      const today = new Date();
+      const currentDay = today.getDate();
+      const month = startDate.getMonth();
+      const year = startDate.getFullYear();
+      return records
+        .map((rec: T) => {
+          const originalDate = new Date(rec.date);
+          const day = originalDate.getDate();
+          // Só inclui se o dia do lançamento recorrente for <= ao dia atual do mês
+          if (day <= currentDay) {
+            const recDate = new Date(year, month, day);
+            if (recDate >= startDate && recDate <= endDate) {
+              return { ...rec, date: recDate };
+            }
+          }
+          return null;
+        })
+        .filter((item): item is T => Boolean(item));
+    };
+
+    // Expandir despesas e receitas recorrentes para o mês
+    const expandedRecurringExpenses = expandRecurring(recurringExpensesRaw, startDate, endDate);
+    const expandedRecurringIncomes = expandRecurring(recurringIncomesRaw, startDate, endDate);
+
+    // Unir despesas normais e recorrentes
+    const allExpenses = [...expenses, ...expandedRecurringExpenses];
+    const allIncomes = [...incomes, ...expandedRecurringIncomes];
+
+
+    // Calcular totais incluindo recorrentes
+    const totalIncome = allIncomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
+    const totalExpenses = allExpenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
     const balance = totalIncome - totalExpenses;
 
     const prevTotalIncome = prevMonthIncomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
@@ -159,10 +226,9 @@ export async function GET(req: NextRequest) {
 
     const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-    // Process expenses by category - agrupar manualmente
+    // Processar despesas por categoria incluindo recorrentes
     const categoryTotals = new Map<string, number>();
-    
-    expensesByCategory.forEach((expense: any) => {
+    allExpenses.forEach((expense: any) => {
       const categoryName = expense.category?.name || 'Sem categoria';
       const amount = Number(expense.amount) || 0;
       const currentTotal = categoryTotals.get(categoryName) || 0;
@@ -185,8 +251,8 @@ export async function GET(req: NextRequest) {
 
     const totalCreditLimit = creditCards.reduce((sum: number, card: any) => sum + Number(card.limit || 0), 0);
 
-    // Calculate recurring expenses total
-    const totalRecurringExpenses = recurringExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+  // Calcular total de gastos recorrentes expandidos
+  const totalRecurringExpenses = expandedRecurringExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
 
     // Find largest expense
     const largestExpense = expenses.reduce((largest: any, expense: any) => {
@@ -276,7 +342,10 @@ export async function GET(req: NextRequest) {
     
     for (let i = 5; i >= 0; i--) {
       const historyMonth = new Date(year, monthNum - 1 - i, 1);
-      const monthStr = `${historyMonth.getFullYear()}-${String(historyMonth.getMonth() + 1).padStart(2, '0')}`;
+      const monthNumStr = (historyMonth.getMonth() + 1).toString().length === 1
+        ? '0' + (historyMonth.getMonth() + 1).toString()
+        : (historyMonth.getMonth() + 1).toString();
+      const monthStr = `${historyMonth.getFullYear()}-${monthNumStr}`;
       
       let historicalScore = baseScore;
       
