@@ -59,21 +59,32 @@ export async function GET(req: NextRequest) {
       }),
 
       // Despesas recorrentes (todas do usuário)
-      prisma.expense.findMany({
-        where: {
-          user: { email: session.user.email },
-          type: 'RECURRING',
-          transferId: null
-        },
-        select: {
-          id: true,
-          amount: true,
-          description: true,
-          date: true,
-          category: { select: { name: true } },
-          type: true
-        }
-      }),
+      (async () => {
+        const userEmail = session?.user?.email ?? '';
+        const allRecurring = await prisma.expense.findMany({
+          where: {
+            user: { email: userEmail },
+            type: 'RECURRING',
+            transferId: null
+          },
+          select: {
+            id: true,
+            amount: true,
+            description: true,
+            date: true,
+            category: { select: { name: true } },
+            type: true
+          }
+        });
+        const now = new Date();
+        const currentDay = now.getDate();
+        // Filtra apenas despesas recorrentes cujo dia do mês é <= ao dia atual
+        return allRecurring.filter((rec: { date: Date }) => {
+          const recDateObj = new Date(rec.date);
+          const recDay = recDateObj.getDate();
+          return recDay <= currentDay;
+        });
+      })(),
 
       // Receitas normais
       prisma.income.findMany({
