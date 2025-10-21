@@ -3,6 +3,47 @@ import { prisma } from '../../../../lib/prisma';
 import { formatYmd } from '../../../../lib/utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
+import { countMonthlyOccurrences } from '../../../../lib/recurring-utils';
+
+/**
+ * Dashboard Charts API Endpoint
+ * 
+ * @route GET /api/dashboard/charts
+ * @description Retorna dados para todos os gráficos do dashboard
+ * 
+ * Calcula dados diários para:
+ * - Gastos/Ganhos por categoria
+ * - Gastos/Ganhos por carteira
+ * - Gastos/Ganhos por tag
+ * - Evolução de saldo diário
+ * - Projeção de saldo
+ * - Gráficos agregados mensais
+ * 
+ * @param {Object} query - Query parameters (obrigatórios)
+ * @param {string} query.year - Ano (YYYY) - OBRIGATÓRIO
+ * @param {string} query.month - Mês (1-12) - OBRIGATÓRIO
+ * @param {string} [query.walletId] - ID da carteira (ou CSV de IDs) - opcional
+ * @param {string} [query.paymentType] - Tipo de pagamento (ou CSV) - opcional
+ * 
+ * @returns {Object} Dados para todos os gráficos
+ * @returns {Object} dailyByCategory - Dados diários por categoria (YYYY-MM-DD => value)
+ * @returns {Object} dailyByWallet - Dados diários por carteira
+ * @returns {Object} dailyByTag - Dados diários por tag
+ * @returns {Array} summary - Resumo consolidado
+ * @returns {Object} monthlyData - Dados mensais agregados
+ * 
+ * @example
+ * // Dados de outubro de 2025
+ * GET /api/dashboard/charts?year=2025&month=10
+ * 
+ * @example
+ * // Com filtros
+ * GET /api/dashboard/charts?year=2025&month=10&walletId=wallet-1,wallet-2&paymentType=CREDIT
+ * 
+ * @throws {401} Usuário não autenticado
+ * @throws {400} Parâmetros year ou month ausentes
+ * @throws {500} Erro ao processar dados
+ */
 
 function parseCsvParam(v: string | null | undefined) {
   if (!v) return undefined;
@@ -249,36 +290,6 @@ export async function GET(req: NextRequest) {
   // dailyBalanceData and balanceProjectionData simplified: compute cumulative balance across days
   // Need previous balance until day before start — include occurrences from RECURRING records
   const prevEndDate = new Date(start.getFullYear(), start.getMonth(), 0);
-  // helper to count monthly occurrences of a recurring record between windowStart/windowEnd
-  function countMonthlyOccurrences(recStart?: Date | null, recEnd?: Date | null, dayOfMonth?: number | null, windowStart?: Date, windowEnd?: Date) {
-    if (!recStart) return 0;
-    const start = recStart;
-    const end = recEnd ?? windowEnd ?? new Date();
-    const from = start > (windowStart ?? start) ? start : (windowStart ?? start);
-    const to = end < (windowEnd ?? end) ? end : (windowEnd ?? end);
-    if (from.getTime() > to.getTime()) return 0;
-    // compute first candidate month
-    let y1 = from.getFullYear();
-    let m1 = from.getMonth();
-    const lastDayFirst = new Date(y1, m1 + 1, 0).getDate();
-    const occDayFirst = Math.min(dayOfMonth ?? from.getDate(), lastDayFirst);
-    // if the occurrence in the first month is before 'from' date, start next month
-    if (occDayFirst < from.getDate()) {
-      m1++;
-      if (m1 > 11) { m1 = 0; y1++; }
-    }
-    let y2 = to.getFullYear();
-    let m2 = to.getMonth();
-    const lastDayLast = new Date(y2, m2 + 1, 0).getDate();
-    const occDayLast = Math.min(dayOfMonth ?? to.getDate(), lastDayLast);
-    // if occurrence in last month is after 'to' date, move to previous month
-    if (occDayLast > to.getDate()) {
-      m2--;
-      if (m2 < 0) { m2 = 11; y2--; }
-    }
-    const monthsBetween = (y2 - y1) * 12 + (m2 - m1);
-    return monthsBetween >= 0 ? monthsBetween + 1 : 0;
-  }
 
   // fetch punctual expenses/incomes up to prevEndDate and all RECURRING to count occurrences
   const [prevExpVar, prevExpFix, prevIncVar, prevIncFix] = await Promise.all([

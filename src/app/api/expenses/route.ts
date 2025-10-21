@@ -1,3 +1,48 @@
+/**
+ * Expenses API Endpoint
+ * 
+ * @route GET /api/expenses
+ * @route POST /api/expenses
+ * 
+ * @description Gerencia despesas (pontuais e recorrentes) do usuário
+ * 
+ * GET: Retorna lista paginada de despesas
+ * POST: Cria nova despesa
+ * 
+ * ===== GET /api/expenses =====
+ * 
+ * @param {Object} query - Query parameters
+ * @param {string} [query.page] - Número da página (padrão: 1)
+ * @param {string} [query.perPage] - Itens por página, máx 200 (padrão: 50)
+ * @param {string} [query.start] - Data inicial (YYYY-MM-DD ou DD/MM/YYYY)
+ * @param {string} [query.end] - Data final (YYYY-MM-DD ou DD/MM/YYYY)
+ * @param {string} [query.type] - PUNCTUAL | RECURRING
+ * @param {string} [query.walletId] - ID da carteira (CSV suportado)
+ * @param {string} [query.categoryId] - ID da categoria
+ * @param {string} [query.q] - Busca por descrição
+ * @param {string} [query.minAmount] - Valor mínimo
+ * @param {string} [query.maxAmount] - Valor máximo
+ * 
+ * @returns {Object} Objeto com array de despesas e paginação
+ * 
+ * @example
+ * // Despesas do mês atual
+ * GET /api/expenses?start=2025-10-01&end=2025-10-31
+ * 
+ * ===== POST /api/expenses =====
+ * 
+ * @param {Object} body - Dados da despesa
+ * @param {string} body.description - Descrição
+ * @param {number} body.amount - Valor
+ * @param {string} body.date - Data (YYYY-MM-DD)
+ * @param {string} body.walletId - ID da carteira
+ * @param {string} body.categoryId - ID da categoria
+ * @param {string} [body.type] - PUNCTUAL (padrão) ou RECURRING
+ * @param {string} [body.paymentType] - CASH, CREDIT, DEBIT, PIX, BANK_TRANSFER
+ * 
+ * @throws {401} Não autenticado
+ * @throws {400} Validação falhou
+ */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';

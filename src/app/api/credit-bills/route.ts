@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
 import { 
   calculateClosingDate, 
   calculateDueDate, 
@@ -9,11 +11,22 @@ import {
   getBillPeriodForInstallment 
 } from '@/lib/credit-utils';
 
+// Schema de validação para query parameters
+const CreditBillsQuerySchema = z.object({
+  creditCardId: z.string().optional(),
+  status: z.string().optional(),
+  year: z.string().regex(/^\d{4}$/).optional(),
+  month: z.string().regex(/^\d{1,2}$/).transform(Number).pipe(z.number().int().min(1).max(12)).optional(),
+  page: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1)).optional(),
+  perPage: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(200)).optional(),
+});
+
 // GET - Listar faturas
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
+      logger.warn('Tentativa de acesso não autenticado em /api/credit-bills');
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -22,16 +35,34 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
+      logger.warn('Usuário não encontrado durante acesso a /api/credit-bills', { email: session.user.email });
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
     const url = new URL(request.url);
-    const creditCardId = url.searchParams.get('creditCardId');
-    const status = url.searchParams.get('status');
-    const year = url.searchParams.get('year');
-    const month = url.searchParams.get('month');
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const perPage = parseInt(url.searchParams.get('perPage') || '20');
+    
+    // Validar query parameters com Zod
+    const queryParams = {
+      creditCardId: url.searchParams.get('creditCardId'),
+      status: url.searchParams.get('status'),
+      year: url.searchParams.get('year'),
+      month: url.searchParams.get('month'),
+      page: url.searchParams.get('page'),
+      perPage: url.searchParams.get('perPage'),
+    };
+
+    const validationResult = CreditBillsQuerySchema.safeParse(queryParams);
+    if (!validationResult.success) {
+      logger.validationError('Validação falhou em /api/credit-bills', validationResult.error.flatten().fieldErrors, {
+        userId: user.id,
+      });
+      return NextResponse.json(
+        { error: 'Parâmetros inválidos', details: validationResult.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    const { creditCardId, status, year, month, page = 1, perPage = 20 } = validationResult.data;
     const skip = (page - 1) * perPage;
 
     const where: any = {
@@ -47,13 +78,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (year && month) {
-      const startDate = new Date(parseInt(year), parseInt(month), 1);
-      const endDate = new Date(parseInt(year), parseInt(month) + 1, 0);
+      const yearNum = typeof year === 'string' ? parseInt(year) : year;
+      const monthNum = typeof month === 'number' ? month : parseInt(month);
+      const startDate = new Date(yearNum, monthNum - 1, 1);
+      const endDate = new Date(yearNum, monthNum, 0);
       where.closingDate = {
         gte: startDate,
         lte: endDate,
       };
     }
+    
+    logger.apiRequest('GET', '/api/credit-bills', user.email, { filters: { creditCardId, status, year, month } });
 
     const [bills, total] = await Promise.all([
       prisma.creditBill.findMany({

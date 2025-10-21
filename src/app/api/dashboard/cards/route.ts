@@ -1,7 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
+import { logger } from '../../../../lib/logger';
+import { countFixedOccurrences } from '../../../../lib/recurring-utils';
+
+/**
+ * Dashboard Cards API Endpoint
+ * 
+ * @route GET /api/dashboard/cards
+ * @description Retorna dados agregados para os 5 cards do dashboard
+ * 
+ * Calcula:
+ * - totalIncome: Ganhos totais no período
+ * - totalExpenses: Gastos totais no período
+ * - recurringIncome: Ganhos recorrentes não pagos
+ * - recurringExpenses: Gastos recorrentes não pagos
+ * - dailyLimit: Limite diário de gastos
+ * 
+ * @param {Object} query - Query parameters
+ * @param {string} [query.year] - Ano (YYYY) - opcional
+ * @param {string} [query.month] - Mês (1-12) - opcional
+ * @param {string} [query.walletId] - ID da carteira (ou CSV de IDs) - opcional
+ * @param {string} [query.paymentType] - Tipo de pagamento (ou CSV) - opcional
+ * 
+ * @returns {Object} Dados dos cards
+ * @returns {number} totalIncome - Ganhos totais
+ * @returns {number} totalExpenses - Gastos totais
+ * @returns {number} recurringIncome - Ganhos recorrentes não pagos
+ * @returns {number} recurringExpenses - Gastos recorrentes não pagos
+ * @returns {number} dailyLimit - Limite diário configurado
+ * @returns {string} limitCurrency - Moeda do limite
+ * 
+ * @example
+ * // Dados do mês atual
+ * GET /api/dashboard/cards?year=2025&month=10
+ * 
+ * @example
+ * // Com filtro de carteira
+ * GET /api/dashboard/cards?year=2025&month=10&walletId=wallet-123
+ * 
+ * @throws {401} Usuário não autenticado
+ * @throws {400} Parâmetros inválidos
+ * @throws {500} Erro ao buscar dados
+ */
+
+// Esquema de validação para query parameters
+const DashboardCardsQuerySchema = z.object({
+  year: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(2000).max(2100)).optional(),
+  month: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(12)).optional(),
+  walletId: z.string().optional(),
+  paymentType: z.string().optional(),
+});
 
 function parseCsvParam(v: string | null | undefined) {
   if (!v) return undefined;
@@ -11,13 +62,35 @@ function parseCsvParam(v: string | null | undefined) {
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  if (!session?.user?.email) {
+    logger.warn('Tentativa de acesso não autenticado em /api/dashboard/cards');
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  }
 
   const { searchParams } = new URL(req.url);
-  const walletId = parseCsvParam(searchParams.get('walletId'));
-  const paymentType = parseCsvParam(searchParams.get('paymentType'));
-  const year = Number(searchParams.get('year')) || undefined;
-  const month = Number(searchParams.get('month')) || undefined;
+  
+  // Validar query parameters com Zod
+  const queryParams = {
+    year: searchParams.get('year'),
+    month: searchParams.get('month'),
+    walletId: searchParams.get('walletId'),
+    paymentType: searchParams.get('paymentType'),
+  };
+
+  const validationResult = DashboardCardsQuerySchema.safeParse(queryParams);
+  if (!validationResult.success) {
+    logger.validationError('Validação falhou em /api/dashboard/cards', validationResult.error.flatten().fieldErrors, {
+      userId: session.user.email,
+    });
+    return NextResponse.json(
+      { error: 'Parâmetros inválidos', details: validationResult.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const { year, month, walletId: walletIdParam, paymentType: paymentTypeParam } = validationResult.data;
+  const walletId = parseCsvParam(walletIdParam);
+  const paymentType = parseCsvParam(paymentTypeParam);
 
   const walletFilter: any = {};
   if (walletId) {
@@ -63,36 +136,6 @@ export async function GET(req: NextRequest) {
 
   let fixedExpensesSum = 0;
   let fixedIncomesSum = 0;
-
-  // Precise occurrences count for a RECURRING record within a period.
-  // Considers dayOfMonth (if present) or fallback to record date's day.
-  const countFixedOccurrences = (
-    recStart?: Date | null,
-    recEnd?: Date | null,
-    recordDay?: number | null,
-    periodStart?: Date,
-    periodEnd?: Date,
-  ) => {
-    if (!periodStart || !periodEnd) return 0;
-    const start = recStart && recStart > periodStart ? recStart : periodStart;
-    const end = recEnd && recEnd < periodEnd ? recEnd : periodEnd;
-    if (!start || !end) return 0;
-    if (start.getTime() > end.getTime()) return 0;
-    // iterate month by month from start's month to end's month
-    let count = 0;
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    const last = new Date(end.getFullYear(), end.getMonth(), 1);
-    while (cursor.getTime() <= last.getTime()) {
-      const year = cursor.getFullYear();
-      const monthIndex = cursor.getMonth();
-      const lastDay = new Date(year, monthIndex + 1, 0).getDate();
-      const day = recordDay && recordDay > 0 ? Math.min(recordDay, lastDay) : Math.min((recStart ? new Date(recStart).getDate() : 1), lastDay);
-      const occDate = new Date(year, monthIndex, day);
-      if (occDate.getTime() >= +periodStart && occDate.getTime() <= +periodEnd) count += 1;
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-    return count;
-  };
 
   // Only compute RECURRING contributions if we have a date range
   if (startDateObj && effectiveEnd) {

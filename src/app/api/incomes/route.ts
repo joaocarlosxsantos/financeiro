@@ -1,9 +1,68 @@
+/**
+ * Incomes API Endpoint
+ * 
+ * @route GET /api/incomes
+ * @route POST /api/incomes
+ * 
+ * @description Gerencia ganhos (pontuais e recorrentes) do usuário
+ * 
+ * GET: Retorna lista paginada de ganhos
+ * POST: Cria novo ganho
+ * 
+ * ===== GET /api/incomes =====
+ * 
+ * @param {Object} query - Query parameters
+ * @param {string} [query.page] - Número da página (padrão: 1)
+ * @param {string} [query.perPage] - Itens por página, máx 200 (padrão: 50)
+ * @param {string} [query.start] - Data inicial (YYYY-MM-DD ou DD/MM/YYYY)
+ * @param {string} [query.end] - Data final (YYYY-MM-DD ou DD/MM/YYYY)
+ * @param {string} [query.type] - PUNCTUAL | RECURRING
+ * @param {string} [query.walletId] - ID da carteira (CSV suportado)
+ * @param {string} [query.categoryId] - ID da categoria
+ * @param {string} [query.q] - Busca por descrição
+ * @param {string} [query.minAmount] - Valor mínimo
+ * @param {string} [query.maxAmount] - Valor máximo
+ * 
+ * @returns {Object} Objeto com array de ganhos e paginação
+ * 
+ * @example
+ * // Ganhos do mês atual
+ * GET /api/incomes?start=2025-10-01&end=2025-10-31
+ * 
+ * ===== POST /api/incomes =====
+ * 
+ * @param {Object} body - Dados do ganho
+ * @param {string} body.description - Descrição
+ * @param {number} body.amount - Valor
+ * @param {string} body.date - Data (YYYY-MM-DD)
+ * @param {string} body.walletId - ID da carteira
+ * @param {string} body.categoryId - ID da categoria
+ * @param {string} [body.type] - PUNCTUAL (padrão) ou RECURRING
+ * 
+ * @throws {401} Não autenticado
+ * @throws {400} Validação falhou
+ */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+// Schema de validação para query parameters
+const IncomesQuerySchema = z.object({
+  page: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1)).optional(),
+  perPage: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(200)).optional(),
+  start: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).or(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/)).optional(),
+  end: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).or(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/)).optional(),
+  type: z.enum(['RECURRING', 'PUNCTUAL']).optional(),
+  walletId: z.string().optional(),
+  categoryId: z.string().optional(),
+  q: z.string().optional(),
+  minAmount: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  maxAmount: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+});
 
 function parseFlexibleDate(input?: string | null): Date | undefined {
   if (!input) return undefined;
@@ -21,18 +80,47 @@ function parseFlexibleDate(input?: string | null): Date | undefined {
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.email) {
+    logger.warn('Tentativa de acesso não autenticado em /api/incomes');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) {
+    logger.warn('Usuário não encontrado durante acesso a /api/incomes', { email: session.user.email });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const url = new URL(req.url);
-  const pageParam = Number(url.searchParams.get('page') || '1');
-  const perPageParam = Number(url.searchParams.get('perPage') || '50');
-  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
-  const perPage = Number.isFinite(perPageParam) && perPageParam > 0 ? Math.min(perPageParam, 200) : 50;
-  const start = url.searchParams.get('start');
-  const end = url.searchParams.get('end');
-  const type = url.searchParams.get('type'); // RECURRING | PUNCTUAL
+  
+  // Validar query parameters com Zod
+  const queryParams = {
+    page: url.searchParams.get('page'),
+    perPage: url.searchParams.get('perPage'),
+    start: url.searchParams.get('start'),
+    end: url.searchParams.get('end'),
+    type: url.searchParams.get('type'),
+    walletId: url.searchParams.get('walletId'),
+    categoryId: url.searchParams.get('categoryId'),
+    q: url.searchParams.get('q'),
+    minAmount: url.searchParams.get('minAmount'),
+    maxAmount: url.searchParams.get('maxAmount'),
+  };
+
+  const validationResult = IncomesQuerySchema.safeParse(queryParams);
+  if (!validationResult.success) {
+    logger.validationError('Validação falhou em /api/incomes', validationResult.error.flatten().fieldErrors, {
+      userId: user.id,
+    });
+    return NextResponse.json(
+      { error: 'Parâmetros inválidos', details: validationResult.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const { page: pageParam = '1', perPage: perPageParam = '50', start, end, type, walletId, categoryId, q, minAmount, maxAmount } = validationResult.data;
+  const page = Number(pageParam);
+  const perPage = Number(perPageParam);
 
   const where: any = { userId: user.id };
   if (type) where.type = type as any;
@@ -48,7 +136,6 @@ export async function GET(req: NextRequest) {
     ];
   }
   // Adicionar filtro por carteira, se informado. Suporta CSV (várias carteiras)
-  const walletId = url.searchParams.get('walletId');
   if (walletId) {
     if (walletId.includes(',')) {
       const ids = walletId.split(',').map((s) => s.trim()).filter(Boolean);
@@ -59,14 +146,10 @@ export async function GET(req: NextRequest) {
   }
 
   // Optional filters
-  const categoryId = url.searchParams.get('categoryId');
   if (categoryId) where.categoryId = categoryId;
-  const q = url.searchParams.get('q');
   if (q) where.description = { contains: q, mode: 'insensitive' } as any;
 
   // Amount range filters
-  const minAmount = url.searchParams.get('minAmount');
-  const maxAmount = url.searchParams.get('maxAmount');
   if (minAmount || maxAmount) {
     where.amount = {} as any;
     if (minAmount) where.amount.gte = Number(minAmount);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
+import { logger } from '../../../lib/logger';
 import { getNowBrasilia } from '../../../lib/datetime-brasilia';
 
 export async function GET(req: NextRequest) {
@@ -259,7 +260,12 @@ export async function GET(req: NextRequest) {
       }
       avgIncome3m = totalIncome3m / 3;
       avgExpense3m = totalExpense3m / 3;
-    } catch {}
+    } catch (error) {
+      logger.error(
+        'Erro ao calcular média de renda e despesas em 3 meses em /api/smart-report',
+        error
+      );
+    }
     const categoryTotals = new Map<string, number>();
     allExpenses.forEach((expense: any) => {
       const categoryName = expense.category?.name || 'Sem categoria';

@@ -1,3 +1,5 @@
+import { logger } from '../../../../lib/logger';
+
 // Função simples de simplificação de descrição
 function sugerirCategoria(descricaoSimplificada: string): string {
   if (!descricaoSimplificada) return 'PIX/TRANSF';
@@ -659,7 +661,12 @@ async function handler(req: NextRequest) {
         categoriasUsuario = user.categories;
       }
     }
-  } catch {}
+  } catch (error) {
+    logger.error(
+      'Erro ao buscar categorias do usuário em /api/importar-extrato/parse',
+      error
+    );
+  }
 
   const formData = await req.formData();
   const file = formData.get('file') as File;

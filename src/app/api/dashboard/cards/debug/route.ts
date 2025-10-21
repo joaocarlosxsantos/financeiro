@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { countFixedOccurrences } from '@/lib/recurring-utils';
 
 function parseCsvParam(v: string | null | undefined) {
   if (!v) return undefined;
@@ -45,34 +46,6 @@ export async function GET(req: NextRequest) {
   // fixed lists (include dayOfMonth)
   const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'RECURRING' }, select: { id: true, amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
   const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'RECURRING' }, select: { id: true, amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-
-  // precise occurrences for FIXED records (considers dayOfMonth or fallback to record date)
-  const countFixedOccurrences = (
-    recStart?: Date | null,
-    recEnd?: Date | null,
-    recordDay?: number | null,
-    periodStart?: Date,
-    periodEnd?: Date,
-  ) => {
-    if (!periodStart || !periodEnd) return 0;
-    const start = recStart && recStart > periodStart ? recStart : periodStart;
-    const end = recEnd && recEnd < periodEnd ? recEnd : periodEnd;
-    if (!start || !end) return 0;
-    if (start.getTime() > end.getTime()) return 0;
-    let count = 0;
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    const last = new Date(end.getFullYear(), end.getMonth(), 1);
-    while (cursor.getTime() <= last.getTime()) {
-      const year = cursor.getFullYear();
-      const monthIndex = cursor.getMonth();
-      const lastDay = new Date(year, monthIndex + 1, 0).getDate();
-      const day = recordDay && recordDay > 0 ? Math.min(recordDay, lastDay) : Math.min((recStart ? new Date(recStart).getDate() : 1), lastDay);
-      const occDate = new Date(year, monthIndex, day);
-      if (occDate.getTime() >= +periodStart && occDate.getTime() <= +periodEnd) count += 1;
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-    return count;
-  };
 
   let fixedExpensesSum = 0;
   let fixedIncomesSum = 0;

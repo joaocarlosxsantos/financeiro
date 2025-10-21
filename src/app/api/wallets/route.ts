@@ -1,3 +1,48 @@
+/**
+ * Wallets API Endpoint
+ * 
+ * @route GET /api/wallets
+ * @route POST /api/wallets
+ * 
+ * @description Gerencia carteiras do usuário
+ * 
+ * GET: Retorna lista de carteiras com saldos
+ * POST: Cria nova carteira
+ * 
+ * ===== GET /api/wallets =====
+ * 
+ * @param {Object} query - Query parameters
+ * @param {string} [query.includeBalance] - Se true, calcula saldo em tempo real
+ * @param {string} [query.sort] - Campo para ordenação (name, createdAt)
+ * @param {string} [query.order] - Ordem: asc (padrão) ou desc
+ * 
+ * @returns {Array} Array de carteiras
+ * @returns {string} id - ID único da carteira
+ * @returns {string} name - Nome da carteira
+ * @returns {string} type - Tipo: cash, bank_account, credit_card, debit_card
+ * @returns {number} balance - Saldo (se includeBalance=true)
+ * 
+ * @example
+ * // Listar todas as carteiras
+ * GET /api/wallets
+ * 
+ * @example
+ * // Com saldos calculados
+ * GET /api/wallets?includeBalance=true
+ * 
+ * ===== POST /api/wallets =====
+ * 
+ * @param {Object} body - Dados da carteira
+ * @param {string} body.name - Nome da carteira
+ * @param {string} body.type - Tipo: cash, bank_account, credit_card, debit_card
+ * @param {number} [body.initialBalance] - Saldo inicial (padrão: 0)
+ * 
+ * @returns {Object} Carteira criada
+ * @returns {string} id - ID único
+ * 
+ * @throws {401} Não autenticado
+ * @throws {400} Validação falhou
+ */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -6,9 +51,7 @@ import { prisma } from '@/lib/prisma';
 type WalletRecord = Awaited<ReturnType<typeof prisma.wallet.findMany>>[number];
 type ExpenseRecord = WalletRecord extends { expenses?: (infer E)[] } ? E : any;
 type IncomeRecord = WalletRecord extends { incomes?: (infer I)[] } ? I : any;
-import { z } from 'zod';
-
-export async function GET(req: NextRequest) {
+import { z } from 'zod';export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });

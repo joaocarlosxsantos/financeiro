@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { 
   NotificationType, 
   NotificationPriority, 
@@ -72,7 +73,19 @@ export async function GET(req: NextRequest) {
     }
 
     // Validate filters
-    const validatedFilters = filterSchema.parse(filterParams);
+    const filterValidation = filterSchema.safeParse(filterParams);
+    if (!filterValidation.success) {
+      logger.validationError('Validação falhou em GET /api/notifications', filterValidation.error.flatten().fieldErrors, {
+        userId: user.id,
+      });
+      return NextResponse.json(
+        { error: 'Parâmetros de filtro inválidos', details: filterValidation.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const validatedFilters = filterValidation.data;
+    
+    logger.apiRequest('GET', '/api/notifications', user.email, { filters: validatedFilters });
 
     // Build where clause
     const where: any = {
