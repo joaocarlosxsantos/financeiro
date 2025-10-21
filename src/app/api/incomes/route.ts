@@ -52,16 +52,16 @@ import { z } from 'zod';
 
 // Schema de validação para query parameters
 const IncomesQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1)).optional(),
-  perPage: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(200)).optional(),
-  start: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).or(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/)).optional(),
-  end: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).or(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/)).optional(),
-  type: z.enum(['RECURRING', 'PUNCTUAL']).optional(),
-  walletId: z.string().optional(),
-  categoryId: z.string().optional(),
-  q: z.string().optional(),
-  minAmount: z.string().regex(/^\d+(\.\d+)?$/).optional(),
-  maxAmount: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  page: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1)).optional().nullable(),
+  perPage: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(200)).optional().nullable(),
+  start: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).or(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/)).optional().nullable(),
+  end: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).or(z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/)).optional().nullable(),
+  type: z.enum(['RECURRING', 'PUNCTUAL']).optional().nullable(),
+  walletId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  q: z.string().optional().nullable(),
+  minAmount: z.string().regex(/^\d+(\.\d+)?$/).optional().nullable(),
+  maxAmount: z.string().regex(/^\d+(\.\d+)?$/).optional().nullable(),
 });
 
 function parseFlexibleDate(input?: string | null): Date | undefined {

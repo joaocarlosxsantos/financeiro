@@ -48,10 +48,10 @@ import { countFixedOccurrences } from '../../../../lib/recurring-utils';
 
 // Esquema de validação para query parameters
 const DashboardCardsQuerySchema = z.object({
-  year: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(2000).max(2100)).optional(),
-  month: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(12)).optional(),
-  walletId: z.string().optional(),
-  paymentType: z.string().optional(),
+  year: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(2000).max(2100)).optional().nullable(),
+  month: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(12)).optional().nullable(),
+  walletId: z.string().optional().nullable(),
+  paymentType: z.string().optional().nullable(),
 });
 
 function parseCsvParam(v: string | null | undefined) {
