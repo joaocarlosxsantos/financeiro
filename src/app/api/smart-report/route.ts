@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { logger } from '../../../lib/logger';
 import { getNowBrasilia } from '../../../lib/datetime-brasilia';
+
+// Schema de validação para query parameters
+const SmartReportQuerySchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'Formato deve ser YYYY-MM'),
+  walletId: z.string().optional(),
+});
 
 export async function GET(req: NextRequest) {
 
@@ -23,15 +30,33 @@ export async function GET(req: NextRequest) {
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
+    logger.warn('Tentativa de acesso não autenticado em /api/smart-report');
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
-  const month = searchParams.get('month'); // YYYY-MM format
   
-  if (!month) {
-    return NextResponse.json({ error: 'Mês é obrigatório' }, { status: 400 });
+  // Validar query parameters com Zod
+  const rawWalletId = searchParams.get('walletId');
+  const queryParams = {
+    month: searchParams.get('month'),
+    walletId: rawWalletId || undefined, // Converter null para undefined
+  };
+
+  const validationResult = SmartReportQuerySchema.safeParse(queryParams);
+  if (!validationResult.success) {
+    logger.validationError(
+      'Validação falhou em /api/smart-report',
+      validationResult.error.flatten().fieldErrors,
+      { email: session.user.email }
+    );
+    return NextResponse.json(
+      { error: 'Parâmetros inválidos', details: validationResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
+
+  const { month, walletId } = validationResult.data;
 
   try {
     // Parse month to get start and end dates
@@ -70,6 +95,13 @@ export async function GET(req: NextRequest) {
         transferId: null
       },
       select: { amount: true, date: true, description: true, type: true }
+    });
+
+    // Log de processamento de receitas
+    logger.apiRequest('GET', '/api/smart-report', session.user.email, {
+      month,
+      walletId,
+      incomesCount: incomesRaw.length
     });
 
     // Credit cards usage
@@ -475,8 +507,26 @@ export async function GET(req: NextRequest) {
       avgExpense3m
     };
 
+    // Log de sucesso com métricas
+    logger.apiResponse('GET', '/api/smart-report', 200, 0, {
+      totalIncome,
+      totalExpenses,
+      incomeCount,
+      expenseCount,
+      healthScore,
+      email: session.user.email
+    });
+
     return NextResponse.json(responseData);
   } catch (error) {
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    logger.error(
+      'Erro em /api/smart-report ao processar receitas e relatório inteligente',
+      error,
+      { month, email: session.user.email }
+    );
+    return NextResponse.json(
+      { error: 'Erro ao processar relatório inteligente' },
+      { status: 500 }
+    );
   }
 }

@@ -4,7 +4,6 @@ import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
-import { countFixedOccurrences } from '../../../../lib/recurring-utils';
 
 /**
  * Dashboard Cards API Endpoint
@@ -128,94 +127,67 @@ export async function GET(req: NextRequest) {
   const expensesWhere = { ...whereBase, ...(dateWhere as any) };
   const incomesWhere = { ...whereBase, ...(dateWhere as any) };
 
-  // Aggregate PUNCTUAL amounts
-  const [expVarAgg, incVarAgg] = await Promise.all([
-    prisma.expense.aggregate({ where: { ...expensesWhere, type: 'PUNCTUAL', transferId: null }, _sum: { amount: true } }),
-    prisma.income.aggregate({ where: { ...incomesWhere, type: 'PUNCTUAL', transferId: null }, _sum: { amount: true } }),
+  // Usar a mesma lógica simples do Smart Report
+  // Buscar todos os registros no período e somar em JavaScript
+  const [expensesRaw, incomesRaw] = await Promise.all([
+    prisma.expense.findMany({
+      where: { ...expensesWhere, transferId: null },
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+    }),
+    prisma.income.findMany({
+      where: { ...incomesWhere, transferId: null },
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+    })
   ]);
 
-  let fixedExpensesSum = 0;
-  let fixedIncomesSum = 0;
+  // Função para ignorar categoria de transferência (mesmo do Smart Report)
+  const isTransferCategory = (item: any) => {
+    const cat = item.category?.name || '';
+    return cat.trim().toLowerCase() === 'transferência entre contas';
+  };
 
-  // Only compute RECURRING contributions if we have a date range
-  if (startDateObj && effectiveEnd) {
-    const fixedExpenses = await prisma.expense.findMany({ where: { ...whereBase, type: 'RECURRING', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-    for (const fe of fixedExpenses) {
-      const recStart = (fe.startDate ?? fe.date) as Date | null;
-      const recEnd = (fe.endDate ?? null) as Date | null;
-      const day = typeof (fe as any).dayOfMonth === 'number' ? (fe as any).dayOfMonth : undefined;
-      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, startDateObj, effectiveEnd);
-      if (occurs > 0) fixedExpensesSum += Number(fe.amount || 0) * occurs;
-    }
+  // Função para filtrar recorrentes: só inclui se dia da data <= dia de hoje
+  const filterRecurringByDay = (records: any[]) => {
+    const todayDate = new Date();
+    const todayDay = todayDate.getDate();
+    
+    return records.filter((record: any) => {
+      if (record.type === 'RECURRING') {
+        const recordDate = new Date(record.date);
+        const recordDay = recordDate.getDate();
+        return recordDay <= todayDay;
+      }
+      return true; // Mantém PUNCTUAL sempre
+    });
+  };
 
-    const fixedIncomes = await prisma.income.findMany({ where: { ...whereBase, type: 'RECURRING', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-    for (const fi of fixedIncomes) {
-      const recStart = (fi.startDate ?? fi.date) as Date | null;
-      const recEnd = (fi.endDate ?? null) as Date | null;
-      const day = typeof (fi as any).dayOfMonth === 'number' ? (fi as any).dayOfMonth : undefined;
-      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, startDateObj, effectiveEnd);
-      if (occurs > 0) fixedIncomesSum += Number(fi.amount || 0) * occurs;
-    }
-  }
+  // Filtrar transferências e depois recorrentes pelo dia
+  const filteredExpenses = filterRecurringByDay(expensesRaw.filter((e: any) => !isTransferCategory(e)));
+  const filteredIncomes = filterRecurringByDay(incomesRaw.filter((i: any) => !isTransferCategory(i)));
 
-  const totalExpenses = Number(expVarAgg._sum.amount || 0) + fixedExpensesSum;
-  const totalIncomes = Number(incVarAgg._sum.amount || 0) + fixedIncomesSum;
+  // Calcular totais simples
+  const totalExpenses = filteredExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+  const totalIncomes = filteredIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
   const balance = totalIncomes - totalExpenses;
 
-  // Saldo acumulado até endDate (if provided) or all time
+  // Saldo acumulado (histórico até hoje)
   let saldoAcumulado = 0;
   if (endDateObj) {
-    // saldo acumulado até endDate: include PUNCTUAL aggregates and RECURRING expanded until endDate
-    const prevWhere = { ...whereBase, date: { lte: effectiveEnd || endDateObj } } as any;
-    const [prevVarExpAgg, prevVarIncAgg] = await Promise.all([
-      prisma.expense.aggregate({ where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
-      prisma.income.aggregate({ where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { lte: effectiveEnd || endDateObj } }, _sum: { amount: true } }),
-    ]);
-    let prevFixedExp = 0;
-    let prevFixedInc = 0;
-    // count recurring occurrences from earliest possible to endDateObj
-    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'RECURRING', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-    for (const fe of fixedExpensesAll) {
-      const recStart = (fe.startDate ?? fe.date) as Date | null;
-      const recEnd = (fe.endDate ?? null) as Date | null;
-      const day = typeof (fe as any).dayOfMonth === 'number' ? (fe as any).dayOfMonth : undefined;
-      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), effectiveEnd || endDateObj);
-      if (occurs > 0) prevFixedExp += Number(fe.amount || 0) * occurs;
-    }
-    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'RECURRING', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-    for (const fi of fixedIncomesAll) {
-      const recStart = (fi.startDate ?? fi.date) as Date | null;
-      const recEnd = (fi.endDate ?? null) as Date | null;
-      const day = typeof (fi as any).dayOfMonth === 'number' ? (fi as any).dayOfMonth : undefined;
-      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), effectiveEnd || endDateObj);
-      if (occurs > 0) prevFixedInc += Number(fi.amount || 0) * occurs;
-    }
-    saldoAcumulado = (Number(prevVarIncAgg._sum.amount || 0) + prevFixedInc) - (Number(prevVarExpAgg._sum.amount || 0) + prevFixedExp);
-  } else {
-    // all time: aggregate PUNCTUAL and include full RECURRING series
-    const [allVarExpAgg, allVarIncAgg] = await Promise.all([
-      prisma.expense.aggregate({ where: { ...whereBase, type: 'PUNCTUAL', transferId: null }, _sum: { amount: true } }),
-      prisma.income.aggregate({ where: { ...whereBase, type: 'PUNCTUAL', transferId: null }, _sum: { amount: true } }),
-    ]);
-    let allFixedExp = 0;
-    let allFixedInc = 0;
-    const fixedExpensesAll = await prisma.expense.findMany({ where: { ...whereBase, type: 'RECURRING', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-    for (const fe of fixedExpensesAll) {
-      const recStart = (fe.startDate ?? fe.date) as Date | null;
-      const recEnd = (fe.endDate ?? null) as Date | null;
-      const day = typeof (fe as any).dayOfMonth === 'number' ? (fe as any).dayOfMonth : undefined;
-      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), new Date());
-      if (occurs > 0) allFixedExp += Number(fe.amount || 0) * occurs;
-    }
-    const fixedIncomesAll = await prisma.income.findMany({ where: { ...whereBase, type: 'RECURRING', transferId: null }, select: { amount: true, startDate: true, endDate: true, date: true, dayOfMonth: true } });
-    for (const fi of fixedIncomesAll) {
-      const recStart = (fi.startDate ?? fi.date) as Date | null;
-      const recEnd = (fi.endDate ?? null) as Date | null;
-      const day = typeof (fi as any).dayOfMonth === 'number' ? (fi as any).dayOfMonth : undefined;
-      const occurs = countFixedOccurrences(recStart, recEnd, day ?? null, new Date('1900-01-01'), new Date());
-      if (occurs > 0) allFixedInc += Number(fi.amount || 0) * occurs;
-    }
-    saldoAcumulado = (Number(allVarIncAgg._sum.amount || 0) + allFixedInc) - (Number(allVarExpAgg._sum.amount || 0) + allFixedExp);
+    const allExpensesUntilNow = await prisma.expense.findMany({
+      where: { ...whereBase, transferId: null, date: { lte: effectiveEnd || endDateObj } },
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+    });
+    const allIncomesUntilNow = await prisma.income.findMany({
+      where: { ...whereBase, transferId: null, date: { lte: effectiveEnd || endDateObj } },
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+    });
+    
+    const filteredExpensesAll = filterRecurringByDay(allExpensesUntilNow.filter((e: any) => !isTransferCategory(e)));
+    const filteredIncomesAll = filterRecurringByDay(allIncomesUntilNow.filter((i: any) => !isTransferCategory(i)));
+    
+    const totalExpensesAll = filteredExpensesAll.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+    const totalIncomesAll = filteredIncomesAll.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+    saldoAcumulado = totalIncomesAll - totalExpensesAll;
   }
 
   // Limite diário: simple heuristic similar to frontend logic
