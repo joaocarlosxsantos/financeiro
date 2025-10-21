@@ -222,9 +222,36 @@ export async function GET(req: NextRequest) {
   // incomesByCategory for the current month
   const [incVarThis, incFixThis] = await Promise.all([
     prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter }, include: { category: true } }),
   ]);
-  const allIncomesThisMonth = [...incVarThis, ...incFixThis];
+  
+  // Expand RECURRING incomes into individual occurrences inside the requested period
+  const expandedFixedIncomesForCategory: any[] = [];
+  for (const i of incFixThis) {
+    // determine recurrence window
+    const recStart = i.startDate ?? i.date ?? startDateObj;
+    const recEnd = i.endDate ?? endDateObj;
+    const from = recStart > startDateObj ? recStart : startDateObj;
+    const to = recEnd < endDateObj ? recEnd : endDateObj;
+    if (!from || !to) continue;
+
+    const day = typeof i.dayOfMonth === 'number' && i.dayOfMonth > 0 ? i.dayOfMonth : new Date(i.date).getDate();
+
+    // iterate months between from and to
+    let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+    const last = new Date(to.getFullYear(), to.getMonth(), 1);
+    while (cur.getTime() <= last.getTime()) {
+      const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+      const dayInMonth = Math.min(day, lastDayOfMonth);
+      const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+      if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
+        expandedFixedIncomesForCategory.push({ ...i, date: formatYmd(occDate) });
+      }
+      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    }
+  }
+  
+  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory];
   const incomeMap = new Map<string, { amount: number; color: string }>();
   for (const i of allIncomesThisMonth) {
     const key = i.category?.name || 'Sem categoria';
