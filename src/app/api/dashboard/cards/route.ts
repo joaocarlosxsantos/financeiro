@@ -4,6 +4,7 @@ import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { logger } from '../../../../lib/logger';
+import { fetchAllTransactions, getEffectiveDateRange, isTransferCategory, filterRecurringByDay } from '../../../../lib/transaction-filters';
 
 /**
  * Dashboard Cards API Endpoint
@@ -103,82 +104,64 @@ export async function GET(req: NextRequest) {
     else paymentTypeFilter.paymentType = paymentType;
   }
 
-  // Determine date range if year/month provided (use Date objects for Prisma)
+  // Determine date range if year/month provided
   let startDateObj: Date | undefined;
   let endDateObj: Date | undefined;
   if (year && month) {
-    startDateObj = new Date(year, month - 1, 1);
-    endDateObj = new Date(year, month, 0);
+    const { startDate, endDate } = getEffectiveDateRange(year, month);
+    startDateObj = startDate;
+    endDateObj = endDate;
   }
 
-  const today = new Date();
-  const isCurrentMonth = year && month && today.getFullYear() === year && today.getMonth() + 1 === month;
-  const effectiveEnd = isCurrentMonth && startDateObj ? new Date(year, month - 1, today.getDate()) : endDateObj;
-
-  // Helper to include date filter
-  const dateWhere = startDateObj && endDateObj ? { AND: [{ date: { gte: startDateObj } }, { date: { lte: endDateObj } }] } : {};
-
-  // Fetch totals including RECURRING items expanded for the period.
-  // PUNCTUAL items can be aggregated directly; RECURRING items need to be expanded
-  // across months that intersect the requested period.
   const whereBase = { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter };
 
-  // For monthly totals we restrict by date
-  const expensesWhere = { ...whereBase, ...(dateWhere as any) };
-  const incomesWhere = { ...whereBase, ...(dateWhere as any) };
-
-  // Usar a mesma lógica simples do Smart Report
-  // Buscar todos os registros no período e somar em JavaScript
-  const [expensesRaw, incomesRaw] = await Promise.all([
+  // Buscar PUNCTUAL (apenas no período) e RECURRING (sem restrição de data)
+  const [punctualExpenses, punctualIncomes, recurringExpenses, recurringIncomes] = await Promise.all([
     prisma.expense.findMany({
-      where: { ...expensesWhere, transferId: null },
+      where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { gte: startDateObj, lte: endDateObj } },
       select: { amount: true, category: { select: { name: true } }, type: true, date: true }
     }),
     prisma.income.findMany({
-      where: { ...incomesWhere, transferId: null },
+      where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { gte: startDateObj, lte: endDateObj } },
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+    }),
+    prisma.expense.findMany({
+      where: { ...whereBase, type: 'RECURRING', transferId: null },
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+    }),
+    prisma.income.findMany({
+      where: { ...whereBase, type: 'RECURRING', transferId: null },
       select: { amount: true, category: { select: { name: true } }, type: true, date: true }
     })
   ]);
 
-  // Função para ignorar categoria de transferência (mesmo do Smart Report)
-  const isTransferCategory = (item: any) => {
-    const cat = item.category?.name || '';
-    return cat.trim().toLowerCase() === 'transferência entre contas';
-  };
+  // Combinar PUNCTUAL + RECURRING
+  const allExpenses = [...punctualExpenses, ...recurringExpenses];
+  const allIncomes = [...punctualIncomes, ...recurringIncomes];
 
-  // Função para filtrar recorrentes: só inclui se dia da data <= dia de hoje
-  const filterRecurringByDay = (records: any[]) => {
-    const todayDate = new Date();
-    const todayDay = todayDate.getDate();
-    
-    return records.filter((record: any) => {
-      if (record.type === 'RECURRING') {
-        const recordDate = new Date(record.date);
-        const recordDay = recordDate.getDate();
-        return recordDay <= todayDay;
-      }
-      return true; // Mantém PUNCTUAL sempre
-    });
-  };
+  // Filtrar transferências
+  const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
+  const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
 
-  // Filtrar transferências e depois recorrentes pelo dia
-  const filteredExpenses = filterRecurringByDay(expensesRaw.filter((e: any) => !isTransferCategory(e)));
-  const filteredIncomes = filterRecurringByDay(incomesRaw.filter((i: any) => !isTransferCategory(i)));
+  // Filtrar recorrentes por dia
+  const finalExpenses = filterRecurringByDay(filteredExpenses);
+  const finalIncomes = filterRecurringByDay(filteredIncomes);
 
-  // Calcular totais simples
-  const totalExpenses = filteredExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-  const totalIncomes = filteredIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+  // Calcular totais
+  const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+  const totalIncomes = finalIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
   const balance = totalIncomes - totalExpenses;
 
-  // Saldo acumulado (histórico até hoje)
+  // Saldo acumulado (até hoje, incluindo meses anteriores)
   let saldoAcumulado = 0;
   if (endDateObj) {
+    const today = new Date();
     const allExpensesUntilNow = await prisma.expense.findMany({
-      where: { ...whereBase, transferId: null, date: { lte: effectiveEnd || endDateObj } },
+      where: { ...whereBase, transferId: null, date: { lte: today } },
       select: { amount: true, category: { select: { name: true } }, type: true, date: true }
     });
     const allIncomesUntilNow = await prisma.income.findMany({
-      where: { ...whereBase, transferId: null, date: { lte: effectiveEnd || endDateObj } },
+      where: { ...whereBase, transferId: null, date: { lte: today } },
       select: { amount: true, category: { select: { name: true } }, type: true, date: true }
     });
     

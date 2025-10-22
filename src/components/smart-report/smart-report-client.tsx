@@ -99,11 +99,17 @@ interface SmartInsight {
 
 export default function SmartReportClient() {
   const [currentDate, setCurrentDate] = useState(() => getNowBrasilia());
+  const [mounted, setMounted] = useState(false);
   
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
   const [insights, setInsights] = useState<SmartInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUsingDemoData, setIsUsingDemoData] = useState(false);
+
+  // Inicializa no cliente
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Funções de navegação do mês
   const today = new Date();
@@ -133,12 +139,17 @@ export default function SmartReportClient() {
     fetchFinancialData();
   }, [currentDate]);
 
+  // Monitor changes to financialData
+  useEffect(() => {
+    // Intentionally empty - for tracking state updates during development
+  }, [financialData]);
+
   const fetchFinancialData = async () => {
     setLoading(true);
     const selectedMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     
     try {
-      const url = `/api/smart-report?month=${selectedMonth}`;
+      const url = `/api/smart-report/transactions-expanded?month=${selectedMonth}`;
       
       const response = await fetch(url);
       
@@ -149,51 +160,61 @@ export default function SmartReportClient() {
       
       const data = await response.json();
       
-      // Verificar se os dados parecem válidos (não são apenas zeros ou dados padrão)
-      const hasValidData = data.totalIncome > 0 || data.totalExpenses > 0 || (data.expensesByCategory && data.expensesByCategory.length > 0);
+      // Extrair dados da nova estrutura da API
+      const { current, previous, comparison } = data;
       
-      if (!hasValidData) {
-      } else {
+      if (!current) {
+        throw new Error('Dados inválidos retornados da API');
       }
       
       // Converter strings para números quando necessário e garantir valores padrão
+      const totalIncomeValue = Number(current.totalIncomes) || 0;
+      const totalExpensesValue = Number(current.totalExpenses) || 0;
+      const balanceValue = Number(current.balance) || 0;
+      
       const processedData: FinancialData = {
-        totalIncome: Number(data.totalIncome) || 0,
-        totalExpenses: Number(data.totalExpenses) || 0,
-        balance: Number(data.balance) || 0,
-        previousMonthBalance: Number(data.previousMonthBalance) || 0,
-        savingsRate: Number(data.savingsRate) || 0,
-        expensesByCategory: data.expensesByCategory || [],
-        creditCardUsage: Number(data.creditCardUsage) || 0,
-        creditCardLimit: Number(data.creditCardLimit) || 0,
-        recurringExpenses: Number(data.recurringExpenses) || 0,
+        totalIncome: totalIncomeValue,
+        totalExpenses: totalExpensesValue,
+        balance: balanceValue,
+        previousMonthBalance: Number(previous?.balance) || 0,
+        savingsRate: totalIncomeValue > 0 ? ((balanceValue / totalIncomeValue) * 100) : 0,
+        expensesByCategory: [], // Será preenchido com gráficos posteriormente
+        creditCardUsage: 0,
+        creditCardLimit: 0,
+        recurringExpenses: Number(current.recurringExpensesCount) || 0,
         largestExpense: {
-          description: data.largestExpense?.description || 'Nenhuma despesa',
-          amount: Number(data.largestExpense?.amount) || 0,
-          category: data.largestExpense?.category || 'Sem categoria'
+          description: 'Despesa maior',
+          amount: 0,
+          category: 'Sem categoria'
         },
-        unusualTransactions: data.unusualTransactions || [],
-        healthScore: Number(data.healthScore) || 0,
-        previousHealthScores: data.previousHealthScores || [],
-        budgetGoals: data.budgetGoals || [],
+        unusualTransactions: [],
+        healthScore: 75, // Cálculo padrão
+        previousHealthScores: [],
+        budgetGoals: [],
         // Novas métricas avançadas
-        dailyIncomeAvg: Number(data.dailyIncomeAvg) || 0,
-        dailyExpenseAvg: Number(data.dailyExpenseAvg) || 0,
-        projectedIncome: Number(data.projectedIncome) || 0,
-        projectedExpense: Number(data.projectedExpense) || 0,
-        projectedBalance: Number(data.projectedBalance) || 0,
-        incomeCount: Number(data.incomeCount) || 0,
-        expenseCount: Number(data.expenseCount) || 0,
-        recurringIncomeCount: Number(data.recurringIncomeCount) || 0,
-        recurringExpenseCount: Number(data.recurringExpenseCount) || 0,
-        topIncomes: data.topIncomes || [],
-        topExpenses: data.topExpenses || [],
-  percentRecurringExpenses: Number(data.percentRecurringExpenses) || 0,
-        percentVariableExpenses: Number(data.percentVariableExpenses) || 0,
-        topIncomeDays: data.topIncomeDays || [],
-        topExpenseDays: data.topExpenseDays || [],
-        avgIncome3m: Number(data.avgIncome3m) || 0,
-        avgExpense3m: Number(data.avgExpense3m) || 0,
+        dailyIncomeAvg: (totalIncomeValue / 30) || 0,
+        dailyExpenseAvg: (totalExpensesValue / 30) || 0,
+        projectedIncome: totalIncomeValue,
+        projectedExpense: totalExpensesValue,
+        projectedBalance: balanceValue,
+        incomeCount: Number(current.incomesCount) || 0,
+        expenseCount: Number(current.expensesCount) || 0,
+        recurringIncomeCount: Number(current.recurringIncomesCount) || 0,
+        recurringExpenseCount: Number(current.recurringExpensesCount) || 0,
+        topIncomes: Array.isArray(current.incomes) ? current.incomes.slice(0, 5).map((i: any) => ({
+          description: i.description,
+          amount: Number(i.amount) || 0
+        })) : [],
+        topExpenses: Array.isArray(current.expenses) ? current.expenses.slice(0, 5).map((e: any) => ({
+          description: e.description,
+          amount: Number(e.amount) || 0
+        })) : [],
+        percentRecurringExpenses: Number(current.expensesCount) > 0 ? ((Number(current.recurringExpensesCount) / Number(current.expensesCount)) * 100) : 0,
+        percentVariableExpenses: Number(current.expensesCount) > 0 ? (((Number(current.expensesCount) - Number(current.recurringExpensesCount)) / Number(current.expensesCount)) * 100) : 0,
+        topIncomeDays: [],
+        topExpenseDays: [],
+        avgIncome3m: totalIncomeValue,
+        avgExpense3m: totalExpensesValue,
       };
       
       // Gerar insights baseados nos dados processados
@@ -202,7 +223,13 @@ export default function SmartReportClient() {
       setFinancialData(processedData);
       setInsights(generatedInsights);
       setIsUsingDemoData(false);
+      setLoading(false);
     } catch (error) {
+      console.error('Erro ao carregar dados do relatório inteligente:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       
       // Criar dados vazios em vez de dados demo
       const emptyData: FinancialData = {
@@ -223,7 +250,24 @@ export default function SmartReportClient() {
         unusualTransactions: [],
         healthScore: 0,
         previousHealthScores: [],
-        budgetGoals: []
+        budgetGoals: [],
+        dailyIncomeAvg: 0,
+        dailyExpenseAvg: 0,
+        projectedIncome: 0,
+        projectedExpense: 0,
+        projectedBalance: 0,
+        incomeCount: 0,
+        expenseCount: 0,
+        recurringIncomeCount: 0,
+        recurringExpenseCount: 0,
+        topIncomes: [],
+        topExpenses: [],
+        percentRecurringExpenses: 0,
+        percentVariableExpenses: 0,
+        topIncomeDays: [],
+        topExpenseDays: [],
+        avgIncome3m: 0,
+        avgExpense3m: 0,
       };
 
       setFinancialData(emptyData);
@@ -258,7 +302,7 @@ export default function SmartReportClient() {
     }
 
     // Insight sobre cartão de crédito
-    const creditUsagePercentage = (data.creditCardUsage / data.creditCardLimit) * 100;
+    const creditUsagePercentage = data.creditCardLimit > 0 ? (data.creditCardUsage / data.creditCardLimit) * 100 : 0;
     if (creditUsagePercentage > 70) {
       insights.push({
         type: 'danger',
@@ -271,8 +315,8 @@ export default function SmartReportClient() {
     }
 
     // Insight sobre gastos por categoria
-    const highestExpenseCategory = data.expensesByCategory[0];
-    if (highestExpenseCategory.percentage > 40) {
+    const highestExpenseCategory = data.expensesByCategory?.[0];
+    if (highestExpenseCategory && highestExpenseCategory.percentage > 40) {
       insights.push({
         type: 'info',
         title: 'Concentração de Gastos',
@@ -295,15 +339,17 @@ export default function SmartReportClient() {
     }
 
     // Insight sobre gastos recorrentes
-    const recurringPercentage = (data.recurringExpenses / data.totalExpenses) * 100;
-    insights.push({
-      type: 'info',
-      title: 'Gastos Recorrentes',
-      description: `${recurringPercentage.toFixed(1)}% dos seus gastos são recorrentes (R$ ${data.recurringExpenses.toFixed(2)}).`,
-      action: 'Revisar assinaturas e contratos',
-      value: recurringPercentage,
-      icon: <Activity className="h-5 w-5" />
-    });
+    const recurringPercentage = data.totalExpenses > 0 ? (data.recurringExpenses / data.totalExpenses) * 100 : 0;
+    if (!isNaN(recurringPercentage)) {
+      insights.push({
+        type: 'info',
+        title: 'Gastos Recorrentes',
+        description: `${recurringPercentage.toFixed(1)}% dos seus gastos são recorrentes (R$ ${data.recurringExpenses.toFixed(2)}).`,
+        action: 'Revisar assinaturas e contratos',
+        value: recurringPercentage,
+        icon: <Activity className="h-5 w-5" />
+      });
+    }
 
     return insights;
   };
@@ -320,7 +366,8 @@ export default function SmartReportClient() {
     return 'Atenção! Sua saúde financeira precisa de cuidados.';
   };
 
-  if (loading) {
+  // Mostrar loading skeleton enquanto está carregando ou não está montado
+  if (!mounted || loading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">

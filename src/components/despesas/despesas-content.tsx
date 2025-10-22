@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useMonth } from '@/components/providers/month-provider';
-
-import DespesasUnificadas from './despesas-unificadas';
+import { ExpandedTransactionsTable } from '@/components/transacoes/expanded-transactions-table';
 
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
@@ -58,7 +57,13 @@ export default function DespesasContent() {
           </Button>
         </div>
       </div>
-  <DespesasUnificadas currentDate={currentDate} defaultDate={today} />
+
+      <ExpandedTransactionsTable
+        transactionType="expense"
+        from={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`}
+        to={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()}`}
+        currentDate={currentDate}
+      />
     </div>
   );
 }

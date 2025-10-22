@@ -119,8 +119,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { page: pageParam = '1', perPage: perPageParam = '50', start, end, type, walletId, categoryId, q, minAmount, maxAmount } = validationResult.data;
-  const page = Number(pageParam);
-  const perPage = Number(perPageParam);
+  const page = Math.max(1, Number(pageParam) || 1);
+  const perPage = Math.min(200, Math.max(1, Number(perPageParam) || 50));
 
   const where: any = { userId: user.id };
   if (type) where.type = type as any;

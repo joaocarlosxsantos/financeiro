@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useMonth } from '@/components/providers/month-provider';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
-
-import RendasUnificadas from './rendas-unificadas';
+import { ExpandedTransactionsTable } from '@/components/transacoes/expanded-transactions-table';
 
 export default function RendasContent() {
   const [activeTab, setActiveTab] = useState('variaveis');
@@ -57,7 +56,13 @@ export default function RendasContent() {
           </Button>
         </div>
       </div>
-  <RendasUnificadas currentDate={currentDate} defaultDate={today} />
+
+      <ExpandedTransactionsTable
+        transactionType="income"
+        from={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`}
+        to={`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()}`}
+        currentDate={currentDate}
+      />
     </div>
   );
 }

@@ -9,11 +9,18 @@ type OnboardingProps = {
 };
 
 export default function OnboardingTour({ open = false, onClose }: OnboardingProps) {
-  const [run, setRun] = useState(open);
+  const [run, setRun] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setRun(open);
-  }, [open]);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      setRun(open);
+    }
+  }, [open, mounted]);
 
   const steps: Step[] = [
     // Header
@@ -72,6 +79,8 @@ export default function OnboardingTour({ open = false, onClose }: OnboardingProp
       if (onClose) onClose();
     }
   };
+
+  if (!mounted) return null;
 
   return (
     <Joyride

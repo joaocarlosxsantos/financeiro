@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { useMonth } from '@/components/providers/month-provider';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
-import DespesasUnificadas from '@/components/despesas/despesas-unificadas';
-import RendasUnificadas from '@/components/rendas/rendas-unificadas';
+import { ExpandedTransactionsTable } from '@/components/transacoes/expanded-transactions-table';
 import { formatCurrency, formatYmd } from '@/lib/utils';
 
 export default function TransacoesContent() {
@@ -194,17 +193,21 @@ export default function TransacoesContent() {
         </TabsList>
 
         <TabsContent value="gastos" className="space-y-4">
-          <div>
-  
-          </div>
-          <DespesasUnificadas currentDate={currentDate} defaultDate={today} />
+          <ExpandedTransactionsTable
+            transactionType="expense"
+            from={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))}
+            to={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0))}
+            currentDate={currentDate}
+          />
         </TabsContent>
 
         <TabsContent value="ganhos" className="space-y-4">
-          <div>
-
-          </div>
-          <RendasUnificadas currentDate={currentDate} defaultDate={today} />
+          <ExpandedTransactionsTable
+            transactionType="income"
+            from={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))}
+            to={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0))}
+            currentDate={currentDate}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -13,12 +13,12 @@ import {
 
 // Schema de validação para query parameters
 const CreditBillsQuerySchema = z.object({
-  creditCardId: z.string().optional(),
-  status: z.string().optional(),
-  year: z.string().regex(/^\d{4}$/).optional(),
-  month: z.string().regex(/^\d{1,2}$/).transform(Number).pipe(z.number().int().min(1).max(12)).optional(),
-  page: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1)).optional(),
-  perPage: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(200)).optional(),
+  creditCardId: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  year: z.coerce.number().int().min(1900).max(2100).nullable().optional(),
+  month: z.coerce.number().int().min(1).max(12).nullable().optional(),
+  page: z.coerce.number().int().min(1).nullable().optional(),
+  perPage: z.coerce.number().int().min(1).max(200).nullable().optional(),
 });
 
 // GET - Listar faturas
@@ -51,19 +51,29 @@ export async function GET(request: NextRequest) {
       perPage: url.searchParams.get('perPage'),
     };
 
+    logger.info('Query params recebidos em /api/credit-bills:', queryParams);
+
     const validationResult = CreditBillsQuerySchema.safeParse(queryParams);
     if (!validationResult.success) {
-      logger.validationError('Validação falhou em /api/credit-bills', validationResult.error.flatten().fieldErrors, {
+      const errorDetails = validationResult.error.flatten().fieldErrors;
+      console.error('❌ Validação falhou em /api/credit-bills');
+      console.error('Query params recebidos:', queryParams);
+      console.error('Erros de validação:', errorDetails);
+      
+      logger.validationError('Validação falhou em /api/credit-bills', errorDetails, {
         userId: user.id,
+        receivedParams: queryParams,
       });
       return NextResponse.json(
-        { error: 'Parâmetros inválidos', details: validationResult.error.flatten().fieldErrors },
+        { error: 'Parâmetros inválidos', details: errorDetails, received: queryParams },
         { status: 400 },
       );
     }
 
-    const { creditCardId, status, year, month, page = 1, perPage = 20 } = validationResult.data;
-    const skip = (page - 1) * perPage;
+    const { creditCardId, status, year, month, page, perPage } = validationResult.data;
+    const pageNum = page ?? 1;
+    const perPageNum = perPage ?? 20;
+    const skip = (pageNum - 1) * perPageNum;
 
     const where: any = {
       userId: user.id,
@@ -78,8 +88,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (year && month) {
-      const yearNum = typeof year === 'string' ? parseInt(year) : year;
-      const monthNum = typeof month === 'number' ? month : parseInt(month);
+      const yearNum = typeof year === 'number' ? year : parseInt(year as any);
+      const monthNum = typeof month === 'number' ? month : parseInt(month as any);
       const startDate = new Date(yearNum, monthNum - 1, 1);
       const endDate = new Date(yearNum, monthNum, 0);
       where.closingDate = {
@@ -120,7 +130,7 @@ export async function GET(request: NextRequest) {
           dueDate: 'desc',
         },
         skip,
-        take: perPage,
+        take: perPageNum,
       }),
       prisma.creditBill.count({ where }),
     ]);
@@ -140,10 +150,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: updatedBills,
       pagination: {
-        page,
-        perPage,
+        page: pageNum,
+        perPage: perPageNum,
         total,
-        totalPages: Math.ceil(total / perPage),
+        totalPages: Math.ceil(total / perPageNum),
       },
     });
   } catch (error) {
