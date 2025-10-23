@@ -19,17 +19,18 @@ export function getEffectiveDateRange(year: number, month: number): { startDate:
 }
 
 /**
- * Filtra transações recorrentes: só inclui se dayOfMonth <= dia de hoje
+ * Filtra transações recorrentes: só inclui se dayOfMonth <= dia especificado
+ * Se nenhum dia for especificado, usa o dia de hoje
  */
-export function filterRecurringByDay<T extends { type: string; date: Date }>(records: T[]): T[] {
+export function filterRecurringByDay<T extends { type: string; date: Date }>(records: T[], untilDay?: number): T[] {
   const todayDate = new Date();
-  const todayDay = todayDate.getDate();
+  const dayLimit = untilDay !== undefined ? untilDay : todayDate.getDate();
   
   return records.filter((record) => {
     if (record.type === 'RECURRING') {
       const recordDate = new Date(record.date);
       const recordDay = recordDate.getDate();
-      return recordDay <= todayDay;
+      return recordDay <= dayLimit;
     }
     return true; // PUNCTUAL sempre incluído
   });
@@ -126,8 +127,9 @@ export async function fetchAllTransactions(
   // Remover transferências
   const filtered = all.filter(t => !isTransferCategory(t));
   
-  // Filtrar recorrentes por dia
-  const final = filterRecurringByDay(filtered);
+  // Filtrar recorrentes por dia - até o final do período
+  const dayLimit = endDate.getDate();
+  const final = filterRecurringByDay(filtered, dayLimit);
   
   return final;
 }

@@ -351,6 +351,18 @@ export default function SmartReportClient() {
       });
     }
 
+    // Insight sobre receitas recorrentes
+    if (data.recurringIncomeCount && data.recurringIncomeCount > 0) {
+      insights.push({
+        type: 'success',
+        title: 'Receitas Recorrentes',
+        description: `Você tem ${data.recurringIncomeCount} receitas recorrentes, garantindo estabilidade na sua renda.`,
+        action: 'Verifique se todas as receitas recorrentes estão cadastradas',
+        value: data.recurringIncomeCount,
+        icon: <TrendingUp className="h-5 w-5" />
+      });
+    }
+
     return insights;
   };
 

@@ -93,6 +93,8 @@ export async function GET(req: NextRequest) {
       status: expensesRes.status,
       dataLength: expensesData.data?.length || 0,
       hasData: !!expensesData.data,
+      totalAmount: expensesData.data?.reduce((sum: number, e: any) => sum + Number(e.amount), 0) || 0,
+      recurringCount: expensesData.data?.filter((e: any) => e.isRecurringExpanded).length || 0,
     });
 
     // Buscar incomes expandidas
@@ -131,6 +133,8 @@ export async function GET(req: NextRequest) {
       status: incomesRes.status,
       dataLength: incomesData.data?.length || 0,
       hasData: !!incomesData.data,
+      totalAmount: incomesData.data?.reduce((sum: number, i: any) => sum + Number(i.amount), 0) || 0,
+      recurringCount: incomesData.data?.filter((i: any) => i.isRecurringExpanded).length || 0,
     });
 
     // Calcular métricas

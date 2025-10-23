@@ -143,30 +143,35 @@ export async function GET(req: NextRequest) {
   const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
   const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
 
-  // Filtrar recorrentes por dia
-  const finalExpenses = filterRecurringByDay(filteredExpenses);
-  const finalIncomes = filterRecurringByDay(filteredIncomes);
+  // Filtrar recorrentes por dia - até o final do período selecionado
+  const dayLimit = endDateObj ? endDateObj.getDate() : new Date().getDate();
+  const finalExpenses = filterRecurringByDay(filteredExpenses, dayLimit);
+  const finalIncomes = filterRecurringByDay(filteredIncomes, dayLimit);
 
   // Calcular totais
   const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
   const totalIncomes = finalIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
   const balance = totalIncomes - totalExpenses;
 
-  // Saldo acumulado (até hoje, incluindo meses anteriores)
+  // Saldo acumulado (até o final do período ou até hoje se for mês atual)
   let saldoAcumulado = 0;
   if (endDateObj) {
     const today = new Date();
+    // Se está vendo o mês atual, acumula até hoje. Caso contrário, até o final do período
+    const accumulateUntil = endDateObj < today ? endDateObj : today;
+    const dayToAccumulateUntil = accumulateUntil.getDate();
+    
     const allExpensesUntilNow = await prisma.expense.findMany({
-      where: { ...whereBase, transferId: null, date: { lte: today } },
+      where: { ...whereBase, transferId: null, date: { lte: accumulateUntil } },
       select: { amount: true, category: { select: { name: true } }, type: true, date: true }
     });
     const allIncomesUntilNow = await prisma.income.findMany({
-      where: { ...whereBase, transferId: null, date: { lte: today } },
+      where: { ...whereBase, transferId: null, date: { lte: accumulateUntil } },
       select: { amount: true, category: { select: { name: true } }, type: true, date: true }
     });
     
-    const filteredExpensesAll = filterRecurringByDay(allExpensesUntilNow.filter((e: any) => !isTransferCategory(e)));
-    const filteredIncomesAll = filterRecurringByDay(allIncomesUntilNow.filter((i: any) => !isTransferCategory(i)));
+    const filteredExpensesAll = filterRecurringByDay(allExpensesUntilNow.filter((e: any) => !isTransferCategory(e)), dayToAccumulateUntil);
+    const filteredIncomesAll = filterRecurringByDay(allIncomesUntilNow.filter((i: any) => !isTransferCategory(i)), dayToAccumulateUntil);
     
     const totalExpensesAll = filteredExpensesAll.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
     const totalIncomesAll = filteredIncomesAll.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);

@@ -82,9 +82,10 @@ export async function GET(req: NextRequest) {
     const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
     const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
 
-    // Filtrar recorrentes por dia
-    const finalExpenses = filterRecurringByDay(filteredExpenses);
-    const finalIncomes = filterRecurringByDay(filteredIncomes);
+    // Filtrar recorrentes por dia - até o final do período selecionado
+    const dayLimit = endDate.getDate();
+    const finalExpenses = filterRecurringByDay(filteredExpenses, dayLimit);
+    const finalIncomes = filterRecurringByDay(filteredIncomes, dayLimit);
 
     // Calcular totais
     const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
