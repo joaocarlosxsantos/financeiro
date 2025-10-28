@@ -22,15 +22,36 @@ export function getEffectiveDateRange(year: number, month: number): { startDate:
  * Filtra transações recorrentes: só inclui se dayOfMonth <= dia especificado
  * Se nenhum dia for especificado, usa o dia de hoje
  */
-export function filterRecurringByDay<T extends { type: string; date: Date }>(records: T[], untilDay?: number): T[] {
-  const todayDate = new Date();
-  const dayLimit = untilDay !== undefined ? untilDay : todayDate.getDate();
-  
+/**
+ * Filtra transações recorrentes considerando:
+ * - Se endDate é menor que o início do mês consultado, ignora
+ * - Se mês é o atual, inclui só recorrentes cujo dia <= dia atual
+ * - Se mês é anterior, inclui todos os dias do mês
+ * - Para pontuais, sempre inclui
+ */
+export function filterRecurringByDay<T extends { type: string; date: Date; endDate?: Date|null }>(
+  records: T[],
+  year: number,
+  month: number,
+  today: Date
+): T[] {
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const dayLimit = isCurrentMonth ? today.getDate() : 31;
+  const monthStart = new Date(year, month - 1, 1);
+
   return records.filter((record) => {
     if (record.type === 'RECURRING') {
+      // Se tem endDate e ela é menor que o início do mês, ignora
+      if (record.endDate) {
+        const endDateObj = new Date(record.endDate);
+        if (endDateObj < monthStart) return false;
+      }
       const recordDate = new Date(record.date);
       const recordDay = recordDate.getDate();
-      return recordDay <= dayLimit;
+      // Se mês atual, só inclui recorrente até o dia atual
+      if (isCurrentMonth) return recordDay <= dayLimit;
+      // Se mês anterior, inclui todos
+      return true;
     }
     return true; // PUNCTUAL sempre incluído
   });
@@ -127,9 +148,8 @@ export async function fetchAllTransactions(
   // Remover transferências
   const filtered = all.filter(t => !isTransferCategory(t));
   
-  // Filtrar recorrentes por dia - até o final do período
-  const dayLimit = endDate.getDate();
-  const final = filterRecurringByDay(filtered, dayLimit);
-  
+  // Filtrar recorrentes conforme regra de mês atual/anterior e endDate
+  const today = new Date();
+  const final = filterRecurringByDay(filtered, year, month, today);
   return final;
 }

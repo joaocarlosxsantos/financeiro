@@ -5,6 +5,39 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { logger } from '../../../lib/logger';
 import { getEffectiveDateRange, isTransferCategory, filterRecurringByDay } from '../../../lib/transaction-filters';
+import { getMonthRange } from '../../../lib/utils';
+// Expande receitas recorrentes em ocorrências reais do mês consultado
+function expandRecurringIncomesForMonth(records: any[], year: number, month: number, today: Date) {
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const { start: monthStart, end: monthEnd } = getMonthRange(year, month);
+  const dayLimit = isCurrentMonth ? today.getDate() : 31;
+  const result: any[] = [];
+  for (const rec of records) {
+    // Se tem endDate e ela é menor que o início do mês, ignora
+    if (rec.endDate) {
+      const endDateObj = new Date(rec.endDate);
+      if (endDateObj < monthStart) continue;
+    }
+    const recStart = new Date(rec.date);
+    // Para cada mês, só gera ocorrência se está dentro do range
+    // Para o mês consultado, só gera até o dia atual (se mês atual)
+    const day = recStart.getDate();
+    const recDay = Math.min(day, new Date(year, month, 0).getDate());
+    if (isCurrentMonth && recDay > dayLimit) continue;
+    // Se endDate existe e é menor que o dia da ocorrência, ignora
+    if (rec.endDate) {
+      const endDateObj = new Date(rec.endDate);
+      const occDate = new Date(year, month - 1, recDay);
+      if (endDateObj < occDate) continue;
+    }
+    // Só inclui se a ocorrência está dentro do mês
+    const occDate = new Date(year, month - 1, recDay);
+    if (occDate >= monthStart && occDate <= monthEnd) {
+      result.push({ ...rec, date: occDate });
+    }
+  }
+  return result;
+}
 
 const SmartReportQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/, 'Formato deve ser YYYY-MM'),
@@ -82,15 +115,27 @@ export async function GET(req: NextRequest) {
     const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
     const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
 
-    // Filtrar recorrentes por dia - até o final do período selecionado
-    const dayLimit = endDate.getDate();
-    const finalExpenses = filterRecurringByDay(filteredExpenses, dayLimit);
-    const finalIncomes = filterRecurringByDay(filteredIncomes, dayLimit);
 
-    // Calcular totais
-    const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-    const totalIncome = finalIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
-    const balance = totalIncome - totalExpenses;
+  // Corrigir receitas pontuais: só até o dia de hoje se mês atual
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === monthNum;
+  const dayLimit = isCurrentMonth ? today.getDate() : 31;
+  const punctualIncomesFiltered = punctualIncomes.filter((inc: any) => {
+    const incDate = new Date(inc.date);
+    if (isCurrentMonth) return incDate.getDate() <= dayLimit;
+    return true;
+  });
+
+  // Corrigir receitas recorrentes: expandir ocorrências reais do mês
+  const recurringIncomesExpanded = expandRecurringIncomesForMonth(recurringIncomes, year, monthNum, today);
+
+  // Despesas: manter lógica anterior (pode ajustar igual receitas se desejar)
+  const finalExpenses = filterRecurringByDay(filteredExpenses, year, monthNum, today);
+
+  // Calcular totais
+  const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+  const totalIncome = [...punctualIncomesFiltered, ...recurringIncomesExpanded].reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+  const balance = totalIncome - totalExpenses;
 
 
     // Previous month
@@ -112,10 +157,9 @@ export async function GET(req: NextRequest) {
     // Métricas
     const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-    const today = new Date();
-    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === monthNum;
-    const daysInMonth = endDate.getDate();
-    const lastDay = isCurrentMonth ? today.getDate() : daysInMonth;
+  // const isCurrentMonth já foi declarada acima
+  const daysInMonth = endDate.getDate();
+  const lastDay = isCurrentMonth ? today.getDate() : daysInMonth;
 
     const dailyIncomeAvg = lastDay > 0 ? totalIncome / lastDay : 0;
     const dailyExpenseAvg = lastDay > 0 ? totalExpenses / lastDay : 0;
@@ -173,14 +217,7 @@ export async function GET(req: NextRequest) {
     // Health score
     const healthScore = savingsRate > 0 ? Math.min(100, Math.round(savingsRate)) : 0;
 
-    logger.apiResponse('GET', '/api/smart-report', 200, 0, {
-      totalIncome,
-      totalExpenses,
-      incomeCount,
-      expenseCount,
-      healthScore,
-      email: session.user.email,
-    });
+
 
     return NextResponse.json({
       totalIncome,

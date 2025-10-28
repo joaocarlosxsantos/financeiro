@@ -132,6 +132,11 @@ export async function GET(req: Request) {
         // determine series start and end
         const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
         const seriesEnd = r.endDate ? new Date(r.endDate) : null;
+        // NOVA REGRA: só inclui recorrente se endDate for nula ou >= início do mês consultado
+        const monthRef = (sDate || seriesStart);
+        if (seriesEnd && seriesEnd < new Date(monthRef.getFullYear(), monthRef.getMonth(), 1)) {
+          continue;
+        }
         // compute intersection of [seriesStart, seriesEnd?] with [sDate,eDate]
         const from = sDate && sDate > seriesStart ? sDate : seriesStart;
         const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
@@ -145,13 +150,21 @@ export async function GET(req: Request) {
         const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
         let months = 0;
         const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
-  while (cursor <= endCursor && months < 24) {
+        const today = new Date();
+        while (cursor <= endCursor && months < 24) {
           // determine desired day: prefer explicit dayOfMonth, otherwise use original record day (use UTC to avoid timezone shifts)
           const originalDay = r.date ? new Date(r.date).getUTCDate() : 1;
           let desiredDay = (r.dayOfMonth && Number.isFinite(r.dayOfMonth)) ? Number(r.dayOfMonth) : originalDay;
           const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
           const day = Math.min(desiredDay, lastDay);
           const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
+          // NOVA REGRA: se mês atual, só inclui recorrente até o dia atual
+          const isCurrentMonth = today.getFullYear() === occDate.getUTCFullYear() && today.getMonth() === occDate.getUTCMonth();
+          if (isCurrentMonth && occDate.getUTCDate() > today.getDate()) {
+            cursor.setMonth(cursor.getMonth() + 1);
+            months += 1;
+            continue;
+          }
           // only include if within sDate..eDate (both normalized to UTC boundaries)
           if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) {
             // give a deterministic occurrence id so frontend can key rows properly
