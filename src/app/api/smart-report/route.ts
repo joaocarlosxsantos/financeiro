@@ -4,7 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { logger } from '../../../lib/logger';
-import { getEffectiveDateRange, isTransferCategory, filterRecurringByDay } from '../../../lib/transaction-filters';
+import { getEffectiveDateRange, isTransferCategory, filterRecurringByDay, expandRecurringAllOccurrencesForMonth } from '../../../lib/transaction-filters';
 import { getMonthRange } from '../../../lib/utils';
 // Expande receitas recorrentes em ocorrências reais do mês consultado
 function expandRecurringIncomesForMonth(records: any[], year: number, month: number, today: Date) {
@@ -116,26 +116,20 @@ export async function GET(req: NextRequest) {
     const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
 
 
-  // Corrigir receitas pontuais: só até o dia de hoje se mês atual
+
+  // Expandir recorrentes em todas as ocorrências do mês para ganhos e despesas (igual dashboard)
   const today = new Date();
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === monthNum;
-  const dayLimit = isCurrentMonth ? today.getDate() : 31;
-  const punctualIncomesFiltered = punctualIncomes.filter((inc: any) => {
-    const incDate = new Date(inc.date);
-    if (isCurrentMonth) return incDate.getDate() <= dayLimit;
-    return true;
-  });
+  const finalIncomes = expandRecurringAllOccurrencesForMonth(filteredIncomes, year, monthNum, today);
+  const finalExpenses = expandRecurringAllOccurrencesForMonth(filteredExpenses, year, monthNum, today);
 
-  // Corrigir receitas recorrentes: expandir ocorrências reais do mês
-  const recurringIncomesExpanded = expandRecurringIncomesForMonth(recurringIncomes, year, monthNum, today);
-
-  // Despesas: manter lógica anterior (pode ajustar igual receitas se desejar)
-  const finalExpenses = filterRecurringByDay(filteredExpenses, year, monthNum, today);
 
   // Calcular totais
   const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-  const totalIncome = [...punctualIncomesFiltered, ...recurringIncomesExpanded].reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+  const totalIncome = finalIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
   const balance = totalIncome - totalExpenses;
+
+  // Redefinir isCurrentMonth para uso posterior
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === monthNum;
 
 
     // Previous month

@@ -1,3 +1,96 @@
+/**
+ * Expande registros recorrentes em todas as ocorrências do mês consultado.
+ * Para cada registro recorrente, gera uma ocorrência para cada dia de vigência no mês.
+ * Pontuais são mantidos como estão.
+ * @param records Lista de transações (pontuais e recorrentes)
+ * @param year Ano do mês de referência
+ * @param month Mês de referência (1-12)
+ * @param today Data de hoje (para limitar recorrentes no mês atual)
+ * @returns Lista expandida de transações
+ */
+export function expandRecurringAllOccurrencesForMonth<T extends { type: string; date: Date|string; endDate?: Date|string|null }>(
+  records: T[],
+  year: number,
+  month: number,
+  today: Date
+): T[] {
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const { startDate, endDate } = getEffectiveDateRange(year, month);
+  const dayLimit = isCurrentMonth ? today.getDate() : new Date(year, month, 0).getDate();
+  const result: T[] = [];
+  for (const rec of records) {
+    if (rec.type === 'RECURRING') {
+      // Se tem endDate e ela é menor que o início do mês, ignora
+      if (rec.endDate) {
+        const endDateObj = new Date(rec.endDate);
+        if (endDateObj < startDate) continue;
+      }
+      const recStart = new Date(rec.date);
+      // Dia da recorrência (ex: salário dia 5)
+      const recDay = Math.min(recStart.getDate(), dayLimit);
+      const occDate = new Date(year, month - 1, recDay);
+      // Só gera se a recorrência já começou
+      if (occDate < recStart) continue;
+      // Só gera se não passou do endDate
+      if (rec.endDate) {
+        const endDateObj = new Date(rec.endDate);
+        if (occDate > endDateObj) continue;
+      }
+      // Só inclui se está dentro do mês e dentro do limite do mês atual
+      if (occDate >= startDate && occDate <= endDate && recDay <= dayLimit) {
+        result.push({ ...rec, date: occDate } as T);
+      }
+    } else {
+      // Pontual: mantém
+      result.push(rec);
+    }
+  }
+  return result;
+}
+/**
+ * Expande registros recorrentes em ocorrências reais do mês consultado.
+ * Para cada registro recorrente, gera uma ocorrência para o mês/dia válido.
+ * Pontuais são mantidos como estão.
+ */
+export function expandRecurringForMonth<T extends { type: string; date: Date|string; endDate?: Date|string|null }>(
+  records: T[],
+  year: number,
+  month: number,
+  today: Date
+): T[] {
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const { startDate, endDate } = getEffectiveDateRange(year, month);
+  const dayLimit = isCurrentMonth ? today.getDate() : 31;
+  const result: T[] = [];
+  for (const rec of records) {
+    if (rec.type === 'RECURRING') {
+      // Se tem endDate e ela é menor que o início do mês, ignora
+      if (rec.endDate) {
+        const endDateObj = new Date(rec.endDate);
+        if (endDateObj < startDate) continue;
+      }
+      const recStart = new Date(rec.date);
+      const recDay = Math.min(recStart.getDate(), new Date(year, month, 0).getDate());
+      // Se mês atual, só gera até o dia atual
+      if (isCurrentMonth && recDay > dayLimit) continue;
+      // Se endDate existe e é menor que o dia da ocorrência, ignora
+      if (rec.endDate) {
+        const endDateObj = new Date(rec.endDate);
+        const occDate = new Date(year, month - 1, recDay);
+        if (endDateObj < occDate) continue;
+      }
+      // Só inclui se a ocorrência está dentro do mês
+      const occDate = new Date(year, month - 1, recDay);
+      if (occDate >= startDate && occDate <= endDate) {
+        result.push({ ...rec, date: occDate } as T);
+      }
+    } else {
+      // Pontual: mantém
+      result.push(rec);
+    }
+  }
+  return result;
+}
 import { prisma } from './prisma';
 
 /**

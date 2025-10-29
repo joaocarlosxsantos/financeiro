@@ -11,7 +11,7 @@ import { authOptions } from '../../../../lib/auth';
 // @ts-ignore
 import { logger } from '../../../../lib/logger';
 // @ts-ignore
-import { fetchAllTransactions, getEffectiveDateRange, isTransferCategory, filterRecurringByDay } from '../../../../lib/transaction-filters';
+import { fetchAllTransactions, getEffectiveDateRange, isTransferCategory, filterRecurringByDay, expandRecurringAllOccurrencesForMonth } from '../../../../lib/transaction-filters';
 
 /**
  * Dashboard Cards API Endpoint
@@ -151,73 +151,53 @@ export async function GET(req: NextRequest) {
   const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
   const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
 
-  // Lógica para receitas pontuais: só até o dia de hoje se mês atual, mês inteiro se anterior
+  // Expandir recorrentes em todas as ocorrências do mês para ganhos e despesas
   const today = new Date();
   const safeYear = typeof year === 'number' && !isNaN(year) ? year : today.getFullYear();
   const safeMonth = typeof month === 'number' && !isNaN(month) ? month : today.getMonth() + 1;
-  const isCurrentMonth = today.getFullYear() === safeYear && today.getMonth() + 1 === safeMonth;
-  const dayLimit = isCurrentMonth ? today.getDate() : 31;
-
-  // Pontuais: só até o dia de hoje se mês atual
-  const punctualIncomesFiltered = punctualIncomes.filter((inc: any) => {
-    const incDate = new Date(inc.date);
-    if (isCurrentMonth) return incDate.getDate() <= dayLimit;
-    return true;
-  });
-
-  // Recorrentes: não pode ter data de fim menor ou igual a hoje, e só inclui até o dia atual se mês atual
-  const recurringIncomesFiltered = recurringIncomes.filter((inc: any) => {
-    // Se tem endDate e ela é menor ou igual a hoje, ignora
-    if (inc.endDate) {
-      const endDate = new Date(inc.endDate);
-      if (endDate <= today) return false;
-    }
-    const incDate = new Date(inc.date);
-    if (isCurrentMonth) return incDate.getDate() <= dayLimit;
-    return true;
-  });
-
-  // Despesas: manter lógica anterior (pode ajustar igual receitas se desejar)
-  const finalExpenses = filterRecurringByDay(filteredExpenses, safeYear, safeMonth, today);
+  const finalIncomes = expandRecurringAllOccurrencesForMonth(filteredIncomes, safeYear, safeMonth, today);
+  const finalExpenses = expandRecurringAllOccurrencesForMonth(filteredExpenses, safeYear, safeMonth, today);
 
   // Calcular totais
   const totalExpenses = finalExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-  const totalIncomes = [...punctualIncomesFiltered, ...recurringIncomesFiltered].reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+  const totalIncomes = finalIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
   const balance = totalIncomes - totalExpenses;
 
-  // Saldo acumulado (até o final do período ou até hoje se for mês atual)
+
+  // Saldo acumulado: soma mês a mês até o mês selecionado (inclusive), usando expansão correta
   let saldoAcumulado = 0;
-  if (endDateObj) {
-    const today = new Date();
-    // Se está vendo o mês atual, acumula até hoje. Caso contrário, até o final do período
-    const accumulateUntil = endDateObj < today ? endDateObj : today;
-    const dayToAccumulateUntil = accumulateUntil.getDate();
-    
-    const allExpensesUntilNow = await prisma.expense.findMany({
-      where: { ...whereBase, transferId: null, date: { lte: accumulateUntil } },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
-    });
-    const allIncomesUntilNow = await prisma.income.findMany({
-      where: { ...whereBase, transferId: null, date: { lte: accumulateUntil } },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
-    });
-    
-    const filteredExpensesAll = filterRecurringByDay(
-      allExpensesUntilNow.filter((e: any) => !isTransferCategory(e)),
-      safeYear,
-      safeMonth,
-      today
-    );
-    const filteredIncomesAll = filterRecurringByDay(
-      allIncomesUntilNow.filter((i: any) => !isTransferCategory(i)),
-      safeYear,
-      safeMonth,
-      today
-    );
-    
-    const totalExpensesAll = filteredExpensesAll.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-    const totalIncomesAll = filteredIncomesAll.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
-    saldoAcumulado = totalIncomesAll - totalExpensesAll;
+  if (year && month) {
+    let acumulado = 0;
+    for (let m = 1; m <= safeMonth; m++) {
+      // Buscar receitas e despesas do mês m
+      const { startDate, endDate } = getEffectiveDateRange(safeYear, m);
+      const [punctualExpensesM, punctualIncomesM, recurringExpensesM, recurringIncomesM] = await Promise.all([
+        prisma.expense.findMany({
+          where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { gte: startDate, lte: endDate } },
+          select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+        }),
+        prisma.income.findMany({
+          where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { gte: startDate, lte: endDate } },
+          select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+        }),
+        prisma.expense.findMany({
+          where: { ...whereBase, type: 'RECURRING', transferId: null },
+          select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true }
+        }),
+        prisma.income.findMany({
+          where: { ...whereBase, type: 'RECURRING', transferId: null },
+          select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true }
+        })
+      ]);
+      const allExpensesM = [...punctualExpensesM, ...recurringExpensesM].filter((e: any) => !isTransferCategory(e));
+      const allIncomesM = [...punctualIncomesM, ...recurringIncomesM].filter((i: any) => !isTransferCategory(i));
+      const expandedIncomesM = expandRecurringAllOccurrencesForMonth(allIncomesM, safeYear, m, today);
+      const expandedExpensesM = expandRecurringAllOccurrencesForMonth(allExpensesM, safeYear, m, today);
+      const totalIncomesM = expandedIncomesM.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+      const totalExpensesM = expandedExpensesM.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
+      acumulado += totalIncomesM - totalExpensesM;
+    }
+    saldoAcumulado = acumulado;
   }
 
   // Limite diário: simple heuristic similar to frontend logic
