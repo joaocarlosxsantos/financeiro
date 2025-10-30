@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-
+import { normalizeDescription } from '@/lib/description-normalizer';
+// Função utilitária para remover acentos (sem dependência externa)
+function removeDiacritics(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
+  if (!session || !session.user || !session.user.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
   const { registros, carteiraId } = await req.json();
@@ -42,10 +46,17 @@ export async function POST(req: NextRequest) {
 
   // Busca todas as categorias do usuário uma vez (cache)
   const categoriasExistentes = await prisma.category.findMany({ where: { userId: user.id } });
+  // Busca categoria de transferência entre contas (pode ser "Transferência entre contas" ou similar)
+  const categoriaTransfer = categoriasExistentes.find((c: any) => c.name.trim().toLowerCase() === 'transferência entre contas');
   type PrismaCategory = Awaited<ReturnType<typeof prisma.category.findMany>>[number];
   const categoriasCache: Record<string, PrismaCategory> = {};
   function normalizeNome(nome: string) {
     return nome.trim().toLowerCase();
+  }
+  // Função para normalizar para comparação (remove acentos, espaços, minúsculo)
+  function normalizeForCompare(str: string) {
+    if (!str) return '';
+    return removeDiacritics(str).toLowerCase().replace(/\s+/g, '');
   }
   for (const cat of categoriasExistentes) {
     const key = `${normalizeNome(cat.name)}|${cat.type}`;
@@ -75,34 +86,49 @@ export async function POST(req: NextRequest) {
     const tipo: 'INCOME' | 'EXPENSE' = reg.valor > 0 ? 'INCOME' : 'EXPENSE';
     let categoriaId = reg.categoriaId;
     let categoriaNome = '';
-    
-    // Prioridade: categoriaId selecionada pelo usuário, senão categoriaRecomendada da IA
-    if (categoriaId && categoriaId.length > 40) {
-      // É um ID válido, manter
-    } else if (categoriaId && categoriaId.length <= 40) {
-      // É um nome de categoria
-      categoriaNome = categoriaId;
-    } else if (!categoriaId && reg.categoriaRecomendada && reg.shouldCreateCategory) {
-      // Usuário não selecionou nada, usar recomendação da IA
-      categoriaNome = reg.categoriaRecomendada;
-      categoriaId = undefined; // Será definido após criação
-    } else if (!categoriaId && reg.categoriaSugerida) {
-      // Fallback para categoriaSugerida (sistema antigo)
-      categoriaNome = reg.categoriaSugerida;
+    let isTransferenciaEntreContas = false;
+
+    // Se NÃO for transferência entre contas, segue para as outras categorias normalmente
+    if (!isTransferenciaEntreContas) {
+      if (categoriaId && categoriaId.length > 40) {
+        // É um ID válido, manter
+      } else if (categoriaId && categoriaId.length <= 40) {
+        // É um nome de categoria
+        categoriaNome = categoriaId;
+      } else if (!categoriaId && reg.categoriaRecomendada && reg.shouldCreateCategory) {
+        // Só usa recomendação da IA se NÃO for "transferência entre contas"
+        const catNorm = normalizeNome(reg.categoriaRecomendada);
+        if (catNorm !== 'transferência entre contas') {
+          categoriaNome = reg.categoriaRecomendada;
+          categoriaId = undefined; // Será definido após criação
+        } else {
+          // Se a IA sugeriu "transferência entre contas" mas o nome do usuário não está na descrição, ignora e deixa sem categoria
+          categoriaNome = '';
+          categoriaId = undefined;
+        }
+      } else if (!categoriaId && reg.categoriaSugerida) {
+        // Fallback para categoriaSugerida (sistema antigo)
+        const catNorm = normalizeNome(reg.categoriaSugerida);
+        if (catNorm !== 'transferência entre contas') {
+          categoriaNome = reg.categoriaSugerida;
+        } else {
+          categoriaNome = '';
+        }
+      }
     }
-    
+
     categoriaNome = categoriaNome ? normalizeNome(categoriaNome) : '';
     let categoriaObj = null;
-    
+
     // Se for lançamento de saldo inicial, força categoria 'Saldo'
     if (reg.isSaldoInicial || categoriaNome === 'saldo') {
       categoriaObj = saldoCategoria;
       categoriaNome = 'saldo';
       categoriaId = saldoCategoria.id;
-    } else if (categoriaNome) {
+    } else if (!isTransferenciaEntreContas && categoriaNome) {
       const key = `${categoriaNome}|${tipo}`;
       categoriaObj = categoriasCache[key];
-      
+
       // Só cria categoria se o nome for válido (não id, não vazio, não string aleatória)
       const isProvavelId = /^[a-z0-9]{20,}$/.test(categoriaNome);
       if (

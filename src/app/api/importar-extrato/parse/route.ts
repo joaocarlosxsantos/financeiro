@@ -143,8 +143,6 @@ function simplificarDescricao(descricao: string): string {
 }
 
 import { NextRequest, NextResponse } from 'next/server';
-// import Papa from 'papaparse';
-// @ts-ignore
 import * as ofxParser from 'ofx-parser';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
@@ -637,6 +635,7 @@ async function parsePdfExtract(text: string) {
 }
 
 async function handler(req: NextRequest) {
+  console.log('[DEBUG] handler /api/importar-extrato/parse chamado');
   // Busca categorias do usuário logado (se autenticado)
   let categoriasUsuario: any[] = [];
   let user: any = null;
@@ -749,7 +748,9 @@ async function handler(req: NextRequest) {
         }
       }
 
-      preview = await Promise.all(transactions.map(async (t: any) => {
+      preview = await Promise.all(transactions.map(async (t: any, idx: number) => {
+  console.log(`[DEBUG] Transação #${idx + 1} objeto:`, t);
+  console.log(`[DEBUG] Processando transação #${idx + 1}: descricao=`, t.descricao, '| descricaoOriginal=', t.descricaoOriginal, '| MEMO=', t.MEMO);
         // Normaliza data OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
         let rawDate = t.DTPOSTED || t.date || '';
         let data = '';
@@ -773,31 +774,37 @@ async function handler(req: NextRequest) {
         let tagsRecomendadas: string[] = [];
         let shouldCreateCategory = false;
         
+        // --- Lógica robusta: nunca sugerir transferência entre contas se nome do usuário não estiver na descrição ---
+  const normalizar = (str: string) => str ? str.normalize('NFD').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
+        const userNorm = user && user.name ? normalizar(user.name) : '';
         try {
           if (user && descricao) {
             aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
-            
+            let suggested = aiAnalysis.suggestedCategory;
+            // Nunca sugerir transferência entre contas se nome não está na descrição
+            if (normalizar(suggested) === 'transferenciaentrecontas') {
+              const descNorm = normalizar(descricao);
+              if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+                console.log('[DEBUG] IA sugeriu Transferência entre contas, mas nome não bateu. Forçando PIX/TRANSF. Desc:', descricao, '| Nome:', user?.name);
+                suggested = 'PIX/TRANSF';
+              }
+            }
             // Verifica se categoria sugerida existe
             const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
             const categoriaExistente = categoriasUsuario.find(
               (cat) =>
                 removeAcentos(cat.name.toLowerCase()) ===
-                removeAcentos(aiAnalysis.suggestedCategory.toLowerCase()),
+                removeAcentos(suggested.toLowerCase()),
             );
-            
             if (categoriaExistente) {
-              // Categoria existe - usar ela
               categoriaRecomendada = categoriaExistente.name;
               categoriaId = categoriaExistente.id;
               shouldCreateCategory = false;
             } else {
-              // Categoria não existe - sugerir criação
-              categoriaRecomendada = aiAnalysis.suggestedCategory;
+              categoriaRecomendada = suggested;
               shouldCreateCategory = true;
             }
-            
             descricaoMelhorada = aiAnalysis.enhancedDescription;
-            
             // Verifica tags e filtra apenas as que não existem
             const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
               return !tagsUsuario.some(tagExistente => 
@@ -805,25 +812,28 @@ async function handler(req: NextRequest) {
                 removeAcentos(tagSugerida.toLowerCase())
               );
             });
-            
-            // Tags recomendadas são apenas as que precisam ser criadas
             tagsRecomendadas = tagsNaoExistentes;
           }
         } catch (error) {
           console.error('Erro na análise IA:', error);
           // Fallback para método antigo se IA falhar
           const descricaoSimplificada = simplificarDescricao(descricao);
-          const categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+          let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+          // Nunca sugerir transferência entre contas se nome não está na descrição
+          if (normalizar(categoriaSugerida) === 'transferenciaentrecontas') {
+            const descNorm = normalizar(descricao);
+            if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+              console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas nome não bateu. Forçando PIX/TRANSF. Desc:', descricao, '| Nome:', user?.name);
+              categoriaSugerida = 'PIX/TRANSF';
+            }
+          }
           descricaoMelhorada = descricaoSimplificada || descricao;
-          
-          // Verifica se categoria do fallback existe
           const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
           const categoriaExistente = categoriasUsuario.find(
             (cat) =>
               removeAcentos(cat.name.toLowerCase()) ===
               removeAcentos(categoriaSugerida.toLowerCase()),
           );
-          
           if (categoriaExistente) {
             categoriaRecomendada = categoriaExistente.name;
             categoriaId = categoriaExistente.id;
@@ -862,8 +872,9 @@ async function handler(req: NextRequest) {
   
   // Processa transações do PDF (aplicando a mesma lógica de IA que OFX)
   if (transactions.length > 0) {
+  console.log('[DEBUG] Iniciando processamento do preview');
     console.log(`Processando ${transactions.length} transações para preview com IA`);
-    
+
     // Busca tags do usuário uma só vez para todas as transações
     let tagsUsuario: any[] = [];
     if (user) {
@@ -877,120 +888,148 @@ async function handler(req: NextRequest) {
       }
     }
 
+    // Busca categoria de transferência entre contas
+    // Função robusta de normalização (remove acentos, espaços, pontuação, caixa)
+    const normalizar = (str: string) => str
+      ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+      : '';
+    const categoriasUsuarioNorm = categoriasUsuario.map(cat => ({
+      ...cat,
+      nomeNorm: normalizar(cat.name)
+    }));
+    console.log('[DEBUG] Categorias do usuário normalizadas para comparação:', categoriasUsuarioNorm.map(c => c.nomeNorm));
+    const categoriaTransfer = categoriasUsuarioNorm.find(cat => cat.nomeNorm === 'transferenciaentrecontas');
+    const userNorm = user && user.name ? normalizar(user.name) : '';
+
     try {
       preview = await Promise.all(transactions.map(async (t: any) => {
-      const data = t.data;
-      const valor = t.valor;
-      const descricao = t.descricao;
+  const data = t.data || t.DTPOSTED || null;
+  const valor = t.valor || t.TRNAMT || null;
+  // Sempre usar MEMO como descricao e descricaoOriginal
+  const descricao = t.MEMO || '';
+  const descricaoOriginal = t.MEMO || '';
+  console.log(`[DEBUG] Descricao final da transação:`, descricao);
 
-      // Usa IA para análise da transação (ou categoria já sugerida pelo parser)
-      let aiAnalysis: any = null;
-      let categoriaRecomendada = t.categoriaRecomendada || ''; // Pode já vir do parser específico (ex: Alelo)
-      let categoriaId = '';
-      let descricaoMelhorada = descricao;
-      let tagsRecomendadas: string[] = [];
-      let shouldCreateCategory = t.shouldCreateCategory || false; // Pode já vir definido
-      
-      try {
-        if (user && descricao && !categoriaRecomendada) { // Só usa IA se não há categoria sugerida
-          aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
-          
-          // Verifica se categoria sugerida existe
+  // --- Lógica de sugestão automática de transferência entre contas ---
+  let categoriaRecomendada = t.categoriaRecomendada || '';
+  let categoriaId = '';
+  let shouldCreateCategory = t.shouldCreateCategory || false;
+  let descricaoMelhorada = descricao;
+  let tagsRecomendadas: string[] = [];
+
+  let isTransferenciaEntreContas = false;
+  console.log('[DEBUG] Checando transferência entre contas para:', descricao, '| userNorm:', userNorm);
+  if (categoriaTransfer && descricao && userNorm.length >= 5) {
+          const descNorm = normalizar(descricao);
+          const match = descNorm.includes(userNorm);
+          console.log('[DEBUG TRANSFERÊNCIA] user.name =', user?.name, '| userNorm =', userNorm, '| descNorm =', descNorm, '| contains =', match);
+          if (match) {
+            isTransferenciaEntreContas = true;
+            categoriaRecomendada = categoriaTransfer.name;
+            categoriaId = categoriaTransfer.id;
+            shouldCreateCategory = false;
+            console.log('[PREVIEW TRANSFERÊNCIA] Usuário:', user.name, '| Normalizado:', userNorm, '| Descrição:', descricao, '| Normalizada:', descNorm);
+          }
+        }
+
+        // Se não for transferência, segue lógica IA/heurística normal
+        if (!isTransferenciaEntreContas) {
+          let aiAnalysis: any = null;
+          try {
+            if (user && descricao && !categoriaRecomendada) {
+              aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
+              let suggested = aiAnalysis.suggestedCategory;
+              // Nunca sugerir 'Transferência entre contas' se não for match do nome
+              if (suggested && normalizar(suggested) === 'transferenciaentrecontas') {
+                const descNorm = normalizar(descricao);
+                if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+                  console.log('[DEBUG] IA sugeriu Transferência entre contas, mas não é transferência entre contas (nome não bateu). Descrição:', descricao, '| Nome usuário:', user?.name);
+                  suggested = 'PIX/TRANSF';
+                }
+              }
+              const categoriaExistente = categoriasUsuario.find(
+                (cat) =>
+                  normalizar(cat.name) ===
+                  normalizar(suggested),
+              );
+              if (categoriaExistente) {
+                categoriaRecomendada = categoriaExistente.name;
+                categoriaId = categoriaExistente.id;
+                shouldCreateCategory = false;
+              } else {
+                categoriaRecomendada = suggested;
+                shouldCreateCategory = true;
+              }
+              descricaoMelhorada = aiAnalysis.enhancedDescription;
+              const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
+                return !tagsUsuario.some(tagExistente => 
+                  normalizar(tagExistente.name) === 
+                  normalizar(tagSugerida)
+                );
+              });
+              tagsRecomendadas = tagsNaoExistentes;
+            }
+          } catch (error) {
+            console.error('Erro na análise IA:', error);
+            if (!categoriaRecomendada) {
+              const descricaoSimplificada = simplificarDescricao(descricao);
+              let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+              if (categoriaSugerida && normalizar(categoriaSugerida).includes('transferenciaentrecontas')) {
+                const descNorm = normalizar(descricao);
+                if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+                  console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas não é transferência entre contas (nome não bateu). Descrição:', descricao, '| Nome usuário:', user?.name);
+                  categoriaSugerida = 'PIX/TRANSF';
+                }
+              }
+              descricaoMelhorada = descricaoSimplificada || descricao;
+              const categoriaExistente = categoriasUsuario.find(
+                (cat) =>
+                  normalizar(cat.name) ===
+                  normalizar(categoriaSugerida),
+              );
+              if (categoriaExistente) {
+                categoriaRecomendada = categoriaExistente.name;
+                categoriaId = categoriaExistente.id;
+                shouldCreateCategory = false;
+              } else {
+                categoriaRecomendada = categoriaSugerida;
+                shouldCreateCategory = true;
+              }
+            }
+          }
+        }
+
+        // Se categoria veio do parser específico, verificar se já existe no sistema
+        if (categoriaRecomendada && !categoriaId) {
           const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
           const categoriaExistente = categoriasUsuario.find(
             (cat) =>
               removeAcentos(cat.name.toLowerCase()) ===
-              removeAcentos(aiAnalysis.suggestedCategory.toLowerCase()),
+              removeAcentos(categoriaRecomendada.toLowerCase()),
           );
-          
           if (categoriaExistente) {
-            // Categoria existe - usar ela
-            categoriaRecomendada = categoriaExistente.name;
             categoriaId = categoriaExistente.id;
             shouldCreateCategory = false;
           } else {
-            // Categoria não existe - sugerir criação
-            categoriaRecomendada = aiAnalysis.suggestedCategory;
-            shouldCreateCategory = true;
-          }
-          
-          descricaoMelhorada = aiAnalysis.enhancedDescription;
-          
-          // Verifica tags e filtra apenas as que não existem
-          const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
-            return !tagsUsuario.some(tagExistente => 
-              removeAcentos(tagExistente.name.toLowerCase()) === 
-              removeAcentos(tagSugerida.toLowerCase())
-            );
-          });
-          
-          // Tags recomendadas são apenas as que precisam ser criadas
-          tagsRecomendadas = tagsNaoExistentes;
-        }
-      } catch (error) {
-        console.error('Erro na análise IA:', error);
-        // Fallback para método antigo se IA falhar e não há categoria já sugerida
-        if (!categoriaRecomendada) {
-          const descricaoSimplificada = simplificarDescricao(descricao);
-          const categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-          descricaoMelhorada = descricaoSimplificada || descricao;
-          
-          // Verifica se categoria do fallback existe
-          const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-          const categoriaExistente = categoriasUsuario.find(
-            (cat) =>
-              removeAcentos(cat.name.toLowerCase()) ===
-              removeAcentos(categoriaSugerida.toLowerCase()),
-          );
-          
-          if (categoriaExistente) {
-            categoriaRecomendada = categoriaExistente.name;
-            categoriaId = categoriaExistente.id;
-            shouldCreateCategory = false;
-          } else {
-            categoriaRecomendada = categoriaSugerida;
             shouldCreateCategory = true;
           }
         }
-      }
-      
-      // Se categoria veio do parser específico, verificar se já existe no sistema
-      if (categoriaRecomendada && !categoriaId) {
-        const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-        const categoriaExistente = categoriasUsuario.find(
-          (cat) =>
-            removeAcentos(cat.name.toLowerCase()) ===
-            removeAcentos(categoriaRecomendada.toLowerCase()),
-        );
-        
-        if (categoriaExistente) {
-          categoriaId = categoriaExistente.id;
-          shouldCreateCategory = false;
-        } else {
-          shouldCreateCategory = true;
-        }
-      }
-      
-      return {
-        data,
-        valor,
-        descricao,
-        descricaoOriginal: descricao,
-        descricaoMelhorada,
-        categoriaRecomendada,
-        categoriaId,
-        tagsRecomendadas,
-        shouldCreateCategory,
-        aiAnalysis: aiAnalysis ? {
-          confidence: aiAnalysis.confidence,
-          merchant: aiAnalysis.merchant,
-          location: aiAnalysis.location,
-          categoryType: aiAnalysis.categoryType
-        } : null,
-      };
-    }));
+
+        return {
+          data,
+          valor,
+          descricao,
+          descricaoOriginal,
+          descricaoMelhorada,
+          categoriaRecomendada,
+          categoriaId,
+          tagsRecomendadas,
+          shouldCreateCategory,
+          aiAnalysis: null // IA só é relevante para debug, pode ser adicionado se necessário
+        };
+      }));
     } catch (error) {
-      console.error('Erro ao processar transações PDF para preview:', error);
+  console.error('[DEBUG] Erro ao processar transações PDF para preview:', error);
       return NextResponse.json(
         { error: 'Erro ao processar transações para preview', details: String(error) },
         { status: 400 }
@@ -998,10 +1037,10 @@ async function handler(req: NextRequest) {
     }
   }
   
-  console.log(`Preview final: ${preview?.length || 0} transações`);
-  console.log('Primeiras 3 transações do preview:', preview?.slice(0, 3));
   
   if (!preview || preview.length === 0) {
+  console.log('[DEBUG] Checando preview vazio:', preview);
+  console.log('[DEBUG] Preview final:', JSON.stringify(preview, null, 2));
     return NextResponse.json(
       { error: 'Nenhum lançamento encontrado no arquivo.', preview: [] },
       { status: 400 },

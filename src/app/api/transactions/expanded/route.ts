@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { logger } from '@/lib/logger';
+// import { logger } from '@/lib/logger';
 import { isTransferCategory } from '@/lib/transaction-filters';
 
 const ExpandedTransactionsQuerySchema = z.object({
@@ -147,7 +147,7 @@ function expandRecurringTransaction(
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
-    logger.warn('Unauthorized access attempt to /api/transactions/expanded');
+    // logger.warn('Unauthorized access attempt to /api/transactions/expanded');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -166,11 +166,11 @@ export async function GET(req: NextRequest) {
 
   const validationResult = ExpandedTransactionsQuerySchema.safeParse(queryParams);
   if (!validationResult.success) {
-    logger.validationError(
-      'Validation failed in /api/transactions/expanded',
-      validationResult.error.flatten().fieldErrors,
-      { email: session.user.email }
-    );
+    // logger.validationError(
+    //   'Validation failed in /api/transactions/expanded',
+    //   validationResult.error.flatten().fieldErrors,
+    //   { email: session.user.email }
+    // );
     return NextResponse.json(
       { error: 'Invalid parameters', details: validationResult.error.flatten().fieldErrors },
       { status: 400 }
@@ -300,17 +300,17 @@ export async function GET(req: NextRequest) {
     const start = (page - 1) * limit;
     const data = all.slice(start, start + limit);
 
-    logger.apiRequest('GET', '/api/transactions/expanded', session.user.email, {
-      type,
-      from,
-      to,
-      categoryIds,
-      tags,
-      walletId,
-      total,
-      page,
-      limit,
-    });
+    // logger.apiRequest('GET', '/api/transactions/expanded', session.user.email, {
+    //   type,
+    //   from,
+    //   to,
+    //   categoryIds,
+    //   tags,
+    //   walletId,
+    //   total,
+    //   page,
+    //   limit,
+    // });
 
     return NextResponse.json({
       data,
@@ -324,7 +324,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Error in /api/transactions/expanded', error, { email: session.user.email });
+  // logger.error('Error in /api/transactions/expanded', error, { email: session.user.email });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

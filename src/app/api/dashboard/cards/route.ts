@@ -164,13 +164,35 @@ export async function GET(req: NextRequest) {
   const balance = totalIncomes - totalExpenses;
 
 
-  // Saldo acumulado: soma mês a mês até o mês selecionado (inclusive), usando expansão correta
+  // Saldo acumulado: soma mês a mês desde o primeiro registro até o mês/ano selecionado, respeitando a virada de ano
   let saldoAcumulado = 0;
   if (year && month) {
     let acumulado = 0;
-    for (let m = 1; m <= safeMonth; m++) {
-      // Buscar receitas e despesas do mês m
-      const { startDate, endDate } = getEffectiveDateRange(safeYear, m);
+    // Descobrir o menor ano/mês de registro do usuário
+    const minDateExpense = await prisma.expense.findFirst({
+      where: { ...whereBase },
+      orderBy: { date: 'asc' },
+      select: { date: true }
+    });
+    const minDateIncome = await prisma.income.findFirst({
+      where: { ...whereBase },
+      orderBy: { date: 'asc' },
+      select: { date: true }
+    });
+    let minDate: Date | undefined = undefined;
+    if (minDateExpense?.date && minDateIncome?.date) {
+      minDate = minDateExpense.date < minDateIncome.date ? minDateExpense.date : minDateIncome.date;
+    } else if (minDateExpense?.date) {
+      minDate = minDateExpense.date;
+    } else if (minDateIncome?.date) {
+      minDate = minDateIncome.date;
+    }
+    let startYear = minDate ? minDate.getFullYear() : safeYear;
+    let startMonth = minDate ? minDate.getMonth() + 1 : 1;
+    let y = startYear;
+    let m = startMonth;
+    while (y < year || (y === year && m <= month)) {
+      const { startDate, endDate } = getEffectiveDateRange(y, m);
       const [punctualExpensesM, punctualIncomesM, recurringExpensesM, recurringIncomesM] = await Promise.all([
         prisma.expense.findMany({
           where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { gte: startDate, lte: endDate } },
@@ -191,11 +213,18 @@ export async function GET(req: NextRequest) {
       ]);
       const allExpensesM = [...punctualExpensesM, ...recurringExpensesM].filter((e: any) => !isTransferCategory(e));
       const allIncomesM = [...punctualIncomesM, ...recurringIncomesM].filter((i: any) => !isTransferCategory(i));
-      const expandedIncomesM = expandRecurringAllOccurrencesForMonth(allIncomesM, safeYear, m, today);
-      const expandedExpensesM = expandRecurringAllOccurrencesForMonth(allExpensesM, safeYear, m, today);
+      const expandedIncomesM = expandRecurringAllOccurrencesForMonth(allIncomesM, y, m, today);
+      const expandedExpensesM = expandRecurringAllOccurrencesForMonth(allExpensesM, y, m, today);
       const totalIncomesM = expandedIncomesM.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
       const totalExpensesM = expandedExpensesM.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
       acumulado += totalIncomesM - totalExpensesM;
+      // Avançar mês/ano
+      if (m === 12) {
+        m = 1;
+        y++;
+      } else {
+        m++;
+      }
     }
     saldoAcumulado = acumulado;
   }

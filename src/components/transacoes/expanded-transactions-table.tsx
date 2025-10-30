@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { MoreVertical, Pencil, Trash } from 'lucide-react';
+import { TransactionFormModal } from './transaction-form-modal';
+import { ConfirmDeleteModal } from './confirm-delete-modal';
 
 interface ExpandedTransaction {
   id: string;
@@ -57,7 +62,14 @@ export function ExpandedTransactionsTable({
     fetchTransactions();
   }, [transactionType, from, to]);
 
-  const fetchTransactions = async () => {
+  // Ref para a div da tabela para preservar scroll
+  const tableRef = useRef<HTMLDivElement>(null);
+  // Função para buscar e atualizar mantendo scroll
+  const fetchTransactions = async (preserveScroll = false) => {
+    let scrollTop = 0;
+    if (preserveScroll && tableRef.current) {
+      scrollTop = tableRef.current.scrollTop;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -68,18 +80,20 @@ export function ExpandedTransactionsTable({
         sort: 'date_desc',
         limit: '500',
       });
-
       const response = await fetch(`/api/transactions/expanded?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Erro ao buscar transações');
       }
-
       const result = await response.json();
       setData(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setLoading(false);
+      // Restaurar scroll
+      if (preserveScroll && tableRef.current) {
+        tableRef.current.scrollTop = scrollTop;
+      }
     }
   };
 
@@ -96,6 +110,58 @@ export function ExpandedTransactionsTable({
 
   const formatDate = (dateStr: string) => {
     return format(new Date(dateStr + 'T00:00:00'), 'dd/MMM', { locale: pt });
+  };
+
+
+  // Estado para modais
+  const [editModal, setEditModal] = useState<{ open: boolean; transaction: ExpandedTransaction | null }>({ open: false, transaction: null });
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; transaction: ExpandedTransaction | null }>({ open: false, transaction: null });
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
+
+  // Carregar categorias e carteiras ao montar
+  useEffect(() => {
+    (async () => {
+      try {
+        const [catRes, walRes] = await Promise.all([
+          fetch('/api/categories?&_=' + Date.now()),
+          fetch('/api/wallets?&_=' + Date.now()),
+        ]);
+        if (catRes.ok) setCategories(await catRes.json());
+        if (walRes.ok) setWallets(await walRes.json());
+      } catch {}
+    })();
+  }, []);
+
+  const handleEdit = (transaction: ExpandedTransaction) => {
+    // Extrair categoryId e walletId para o modal
+    const initialData = {
+      ...transaction,
+      categoryId: transaction.category?.id || '',
+      walletId: transaction.wallet?.id || '',
+    };
+    setEditModal({ open: true, transaction: initialData });
+  };
+  const handleDelete = (transaction: ExpandedTransaction) => {
+    setDeleteModal({ open: true, transaction });
+  };
+
+  const handleEditSubmit = async (form: any) => {
+    if (!editModal.transaction) return;
+    await fetch(`/api/transactions/${editModal.transaction.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    setEditModal({ open: false, transaction: null });
+    fetchTransactions(true); // preserva scroll
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.transaction) return;
+    await fetch(`/api/transactions/${deleteModal.transaction.id}`, { method: 'DELETE' });
+    setDeleteModal({ open: false, transaction: null });
+    fetchTransactions(true); // preserva scroll
   };
 
   if (loading) {
@@ -122,28 +188,32 @@ export function ExpandedTransactionsTable({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <TransactionFormModal
+        open={editModal.open}
+        onClose={() => setEditModal({ open: false, transaction: null })}
+        onSubmit={handleEditSubmit}
+        initialData={editModal.transaction}
+        title="Editar Transação"
+        categories={categories}
+        wallets={wallets}
+      />
+      <ConfirmDeleteModal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, transaction: null })}
+        onConfirm={handleDeleteConfirm}
+        description={deleteModal.transaction?.description}
+      />
+  <div ref={tableRef} className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: 600 }}>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">
-                Data
-              </th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">
-                Descrição
-              </th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">
-                Categoria
-              </th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">
-                Carteira
-              </th>
-              <th className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">
-                Valor
-              </th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">
-                Tags
-              </th>
+              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Data</th>
+              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Descrição</th>
+              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Categoria</th>
+              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Carteira</th>
+              <th className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Valor</th>
+              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tags</th>
+              <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -204,6 +274,24 @@ export function ExpandedTransactionsTable({
                   ) : (
                     <span className="text-gray-400 dark:text-gray-500">—</span>
                   )}
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Ações</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(transaction)} className="text-red-600 focus:text-red-700">
+                        <Trash className="mr-2 h-4 w-4" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </td>
               </tr>
             ))}

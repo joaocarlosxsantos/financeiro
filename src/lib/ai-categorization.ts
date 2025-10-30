@@ -33,32 +33,54 @@ export async function analyzeTransactionWithAI(
 ): Promise<TransactionAnalysis> {
   // Normaliza a descrição
   const normalizedDesc = normalizeDescription(description);
-  
+
   // Detecta o tipo de transação (receita ou despesa)
   const isIncome = amount > 0;
   const categoryType = isIncome ? 'INCOME' : 'EXPENSE';
-  
+
   // Extrai informações da descrição
   const merchantInfo = extractMerchantInfo(normalizedDesc);
   const enhancedDescription = enhanceDescription(normalizedDesc, merchantInfo);
-  
-  // Sugere categoria baseada na descrição melhorada
-  const categorySuggestion = suggestCategoryFromDescription(
-    enhancedDescription,
-    categoryType,
-    existingCategories
-  );
-  
+
+  // --- AJUSTE: Sugerir categoria PIX para envio a terceiros ---
+  let categorySuggestion;
+  // Tenta extrair nome de pessoa do PIX
+  let nomeExtraido = null;
+  try {
+    const match = enhancedDescription.match(/PIX\s*\-\s*([\w\s]+)(?:\s*\(Transferência\))?/i);
+    if (match && match[1]) {
+      nomeExtraido = match[1].trim();
+    }
+  } catch {}
+
+  // Se for despesa PIX e nome extraído não for vazio, sugere 'PIX' como categoria
+  if (!isIncome && nomeExtraido) {
+    categorySuggestion = {
+      name: 'PIX',
+      type: 'EXPENSE',
+      color: '#3B82F6',
+      icon: '💸',
+      confidence: 0.95
+    };
+  } else {
+    // Sugere categoria baseada na descrição melhorada (padrão)
+    categorySuggestion = suggestCategoryFromDescription(
+      enhancedDescription,
+      categoryType,
+      existingCategories
+    );
+  }
+
   // Sugere tags baseadas no contexto
   const suggestedTags = suggestTags(enhancedDescription, merchantInfo);
-  
+
   return {
     originalDescription: description,
     enhancedDescription,
     suggestedCategory: categorySuggestion.name,
     confidence: categorySuggestion.confidence,
-    shouldCreateCategory: categorySuggestion.confidence > 0.7 && 
-      !existingCategories.some(cat => 
+    shouldCreateCategory: categorySuggestion.confidence > 0.7 &&
+      !existingCategories.some(cat =>
         cat.name.toLowerCase() === categorySuggestion.name.toLowerCase()
       ),
     categoryType,
