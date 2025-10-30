@@ -6,11 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useMonth } from '@/components/providers/month-provider';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Calendar, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, TrendingDown, TrendingUp, DollarSign, Plus } from 'lucide-react';
+import { TransactionFormModal } from '@/components/transacoes/transaction-form-modal';
+import { useCategoriesAndWallets } from '@/hooks/use-categories-wallets';
 import { ExpandedTransactionsTable } from '@/components/transacoes/expanded-transactions-table';
 import { formatCurrency, formatYmd } from '@/lib/utils';
 
 export default function TransacoesContent() {
+  const [reloadFlag, setReloadFlag] = useState(0);
+  const [showForm, setShowForm] = useState(false);
+  const { categories, wallets, loading } = useCategoriesAndWallets();
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl === 'ganhos' ? 'ganhos' : 'gastos');
@@ -42,6 +47,11 @@ export default function TransacoesContent() {
 
   // Carregar resumo das transações
   useEffect(() => {
+    function handleReloadSummary() {
+      setReloadFlag(f => f + 1);
+    }
+    window.addEventListener('transactions:reloadSummary', handleReloadSummary);
+
     async function loadSummary() {
       setSummary(prev => ({ ...prev, isLoading: true }));
       
@@ -95,7 +105,10 @@ export default function TransacoesContent() {
     }
 
     loadSummary();
-  }, [currentDate]);
+    return () => {
+      window.removeEventListener('transactions:reloadSummary', handleReloadSummary);
+    };
+  }, [currentDate, reloadFlag]);
 
   return (
     <div className="space-y-6">
@@ -130,6 +143,10 @@ export default function TransacoesContent() {
             <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
           </Button>
         </div>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Transação
+        </Button>
       </div>
 
       {/* Cards de Resumo */}
@@ -198,6 +215,7 @@ export default function TransacoesContent() {
             from={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))}
             to={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0))}
             currentDate={currentDate}
+            reloadFlag={reloadFlag}
           />
         </TabsContent>
 
@@ -207,9 +225,43 @@ export default function TransacoesContent() {
             from={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))}
             to={formatYmd(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0))}
             currentDate={currentDate}
+            reloadFlag={reloadFlag}
           />
         </TabsContent>
       </Tabs>
+      {/* Modal de criar transação */}
+      <TransactionFormModal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={async (form) => {
+          // Monta payload
+          const payload = {
+            description: form.description,
+            amount: Number(form.amount),
+            date: form.date,
+            categoryId: form.categoryId,
+            walletId: form.walletId,
+            type: form.recurring ? 'RECURRING' : 'PUNCTUAL',
+            recurringStart: form.recurring ? form.recurringStart : undefined,
+            recurringEnd: form.recurring ? form.recurringEnd : undefined,
+          };
+          const url = form.type === 'income' ? '/api/incomes' : '/api/expenses';
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) {
+            setShowForm(false);
+            setReloadFlag(f => f + 1);
+          } else {
+            alert('Erro ao salvar transação');
+          }
+        }}
+        title="Nova Transação"
+        categories={categories}
+        wallets={wallets}
+      />
     </div>
   );
 }

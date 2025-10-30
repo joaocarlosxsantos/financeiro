@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, Trash2, Plus, Wallet as WalletIcon, ArrowLeft, ArrowRight, Calendar, ArrowUpDown } from 'lucide-react';
 import { AlertTriangle, Building2, Gift, Banknote, Folder, TrendingUp } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
+import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { Loader } from '@/components/ui/loader';
 import { useMonth } from '@/components/providers/month-provider';
 import { TransferModal } from '@/components/transfers/transfer-modal';
@@ -33,6 +34,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
   const [activeTab, setActiveTab] = useState('todas');
 
   const [showForm, setShowForm] = useState(false);
+  const [formInitial, setFormInitial] = useState<{ id?: string; name?: string; type?: string } | null>(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -91,8 +93,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
     const wallet = wallets.find((w) => w.id === id);
     if (wallet) {
       setEditingId(id);
-      setName(wallet.name);
-      setType(wallet.type);
+      setFormInitial({ id, name: wallet.name, type: wallet.type });
       setShowForm(true);
     }
   };
@@ -114,43 +115,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
 
   const deletingWallet = confirmingDelete ? wallets.find((w) => w.id === confirmingDelete) : null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: { name?: string; type?: string } = {};
-    if (!name.trim()) newErrors.name = 'Nome é obrigatório.';
-    if (!type.trim()) newErrors.type = 'Tipo é obrigatório.';
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-
-    if (editingId) {
-      const res = await fetch(`/api/wallets/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setWallets((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
-      }
-    } else {
-      const res = await fetch('/api/wallets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        setWallets((prev) => [created, ...prev]);
-        if (onCreated) onCreated(created.id);
-      }
-    }
-
-  setShowForm(false);
-  setEditingId(null);
-  setName('');
-  setType('BANK');
-  setErrors({});
-  };
+  // O handleSubmit foi removido, pois o modal agora lida com submit
 
   // Calcular estatísticas
   const totalWallets = wallets.length;
@@ -303,7 +268,11 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
             <ArrowUpDown className="h-4 w-4 mr-2" />
             Transferir
           </Button>
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => {
+            setEditingId(null);
+            setFormInitial(null);
+            setShowForm(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Carteira
           </Button>
@@ -426,57 +395,24 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Formulário */}
+      {/* Modal de criar/editar carteira */}
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? 'Editar Carteira' : 'Nova Carteira'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-3" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
-                <div>
-                  <Label htmlFor="name">Nome</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ex: Carteira Principal"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
-                </div>
-                <div>
-                  <Label htmlFor="type">Tipo</Label>
-                  <select
-                    id="type"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-2 sm:px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                  >
-                    <option value="BANK">Banco</option>
-                    <option value="VALE_BENEFICIOS">Vale Benefícios</option>
-                    <option value="CASH">Dinheiro</option>
-                    <option value="OTHER">Outros</option>
-                  </select>
-                  {errors.type && <span className="text-red-600 text-xs">{errors.type}</span>}
-                </div>
-              </div>
-              <div className="flex space-x-1 sm:space-x-2">
-                <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <WalletCreateModal
+          open={showForm}
+          onClose={() => {
+            setShowForm(false);
+            setEditingId(null);
+            setFormInitial(null);
+          }}
+          onCreated={async (id) => {
+            setShowForm(false);
+            setEditingId(null);
+            setFormInitial(null);
+            await load();
+            if (onCreated && id) onCreated(id);
+          }}
+          initial={formInitial}
+        />
       )}
 
       {/* Modal de confirmação de exclusão (melhorado) */}

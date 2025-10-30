@@ -1,23 +1,27 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Modal } from './modal';
 import { Input } from './input';
 import { Label } from './label';
 import { Button } from './button';
 
-export function WalletCreateModal({
-  open,
-  onClose,
-  onCreated,
-}: {
+interface WalletCreateModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
-}) {
-  const [name, setName] = useState('');
-  // usar os valores internos que a API espera (enums)
-  const [type, setType] = useState('BANK');
+  initial?: { id?: string; name?: string; type?: string } | null;
+}
+
+export function WalletCreateModal({ open, onClose, onCreated, initial }: WalletCreateModalProps) {
+  const [name, setName] = useState(initial?.name || '');
+  const [type, setType] = useState(initial?.type || 'BANK');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Atualiza os campos se o modal for reaberto para editar outra carteira
+  React.useEffect(() => {
+    setName(initial?.name || '');
+    setType(initial?.type || 'BANK');
+  }, [initial, open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,11 +31,22 @@ export function WalletCreateModal({
     }
     setLoading(true);
     setError('');
-    const res = await fetch('/api/wallets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type }),
-    });
+    let res;
+    if (initial?.id) {
+      // Editar carteira existente
+      res = await fetch(`/api/wallets/${initial.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type }),
+      });
+    } else {
+      // Criar nova carteira
+      res = await fetch('/api/wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type }),
+      });
+    }
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
@@ -42,7 +57,7 @@ export function WalletCreateModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Nova Carteira">
+    <Modal open={open} onClose={onClose} title={initial?.id ? 'Editar Carteira' : 'Nova Carteira'}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <Label htmlFor="wallet-name">Nome</Label>
@@ -65,7 +80,7 @@ export function WalletCreateModal({
         </div>
         <div className="flex gap-2">
           <Button type="submit" disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar'}
+            {loading ? (initial?.id ? 'Atualizando...' : 'Salvando...') : (initial?.id ? 'Atualizar' : 'Salvar')}
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar

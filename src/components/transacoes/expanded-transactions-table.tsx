@@ -46,6 +46,7 @@ interface ExpandedTransactionsTableProps {
   from: string;
   to: string;
   currentDate: Date;
+  reloadFlag?: number;
 }
 
 export function ExpandedTransactionsTable({
@@ -53,6 +54,7 @@ export function ExpandedTransactionsTable({
   from,
   to,
   currentDate,
+  reloadFlag,
 }: ExpandedTransactionsTableProps) {
   const [data, setData] = useState<ExpandedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export function ExpandedTransactionsTable({
 
   useEffect(() => {
     fetchTransactions();
-  }, [transactionType, from, to]);
+  }, [transactionType, from, to, reloadFlag]);
 
   // Ref para a div da tabela para preservar scroll
   const tableRef = useRef<HTMLDivElement>(null);
@@ -155,11 +157,18 @@ export function ExpandedTransactionsTable({
     });
     setEditModal({ open: false, transaction: null });
     fetchTransactions(true); // preserva scroll
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('transactions:reloadSummary'));
+    }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteModal.transaction) return;
-    await fetch(`/api/transactions/${deleteModal.transaction.id}`, { method: 'DELETE' });
+    // Se for recorrente expandida, usa o originalId
+    const idToDelete = deleteModal.transaction.isRecurringExpanded
+      ? deleteModal.transaction.originalId
+      : deleteModal.transaction.id;
+    await fetch(`/api/transactions/${idToDelete}`, { method: 'DELETE' });
     setDeleteModal({ open: false, transaction: null });
     fetchTransactions(true); // preserva scroll
   };

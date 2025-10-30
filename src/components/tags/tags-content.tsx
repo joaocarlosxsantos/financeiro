@@ -2,10 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TagCreateModal } from '@/components/ui/tag-create-modal';
 import { Loader } from '@/components/ui/loader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMonth } from '@/components/providers/month-provider';
-import { Plus, Tag, Edit, Trash2, ArrowLeft, ArrowRight, Calendar, Hash, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Tag, Edit, Trash2, ArrowLeft, ArrowRight, Calendar, Hash, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 import { useEffect, useState } from 'react';
 
 interface Tag {
@@ -21,10 +23,10 @@ export function TagsContent({ onCreated }: TagsContentProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [formInitial, setFormInitial] = useState<{ id?: string; name?: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [errors, setErrors] = useState<{ name?: string }>({});
   const [activeTab, setActiveTab] = useState('todas');
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const { currentDate, setCurrentDate } = useMonth();
 
   // Navegação de mês
@@ -78,50 +80,23 @@ export function TagsContent({ onCreated }: TagsContentProps) {
     const tag = tags.find((t) => t.id === id);
     if (tag) {
       setEditingId(id);
-      setName(tag.name);
+      setFormInitial({ id, name: tag.name });
       setShowForm(true);
     }
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/tags/${id}`, { method: 'DELETE' });
-    if (res.ok) setTags(tags.filter((t) => t.id !== id));
+    setConfirmingDelete(id);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: { name?: string } = {};
-    if (!name.trim()) newErrors.name = 'Nome é obrigatório.';
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-    setIsLoading(true);
-    try {
-      if (editingId) {
-        await fetch(`/api/tags/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
-        });
-      } else {
-        const res = await fetch('/api/tags', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
-        });
-        if (res.ok) {
-          const created = await res.json();
-          if (onCreated) onCreated(created.id);
-        }
-      }
-      await load();
-      setShowForm(false);
-      setEditingId(null);
-      setName('');
-      setErrors({});
-    } finally {
-      setIsLoading(false);
-    }
+  const confirmDelete = async () => {
+    if (!confirmingDelete) return;
+    const res = await fetch(`/api/tags/${confirmingDelete}`, { method: 'DELETE' });
+    if (res.ok) setTags(tags.filter((t) => t.id !== confirmingDelete));
+    setConfirmingDelete(null);
   };
+
+
 
   // Função para renderizar a lista de tags
   const renderTagsList = (tagsToRender: Tag[]) => {
@@ -139,7 +114,11 @@ export function TagsContent({ onCreated }: TagsContentProps) {
                : activeTab === 'recentes' ? 'Nenhuma tag recente'
                : 'Nenhuma tag encontrada'}
             </p>
-            <Button className="mt-4" onClick={() => setShowForm(true)}>
+            <Button className="mt-4" onClick={() => {
+              setEditingId(null);
+              setFormInitial(null);
+              setShowForm(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeira Tag
             </Button>
@@ -208,7 +187,11 @@ export function TagsContent({ onCreated }: TagsContentProps) {
           </Button>
         </div>
         
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => {
+          setEditingId(null);
+          setFormInitial(null);
+          setShowForm(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Tag
         </Button>
@@ -295,40 +278,57 @@ export function TagsContent({ onCreated }: TagsContentProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Formulário */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? 'Editar Tag' : 'Nova Tag'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div>
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  placeholder="Ex: Viagem"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
+      {/* Modal de confirmação de exclusão */}
+      {confirmingDelete && (
+        <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
-              <div className="flex space-x-2">
-                <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                  }}
-                >
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tem certeza que deseja excluir esta tag? Esta ação é irreversível e removerá todos os registros relacionados.
+              </p>
+              <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">
+                {tags.find((t) => t.id === confirmingDelete)?.name}
+              </p>
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
+                <Button
+                  onClick={confirmDelete}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de criar/editar tag */}
+      {showForm && (
+        <TagCreateModal
+          open={showForm}
+          onClose={() => {
+            setShowForm(false);
+            setEditingId(null);
+            setFormInitial(null);
+          }}
+          onCreated={async (id) => {
+            setShowForm(false);
+            setEditingId(null);
+            setFormInitial(null);
+            await load();
+            if (onCreated && id) onCreated(id);
+          }}
+          initial={formInitial}
+        />
       )}
     </div>
   );

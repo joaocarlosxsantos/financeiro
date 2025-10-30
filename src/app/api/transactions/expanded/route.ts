@@ -71,10 +71,18 @@ function expandRecurringTransaction(
   toDate: Date,
   isExpense: boolean
 ): ExpandedTransaction[] {
-  if (!transaction.dayOfMonth) return [];
+
+  // Usa dayOfMonth se existir, senão usa o dia de startDate, senão dia 1
+  let dayOfMonth = transaction.dayOfMonth;
+  if (!dayOfMonth) {
+    if (transaction.startDate) {
+      dayOfMonth = new Date(transaction.startDate).getUTCDate();
+    } else {
+      dayOfMonth = 1;
+    }
+  }
 
   const expanded: ExpandedTransaction[] = [];
-  const dayOfMonth = transaction.dayOfMonth;
 
   // Começar do primeiro mês do período
   let currentYear = fromDate.getFullYear();

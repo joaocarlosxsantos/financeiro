@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CategoryCreateModal } from '@/components/ui/category-create-modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMonth } from '@/components/providers/month-provider';
 import { Edit, Trash2, Plus, Tag, ArrowLeft, ArrowRight, Calendar, FolderOpen, TrendingUp, TrendingDown } from 'lucide-react';
@@ -29,14 +31,8 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
   const { currentDate, setCurrentDate } = useMonth();
 
   const [showForm, setShowForm] = useState(false);
+  const [formInitial, setFormInitial] = useState<{ id?: string; name?: string; color?: string; type?: 'EXPENSE' | 'INCOME' | 'BOTH'; icon?: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [errors, setErrors] = useState<{ name?: string }>({});
-  const [color, setColor] = useState('var(--c-3b82f6)');
-
-  // (Removido useEffect de sincronização de cor, pois resetForm já garante o valor correto)
-  const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'BOTH'>('EXPENSE');
-  const [icon, setIcon] = useState('');
 
   // Navegação de mês
   const handlePrevMonth = () => {
@@ -74,10 +70,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
   // Função para resetar o formulário
   const resetForm = (cat?: Category) => {
     setEditingId(cat ? cat.id : null);
-    setName(cat ? cat.name : '');
-  setColor(cat ? cat.color : 'var(--c-3b82f6)');
-    setType(cat ? cat.type : 'EXPENSE');
-    setIcon(cat && cat.icon ? cat.icon : '');
+    setFormInitial(cat ? { id: cat.id, name: cat.name, color: cat.color, type: cat.type, icon: cat.icon } : null);
     setTimeout(() => setShowForm(true), 0);
   };
 
@@ -88,52 +81,25 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
     }
   };
 
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleDelete = async (id: string) => {
+    setDeleteLoading(true);
+    setDeleteError(null);
     const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    setDeleteLoading(false);
     if (res.ok) {
       setCategories(categories.filter((c) => c.id !== id));
+      setDeleteId(null);
     } else {
       const error = await res.json();
-      alert(error.error || 'Erro ao excluir categoria');
+      setDeleteError(error.error || 'Erro ao excluir categoria');
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: { name?: string } = {};
-    if (!name.trim()) newErrors.name = 'Nome é obrigatório.';
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-    if (editingId) {
-      const res = await fetch(`/api/categories/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, color, type, icon: icon || undefined }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setCategories((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-      }
-    } else {
-      const res = await fetch('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, color, type, icon: icon || undefined }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        setCategories((prev) => [created, ...prev]);
-        if (onCreated) onCreated(created.id);
-      }
-    }
-    setShowForm(false);
-    setEditingId(null);
-    setName('');
-  setColor('var(--c-3b82f6)');
-    setType('EXPENSE');
-    setIcon('');
-    setErrors({});
-  };
+
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -192,7 +158,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
                : activeTab === 'despesas' ? 'Nenhuma categoria de despesas cadastrada'
                : 'Nenhuma categoria de rendas cadastrada'}
             </p>
-            <Button className="mt-4" onClick={() => setShowForm(true)}>
+        <Button className="mt-4" onClick={() => resetForm(undefined)}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeira Categoria
             </Button>
@@ -229,12 +195,23 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => handleDelete(category.id)}
+                    onClick={() => setDeleteId(category.id)}
                     disabled={category.name === 'Transferência entre Contas' && category.type === 'BOTH'}
                     title={category.name === 'Transferência entre Contas' && category.type === 'BOTH' ? 'Esta categoria não pode ser excluída' : undefined}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+      {/* Modal de confirmação de exclusão */}
+      <ConfirmModal
+        open={!!deleteId}
+        title="Excluir categoria"
+        description={deleteError ? deleteError : 'Tem certeza que deseja excluir esta categoria? Essa ação não poderá ser desfeita.'}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        loading={deleteLoading}
+        onConfirm={() => deleteId && handleDelete(deleteId)}
+        onCancel={() => { setDeleteId(null); setDeleteError(null); }}
+      />
                 </div>
               </div>
             </CardContent>
@@ -278,7 +255,7 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
           </Button>
         </div>
         
-        <Button onClick={() => resetForm(undefined)}>
+  <Button onClick={() => resetForm(undefined)}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Categoria
         </Button>
@@ -394,74 +371,29 @@ export function CategoriasContent({ onCreated }: CategoriasContentProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Formulário */}
+      {/* Modal de criar/editar categoria */}
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? 'Editar Categoria' : 'Nova Categoria'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Nome</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ex: Alimentação"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  {errors.name && <span className="text-red-600 text-xs">{errors.name}</span>}
-                </div>
-                <div>
-                  <Label htmlFor="color">Cor</Label>
-                  <Input
-                    id="color"
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="type">Tipo</Label>
-                  <select
-                    id="type"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={type}
-                    onChange={(e) => setType(e.target.value as 'EXPENSE' | 'INCOME' | 'BOTH')}
-                  >
-                    <option value="EXPENSE">Despesa</option>
-                    <option value="INCOME">Renda</option>
-                    <option value="BOTH">Ambos</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="icon">Ícone (Opcional)</Label>
-                  <Input
-                    id="icon"
-                    placeholder="Ex: 🍕"
-                    value={icon}
-                    onChange={(e) => setIcon(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-2">
-                <Button type="submit">{editingId ? 'Atualizar' : 'Cadastrar'}</Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingId(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <CategoryCreateModal
+          open={showForm}
+          onClose={() => {
+            setShowForm(false);
+            setEditingId(null);
+            setFormInitial(null);
+          }}
+          onCreated={async (id) => {
+            setShowForm(false);
+            setEditingId(null);
+            setFormInitial(null);
+            // reload categories
+            const res = await fetch('/api/categories', { cache: 'no-store' });
+            if (res.ok) {
+              const data = await res.json();
+              setCategories(data);
+            }
+            if (onCreated && id) onCreated(id);
+          }}
+          initial={formInitial}
+        />
       )}
     </div>
   );

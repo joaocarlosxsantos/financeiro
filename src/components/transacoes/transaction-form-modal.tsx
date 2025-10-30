@@ -23,12 +23,17 @@ export function TransactionFormModal({
   categories = [],
   wallets = [],
 }: TransactionFormModalProps) {
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     description: '',
     amount: '',
     date: '',
     categoryId: '',
     walletId: '',
+    type: 'expense', // 'expense' ou 'income'
+    recurring: false,
+    recurringStart: today,
+    recurringEnd: '',
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -40,7 +45,13 @@ export function TransactionFormModal({
         date: initialData.date ? initialData.date.slice(0, 10) : '',
         categoryId: initialData.categoryId || '',
         walletId: initialData.walletId || '',
+        type: initialData.type || 'expense',
+        recurring: initialData.recurring || false,
+        recurringStart: initialData.recurringStart || today,
+        recurringEnd: initialData.recurringEnd || '',
       });
+    } else {
+      setForm(f => ({ ...f, recurringStart: today }));
     }
   }, [initialData]);
 
@@ -57,7 +68,50 @@ export function TransactionFormModal({
 
   return (
     <Modal open={open} onClose={onClose} title={title}>
-      <form className="space-y-3" onSubmit={handleSubmit}>
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+        <div>
+          <Label htmlFor="type">Tipo</Label>
+          <select
+            id="type"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+            value={form.type}
+            onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+          >
+            <option value="expense">Gasto</option>
+            <option value="income">Ganho</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            id="recurring"
+            type="checkbox"
+            checked={form.recurring}
+            onChange={e => setForm(f => ({ ...f, recurring: e.target.checked }))} 
+          />
+          <Label htmlFor="recurring">Recorrente</Label>
+        </div>
+        {form.recurring && (
+          <>
+            <div>
+              <Label htmlFor="recurringStart">Início</Label>
+              <Input
+                id="recurringStart"
+                type="date"
+                value={form.recurringStart}
+                onChange={e => setForm(f => ({ ...f, recurringStart: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="recurringEnd">Fim</Label>
+              <Input
+                id="recurringEnd"
+                type="date"
+                value={form.recurringEnd}
+                onChange={e => setForm(f => ({ ...f, recurringEnd: e.target.value }))}
+              />
+            </div>
+          </>
+        )}
         <div>
           <Label htmlFor="description">Descrição</Label>
           <Input
@@ -116,7 +170,7 @@ export function TransactionFormModal({
             ))}
           </select>
         </div>
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex justify-end gap-2 mt-4 md:col-span-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
           <Button type="submit">Salvar</Button>
         </div>
