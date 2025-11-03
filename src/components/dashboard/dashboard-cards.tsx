@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import QuickDespesaForm from '../quick-add/quick-despesa-form';
 import QuickRendaForm from '../quick-add/quick-renda-form';
+import QuickCardForm from '../quick-add/quick-card-form';
 import QuickTransferForm from '../quick-add/quick-transfer-form';
 import type { Summary } from '@/hooks/use-dashboard-state';
 
@@ -64,8 +65,8 @@ interface DashboardCardsProps {
 
   quickAddOpen: boolean;
   setQuickAddOpen: (v: boolean) => void;
-  quickTab: 'despesa' | 'renda' | 'transferencia';
-  setQuickTab: (v: 'despesa' | 'renda' | 'transferencia') => void;
+  quickTab: 'despesa' | 'renda' | 'cartao' | 'transferencia';
+  setQuickTab: (v: 'despesa' | 'renda' | 'cartao' | 'transferencia') => void;
 
   // Tour
   onTourClick?: () => void;
@@ -522,11 +523,11 @@ export function DashboardCards({
       {/* Quick Add Modal */}
       <Modal open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Adicionar rápido">
         <div className="space-y-4">
-          <div className="flex gap-2 mb-2">
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               type="button"
               onClick={() => setQuickTab('despesa')}
-              className={`border rounded-md py-2 px-3 flex-1 transition-colors text-sm font-medium
+              className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'despesa'
                     ? 'bg-primary text-white border-primary shadow'
@@ -539,7 +540,7 @@ export function DashboardCards({
             <button
               type="button"
               onClick={() => setQuickTab('renda')}
-              className={`border rounded-md py-2 px-3 flex-1 transition-colors text-sm font-medium
+              className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'renda'
                     ? 'bg-primary text-white border-primary shadow'
@@ -551,8 +552,21 @@ export function DashboardCards({
             </button>
             <button
               type="button"
+              onClick={() => setQuickTab('cartao')}
+              className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
+                ${
+                  quickTab === 'cartao'
+                    ? 'bg-primary text-white border-primary shadow'
+                    : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                }
+              `}
+            >
+              Cartão
+            </button>
+            <button
+              type="button"
               onClick={() => setQuickTab('transferencia')}
-              className={`border rounded-md py-2 px-3 flex-1 transition-colors text-sm font-medium
+              className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'transferencia'
                     ? 'bg-primary text-white border-primary shadow'
@@ -568,6 +582,8 @@ export function DashboardCards({
               <QuickDespesaForm />
             ) : quickTab === 'renda' ? (
               <QuickRendaForm />
+            ) : quickTab === 'cartao' ? (
+              <QuickCardForm onSuccess={onQuickAddSuccess} />
             ) : (
               <QuickTransferForm onSuccess={onQuickAddSuccess} />
             )}

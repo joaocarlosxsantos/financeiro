@@ -106,8 +106,8 @@ export interface DashboardStateReturn {
   // Modal states
   quickAddOpen: boolean;
   setQuickAddOpen: (v: boolean) => void;
-  quickTab: 'despesa' | 'renda' | 'transferencia';
-  setQuickTab: (v: 'despesa' | 'renda' | 'transferencia') => void;
+  quickTab: 'despesa' | 'renda' | 'cartao' | 'transferencia';
+  setQuickTab: (v: 'despesa' | 'renda' | 'cartao' | 'transferencia') => void;
   modal: null | 'income' | 'expense' | 'balance' | 'diff';
   setModal: (v: null | 'income' | 'expense' | 'balance' | 'diff') => void;
   chartModal: null | 'monthly' | 'top' | 'dailyCategory' | 'dailyWallet' | 'dailyTag';
@@ -170,7 +170,7 @@ export function useDashboardState(): DashboardStateReturn {
 
   // ===== Modal states =====
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [quickTab, setQuickTab] = useState<'despesa' | 'renda' | 'transferencia'>('despesa');
+  const [quickTab, setQuickTab] = useState<'despesa' | 'renda' | 'cartao' | 'transferencia'>('despesa');
   const [modal, setModal] = useState<null | 'income' | 'expense' | 'balance' | 'diff'>(null);
   const [chartModal, setChartModal] = useState<
     null | 'monthly' | 'top' | 'dailyCategory' | 'dailyWallet' | 'dailyTag'
