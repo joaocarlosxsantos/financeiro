@@ -48,89 +48,146 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 @layer base {
   :root {
-  /* Fundo claro azul um pouco mais escuro para melhor contraste */
-  --background: 218 50% 95%; /* Ajustado de 97% -> 95% de lightness */
-    --foreground: 220 15% 10%; /* Preto suave */
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 10%;
+    /* 🎨 TEMA CLARO - Azul Profissional + Verde Financeiro */
+    
+    /* Fundos e Superfícies */
+    --background: 210 40% 98%;        /* Azul bem claro, quase branco */
+    --foreground: 222 47% 11%;        /* Azul escuro profundo para texto */
+    
+    --card: 0 0% 100%;                /* Branco puro para cards */
+    --card-foreground: 222 47% 11%;   /* Azul escuro para texto em cards */
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 10%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 0 0% 100%; /* Branco puro para botões */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 220 15% 10%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 220 12% 35%; /* Cinza mais escuro para melhor contraste */
-    --accent: 210 40% 96%;
-    --accent-foreground: 220 15% 10%;
-    --destructive: 0 84.2% 60.2%;
+    --popover-foreground: 222 47% 11%;
+    
+    /* Primary - Azul Profissional */
+    --primary: 217 91% 60%;           /* Azul vibrante e confiável #3b82f6 */
+    --primary-foreground: 0 0% 100%;  /* Branco para contraste */
+    
+    /* Secondary - Roxo Elegante */
+    --secondary: 262 83% 58%;         /* Roxo moderno #7c3aed */
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Muted - Cinza Azulado */
+    --muted: 210 40% 96%;             /* Cinza azulado claro */
+    --muted-foreground: 215 16% 47%;  /* Cinza médio azulado */
+    
+    /* Accent - Verde Financeiro */
+    --accent: 142 76% 36%;            /* Verde sucesso #10b981 */
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive - Vermelho */
+    --destructive: 0 84% 60%;         /* Vermelho vibrante #ef4444 */
     --destructive-foreground: 0 0% 100%;
-    --border: 214.3 31.8% 88%; /* Bordas um pouco mais escuras para melhor contraste */
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    
+    /* Bordas e Inputs */
+    --border: 214 32% 91%;            /* Borda azul claro */
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;              /* Anel de foco azul */
+    
     --radius: 0.5rem;
-  /* sidebar gradient tokens */
-  --sidebar-grad-start: 217 20% 13%;
-  --sidebar-grad-end: 220 12% 5%;
-  /* palette variables for existing hardcoded colors (brand & fallback) */
-  --c-22c55e: #22c55e;
-  --c-64748b: #64748b;
-  --c-ff7f00: #ff7f00;
-  --c-820ad1: #820ad1;
-  --c-0c6cb0: #0c6cb0;
-  --c-d90429: #d90429;
-  --c-ec0000: #ec0000;
-  --c-ff6600: #ff6600;
-  --c-ffcc29: #ffcc29;
-  --c-3b82f6: #3b82f6;
-  --c-ff0057: #ff0057;
-  --c-00995d: #00995d;
-  --c-e94e1b: #e94e1b;
-  --c-00a859: #00a859;
-  --c-f59e42: #f59e42;
-  --c-a3a3a3: #a3a3a3;
-  --c-6366f1: #6366f1;
-  /* semantic colors (H S% L%) so callers can use hsl(var(--success)) */
-  --success: 145 63% 42%; /* ~ #10b981 */
-  --success-foreground: 0 0% 100%;
-  --danger: 6 78% 58%; /* ~ #ef4444 */
-  --danger-foreground: 0 0% 100%;
+    
+    /* Sidebar - Gradiente Azul Profundo */
+    --sidebar-grad-start: 217 91% 60%;
+    --sidebar-grad-end: 222 47% 11%;
+    --sidebar-grad-start: 217 91% 60%;
+    --sidebar-grad-end: 222 47% 11%;
+    
+    /* 🎨 Cores de Marca e Hardcoded (mantidas para compatibilidade) */
+    --c-22c55e: #22c55e;  /* Verde */
+    --c-64748b: #64748b;  /* Cinza */
+    --c-ff7f00: #ff7f00;  /* Laranja */
+    --c-820ad1: #820ad1;  /* Roxo */
+    --c-0c6cb0: #0c6cb0;  /* Azul */
+    --c-d90429: #d90429;  /* Vermelho */
+    --c-ec0000: #ec0000;  /* Vermelho Forte */
+    --c-ff6600: #ff6600;  /* Laranja Escuro */
+    --c-ffcc29: #ffcc29;  /* Amarelo */
+    --c-3b82f6: #3b82f6;  /* Azul Primary */
+    --c-ff0057: #ff0057;  /* Rosa */
+    --c-00995d: #00995d;  /* Verde Escuro */
+    --c-e94e1b: #e94e1b;  /* Laranja Vermelho */
+    --c-00a859: #00a859;  /* Verde Menta */
+    --c-f59e42: #f59e42;  /* Laranja Claro */
+    --c-a3a3a3: #a3a3a3;  /* Cinza Médio */
+    --c-6366f1: #6366f1;  /* Índigo */
+    
+    /* Cores Semânticas */
+    --success: 142 76% 36%;          /* Verde sucesso #10b981 */
+    --success-foreground: 0 0% 100%;
+    --danger: 0 84% 60%;             /* Vermelho perigo #ef4444 */
+    --danger-foreground: 0 0% 100%;
+    
+    /* Cores para Gráficos - Paleta Vibrante e Distinta */
+    --chart-1: 217 91% 60%;          /* Azul Primary */
+    --chart-2: 142 76% 36%;          /* Verde */
+    --chart-3: 262 83% 58%;          /* Roxo */
+    --chart-4: 25 95% 53%;           /* Laranja */
+    --chart-5: 346 77% 50%;          /* Rosa/Vermelho */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 0 0% 100%; /* Branco puro */
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 0 0% 100%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 0 0% 100%; /* Branco puro para botões */
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 210 10% 70%; /* Cinza claro para contraste */
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-  --success: 145 63% 42%;
-  --success-foreground: 0 0% 100%;
-  --danger: 6 78% 58%;
-  --danger-foreground: 0 0% 100%;
+    /* 🎨 TEMA ESCURO - Azul Profundo + Verde Neon */
+    
+    /* Fundos e Superfícies */
+    --background: 222 47% 11%;       /* Azul escuro profundo */
+    --foreground: 210 40% 98%;       /* Azul claro quase branco */
+    
+    --card: 217 33% 17%;             /* Azul escuro médio para cards */
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary - Azul Brilhante */
+    --primary: 217 91% 60%;          /* Azul vibrante */
+    --primary-foreground: 222 47% 11%; /* Azul escuro para contraste */
+    
+    /* Secondary - Roxo Neon */
+    --secondary: 262 83% 58%;        /* Roxo brilhante */
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Muted - Cinza Azulado Escuro */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%; /* Cinza azulado claro */
+    
+    /* Accent - Verde Neon */
+    --accent: 142 76% 36%;           /* Verde brilhante */
+    --accent-foreground: 210 40% 98%;
+    
+    /* Destructive - Vermelho Brilhante */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Bordas e Inputs */
+    --border: 217 33% 24%;           /* Borda azul escuro */
+    --input: 217 33% 24%;
+    --ring: 217 91% 60%;
+    
+    /* Cores Semânticas */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+    
+    /* Cores para Gráficos - Versão Mais Brilhante para Tema Escuro */
+    --chart-1: 217 91% 70%;          /* Azul mais claro */
+    --chart-2: 142 76% 46%;          /* Verde mais brilhante */
+    --chart-3: 262 83% 68%;          /* Roxo mais claro */
+    --chart-4: 25 95% 63%;           /* Laranja mais claro */
+    --chart-5: 346 77% 60%;          /* Rosa mais brilhante */
   }
 }
 
-/* Sidebar background utility (use instead of inline bg-[radial-gradient(...)] classes) */
+/* Sidebar background utility - Cor sólida sem gradiente */
 @layer components {
   .sidebar-bg {
-    background-image: radial-gradient(circle at 30% 20%, hsl(var(--sidebar-grad-start)) 0%, hsl(var(--sidebar-grad-end)) 60%);
+    /* Tema Claro: Azul sólido profissional */
+    background-color: hsl(222 47% 11%);  /* Azul escuro profundo */
   }
   .dark .sidebar-bg {
-    background-image: radial-gradient(circle at 30% 20%, hsl(220 12% 5%) 0%, hsl(220 8% 2%) 65%);
+    /* Tema Escuro: Azul escuro sólido */
+    background-color: hsl(217 33% 14%);  /* Azul escuro médio */
   }
 }
 
@@ -203,15 +260,15 @@ input[type='date']::-webkit-calendar-picker-indicator {
 /* Scrollbar customizado (Webkit + Firefox) */
 @layer base {
   :root {
-    --scrollbar-track: hsl(var(--muted));
-    --scrollbar-thumb: hsl(var(--primary) / 0.35);
-    --scrollbar-thumb-hover: hsl(var(--primary) / 0.55);
+    --scrollbar-track: hsl(210 40% 96%);           /* Azul claro */
+    --scrollbar-thumb: hsl(217 91% 60% / 0.4);     /* Azul semi-transparente */
+    --scrollbar-thumb-hover: hsl(217 91% 60% / 0.7); /* Azul mais forte */
     --scrollbar-corner: hsl(var(--background));
   }
   .dark {
-    --scrollbar-track: hsl(var(--secondary));
-    --scrollbar-thumb: hsl(var(--primary) / 0.45);
-    --scrollbar-thumb-hover: hsl(var(--primary) / 0.65);
+    --scrollbar-track: hsl(217 33% 17%);           /* Azul escuro */
+    --scrollbar-thumb: hsl(217 91% 60% / 0.5);     /* Azul brilhante */
+    --scrollbar-thumb-hover: hsl(217 91% 60% / 0.8);
     --scrollbar-corner: hsl(var(--background));
   }
 
@@ -283,5 +340,14 @@ input[type='date']::-webkit-calendar-picker-indicator {
   .page-transition-loading,
   .navigation-loading {
     display: none !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }

@@ -34,9 +34,9 @@ export function FinancialHealthChart({ data }: FinancialHealthChartProps) {
   }, [data]);
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'bg-gradient-to-t from-green-500 to-green-400';
-    if (score >= 60) return 'bg-gradient-to-t from-yellow-500 to-yellow-400';
-    return 'bg-gradient-to-t from-red-500 to-red-400';
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   const getScoreBorderColor = (score: number) => {
@@ -123,15 +123,15 @@ export function FinancialHealthChart({ data }: FinancialHealthChartProps) {
           {/* Legenda melhorada */}
           <div className="flex flex-wrap justify-center gap-4 text-xs bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gradient-to-t from-green-500 to-green-400 rounded-full border border-green-600"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-full border border-green-600"></div>
               <span className="font-medium">Excelente (80+)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-full border border-yellow-600"></div>
+              <div className="w-3 h-3 bg-yellow-500 rounded-full border border-yellow-600"></div>
               <span className="font-medium">Boa (60-79)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gradient-to-t from-red-500 to-red-400 rounded-full border border-red-600"></div>
+              <div className="w-3 h-3 bg-red-500 rounded-full border border-red-600"></div>
               <span className="font-medium">Atenção (&lt;60)</span>
             </div>
           </div>

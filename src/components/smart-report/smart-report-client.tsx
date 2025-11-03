@@ -457,7 +457,7 @@ export default function SmartReportClient() {
 
 
       {/* Score de Saúde Financeira */}
-      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+      <Card className="bg-card border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />

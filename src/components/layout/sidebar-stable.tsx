@@ -162,7 +162,7 @@ const NavItem = React.memo(({ item, active, onClick, isSubItem = false }: {
         'sidebar-desktop-layout', // CSS responsivo
         isSubItem ? 'px-4 ml-6' : 'px-3',
         active
-          ? 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow-md transform scale-[1.02]'
+          ? 'bg-primary text-primary-foreground shadow-md'
           : isSubItem 
             ? 'text-white/65 hover:text-white/90 hover:bg-white/8'
             : 'text-white/70 hover:text-white/90 hover:bg-white/5'

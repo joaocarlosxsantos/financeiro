@@ -37,9 +37,9 @@ function BaseCard({ onClick, children, variant = "neutral" }: BaseCardProps) {
       onKeyDown={handleKeyDown}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
-      className={`group relative flex flex-col gap-3 overflow-hidden rounded-xl border bg-gradient-to-br p-4 transition-all ${variantClasses} card-shadow ${isClickable ? 'clickable' : ''}`}
+      className={`group relative flex flex-col gap-3 overflow-hidden rounded-xl border p-4 transition-all ${variantClasses} card-shadow ${isClickable ? 'clickable' : ''}`}
     >
-      <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.6),transparent_60%)] dark:bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.08),transparent_70%)]" />
+      <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none bg-white/10 dark:bg-white/5" />
       {children}
     </div>
   );

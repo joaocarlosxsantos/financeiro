@@ -189,7 +189,7 @@ const NavItem = React.memo(({ item, active, onClick, isSubItem = false }: { item
         isMobile ? 'py-3 px-4 min-h-[48px]' : 'py-2',
         isSubItem && !isMobile ? 'px-4 ml-6' : !isSubItem ? 'px-3' : 'px-4 ml-4',
         active
-          ? 'bg-gradient-to-r from-primary/90 to-primary text-primary-foreground shadow-md transform scale-[1.02]'
+          ? 'bg-primary text-primary-foreground shadow-md'
           : isSubItem 
             ? 'text-white/65 hover:text-white/90 hover:bg-white/8 hover:ml-7 hover:shadow-sm'
             : 'text-white/70 hover:text-white/90 hover:bg-white/5'

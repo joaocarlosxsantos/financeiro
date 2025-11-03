@@ -18,14 +18,8 @@
  */
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Modal } from '@/components/ui/modal';
 import { Loader } from '@/components/ui/loader';
-import { useIsMobile } from '@/hooks/use-is-mobile';
-import MobileChartDetailList from './mobile-chart-detail-list';
-import { getWalletColor } from './daily-wallet-chart';
-import { formatCurrency } from '@/lib/utils';
 
 // Dynamic imports para gráficos (lazy loading)
 const DailyCategoryChart = dynamic(
@@ -146,10 +140,7 @@ export function DashboardCharts({
   tagData = [],
   isDemoMode = false,
 }: DashboardChartsProps): JSX.Element {
-  const isMobile = useIsMobile();
-  const [chartModal, setChartModal] = useState<
-    null | 'monthly' | 'top' | 'dailyCategory' | 'dailyWallet' | 'dailyTag'
-  >(null);
+  // Removida a variável isMobile pois não é mais usada após remoção dos modais
 
   return (
     <>
@@ -157,8 +148,6 @@ export function DashboardCharts({
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
         {/* Ganhos por Categoria */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setModal('income')}
           data-tour="chart-income-category"
         >
           <CardHeader>
@@ -174,16 +163,11 @@ export function DashboardCharts({
                 Sem dados para o período selecionado
               </div>
             )}
-            {summary.incomesByCategory.length > 5 && (
-              <div className="mt-2 text-[10px] text-muted-foreground">Clique para ver todas</div>
-            )}
           </CardContent>
         </Card>
 
         {/* Gastos por Categoria */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setModal('expense')}
           data-tour="chart-expense-category"
         >
           <CardHeader>
@@ -199,9 +183,6 @@ export function DashboardCharts({
                 Sem dados para o período selecionado
               </div>
             )}
-            {summary.expensesByCategory.length > 5 && (
-              <div className="mt-2 text-[10px] text-muted-foreground">Clique para ver todas</div>
-            )}
           </CardContent>
         </Card>
 
@@ -213,8 +194,6 @@ export function DashboardCharts({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
         {/* Gasto Diário por Categoria */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setChartModal('dailyCategory')}
           data-tour="chart-daily-category"
         >
           <CardHeader>
@@ -240,8 +219,6 @@ export function DashboardCharts({
 
         {/* Gasto Diário por Carteira */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setChartModal('dailyWallet')}
           data-tour="chart-daily-wallet"
         >
           <CardHeader>
@@ -265,8 +242,6 @@ export function DashboardCharts({
 
         {/* Gasto Diário por Tag */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setChartModal('dailyTag')}
           data-tour="chart-daily-tag"
         >
           <CardHeader>
@@ -329,8 +304,6 @@ export function DashboardCharts({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
         {/* Gráfico Mensal */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setChartModal('monthly')}
           data-tour="chart-monthly-bar"
         >
           <CardHeader>
@@ -351,8 +324,6 @@ export function DashboardCharts({
 
         {/* Top Categorias */}
         <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => setChartModal('top')}
           data-tour="chart-top-categories"
         >
           <CardHeader>
@@ -371,118 +342,6 @@ export function DashboardCharts({
           </CardContent>
         </Card>
       </div>
-
-      {/* MODAIS AMPLIADOS - Exibição em tela cheia no mobile */}
-      <Modal
-        open={chartModal !== null}
-        onClose={() => setChartModal(null)}
-        title={chartModal ? 'Visualizar gráfico' : undefined}
-        size="full"
-      >
-        {chartModal === 'dailyCategory' && (
-          <div className="h-full flex flex-col">
-            {isMobile && dailyByCategory.length > 0 && (
-              <MobileChartDetailList
-                dailyData={dailyByCategory}
-              />
-            )}
-            {chartsLoaded && dailyByCategory.length > 0 ? (
-              <DailyCategoryChart
-                data={dailyByCategory}
-                categoryColors={Object.fromEntries(
-                  summary.expensesByCategory.map((c) => [c.category, c.color]),
-                )}
-                height={'100%'}
-              />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </div>
-        )}
-
-        {chartModal === 'dailyWallet' && (
-          <div className="h-full flex flex-col">
-            {isMobile && dailyByWallet.length > 0 && (
-              <MobileChartDetailList
-                dailyData={dailyByWallet}
-              />
-            )}
-            {chartsLoaded && dailyByWallet.length > 0 ? (
-              <DailyWalletChart 
-                data={dailyByWallet} 
-                walletsMeta={wallets.map((w) => ({ name: w.name, type: w.type || 'cash' }))} 
-                height={'100%'} 
-              />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </div>
-        )}
-
-        {chartModal === 'dailyTag' && (
-          <div className="h-full flex flex-col">
-            {isMobile && dailyByTag.length > 0 && (
-              <MobileChartDetailList
-                dailyData={dailyByTag}
-              />
-            )}
-            {chartsLoaded && dailyByTag.length > 0 ? (
-              <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} height={'100%'} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </div>
-        )}
-
-        {chartModal === 'monthly' && (
-          <div className="h-full flex flex-col">
-            {isMobile && summary.monthlyData.length > 0 && (
-              <MobileChartDetailList
-                dailyData={summary.monthlyData.map((m) => ({
-                  date: m.month,
-                  income: m.income,
-                  expense: m.expense,
-                  balance: m.balance,
-                }))}
-              />
-            )}
-            {chartsLoaded && summary.monthlyData.length > 0 ? (
-              <MonthlyBarChart data={summary.monthlyData} height={'100%'} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </div>
-        )}
-
-        {chartModal === 'top' && (
-          <div className="h-full flex flex-col">
-            {isMobile && summary.topExpenseCategories.length > 0 && (
-              <MobileChartDetailList
-                dailyData={summary.topExpenseCategories.map((c) => ({
-                  category: c.category,
-                  amount: c.amount,
-                  diff: c.diff,
-                }))}
-              />
-            )}
-            {chartsLoaded && summary.topExpenseCategories.length > 0 ? (
-              <TopExpenseCategoriesChart data={summary.topExpenseCategories} height={'100%'} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
     </>
   );
 }

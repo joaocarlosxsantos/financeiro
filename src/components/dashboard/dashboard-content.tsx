@@ -16,7 +16,6 @@
 import { useDashboardState } from '@/hooks/use-dashboard-state';
 import { DashboardCards } from './dashboard-cards';
 import { DashboardCharts } from './dashboard-charts';
-import { DashboardTransactionsExpanded } from './dashboard-transactions-expanded';
 import OnboardingTour from '@/components/OnboardingTour';
 
 /**
@@ -76,16 +75,6 @@ export function DashboardContent() {
         isDemoMode={state.isDemoMode}
       />
 
-      {/* Transações Expandidas */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Transações do Mês
-        </h2>
-        <DashboardTransactionsExpanded
-          year={state.currentDate.getFullYear()}
-          month={state.currentDate.getMonth() + 1}
-        />
-      </div>
 
       {/* Tour */}
       <OnboardingTour open={state.tourOpen} onClose={() => state.setTourOpen(false)} />
