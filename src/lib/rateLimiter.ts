@@ -160,6 +160,37 @@ export const RATE_LIMITS = {
     maxRequests: 5,
     windowMs: 15 * 60 * 1000, // 15 minutes
     message: 'Muitas tentativas de exclusão. Aguarde antes de tentar novamente.'
+  },
+  
+  // Financial operations limits
+  TRANSACTIONS_CREATE: {
+    maxRequests: 50,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: 'Limite de criação de transações excedido. Aguarde 15 minutos.'
+  },
+  
+  TRANSACTIONS_UPDATE: {
+    maxRequests: 60,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: 'Limite de atualização de transações excedido. Aguarde 15 minutos.'
+  },
+  
+  TRANSACTIONS_DELETE: {
+    maxRequests: 30,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: 'Limite de exclusão de transações excedido. Aguarde 15 minutos.'
+  },
+  
+  IMPORT_EXTRACT: {
+    maxRequests: 10,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: 'Limite de importação de extratos excedido. Aguarde 15 minutos.'
+  },
+  
+  APIKEY_OPERATIONS: {
+    maxRequests: 5,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: 'Limite de operações com API Key excedido. Aguarde 15 minutos.'
   }
 } as const;
 

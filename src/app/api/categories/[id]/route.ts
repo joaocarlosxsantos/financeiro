@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -9,7 +10,20 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { name, color, type, icon } = await req.json();
+  const body = await req.json();
+  const categoryUpdateSchema = z.object({
+    name: z.string().min(1, 'Nome é obrigatório').optional(),
+    color: z.string().optional(),
+    type: z.enum(['EXPENSE', 'INCOME', 'BOTH']).optional(),
+    icon: z.string().optional().nullable(),
+  });
+  
+  const parse = categoryUpdateSchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json({ error: parse.error.issues.map(e => e.message).join(', ') }, { status: 400 });
+  }
+  
+  const { name, color, type, icon } = parse.data;
   try {
     const updated = await prisma.category.update({
       where: { id: params.id, userId: user.id },

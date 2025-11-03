@@ -50,6 +50,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { parseInputDateBrasilia, createBrasiliaDate } from '@/lib/datetime-brasilia';
+import { withUserRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
 
 function parseFlexibleDate(input?: string | null): Date | undefined {
   if (!input) return undefined;
@@ -202,6 +203,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Apply rate limiting
+  const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.TRANSACTIONS_CREATE);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const body = await req.json();
   const expenseSchema = z.object({

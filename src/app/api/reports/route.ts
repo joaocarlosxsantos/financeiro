@@ -24,10 +24,20 @@ export async function GET(req: Request) {
   const type = qp.get('type') || 'both';
   const startDate = qp.get('startDate');
   const endDate = qp.get('endDate');
-  const categoryIds = qp.get('categoryIds') ? qp.get('categoryIds')!.split(',').filter(Boolean) : undefined;
-  const walletIds = qp.get('walletIds') ? qp.get('walletIds')!.split(',').filter(Boolean) : undefined;
-  const creditCardIds = qp.get('creditCardIds') ? qp.get('creditCardIds')!.split(',').filter(Boolean) : undefined;
-  const tags = qp.get('tags') ? qp.get('tags')!.split(',').filter(Boolean) : undefined;
+  const categoryIds = qp.get('categoryIds') ? qp.get('categoryIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
+  const walletIds = qp.get('walletIds') ? qp.get('walletIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
+  const creditCardIds = qp.get('creditCardIds') ? qp.get('creditCardIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
+  
+  // Sanitize tags input to prevent injection attacks
+  const tags = qp.get('tags') 
+    ? qp.get('tags')!
+        .split(',')
+        .filter(Boolean)
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0 && tag.length <= 100) // Limit tag length
+        .map(tag => tag.replace(/[^\w\s\-\_\.]/g, '')) // Remove special chars except alphanumeric, spaces, dashes, underscores, dots
+    : undefined;
+    
   const page = Number(qp.get('page') || '1');
   const pageSize = Math.min(500, Math.max(1, Number(qp.get('pageSize') || '50')));
   const debugFlag = qp.get('debug') === '1';

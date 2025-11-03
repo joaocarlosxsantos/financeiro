@@ -7,21 +7,23 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = (session.user as any).id;
-  // Validate user exists to avoid returning tags for non-existing user id (defensive)
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: 'Usuário não encontrado. Faça login novamente.' }, { status: 401 });
 
-  const tags = await prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+  const tags = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: 'asc' } });
   // Return without caching headers to ensure clients always get fresh data
   return NextResponse.json(tags);
 }
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = (session.user as any).id;
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) return NextResponse.json({ error: 'Usuário não encontrado. Faça login novamente.' }, { status: 401 });
+  
   const body = await req.json();
   const tagSchema = z.object({
     name: z.string().min(1, 'Nome obrigatório'),
@@ -31,12 +33,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parse.error.issues.map(e => e.message).join(', ') }, { status: 400 });
   }
   const { name } = parse.data;
-  // Ensure the user still exists (prevents FK violations if user was removed)
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return NextResponse.json({ error: 'Usuário não encontrado. Faça login novamente.' }, { status: 401 });
 
   try {
-    const tag = await prisma.tag.create({ data: { name, userId } });
+    const tag = await prisma.tag.create({ data: { name, userId: user.id } });
     return NextResponse.json(tag);
   } catch (err: any) {
     // Surface a nicer message for FK or unique constraint issues

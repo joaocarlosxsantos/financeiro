@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { withUserRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
+import { z } from 'zod';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -9,7 +11,32 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Apply rate limiting
+  const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.TRANSACTIONS_UPDATE);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const body = await req.json();
+  
+  // Validação Zod
+  const incomeUpdateSchema = z.object({
+    description: z.string().min(1, 'Descrição é obrigatória').optional(),
+    amount: z.number().positive('Valor deve ser positivo').optional(),
+    date: z.string().optional(),
+    type: z.enum(['RECURRING', 'PUNCTUAL']).optional(),
+    paymentType: z.enum(['DEBIT', 'PIX_TRANSFER', 'CASH', 'OTHER']).optional(),
+    isRecurring: z.boolean().optional(),
+    startDate: z.string().optional().nullable(),
+    endDate: z.string().optional().nullable(),
+    dayOfMonth: z.number().optional().nullable(),
+    categoryId: z.string().optional().nullable(),
+    walletId: z.string().min(1, 'Carteira é obrigatória').optional(),
+    tags: z.array(z.string()).optional(),
+  });
+  
+  const parse = incomeUpdateSchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json({ error: parse.error.issues.map(e => e.message).join(', ') }, { status: 400 });
+  }
   
   // Normalize tags: filter out 'no-tag' values
   let normalizedTags = body.tags ?? [];
@@ -66,11 +93,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Apply rate limiting
+  const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.TRANSACTIONS_DELETE);
+  if (rateLimitResponse) return rateLimitResponse;
 
   try {
     await prisma.income.delete({ where: { id: params.id, userId: user.id } as any });

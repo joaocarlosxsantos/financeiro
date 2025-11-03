@@ -50,7 +50,16 @@ export function UserProfile({ className }: UserProfileProps) {
           const kres = await fetch('/api/user/apikey');
           if (!cancelled && kres.ok) {
             const kd = await kres.json();
-            setApiKey(kd.apiKey || null);
+            // Se tiver chave, buscar versão completa para copiar
+            if (kd.hasKey) {
+              const revealRes = await fetch('/api/user/apikey?reveal=true');
+              if (revealRes.ok) {
+                const revealData = await revealRes.json();
+                setApiKey(revealData.apiKey || null);
+              }
+            } else {
+              setApiKey(null);
+            }
           }
         } catch (e) { /* ignore */ }
       } finally { if (!cancelled) setInitialLoading(false); }

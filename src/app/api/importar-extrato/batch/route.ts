@@ -2,6 +2,7 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { withUserRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +81,19 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
+
+  // Buscar usuário primeiro para rate limiting
+  const user = await prisma.user.findUnique({ 
+    where: { email: session.user.email } 
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
+  }
+
+  // Apply rate limiting
+  const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.IMPORT_EXTRACT);
+  if (rateLimitResponse) return rateLimitResponse;
 
   try {
     const { batches, carteiraId, saldoAnterior, deleteExisting }: BatchImportData = await req.json();

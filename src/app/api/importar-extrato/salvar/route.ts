@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { normalizeDescription } from '@/lib/description-normalizer';
+import { withUserRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
 // Função utilitária para remover acentos (sem dependência externa)
 function removeDiacritics(str: string): string {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -12,6 +13,21 @@ export async function POST(req: NextRequest) {
   if (!session || !session.user || !session.user.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
+
+  // Buscar usuário primeiro para rate limiting
+  const user = await prisma.user.findUnique({ 
+    where: { email: session.user.email },
+    select: { id: true }
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
+  }
+
+  // Apply rate limiting
+  const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.IMPORT_EXTRACT);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const { registros, carteiraId, deleteExisting } = await req.json();
   // registros: array de lançamentos extraídos do extrato (esperamos objetos com campos definidos)
   type ImportRow = { 
@@ -39,10 +55,6 @@ export async function POST(req: NextRequest) {
     const dt = new Date(str);
     return isNaN(dt.getTime()) ? null : dt;
   }
-
-  // Buscar usuário
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
 
   // Busca todas as categorias do usuário uma vez (cache)
   const categoriasExistentes = await prisma.category.findMany({ where: { userId: user.id } });
