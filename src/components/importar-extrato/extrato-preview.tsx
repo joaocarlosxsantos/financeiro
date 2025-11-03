@@ -14,12 +14,13 @@ interface ExtratoPreviewProps {
   wallets: any[];
   selectedWallet: string;
   onWalletChange: (id: string) => void;
-  onSave: (registros: any[], saldoAnterior?: number) => void;
+  onSave: (registros: any[], saldoAnterior?: number, deleteExisting?: boolean) => void;
   saving: boolean;
   error: string | null;
   success: boolean;
   fetchWallets?: () => Promise<void>;
   hideImportSummary?: boolean; // Nova prop para esconder o resumo
+  fileName?: string; // Nome do arquivo para verificação
 }
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
 import { TransactionRow } from './transaction-row';
@@ -37,6 +38,7 @@ export function ExtratoPreview({
   success,
   fetchWallets,
   hideImportSummary = false,
+  fileName,
 }: ExtratoPreviewProps) {
   const [registros, setRegistros] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -294,7 +296,7 @@ export function ExtratoPreview({
     return iconMap[categoryName.toLowerCase()] || null;
   }
 
-  async function handleSaveComSaldo(saldoAnterior?: number) {
+  async function handleSaveComSaldo(saldoAnterior?: number, deleteExisting?: boolean) {
     let novosRegistros = [...registros];
 
     // Processar sugestões da IA automaticamente se o usuário não fez seleções
@@ -362,7 +364,8 @@ export function ExtratoPreview({
         ...novosRegistros,
       ];
     }
-    onSave(novosRegistros, saldoAnterior);
+    
+    onSave(novosRegistros, saldoAnterior, deleteExisting);
   }
 
   return (
@@ -444,6 +447,11 @@ export function ExtratoPreview({
           totalIncome={registros.filter(r => r.valor > 0).reduce((acc, r) => acc + r.valor, 0)}
           totalExpense={registros.filter(r => r.valor < 0).reduce((acc, r) => acc + Math.abs(r.valor), 0)}
           firstTransactionDate={dataPrimeiroLancamento}
+          uploadedFiles={fileName ? [{
+            file: { name: fileName } as File,
+            id: 'single-file',
+            preview: registros
+          }] : undefined}
         />
       )}
     </div>

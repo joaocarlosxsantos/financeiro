@@ -23,7 +23,7 @@ interface MultipleExtratoPreviewProps {
   wallets: any[];
   selectedWallet: string;
   onWalletChange: (walletId: string) => void;
-  onSave: (allTransactions: any[], saldoAnterior?: number) => void;
+  onSave: (allTransactions: any[], saldoAnterior?: number, deleteExisting?: boolean) => void;
   saving: boolean;
   error: string | null;
   success: boolean;
@@ -118,11 +118,11 @@ export function MultipleExtratoPreview({
     }));
   };
 
-  const handleSaveAll = () => {
-    onSave(allTransactions);
+  const handleSaveAll = (registros: any[], saldoAnterior?: number) => {
+    onSave(registros, saldoAnterior, false);
   };
 
-  const handleSaveAllWithBalance = (saldoAnterior?: number) => {
+  const handleSaveAllWithBalance = (saldoAnterior?: number, deleteExisting?: boolean) => {
     let transactionsWithBalance = [...allTransactions];
     
     // Adicionar saldo anterior se informado
@@ -146,7 +146,7 @@ export function MultipleExtratoPreview({
       transactionsWithBalance = [saldoInicial, ...transactionsWithBalance];
     }
     
-    onSave(allTransactions, saldoAnterior);
+    onSave(allTransactions, saldoAnterior, deleteExisting);
   };
 
   const getCurrentTabInfo = () => {
@@ -430,6 +430,7 @@ export function MultipleExtratoPreview({
         totalIncome={stats.totalIncome}
         totalExpense={stats.totalExpense}
         firstTransactionDate={stats.dateRange.start}
+        uploadedFiles={files}
       />
     </div>
   );

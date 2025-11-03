@@ -118,7 +118,7 @@ export default function ImportarExtratoPage() {
   };
 
   // Função para salvar (pode ser individual ou múltiplo)
-  const handleSave = async (registrosEditados?: any[], saldoAnterior?: number) => {
+  const handleSave = async (registrosEditados?: any[], saldoAnterior?: number, deleteExisting?: boolean) => {
     setSaving(true);
     setError(null);
     setSuccess(false);
@@ -141,14 +141,16 @@ export default function ImportarExtratoPage() {
         requestBody = {
           batches,
           carteiraId: selectedWallet,
-          saldoAnterior
+          saldoAnterior,
+          deleteExisting
         };
       } else {
         // Processamento individual - registrosEditados já inclui o saldo anterior se informado
         const transactions = registrosEditados || uploadedFiles[0]?.preview || [];
         requestBody = {
           registros: transactions,
-          carteiraId: selectedWallet
+          carteiraId: selectedWallet,
+          deleteExisting
         };
       }
 
@@ -299,6 +301,7 @@ export default function ImportarExtratoPage() {
                 error={error}
                 success={success}
                 fetchWallets={loadWallets}
+                fileName={uploadedFiles[0]?.file.name}
               />
             )}
           </>

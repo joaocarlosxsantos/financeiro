@@ -5,6 +5,12 @@ import { authOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+interface PeriodCheck {
+  startDate: string;
+  endDate: string;
+  sourceFile?: string;
+}
+
 interface BatchImportData {
   batches: Array<{
     registros: any[];
@@ -12,6 +18,61 @@ interface BatchImportData {
   }>;
   carteiraId: string;
   saldoAnterior?: number;
+  deleteExisting?: boolean;
+}
+
+// Função para excluir registros existentes nos períodos
+async function deleteExistingRecords(
+  userId: string, 
+  batches: Array<{ registros: any[]; sourceFile: string }>, 
+  carteiraId: string
+) {
+  function parsePtBrDate(str: string) {
+    if (!str) return null;
+    const [d, m, y] = str.split('/');
+    if (d && m && y) return new Date(Number(y), Number(m) - 1, Number(d));
+    const dt = new Date(str);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  // Extrair períodos de cada batch
+  for (const batch of batches) {
+    const validDates = batch.registros
+      .map(reg => parsePtBrDate(reg.data))
+      .filter(Boolean) as Date[];
+
+    if (validDates.length === 0) continue;
+
+    const startDate = new Date(Math.min(...validDates.map(d => d.getTime())));
+    const endDate = new Date(Math.max(...validDates.map(d => d.getTime())));
+    
+    // Ajustar para fim do dia
+    endDate.setHours(23, 59, 59, 999);
+
+    // Excluir incomes no período
+    await prisma.income.deleteMany({
+      where: {
+        userId,
+        walletId: carteiraId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    });
+
+    // Excluir expenses no período
+    await prisma.expense.deleteMany({
+      where: {
+        userId,
+        walletId: carteiraId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -21,7 +82,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { batches, carteiraId, saldoAnterior }: BatchImportData = await req.json();
+    const { batches, carteiraId, saldoAnterior, deleteExisting }: BatchImportData = await req.json();
 
     if (!Array.isArray(batches) || !carteiraId) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
@@ -34,6 +95,11 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 401 });
+    }
+
+    // Se deleteExisting for true, excluir registros existentes nos períodos
+    if (deleteExisting) {
+      await deleteExistingRecords(user.id, batches, carteiraId);
     }
 
     // Agregar todos os registros de todos os lotes

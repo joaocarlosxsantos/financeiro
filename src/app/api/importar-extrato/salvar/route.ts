@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (!session || !session.user || !session.user.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
-  const { registros, carteiraId } = await req.json();
+  const { registros, carteiraId, deleteExisting } = await req.json();
   // registros: array de lançamentos extraídos do extrato (esperamos objetos com campos definidos)
   type ImportRow = { 
     data: string; 
@@ -360,6 +360,41 @@ export async function POST(req: NextRequest) {
         if (reg.valor > 0) incomes.push(base);
         else if (reg.valor < 0) expenses.push(base);
       }
+      
+      // Se deleteExisting for true, excluir registros existentes no período
+      if (deleteExisting && incomes.length + expenses.length > 0) {
+        const allDates = [...incomes, ...expenses].map(r => r.date);
+        const startDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+        const endDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+        
+        // Ajustar para fim do dia
+        endDate.setHours(23, 59, 59, 999);
+
+        // Excluir incomes no período
+        await prisma.income.deleteMany({
+          where: {
+            userId: user.id,
+            walletId: carteiraId,
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        });
+
+        // Excluir expenses no período
+        await prisma.expense.deleteMany({
+          where: {
+            userId: user.id,
+            walletId: carteiraId,
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        });
+      }
+      
       const queries = [];
       if (incomes.length) queries.push(prisma.income.createMany({ data: incomes }));
       if (expenses.length) queries.push(prisma.expense.createMany({ data: expenses }));

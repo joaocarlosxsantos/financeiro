@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { WalletCreateModal } from '@/components/ui/wallet-create-modal';
+import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
 import { Plus, FileText, Package, TrendingUp, TrendingDown } from 'lucide-react';
 import { useState } from 'react';
 
@@ -11,7 +12,7 @@ interface ImportSummaryProps {
   wallets: any[];
   selectedWallet: string;
   onWalletChange: (walletId: string) => void;
-  onSave: (saldoAnterior?: number) => void;
+  onSave: (saldoAnterior?: number, deleteExisting?: boolean) => void;
   saving: boolean;
   error: string | null;
   success: boolean;
@@ -23,6 +24,13 @@ interface ImportSummaryProps {
   totalIncome: number;
   totalExpense: number;
   firstTransactionDate?: Date | null;
+  
+  // Períodos dos extratos para verificação
+  uploadedFiles?: Array<{
+    file: File;
+    id: string;
+    preview?: any[];
+  }>;
 }
 
 export function ImportSummary({
@@ -38,14 +46,122 @@ export function ImportSummary({
   totalTransactions,
   totalIncome,
   totalExpense,
-  firstTransactionDate
+  firstTransactionDate,
+  uploadedFiles
 }: ImportSummaryProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [saldoAnterior, setSaldoAnterior] = useState<string>('');
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState<any>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
-  const handleSaveWithBalance = () => {
+  // Função para converter data de string para Date
+  const parseTransactionDate = (dateString: string): Date | null => {
+    if (!dateString) return null;
+    
+    if (dateString.includes('/')) {
+      const [d, m, y] = dateString.split('/');
+      return new Date(Number(y), Number(m) - 1, Number(d));
+    } else if (dateString.includes('-')) {
+      return new Date(dateString);
+    } else if (dateString.length === 8 && /^\d{8}$/.test(dateString)) {
+      const year = Number(dateString.substring(0, 4));
+      const month = Number(dateString.substring(4, 6)) - 1;
+      const day = Number(dateString.substring(6, 8));
+      return new Date(year, month, day);
+    }
+    
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
+  // Função para verificar registros existentes
+  const checkExistingRecords = async () => {
+    if (!selectedWallet || !uploadedFiles || uploadedFiles.length === 0) {
+      return null;
+    }
+
+    setIsChecking(true);
+    
+    try {
+      // Extrair períodos de cada arquivo
+      const periods = uploadedFiles
+        .filter(f => f.preview && f.preview.length > 0)
+        .map(file => {
+          const transactions = file.preview!;
+          
+          const validDates = transactions
+            .map(t => parseTransactionDate(t.data))
+            .filter(Boolean) as Date[];
+
+          if (validDates.length === 0) return null;
+
+          const startDate = new Date(Math.min(...validDates.map(d => d.getTime())));
+          const endDate = new Date(Math.max(...validDates.map(d => d.getTime())));
+
+          return {
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+            sourceFile: file.file.name,
+          };
+        })
+        .filter(Boolean);
+
+      if (periods.length === 0) {
+        return null;
+      }
+
+      // Fazer verificação na API
+      const response = await fetch('/api/importar-extrato/check-existing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periods,
+          walletId: selectedWallet,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao verificar registros existentes');
+      }
+
+      const data = await response.json();
+      return data;
+
+    } catch (error) {
+      console.error('Erro ao verificar conflitos:', error);
+      return null;
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handleSaveWithBalance = async () => {
+    // Verificar registros existentes antes de salvar
+    const conflictCheck = await checkExistingRecords();
+    
+    if (conflictCheck && conflictCheck.hasConflict) {
+      // Mostrar modal de conflito
+      setConflictData(conflictCheck);
+      setShowConflictModal(true);
+    } else {
+      // Não há conflitos, prosseguir com o salvamento
+      const saldoValue = saldoAnterior ? parseFloat(saldoAnterior) : undefined;
+      onSave(saldoValue, false); // Passa saldoAnterior e deleteExisting
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    // Usuário confirmou a exclusão, prosseguir com o salvamento
     const saldoValue = saldoAnterior ? parseFloat(saldoAnterior) : undefined;
-    onSave(saldoValue);
+    setShowConflictModal(false);
+    onSave(saldoValue, true); // Passa saldoAnterior e deleteExisting
+  };
+
+  const handleCancelDelete = () => {
+    // Usuário cancelou, fechar modal
+    setShowConflictModal(false);
+    setConflictData(null);
   };
 
   return (
@@ -175,11 +291,11 @@ export function ImportSummary({
           
           <Button 
             onClick={handleSaveWithBalance}
-            disabled={!selectedWallet || saving || totalTransactions === 0}
+            disabled={!selectedWallet || saving || isChecking || totalTransactions === 0}
             size="lg"
             className="w-full sm:w-auto"
           >
-            {saving ? 'Importando...' : `Importar ${totalTransactions} Transações`}
+            {isChecking ? 'Verificando...' : saving ? 'Importando...' : `Importar ${totalTransactions} Transações`}
           </Button>
         </div>
 
@@ -195,6 +311,18 @@ export function ImportSummary({
             }
           }}
         />
+
+        {/* Modal de conflito de registros */}
+        {conflictData && (
+          <ConflictResolutionModal
+            open={showConflictModal}
+            onConfirm={handleConfirmDelete}
+            onCancel={handleCancelDelete}
+            loading={saving}
+            conflicts={conflictData.periods || []}
+            totalConflicts={conflictData.totalConflicts || 0}
+          />
+        )}
 
         {/* Mensagens de erro/sucesso */}
         {error && (
