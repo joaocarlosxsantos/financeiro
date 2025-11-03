@@ -10,7 +10,7 @@ export function Fab({ onClick, label }: FabProps) {
   return (
     <button
       onClick={onClick}
-      className="fixed z-50 bottom-4 sm:bottom-6 right-4 sm:right-10 flex items-center gap-1 sm:gap-2 bg-primary text-white rounded-full shadow-lg px-4 sm:px-5 py-2.5 sm:py-3 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all"
+      className="fixed z-50 bottom-4 sm:bottom-6 left-4 sm:left-80 flex items-center gap-1 sm:gap-2 bg-primary text-white rounded-full shadow-lg px-4 sm:px-5 py-2.5 sm:py-3 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all"
       aria-label={label || 'Adicionar'}
       type="button"
     >

@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { MonthProvider } from '@/components/providers/month-provider';
 import { DisableNavigationLoading } from '@/components/providers/disable-navigation-loading';
 import PageTitle from '@/components/PageTitle';
+import AIAssistantButton from '@/components/ai-assistant/ai-assistant-button';
 
 // componente dev para suprimir logs do hot-reloader
 let SuppressHotLogs: any = () => null;
@@ -41,6 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {process.env.NODE_ENV === 'development' && <SuppressHotLogs />}
               {/* Páginas devem exportar `metadata` via `getMetadata` ou usar `PageTitle` localmente quando necessário. */}
               <main id="main">{children}</main>
+              {/* Assistente de IA - Botão flutuante */}
+              <AIAssistantButton />
             </AuthProvider>
           </MonthProvider>
         </ThemeProvider>
