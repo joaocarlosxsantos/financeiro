@@ -39,6 +39,7 @@ import QuickRendaForm from '../quick-add/quick-renda-form';
 import QuickCardForm from '../quick-add/quick-card-form';
 import QuickTransferForm from '../quick-add/quick-transfer-form';
 import type { Summary } from '@/hooks/use-dashboard-state';
+import { SmartInsightsWidget, SmartInsight } from './smart-insights-widget';
 
 interface DashboardCardsProps {
   // Card data
@@ -67,6 +68,9 @@ interface DashboardCardsProps {
   setQuickAddOpen: (v: boolean) => void;
   quickTab: 'despesa' | 'renda' | 'cartao' | 'transferencia';
   setQuickTab: (v: 'despesa' | 'renda' | 'cartao' | 'transferencia') => void;
+
+  // Smart insights
+  smartInsights?: SmartInsight[];
 
   // Tour
   onTourClick?: () => void;
@@ -483,6 +487,7 @@ export function DashboardCards({
   setQuickTab,
   onTourClick,
   onQuickAddSuccess,
+  smartInsights,
 }: DashboardCardsProps): JSX.Element {
   return (
     <>
@@ -500,6 +505,11 @@ export function DashboardCards({
           onTourClick={onTourClick}
         />
       </div>
+
+      {/* Smart Insights Widget */}
+      {smartInsights && smartInsights.length > 0 && (
+        <SmartInsightsWidget insights={smartInsights} />
+      )}
 
       {/* Summary Cards */}
       <SummaryCards

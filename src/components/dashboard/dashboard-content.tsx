@@ -57,6 +57,7 @@ export function DashboardContent() {
         setQuickTab={state.setQuickTab}
         onTourClick={() => state.setTourOpen(true)}
         onQuickAddSuccess={state.handleQuickAddSuccess}
+        smartInsights={state.smartInsights}
       />
 
       {/* Gráficos */}
@@ -73,6 +74,9 @@ export function DashboardContent() {
         setModal={state.setModal}
         modal={state.modal}
         isDemoMode={state.isDemoMode}
+        healthScoreData={state.healthScoreData}
+        monthComparisonData={state.monthComparisonData}
+        quickInsightsData={state.quickInsightsData}
       />
 
 

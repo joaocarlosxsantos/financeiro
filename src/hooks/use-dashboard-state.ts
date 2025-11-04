@@ -19,6 +19,9 @@ import { useMonth } from '@/components/providers/month-provider';
 import { PaymentType } from '@/components/ui/payment-type-multi-select';
 import { fetchAll } from '@/lib/fetchAll';
 import { getMonthRange } from '@/lib/utils';
+import { SmartInsight, generateSmartInsights } from '@/components/dashboard/smart-insights-widget';
+import { generateMonthComparisonData, MonthComparisonData } from '@/components/dashboard/month-comparison-card';
+import { QuickInsightsData } from '@/components/dashboard/quick-insights-card';
 
 // Type definitions
 export type Summary = {
@@ -115,6 +118,27 @@ export interface DashboardStateReturn {
 
   // Helper
   handleQuickAddSuccess: () => void;
+
+  // Smart insights
+  smartInsights: SmartInsight[];
+
+  // Financial health data
+  healthScoreData: {
+    totalIncome: number;
+    totalExpenses: number;
+    saldoDoMes: number;
+    savingsRate: number;
+    consecutivePositiveMonths: number;
+    goalsAchieved: number;
+    totalGoals: number;
+    expensesVsAverage: number;
+  };
+
+  // Month comparison data
+  monthComparisonData: MonthComparisonData | null;
+
+  // Quick insights data
+  quickInsightsData: QuickInsightsData;
 }
 
 // Helper function to convert date to yyyy-MM-dd format
@@ -566,6 +590,154 @@ export function useDashboardState(): DashboardStateReturn {
     setCurrentDate(new Date(currentDate));
   }, [currentDate, setCurrentDate]);
 
+  // ===== Smart Insights - Gerar automaticamente =====
+  const smartInsights = useMemo(() => {
+    // Calcular taxa de poupança
+    const savingsRate = totalIncome > 0 ? ((saldoDoMes / totalIncome) * 100) : 0;
+
+    // Calcular despesas recorrentes (estimativa simples)
+    const recurringExpenses = totalExpenses * 0.4; // Aproximação
+
+    // Calcular comparação com mês anterior (se disponível)
+    let monthComparison: { expensesDiff: number; incomeDiff: number } | undefined;
+    let historicalData: { expenses: number[]; savingsRate?: number } | undefined;
+    
+    if (summary.topExpenseCategories.length > 0) {
+      const totalPrevExpenses = summary.topExpenseCategories.reduce(
+        (sum, cat) => sum + (cat.prevAmount || 0),
+        0
+      );
+      
+      if (totalPrevExpenses > 0) {
+        const expensesDiff = ((totalExpenses - totalPrevExpenses) / totalPrevExpenses) * 100;
+        monthComparison = { expensesDiff, incomeDiff: 0 };
+        
+        // Dados históricos para alertas inteligentes
+        historicalData = {
+          expenses: [totalPrevExpenses], // Pode ser expandido com mais meses
+          savingsRate: totalPrevExpenses > 0 && totalIncome > 0 
+            ? ((totalIncome - totalPrevExpenses) / totalIncome) * 100 
+            : undefined,
+        };
+      }
+    }
+
+    return generateSmartInsights({
+      totalIncome,
+      totalExpenses,
+      saldoDoMes,
+      savingsRate,
+      topExpenseCategories: summary.topExpenseCategories,
+      recurringExpenses,
+      monthComparison,
+      historicalData, // Passar dados históricos para alertas inteligentes
+    });
+  }, [
+    totalIncome,
+    totalExpenses,
+    saldoDoMes,
+    summary.topExpenseCategories,
+  ]);
+
+  // ===== Financial Health Data =====
+  const healthScoreData = useMemo(() => {
+    const savingsRate = totalIncome > 0 ? ((saldoDoMes / totalIncome) * 100) : 0;
+    
+    // Calcular média de gastos (simplificado - usar mês anterior)
+    const totalPrevExpenses = summary.topExpenseCategories.reduce(
+      (sum, cat) => sum + (cat.prevAmount || 0),
+      0
+    );
+    const expensesVsAverage = totalPrevExpenses > 0 
+      ? ((totalExpenses - totalPrevExpenses) / totalPrevExpenses) * 100 
+      : 0;
+
+    return {
+      totalIncome,
+      totalExpenses,
+      saldoDoMes,
+      savingsRate,
+      consecutivePositiveMonths: saldoDoMes > 0 ? 1 : 0, // Simplificado - pode ser expandido
+      goalsAchieved: 0, // TODO: Integrar com sistema de metas
+      totalGoals: 0, // TODO: Integrar com sistema de metas
+      expensesVsAverage,
+    };
+  }, [
+    totalIncome,
+    totalExpenses,
+    saldoDoMes,
+    summary.topExpenseCategories,
+  ]);
+
+  // ===== Month Comparison Data =====
+  const monthComparisonData = useMemo(() => {
+    return generateMonthComparisonData(
+      totalExpenses,
+      totalIncome,
+      summary.topExpenseCategories.map(cat => ({
+        category: cat.category,
+        amount: cat.amount,
+        prevAmount: cat.prevAmount,
+        diff: cat.diff,
+      }))
+    );
+  }, [
+    totalIncome,
+    totalExpenses,
+    summary.topExpenseCategories,
+  ]);
+
+  // ===== Quick Insights Data =====
+  const quickInsightsData = useMemo(() => {
+    // Encontrar maior gasto
+    const biggestExpense = summary.expensesByCategory.length > 0
+      ? summary.expensesByCategory.reduce((max, cat) => 
+          cat.amount > max.amount ? cat : max
+        )
+      : { category: 'N/A', amount: 0 };
+
+    // Calcular média diária (dias corridos do mês até hoje)
+    const today = new Date();
+    const currentDay = currentDate.getMonth() === today.getMonth() && 
+                       currentDate.getFullYear() === today.getFullYear()
+      ? today.getDate()
+      : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    
+    const averageDailyExpense = currentDay > 0 ? totalExpenses / currentDay : 0;
+    
+    // Projeção fim do mês
+    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const projectedMonthEnd = averageDailyExpense * daysInMonth;
+
+    // Status de orçamento (simples - pode ser expandido com orçamento real)
+    const estimatedBudget = totalIncome; // Simplificado
+    const budgetPercentage = estimatedBudget > 0 ? (totalExpenses / estimatedBudget) * 100 : 0;
+
+    const savingsRate = totalIncome > 0 ? ((saldoDoMes / totalIncome) * 100) : 0;
+
+    return {
+      savingsRate,
+      biggestExpense: {
+        category: biggestExpense.category,
+        amount: biggestExpense.amount,
+      },
+      budgetStatus: {
+        spent: totalExpenses,
+        total: estimatedBudget,
+        percentage: budgetPercentage,
+      },
+      daysToGoal: undefined, // TODO: Integrar com sistema de metas
+      averageDailyExpense,
+      projectedMonthEnd,
+    };
+  }, [
+    totalIncome,
+    totalExpenses,
+    saldoDoMes,
+    summary.expensesByCategory,
+    currentDate,
+  ]);
+
   return {
     // Card data
     totalIncome,
@@ -637,5 +809,17 @@ export function useDashboardState(): DashboardStateReturn {
 
     // Helper
     handleQuickAddSuccess,
+
+    // Smart insights
+    smartInsights,
+
+    // Financial health
+    healthScoreData,
+
+    // Month comparison
+    monthComparisonData,
+
+    // Quick insights
+    quickInsightsData,
   };
 }

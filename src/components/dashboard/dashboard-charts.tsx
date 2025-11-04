@@ -59,6 +59,10 @@ const TopExpenseCategoriesChart = dynamic(
 
 import { DailyBalanceChart } from '@/components/dashboard/daily-balance-chart';
 import { BalanceProjectionChart } from '@/components/dashboard/balance-projection-chart';
+import { EnhancedBalanceProjectionChart, calculateEnhancedProjection } from '@/components/dashboard/enhanced-balance-projection-chart';
+import { FinancialHealthCard, HealthScoreData } from '@/components/dashboard/financial-health-card';
+import { MonthComparisonCard, MonthComparisonData } from '@/components/dashboard/month-comparison-card';
+import { QuickInsightsCard, QuickInsightsData } from '@/components/dashboard/quick-insights-card';
 
 /**
  * Props para o componente DashboardCharts
@@ -115,6 +119,15 @@ interface DashboardChartsProps {
 
   /** Modo demo habilitado */
   isDemoMode?: boolean;
+
+  /** Dados para o card de saúde financeira */
+  healthScoreData?: HealthScoreData;
+
+  /** Dados para comparação mensal */
+  monthComparisonData?: MonthComparisonData | null;
+
+  /** Dados para insights rápidos */
+  quickInsightsData?: QuickInsightsData;
 }
 
 /**
@@ -139,25 +152,32 @@ export function DashboardCharts({
   modal,
   tagData = [],
   isDemoMode = false,
+  healthScoreData,
+  monthComparisonData,
+  quickInsightsData,
 }: DashboardChartsProps): JSX.Element {
   // Removida a variável isMobile pois não é mais usada após remoção dos modais
 
   return (
     <>
-      {/* SEÇÃO 1: Gráficos de Pizza - Ganhos e Gastos por Categoria (Top 5) */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
-        {/* Ganhos por Categoria */}
-        <Card
-          data-tour="chart-income-category"
-        >
+      {/* SEÇÃO 1: Cards de Insights - 3 colunas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+        {healthScoreData && <FinancialHealthCard data={healthScoreData} />}
+        {monthComparisonData && <MonthComparisonCard data={monthComparisonData} />}
+        {quickInsightsData && <QuickInsightsCard data={quickInsightsData} />}
+      </div>
+
+      {/* SEÇÃO 2: Evolução do Saldo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+        <Card data-tour="chart-daily-balance">
           <CardHeader>
-            <CardTitle>Ganhos por Categoria (Top 5)</CardTitle>
+            <CardTitle>📊 Evolução do Saldo</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Loader text="Carregando ganhos..." />
-            ) : summary.incomesByCategory.length > 0 ? (
-              <IncomeChart data={summary.incomesByCategory} maxItems={5} />
+            {!chartsLoaded && loadingDaily ? (
+              <Loader text="Carregando gráfico de saldo..." />
+            ) : chartsLoaded && summary.dailyBalanceData.length > 0 ? (
+              <DailyBalanceChart data={summary.dailyBalanceData} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
@@ -166,12 +186,34 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        {/* Gastos por Categoria */}
-        <Card
-          data-tour="chart-expense-category"
-        >
+        <Card data-tour="chart-balance-projection">
           <CardHeader>
-            <CardTitle>Gastos por Categoria (Top 5)</CardTitle>
+            <CardTitle>🔮 Projeção de Saldo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!chartsLoaded && loadingDaily ? (
+              <Loader text="Carregando projeção..." />
+            ) : chartsLoaded && summary.dailyBalanceData.length > 0 ? (
+              <EnhancedBalanceProjectionChart 
+                data={calculateEnhancedProjection(
+                  summary.dailyBalanceData.map(d => d.balance),
+                  31
+                )} 
+              />
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-foreground">
+                Sem dados para o período selecionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* SEÇÃO 3: Distribuição por Categoria */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+        <Card data-tour="chart-expense-category">
+          <CardHeader>
+            <CardTitle>💸 Gastos por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -186,18 +228,66 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        {/* Coluna vazia para alinhamento em telas grandes */}
-        <div className="hidden xl:block" />
+        <Card data-tour="chart-income-category">
+          <CardHeader>
+            <CardTitle>💰 Ganhos por Categoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Carregando ganhos..." />
+            ) : summary.incomesByCategory.length > 0 ? (
+              <IncomeChart data={summary.incomesByCategory} maxItems={5} />
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-foreground">
+                Sem dados para o período selecionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* SEÇÃO 2: Gráficos Diários - Categoria, Carteira, Tag */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
-        {/* Gasto Diário por Categoria */}
-        <Card
-          data-tour="chart-daily-category"
-        >
+      {/* SEÇÃO 4: Análise Mensal */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+        <Card data-tour="chart-monthly-bar">
           <CardHeader>
-            <CardTitle>Gasto Diário por Categoria</CardTitle>
+            <CardTitle>📅 Últimos 12 Meses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Carregando dados mensais..." />
+            ) : summary.monthlyData.length > 0 ? (
+              <MonthlyBarChart data={summary.monthlyData} />
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-foreground">
+                Sem dados para o período selecionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-tour="chart-top-categories">
+          <CardHeader>
+            <CardTitle>🏆 Top Categorias</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Loader text="Carregando categorias..." />
+            ) : summary.topExpenseCategories.length > 0 ? (
+              <TopExpenseCategoriesChart data={summary.topExpenseCategories} />
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-foreground">
+                Sem dados para o período selecionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* SEÇÃO 5: Análise Diária Detalhada */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+        <Card data-tour="chart-daily-category">
+          <CardHeader>
+            <CardTitle className="text-base">📈 Diário por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {!chartsLoaded && loadingDaily ? (
@@ -217,12 +307,9 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        {/* Gasto Diário por Carteira */}
-        <Card
-          data-tour="chart-daily-wallet"
-        >
+        <Card data-tour="chart-daily-wallet">
           <CardHeader>
-            <CardTitle>Saldo Diário por Carteira</CardTitle>
+            <CardTitle className="text-base">👛 Diário por Carteira</CardTitle>
           </CardHeader>
           <CardContent>
             {!chartsLoaded && loadingDaily ? (
@@ -240,100 +327,15 @@ export function DashboardCharts({
           </CardContent>
         </Card>
 
-        {/* Gasto Diário por Tag */}
-        <Card
-          data-tour="chart-daily-tag"
-        >
+        <Card data-tour="chart-daily-tag">
           <CardHeader>
-            <CardTitle>Gasto Diário por Tag</CardTitle>
+            <CardTitle className="text-base">🏷️ Diário por Tag</CardTitle>
           </CardHeader>
           <CardContent>
             {!chartsLoaded && loadingDaily ? (
               <Loader text="Carregando gráfico diário..." />
             ) : chartsLoaded && dailyByTag.length > 0 ? (
               <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* SEÇÃO 3: Gráficos de Evolução - Saldo e Projeção */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-        {/* Saldo Diário */}
-        <Card className="w-full" data-tour="chart-daily-balance">
-          <CardHeader>
-            <CardTitle>Saldo Diário</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!chartsLoaded && loadingDaily ? (
-              <Loader text="Carregando gráfico de saldo..." />
-            ) : chartsLoaded && summary.dailyBalanceData.length > 0 ? (
-              <DailyBalanceChart data={summary.dailyBalanceData} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Projeção de Saldo */}
-        <Card className="w-full" data-tour="chart-balance-projection">
-          <CardHeader>
-            <CardTitle>Projeção de Saldo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!chartsLoaded && loadingDaily ? (
-              <Loader text="Carregando projeção..." />
-            ) : chartsLoaded && summary.balanceProjectionData.length > 0 ? (
-              <BalanceProjectionChart data={summary.balanceProjectionData} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* SEÇÃO 4: Análise Mensal e Top Categorias */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-        {/* Gráfico Mensal */}
-        <Card
-          data-tour="chart-monthly-bar"
-        >
-          <CardHeader>
-            <CardTitle>Últimos 12 Meses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Loader text="Carregando dados mensais..." />
-            ) : summary.monthlyData.length > 0 ? (
-              <MonthlyBarChart data={summary.monthlyData} />
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
-                Sem dados para o período selecionado
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Categorias */}
-        <Card
-          data-tour="chart-top-categories"
-        >
-          <CardHeader>
-            <CardTitle>Top Categorias</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Loader text="Carregando categorias..." />
-            ) : summary.topExpenseCategories.length > 0 ? (
-              <TopExpenseCategoriesChart data={summary.topExpenseCategories} />
             ) : (
               <div className="text-sm text-gray-500 dark:text-foreground">
                 Sem dados para o período selecionado
