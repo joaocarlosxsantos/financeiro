@@ -178,9 +178,35 @@ function SummaryCards({
         </CardContent>
       </Card>
 
+
+      {/* Saldo Acumulado */}
+      <Card
+        className="group relative order-3 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
+        aria-label="Saldo Acumulado"
+        data-tour="card-accumulated"
+      >
+        <CardContent className="p-2 flex flex-col flex-1">
+          <div className="flex flex-1 items-center justify-between gap-2">
+            <AutoFitNumber
+              value={formatCurrency(saldoAcumulado)}
+              className="text-indigo-600 dark:text-indigo-400"
+              max={40}
+              min={18}
+            />
+            <DollarSign className="hidden 2xl:block h-7 w-7 text-indigo-500/80" />
+          </div>
+          <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
+            Saldo Acumulado
+          </div>
+          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
+            Ganhos - Gastos de todos os meses até o selecionado
+          </span>
+        </CardContent>
+      </Card>
+
       {/* Limite Diário */}
       <Card
-        className="group relative order-5 flex flex-col h-full min-h-[150px] overflow-hidden"
+        className="group relative order-5 flex flex-col h-full min-h-[150px] overflow-hidden col-span-2 lg:col-span-1"
         aria-label="Limite Diário"
         data-tour="card-daily-limit"
       >
@@ -205,30 +231,6 @@ function SummaryCards({
         </CardContent>
       </Card>
 
-      {/* Saldo Acumulado */}
-      <Card
-        className="group relative order-4 col-span-2 md:col-span-2 lg:col-span-1 flex flex-col h-full min-h-[150px] overflow-hidden"
-        aria-label="Saldo Acumulado"
-        data-tour="card-accumulated"
-      >
-        <CardContent className="p-2 flex flex-col flex-1">
-          <div className="flex flex-1 items-center justify-between gap-2">
-            <AutoFitNumber
-              value={formatCurrency(saldoAcumulado)}
-              className="text-indigo-600 dark:text-indigo-400"
-              max={40}
-              min={18}
-            />
-            <DollarSign className="hidden 2xl:block h-7 w-7 text-indigo-500/80" />
-          </div>
-          <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
-            Saldo Acumulado
-          </div>
-          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
-            Ganhos - Gastos de todos os meses até o selecionado
-          </span>
-        </CardContent>
-      </Card>
     </div>
   );
 }
