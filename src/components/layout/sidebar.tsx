@@ -13,7 +13,7 @@ import {
   BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
   LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
   TrendingUp, TrendingDown, Upload, ChevronRight, ArrowUpDown,
-  FolderOpen, Users, Bell, Menu, X, PieChart, Activity
+  FolderOpen, Users, Bell, Menu, X, PieChart, Activity, Trophy, Shield, LineChart, Zap, Fingerprint
 } from 'lucide-react';
 
 // Componente para ícone de expansão que evita hydration mismatch - memoizado
@@ -91,6 +91,9 @@ const navigationFinanceiro = {
     icon: Target,
     items: [
       { name: 'Metas Financeiras', href: '/metas', icon: Target },
+      { name: 'Reserva de Emergência', href: '/reserva-emergencia', icon: Shield },
+      { name: 'Simulador de Cenários', href: '/simulador', icon: LineChart },
+      { name: 'Conquistas', href: '/conquistas', icon: Trophy },
     ]
   },
   contasCartoes: {
@@ -114,6 +117,8 @@ const navigationFinanceiro = {
     icon: Settings,
     items: [
       { name: 'Notificações', href: '/notifications/settings', icon: Bell },
+      { name: 'Integrações', href: '/integracoes', icon: Zap },
+      { name: 'Autenticação Biométrica', href: '/biometria', icon: Fingerprint },
     ]
   }
 };

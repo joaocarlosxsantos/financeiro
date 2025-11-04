@@ -11,7 +11,7 @@ import {
   BarChart3, CreditCard, DollarSign, Tag, User, LogOut, Wallet, 
   LucideLayoutDashboard, Table2Icon, Target, FileText, Settings,
   TrendingUp, TrendingDown, Upload, ChevronRight, ArrowUpDown,
-  FolderOpen, Users, Bell, Menu, X, PieChart, Activity
+  FolderOpen, Users, Bell, Menu, X, PieChart, Activity, Trophy, Shield, LineChart, Zap, Fingerprint
 } from 'lucide-react';
 import './sidebar-stable.css';
 
@@ -65,6 +65,9 @@ const navigationFinanceiro = {
     icon: Target,
     items: [
       { name: 'Metas Financeiras', href: '/metas', icon: Target },
+      { name: 'Reserva de Emergência', href: '/reserva-emergencia', icon: Shield },
+      { name: 'Simulador de Cenários', href: '/simulador', icon: LineChart },
+      { name: 'Conquistas', href: '/conquistas', icon: Trophy },
     ]
   },
   contasCartoes: {
@@ -88,6 +91,8 @@ const navigationFinanceiro = {
     icon: Settings,
     items: [
       { name: 'Notificações', href: '/notifications/settings', icon: Bell },
+      { name: 'Integrações', href: '/integracoes', icon: Zap },
+      { name: 'Autenticação Biométrica', href: '/biometria', icon: Fingerprint },
     ]
   }
 };
@@ -146,7 +151,12 @@ const NavItem = React.memo(({ item, active, onClick, isSubItem = false }: {
       '/reports': 'sidebar-reports',
       '/importar-extrato': 'sidebar-import',
       '/metas': 'sidebar-goals',
-      '/notifications/settings': 'sidebar-notifications'
+      '/notifications/settings': 'sidebar-notifications',
+      '/conquistas': 'sidebar-achievements',
+      '/reserva-emergencia': 'sidebar-emergency-fund',
+      '/simulador': 'sidebar-simulator',
+      '/integracoes': 'sidebar-integrations',
+      '/biometria': 'sidebar-biometric'
     };
     return tourMap[href] || '';
   }, []);

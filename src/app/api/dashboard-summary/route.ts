@@ -29,8 +29,10 @@ export async function GET(req: NextRequest) {
   // datas do mês usando timezone do Brasil
   const { start, end } = getMonthRangeBrasilia(year, month);
   const { formatYmd } = await import('@/lib/utils');
-  const startStr = formatYmd(start);
-  const endStr = formatYmd(end);
+  
+  // Converte para ISO string para o Prisma
+  const startStr = start.toISOString();
+  const endStr = end.toISOString();
 
   // Filtros
   const walletFilter = walletId
