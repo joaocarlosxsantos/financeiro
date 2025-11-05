@@ -212,9 +212,9 @@ export function ExpandedTransactionsTable({
         onConfirm={handleDeleteConfirm}
         description={deleteModal.transaction?.description}
       />
-  <div ref={tableRef} className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: 600 }}>
+      <div ref={tableRef} className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: '600px' }}>
         <table className="w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Data</th>
               <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Descrição</th>
