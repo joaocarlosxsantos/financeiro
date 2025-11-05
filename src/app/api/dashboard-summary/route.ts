@@ -44,98 +44,221 @@ export async function GET(req: NextRequest) {
   const dateFilter = { gte: startStr, lte: endStr };
 
   // Busca paralela
-  const [expenses, incomes, wallets, tags] = await Promise.all([
+  const [pontuaisExpenses, pontuaisIncomes, recorrentesExpenses, recorrentesIncomes, wallets, tags] = await Promise.all([
+    // Despesas pontuais do mês
     prisma.expense.findMany({
-      where: { ...userFilter, ...walletFilter, date: dateFilter },
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: false,
+        date: dateFilter 
+      },
       include: { category: true, wallet: true },
     }),
+    // Rendas pontuais do mês
     prisma.income.findMany({
-      where: { ...userFilter, ...walletFilter, date: dateFilter },
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: false,
+        date: dateFilter 
+      },
+      include: { category: true, wallet: true },
+    }),
+    // Despesas recorrentes (todas, vamos expandir depois)
+    prisma.expense.findMany({
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: true
+      },
+      include: { category: true, wallet: true },
+    }),
+    // Rendas recorrentes (todas, vamos expandir depois)
+    prisma.income.findMany({
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: true
+      },
       include: { category: true, wallet: true },
     }),
     prisma.wallet.findMany({ where: { ...userFilter } }),
     prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } }),
   ]);
 
-  // Resumo do mês atual
   type PrismaExpense = Awaited<ReturnType<typeof prisma.expense.findMany>>[number];
   type PrismaIncome = Awaited<ReturnType<typeof prisma.income.findMany>>[number];
-  const totalExpenses = expenses.reduce((sum: number, e: PrismaExpense) => sum + Number(e.amount), 0);
-  const totalIncome = incomes.reduce((sum: number, i: PrismaIncome) => sum + Number(i.amount), 0);
+
+  // Função para expandir apenas recorrentes que ocorrem no mês especificado
+  function expandRecurrentesForMonth(records: (PrismaExpense | PrismaIncome)[], targetYear: number, targetMonth: number) {
+    const expanded: (PrismaExpense | PrismaIncome)[] = [];
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === targetYear && today.getMonth() + 1 === targetMonth;
+    const dayLimit = isCurrentMonth ? today.getDate() : 31;
+    
+    for (const r of records) {
+      // Verifica se a recorrente está ativa neste mês
+      const monthStart = createBrasiliaDate(targetYear, targetMonth, 1);
+      const monthEnd = createBrasiliaDate(targetYear, targetMonth + 1, 0);
+      
+      // Se tem endDate e já terminou antes deste mês, pula
+      if (r.endDate) {
+        const recEndDate = parseInputDateBrasilia(r.endDate);
+        if (recEndDate < monthStart) continue;
+      }
+      
+      // Se tem startDate e ainda não começou, pula
+      if (r.startDate) {
+        const recStartDate = parseInputDateBrasilia(r.startDate);
+        if (recStartDate > monthEnd) continue;
+      }
+      
+      // Determina o dia da ocorrência
+      const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 
+        ? r.dayOfMonth 
+        : (r.date ? parseInputDateBrasilia(r.date).getDate() : 1);
+      
+      // Ajusta para o último dia do mês se necessário
+      const lastDayOfMonth = monthEnd.getDate();
+      const dayInMonth = Math.min(day, lastDayOfMonth);
+      
+      // Se for mês atual e o dia ainda não chegou, pula
+      if (isCurrentMonth && dayInMonth > dayLimit) {
+        continue;
+      }
+      
+      // Cria a ocorrência para este mês
+      const occDate = createBrasiliaDate(targetYear, targetMonth, dayInMonth);
+      expanded.push({ ...(r as any), date: formatYmd(occDate) } as PrismaExpense | PrismaIncome);
+    }
+    
+    return expanded;
+  }
+
+  // Expande recorrentes apenas para o mês selecionado
+  const recorrentesExpensesExpanded = expandRecurrentesForMonth(recorrentesExpenses, year, month);
+  const recorrentesIncomesExpanded = expandRecurrentesForMonth(recorrentesIncomes, year, month);
+
+  // Combina pontuais + recorrentes do mês
+  const expensesThisMonth = [...pontuaisExpenses, ...recorrentesExpensesExpanded];
+  const incomesThisMonth = [...pontuaisIncomes, ...recorrentesIncomesExpanded];
+
+  // Resumo do mês atual
+  const totalExpenses = expensesThisMonth.reduce((sum: number, e: PrismaExpense) => sum + Number(e.amount), 0);
+  const totalIncome = incomesThisMonth.reduce((sum: number, i: PrismaIncome) => sum + Number(i.amount), 0);
 
   // Saldo do mês
   const saldoDoMes = totalIncome - totalExpenses;
 
-  // Saldo acumulado (todas as receitas e despesas até o fim do mês selecionado)
-  const acumuladoExpenses = await prisma.expense.findMany({
-    where: {
-      userId,
-      ...(walletId ? { walletId } : {}),
-      date: { lte: endStr },
-    },
-  });
-  const acumuladoIncomes = await prisma.income.findMany({
-    where: {
-      userId,
-      ...(walletId ? { walletId } : {}),
-      date: { lte: endStr },
-    },
-  });
-  // Expandir despesas/rendas FIXED em ocorrências mensais até endStr
-  const endDate = parseInputDateBrasilia(endStr);
+  // Saldo acumulado (soma de TODOS os períodos até a data final)
+  // Busca todas as transações até a data final
+  const [allPontuaisExpenses, allPontuaisIncomes, allRecorrentesExpenses, allRecorrentesIncomes] = await Promise.all([
+    prisma.expense.findMany({
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: false,
+        date: { lte: endStr }
+      },
+    }),
+    prisma.income.findMany({
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: false,
+        date: { lte: endStr }
+      },
+    }),
+    prisma.expense.findMany({
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: true
+      },
+    }),
+    prisma.income.findMany({
+      where: { 
+        ...userFilter, 
+        ...walletFilter,
+        isRecurring: true
+      },
+    }),
+  ]);
 
-  function expandFixedRecords(records: (PrismaExpense | PrismaIncome)[], upto: Date) {
+  // Função para expandir recorrentes até o mês/ano especificado
+  function expandRecurrentesUntil(records: (PrismaExpense | PrismaIncome)[], untilYear: number, untilMonth: number) {
     const expanded: (PrismaExpense | PrismaIncome)[] = [];
     const today = new Date();
-    const year = upto.getFullYear();
-    const month = upto.getMonth() + 1;
-    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
-    const dayLimit = isCurrentMonth ? today.getDate() : 31;
-    const monthStart = createBrasiliaDate(year, month, 1);
+    
     for (const r of records) {
-      if (r.isRecurring) {
-        // Se tem endDate e ela é menor que o início do mês, ignora
-        if (r.endDate) {
-          const recEndDate = parseInputDateBrasilia(r.endDate);
-          if (recEndDate < monthStart) continue;
-        }
-        const recStart = r.startDate ? parseInputDateBrasilia(r.startDate) : r.date ? parseInputDateBrasilia(r.date) : createBrasiliaDate(1900, 1, 1);
-        const recEnd = r.endDate ? parseInputDateBrasilia(r.endDate) : upto;
-        const minDate = createBrasiliaDate(1900, 1, 1);
-        const from = recStart > minDate ? recStart : minDate;
-        const to = recEnd < upto ? recEnd : upto;
-        if (from && to && from.getTime() <= to.getTime()) {
-          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? parseInputDateBrasilia(r.date).getDate() : 1);
-          let cur = createBrasiliaDate(from.getFullYear(), from.getMonth() + 1, 1);
-          const last = createBrasiliaDate(to.getFullYear(), to.getMonth() + 1, 1);
-          while (cur.getTime() <= last.getTime()) {
-            const lastDayOfMonth = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 0).getDate();
-            const dayInMonth = Math.min(day, lastDayOfMonth);
-            const occDate = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 1, dayInMonth);
-            // Se mês atual, só inclui recorrente até o dia atual
-            if (isCurrentMonth && occDate.getDate() > dayLimit) {
-              cur = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 1);
-              continue;
-            }
-            if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
-              expanded.push({ ...(r as any), date: formatYmd(occDate) } as PrismaExpense | PrismaIncome);
-            }
-            cur = createBrasiliaDate(cur.getFullYear(), cur.getMonth() + 2, 1);
+      const recStart = r.startDate ? parseInputDateBrasilia(r.startDate) : (r.date ? parseInputDateBrasilia(r.date) : createBrasiliaDate(1900, 1, 1));
+      const recEnd = r.endDate ? parseInputDateBrasilia(r.endDate) : createBrasiliaDate(untilYear, untilMonth + 1, 0);
+      
+      const startYear = recStart.getFullYear();
+      const startMonth = recStart.getMonth() + 1;
+      
+      // Itera por cada mês desde o início até o mês final
+      let curYear = startYear;
+      let curMonth = startMonth;
+      
+      while (curYear < untilYear || (curYear === untilYear && curMonth <= untilMonth)) {
+        const monthStart = createBrasiliaDate(curYear, curMonth, 1);
+        const monthEnd = createBrasiliaDate(curYear, curMonth + 1, 0);
+        
+        // Verifica se esta ocorrência está dentro do período da recorrente
+        if (monthEnd < recStart || (r.endDate && monthStart > recEnd)) {
+          // Avança para o próximo mês
+          curMonth++;
+          if (curMonth > 12) {
+            curMonth = 1;
+            curYear++;
           }
+          continue;
         }
-      } else {
-        // não-FIXED: incluir o registro original se estiver até 'upto'
-        if (r.date && new Date(r.date) <= upto) expanded.push(r);
+        
+        // Determina o dia da ocorrência
+        const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 
+          ? r.dayOfMonth 
+          : recStart.getDate();
+        
+        const lastDayOfMonth = monthEnd.getDate();
+        const dayInMonth = Math.min(day, lastDayOfMonth);
+        
+        const isCurrentMonth = today.getFullYear() === curYear && today.getMonth() + 1 === curMonth;
+        const dayLimit = isCurrentMonth ? today.getDate() : 31;
+        
+        // Se for mês atual e o dia ainda não chegou, pula
+        if (isCurrentMonth && dayInMonth > dayLimit) {
+          curMonth++;
+          if (curMonth > 12) {
+            curMonth = 1;
+            curYear++;
+          }
+          continue;
+        }
+        
+        // Cria a ocorrência
+        const occDate = createBrasiliaDate(curYear, curMonth, dayInMonth);
+        expanded.push({ ...(r as any), date: formatYmd(occDate) } as PrismaExpense | PrismaIncome);
+        
+        // Avança para o próximo mês
+        curMonth++;
+        if (curMonth > 12) {
+          curMonth = 1;
+          curYear++;
+        }
       }
     }
+    
     return expanded;
   }
 
-  const allExpensesExpanded = expandFixedRecords(acumuladoExpenses, endDate);
-  const allIncomesExpanded = expandFixedRecords(acumuladoIncomes, endDate);
+  const allRecorrentesExpensesExpanded = expandRecurrentesUntil(allRecorrentesExpenses, year, month);
+  const allRecorrentesIncomesExpanded = expandRecurrentesUntil(allRecorrentesIncomes, year, month);
 
-  const totalExpensesAcumulado = allExpensesExpanded.reduce((sum: number, e: PrismaExpense) => sum + Number(e.amount), 0);
-  const totalIncomeAcumulado = allIncomesExpanded.reduce((sum: number, i: PrismaIncome) => sum + Number(i.amount), 0);
+  const totalExpensesAcumulado = [...allPontuaisExpenses, ...allRecorrentesExpensesExpanded].reduce((sum: number, e: PrismaExpense) => sum + Number(e.amount), 0);
+  const totalIncomeAcumulado = [...allPontuaisIncomes, ...allRecorrentesIncomesExpanded].reduce((sum: number, i: PrismaIncome) => sum + Number(i.amount), 0);
   const saldoAcumulado = totalIncomeAcumulado - totalExpensesAcumulado;
 
   // Limite diário (quanto pode gastar por dia até o fim do mês para não ficar negativo)
@@ -149,7 +272,7 @@ export async function GET(req: NextRequest) {
 
   // Por categoria
   const expensesByCategory: Record<string, { amount: number; color: string }> = {};
-  for (const e of expenses) {
+  for (const e of expensesThisMonth) {
     const cat = e.category?.name || 'Sem categoria';
     // Excluir categoria de transferência dos gráficos
     if (cat === 'Transferência entre Contas') continue;
@@ -163,7 +286,7 @@ export async function GET(req: NextRequest) {
 
   // Por tag
   const expensesByTag: Record<string, { amount: number; color: string }> = {};
-  for (const e of expenses) {
+  for (const e of expensesThisMonth) {
     if (Array.isArray(e.tags) && e.tags.length > 0) {
         for (const tag of e.tags) {
         const tagName = tag;
@@ -180,7 +303,7 @@ export async function GET(req: NextRequest) {
 
   // Por carteira
   const expensesByWallet: Record<string, number> = {};
-  for (const e of expenses) {
+  for (const e of expensesThisMonth) {
     const wallet = e.wallet?.name || 'Sem carteira';
     if (!expensesByWallet[wallet]) expensesByWallet[wallet] = 0;
     expensesByWallet[wallet] += Number(e.amount);

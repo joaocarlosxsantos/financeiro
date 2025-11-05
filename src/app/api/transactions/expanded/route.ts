@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // import { logger } from '@/lib/logger';
-import { isTransferCategory } from '@/lib/transaction-filters';
 
 const ExpandedTransactionsQuerySchema = z.object({
   type: z.enum(['expense', 'income'], { errorMap: () => ({ message: 'type deve ser "expense" ou "income"' }) }),
@@ -196,10 +195,9 @@ export async function GET(req: NextRequest) {
     const isExpense = type === 'expense';
     const model = isExpense ? prisma.expense : prisma.income;
 
-    // Construir where base
+    // Construir where base (remove transferId: null pois transferências são identificadas pela categoria)
     const whereBase: any = {
       user: { email: session.user.email },
-      transferId: null,
     };
 
     // Filtrar por categorias
@@ -280,11 +278,8 @@ export async function GET(req: NextRequest) {
       updatedAt: new Date(p.updatedAt).toISOString(),
     }));
 
-    // Combinar e filtrar transferências
+    // Combinar todas as transações (incluindo transferências)
     let all: ExpandedTransaction[] = [...punctualFormatted, ...expandedRecurring];
-
-    // Remover transferências
-    all = all.filter((t) => !isTransferCategory(t.category));
 
     // Ordenação
     switch (sort) {

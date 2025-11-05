@@ -22,6 +22,7 @@ import { getMonthRange } from '@/lib/utils';
 import { SmartInsight, generateSmartInsights } from '@/components/dashboard/smart-insights-widget';
 import { generateMonthComparisonData, MonthComparisonData } from '@/components/dashboard/month-comparison-card';
 import { QuickInsightsData } from '@/components/dashboard/quick-insights-card';
+import { isTransferCategory } from '@/lib/transaction-filters';
 
 // Type definitions
 export type Summary = {
@@ -480,8 +481,9 @@ export function useDashboardState(): DashboardStateReturn {
         if (Array.isArray(tagsList)) for (const t of tagsList) tagIdToNameLocal[t.id] = t.name;
         setTagNames(tagIdToNameLocal);
 
-        const allExpenses: any[] = [...expVar, ...expFix];
-        const allIncomes: any[] = [...incVar, ...incFix];
+        // Filtrar transferências ANTES de combinar
+        const allExpenses: any[] = [...expVar, ...expFix].filter((e: any) => !isTransferCategory(e));
+        const allIncomes: any[] = [...incVar, ...incFix].filter((i: any) => !isTransferCategory(i));
 
         const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
         const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
@@ -539,7 +541,7 @@ export function useDashboardState(): DashboardStateReturn {
               { cache: 'no-store', credentials: 'same-origin' }
             ),
           ]);
-          const allPrevExpenses: any[] = [...prevExpVar, ...prevExpFix];
+          const allPrevExpenses: any[] = [...prevExpVar, ...prevExpFix].filter((e: any) => !isTransferCategory(e));
           const prevExpenseMap = new Map<string, number>();
           for (const e of allPrevExpenses) {
             const key = e.category?.name || 'Sem categoria';

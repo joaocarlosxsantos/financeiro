@@ -4,6 +4,7 @@ import { formatYmd } from '../../../../lib/utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { countMonthlyOccurrences } from '../../../../lib/recurring-utils';
+import { isTransferCategory } from '../../../../lib/transaction-filters';
 
 /**
  * Dashboard Charts API Endpoint
@@ -91,8 +92,8 @@ export async function GET(req: NextRequest) {
   // Fetch all expenses for period (both PUNCTUAL and RECURRING expanded in existing APIs)
   // Buscar despesas PONTUAIS no período e todas as despesas RECORRENTES (para expandir ocorrências)
   const [expVar, expFix] = await Promise.all([
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true, wallet: true } }),
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter }, include: { category: true, wallet: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true, wallet: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter }, include: { category: true, wallet: true } }),
   ]);
   // Expand RECURRING expenses into individual occurrences inside the requested period
   const expandedFixed: any[] = [];
@@ -120,7 +121,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const allExpenses = [...expVar, ...expandedFixed];
+  // Combinar pontuais + recorrentes expandidas e filtrar transferências
+  const allExpenses = [...expVar, ...expandedFixed].filter((e: any) => !isTransferCategory(e));
 
   // dailyByCategory
   const days: string[] = [];
@@ -175,10 +177,10 @@ export async function GET(req: NextRequest) {
     const mStartDate = new Date(d.getFullYear(), d.getMonth(), 1);
     const mEndDate = new Date(d.getFullYear(), d.getMonth() + 1, 0);
     const [mExpVar, mExpFix, mIncVar, mIncFix] = await Promise.all([
-      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
-      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
-      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
-      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter, date: { gte: mStartDate, lte: mEndDate } }, select: { amount: true } }),
     ]);
     const allExp = [...mExpVar, ...mExpFix];
     const allInc = [...mIncVar, ...mIncFix];
@@ -221,8 +223,8 @@ export async function GET(req: NextRequest) {
 
   // incomesByCategory for the current month
   const [incVarThis, incFixThis] = await Promise.all([
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter }, include: { category: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, include: { category: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter }, include: { category: true } }),
   ]);
   
   // Expand RECURRING incomes into individual occurrences inside the requested period
@@ -251,11 +253,11 @@ export async function GET(req: NextRequest) {
     }
   }
   
-  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory];
+  // Combinar pontuais + recorrentes expandidas e filtrar transferências
+  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory].filter((i: any) => !isTransferCategory(i));
   const incomeMap = new Map<string, { amount: number; color: string }>();
   for (const i of allIncomesThisMonth) {
     const key = i.category?.name || 'Sem categoria';
-    // Excluir categoria de transferência dos gráficos
     if (key === 'Transferência entre Contas') continue;
     // fallback consistente: rendas usam --success quando não há cor
     const color = i.category?.color || 'hsl(var(--success))';
@@ -285,8 +287,8 @@ export async function GET(req: NextRequest) {
   const prevMonthEndDate = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
   const [pExpVar, pExpFix, pExpVarComplete, pExpFixComplete] = await Promise.all([
     // Dados filtrados (sem transferências) para gráficos
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
     // Dados completos (com transferências) para detalhamento
     prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
     prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter, date: { gte: prevStartDate, lte: prevMonthEndDate } }, select: { amount: true, category: true } }),
@@ -320,10 +322,10 @@ export async function GET(req: NextRequest) {
 
   // fetch punctual expenses/incomes up to prevEndDate and all RECURRING to count occurrences
   const [prevExpVar, prevExpFix, prevIncVar, prevIncFix] = await Promise.all([
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
-    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
+    prisma.expense.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: new Date('1900-01-01'), lte: prevEndDate } }, select: { amount: true, date: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
   ]);
 
   const prevExpTotalVar = prevExpVar.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
@@ -349,8 +351,8 @@ export async function GET(req: NextRequest) {
   // fill dayMap from incomes and expenses
   // fetch incomes punctual in period and RECURRING incomes (to expand occurrences into this period)
   const [incVarList, incFixList] = await Promise.all([
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, select: { amount: true, date: true } }),
-    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', transferId: null, ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'PUNCTUAL', ...walletFilter, ...paymentTypeFilter, date: { gte: startDateObj, lte: endDateObj } }, select: { amount: true, date: true } }),
+    prisma.income.findMany({ where: { user: { email: session.user.email }, type: 'RECURRING', ...walletFilter, ...paymentTypeFilter }, select: { amount: true, date: true, startDate: true, endDate: true, dayOfMonth: true } }),
   ]);
   const expandedFixedIncomes: any[] = [];
   for (const inc of incFixList) {
@@ -372,7 +374,8 @@ export async function GET(req: NextRequest) {
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
   }
-  const incomesCombined = [...incVarList, ...expandedFixedIncomes];
+  // Combinar pontuais + recorrentes expandidas e filtrar transferências
+  const incomesCombined = [...incVarList, ...expandedFixedIncomes].filter((i: any) => !isTransferCategory(i));
   for (const i of incomesCombined) {
     if (!i.date) continue;
     const key = toYmd(new Date(i.date));
@@ -427,8 +430,8 @@ export async function GET(req: NextRequest) {
 
     // soma variáveis nesse intervalo
     const [varsExp, varsInc] = await Promise.all([
-      prisma.expense.findMany({ where: { user: { email: session.user.email }, transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
-      prisma.income.findMany({ where: { user: { email: session.user.email }, transferId: null, ...walletFilter, ...paymentTypeFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
+      prisma.expense.findMany({ where: { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
+      prisma.income.findMany({ where: { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter, date: { gte: startDate, lte: endDate } }, select: { amount: true } }),
     ]);
     const sumVarsExp = varsExp.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
     const sumVarsInc = varsInc.reduce((s: number, x: { amount?: number | null }) => s + Number(x.amount || 0), 0);
@@ -502,3 +505,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(payload);
 }
+
