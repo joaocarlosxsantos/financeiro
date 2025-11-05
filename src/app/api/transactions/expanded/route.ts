@@ -91,10 +91,11 @@ function expandRecurringTransaction(
   const endMonth = toDate.getMonth() + 1;
 
   while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+    
     // Verificar se a recorrência ainda está ativa neste mês
     if (transaction.startDate) {
       const startDate = new Date(transaction.startDate);
-      const checkDate = new Date(currentYear, currentMonth - 1, 1);
+      const checkDate = new Date(Date.UTC(currentYear, currentMonth - 1, 1, 12, 0, 0, 0));
       if (checkDate < startDate) {
         currentMonth++;
         if (currentMonth > 12) {
@@ -107,7 +108,7 @@ function expandRecurringTransaction(
 
     if (transaction.endDate) {
       const endDate = new Date(transaction.endDate);
-      const checkDate = new Date(currentYear, currentMonth - 1, dayOfMonth);
+      const checkDate = new Date(Date.UTC(currentYear, currentMonth - 1, dayOfMonth, 12, 0, 0, 0));
       if (checkDate > endDate) {
         break;
       }
