@@ -207,32 +207,13 @@ export async function GET(req: NextRequest) {
 
   // DEPOIS filtra transferências
   // Remove incomes E expenses com categoria "Transferência entre Contas"
-  console.log('=== CARDS DO MÊS - ANTES DO FILTRO ===');
-  console.log('Incomes expandidos:', expandedIncomes.length);
-  expandedIncomes.forEach((i: any) => {
-    console.log(`  Income: R$ ${Number(i.amount).toFixed(2)} - cat: "${i.category?.name || 'sem'}" - isTransfer: ${isTransferCategory(i)}`);
-  });
-  
-  console.log('Expenses expandidos:', expandedExpenses.length);
-  expandedExpenses.forEach((e: any) => {
-    console.log(`  Expense: R$ ${Number(e.amount).toFixed(2)} - cat: "${e.category?.name || 'sem'}" - isTransfer: ${isTransferCategory(e)}`);
-  });
-  
   const filteredIncomes = expandedIncomes.filter((i: any) => !isTransferCategory(i));
   const filteredExpenses = expandedExpenses.filter((e: any) => !isTransferCategory(e));
-  
-  console.log('Incomes APÓS filtro:', filteredIncomes.length, '(removeu', expandedIncomes.length - filteredIncomes.length, 'transferências)');
-  console.log('Expenses APÓS filtro:', filteredExpenses.length, '(removeu', expandedExpenses.length - filteredExpenses.length, 'transferências)');
 
   // Calcular totais
   const totalExpenses = filteredExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
   const totalIncomes = filteredIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
   const balance = totalIncomes - totalExpenses;
-  
-  console.log('Total Expenses:', totalExpenses.toFixed(2));
-  console.log('Total Incomes:', totalIncomes.toFixed(2));
-  console.log('Balance:', balance.toFixed(2));
-  console.log('===================');
 
 
 
@@ -254,27 +235,15 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    console.log('=== SALDO ACUMULADO ===');
-    console.log('Total Expenses até', endDateFinal.toISOString().split('T')[0], ':', allExpensesAcc.length);
-    console.log('Total Incomes até', endDateFinal.toISOString().split('T')[0], ':', allIncomesAcc.length);
-
     // Remove transferências (incomes E expenses com categoria "Transferência entre Contas")
     const filteredIncomesAcc = allIncomesAcc.filter((i: any) => !isTransferCategory(i));
     const filteredExpensesAcc = allExpensesAcc.filter((e: any) => !isTransferCategory(e));
-
-    console.log('Incomes APÓS filtro:', filteredIncomesAcc.length, '(removeu', allIncomesAcc.length - filteredIncomesAcc.length, 'transferências)');
-    console.log('Expenses APÓS filtro:', filteredExpensesAcc.length, '(removeu', allExpensesAcc.length - filteredExpensesAcc.length, 'transferências)');
 
     // Soma direta
     const totalExpensesAcc = filteredExpensesAcc.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
     const totalIncomesAcc = filteredIncomesAcc.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0);
     
     saldoAcumulado = totalIncomesAcc - totalExpensesAcc;
-    
-    console.log('Total Expenses Acc:', totalExpensesAcc);
-    console.log('Total Incomes Acc:', totalIncomesAcc);
-    console.log('Saldo Acumulado:', saldoAcumulado);
-    console.log('===================');
   }
 
   // Limite diário: simple heuristic similar to frontend logic

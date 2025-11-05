@@ -127,6 +127,7 @@ export async function GET(req: Request) {
       const occurrences: any[] = [];
       const sDate = parsedStartDate;
       const eDate = parsedEndDate;
+      
       for (const r of rows) {
         // For non-recurring records, only include if within requested date interval (if provided)
         if (!r.isRecurring) {
@@ -139,9 +140,11 @@ export async function GET(req: Request) {
           occurrences.push({ ...r, kind });
           continue;
         }
+        
         // determine series start and end
         const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
         const seriesEnd = r.endDate ? new Date(r.endDate) : null;
+        
         // NOVA REGRA: só inclui recorrente se endDate for nula ou >= início do mês consultado
         const monthRef = (sDate || seriesStart);
         if (seriesEnd && seriesEnd < new Date(monthRef.getFullYear(), monthRef.getMonth(), 1)) {
@@ -150,6 +153,7 @@ export async function GET(req: Request) {
         // compute intersection of [seriesStart, seriesEnd?] with [sDate,eDate]
         const from = sDate && sDate > seriesStart ? sDate : seriesStart;
         const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
+        
         if (!to) {
           // no upper bound, include one occurrence at 'from'
           occurrences.push({ ...r, kind, date: from });
@@ -161,6 +165,7 @@ export async function GET(req: Request) {
         let months = 0;
         const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
         const today = new Date();
+        
         while (cursor <= endCursor && months < 24) {
           // determine desired day: prefer explicit dayOfMonth, otherwise use original record day (use UTC to avoid timezone shifts)
           const originalDay = r.date ? new Date(r.date).getUTCDate() : 1;
@@ -185,6 +190,7 @@ export async function GET(req: Request) {
           months += 1;
         }
       }
+      
       // Normalize tags: if tags look like IDs, try to resolve names
       const allTagValues = Array.from(new Set(occurrences.flatMap((o) => Array.isArray(o.tags) ? o.tags : [])));
       if (allTagValues.length > 0) {
@@ -209,6 +215,7 @@ export async function GET(req: Request) {
       const incomeWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
       const incomeWhere = { ...incomeWhereBase, ...(tags ? { AND: [ ...(incomeWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
       let incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true } });
+      
       // If DB returned no incomes when tags provided, attempt an in-memory fallback that matches tag ids/names case-insensitively
       if (tags && tags.length > 0 && incomes.length === 0) {
         try {
@@ -241,6 +248,7 @@ export async function GET(req: Request) {
       const expenseWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
       const expenseWhere = { ...expenseWhereBase, ...(tags ? { AND: [ ...(expenseWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
       let expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true } });
+      
       if (tags && tags.length > 0 && expenses.length === 0) {
         try {
           const expensesNoTag = await prisma.expense.findMany({ where: expenseWhereBase, include: { category: true, wallet: true } });

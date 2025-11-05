@@ -46,7 +46,7 @@ export function TransactionFormModal({
         categoryId: initialData.categoryId || '',
         walletId: initialData.walletId || '',
         type: initialData.type || 'expense',
-        recurring: initialData.recurring || false,
+        recurring: initialData.isRecurring || initialData.recurring || false,
         recurringStart: initialData.recurringStart || today,
         recurringEnd: initialData.recurringEnd || '',
       });

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,40 +19,40 @@ model Tag {
 }
 
 model User {
-  id                 String               @id @default(cuid())
-  name               String?
-  email              String               @unique
-  apiKey             String?              @unique
-  phone              String?
-  emailVerified      DateTime?
-  image              String?
-  password           String?
-  theme              String?              @default("system")
-  tags               Tag[]
-  categories         Category[]
-  goals              Goal[]
-  expenses           Expense[]
-  incomes            Income[]
-  wallets            Wallet[]
-  creditCards        CreditCard[]
-  creditExpenses     CreditExpense[]
-  creditBills        CreditBill[]
-  billPayments       BillPayment[]
-  groups             Group[]
-  members            Member[]
-  bills              Bill[]
-  billMemberShares   BillMemberShare[]
-  notifications      Notification[]
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  apiKey              String?              @unique
+  phone               String?
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  theme               String?              @default("system")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  achievements        Achievement[]        @relation("UserAchievements")
   alertConfigurations AlertConfiguration[]
-  achievements       Achievement[]        @relation("UserAchievements")
-  challenges         Challenge[]          @relation("UserChallenges")
-  stats              UserStats?           @relation("UserStats")
-  scenarios          Scenario[]           @relation("UserScenarios")
-  webhooks           Webhook[]            @relation("UserWebhooks")
-  integrations       Integration[]        @relation("UserIntegrations")
-  authenticators     Authenticator[]      @relation("UserAuthenticators")
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  authenticators      Authenticator[]      @relation("UserAuthenticators")
+  bills               Bill[]
+  billMemberShares    BillMemberShare[]
+  billPayments        BillPayment[]
+  categories          Category[]
+  challenges          Challenge[]          @relation("UserChallenges")
+  creditBills         CreditBill[]
+  creditCards         CreditCard[]
+  creditExpenses      CreditExpense[]
+  expenses            Expense[]
+  goals               Goal[]
+  groups              Group[]
+  incomes             Income[]
+  integrations        Integration[]        @relation("UserIntegrations")
+  members             Member[]
+  notifications       Notification[]
+  scenarios           Scenario[]           @relation("UserScenarios")
+  tags                Tag[]
+  stats               UserStats?           @relation("UserStats")
+  wallets             Wallet[]
+  webhooks            Webhook[]            @relation("UserWebhooks")
 }
 
 model Category {
@@ -65,13 +62,13 @@ model Category {
   icon           String?
   type           CategoryType
   userId         String
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses       Expense[]
-  incomes        Income[]
-  creditExpenses CreditExpense[]
-  goals          Goal[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditExpenses CreditExpense[]
+  expenses       Expense[]
+  goals          Goal[]
+  incomes        Income[]
 
   @@unique([userId, name, type])
 }
@@ -82,21 +79,21 @@ model Expense {
   amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
   type        ExpenseType
-  paymentType PaymentType @default(DEBIT) // Agora só aceita DEBIT, PIX_TRANSFER, CASH, OTHER
+  paymentType PaymentType @default(DEBIT)
   isRecurring Boolean     @default(false)
-  startDate   DateTime? // Para despesas recorrentes
-  endDate     DateTime? // Para despesas recorrentes
-  dayOfMonth  Int? // Para despesas recorrentes (dia do mês)
-  transferId  String? // ID da transferência (para ligar saída e entrada)
+  startDate   DateTime?
+  endDate     DateTime?
+  dayOfMonth  Int?
+  transferId  String?
   categoryId  String?
-  category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   walletId    String
-  wallet      Wallet      @relation(fields: [walletId], references: [id])
-  tags        String[] // Tags secundárias
+  tags        String[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet      Wallet      @relation(fields: [walletId], references: [id])
 }
 
 model Income {
@@ -105,55 +102,408 @@ model Income {
   amount      Decimal     @db.Decimal(10, 2)
   date        DateTime
   type        IncomeType
-  paymentType PaymentType @default(DEBIT) // Agora só aceita DEBIT, PIX_TRANSFER, CASH, OTHER
+  paymentType PaymentType @default(DEBIT)
   isRecurring Boolean     @default(false)
-  startDate   DateTime? // Para receitas recorrentes
-  endDate     DateTime? // Para receitas recorrentes
-  dayOfMonth  Int? // Para receitas recorrentes (dia do mês)
-  transferId  String? // ID da transferência (para ligar saída e entrada)
+  startDate   DateTime?
+  endDate     DateTime?
+  dayOfMonth  Int?
+  transferId  String?
   categoryId  String?
-  category    Category?   @relation(fields: [categoryId], references: [id])
   userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   walletId    String
-  wallet      Wallet      @relation(fields: [walletId], references: [id])
-  tags        String[] // Tags secundárias
+  tags        String[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet      Wallet      @relation(fields: [walletId], references: [id])
 }
 
 model Wallet {
   id           String        @id @default(cuid())
   name         String
-  type         String        // Ex: "carteira", "banco", "cartao"
+  type         String
   userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses     Expense[]
-  incomes      Income[]
-  creditCards  CreditCard[]  @relation("CreditCardBank")
-  billPayments BillPayment[] @relation("BillPayments")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  billPayments BillPayment[] @relation("BillPayments")
+  creditCards  CreditCard[]  @relation("CreditCardBank")
+  expenses     Expense[]
+  incomes      Income[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
 }
 
 model CreditCard {
-  id            String         @id @default(cuid())
-  name          String         // Nome do cartão
-  limit         Decimal        @db.Decimal(10, 2) // Limite do cartão
-  closingDay    Int            // Dia do fechamento da fatura (1-31)
-  dueDay        Int            // Dia do vencimento da fatura (1-31)
-  bankId        String?        // Banco vinculado (pode ser nulo)
-  bank          Wallet?        @relation("CreditCardBank", fields: [bankId], references: [id])
-  userId        String
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String          @id @default(cuid())
+  name           String
+  limit          Decimal         @db.Decimal(10, 2)
+  closingDay     Int
+  dueDay         Int
+  bankId         String?
+  userId         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  creditBills    CreditBill[]
+  bank           Wallet?         @relation("CreditCardBank", fields: [bankId], references: [id])
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   creditExpenses CreditExpense[]
-  creditBills   CreditBill[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
 
   @@unique([userId, name])
+}
+
+model Group {
+  id          Int      @id @default(autoincrement())
+  name        String
+  userId      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  bills       Bill[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members     Member[]
+
+  @@unique([userId, name])
+}
+
+model Member {
+  id        Int               @id @default(autoincrement())
+  name      String
+  phone     String?
+  userId    String
+  groupId   Int
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  shares    BillMemberShare[]
+  group     Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Bill {
+  id          Int               @id @default(autoincrement())
+  title       String
+  description String?
+  amount      Float
+  dueDate     DateTime
+  paid        Boolean           @default(false)
+  userId      String
+  groupId     Int
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares      BillMemberShare[]
+}
+
+model BillMemberShare {
+  id        Int      @id @default(autoincrement())
+  billId    Int
+  memberId  Int
+  userId    String
+  amount    Float
+  percent   Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([billId, memberId])
+}
+
+model Goal {
+  id            String          @id @default(cuid())
+  userId        String
+  title         String
+  description   String?
+  type          GoalType
+  kind          GoalKind        @default(ATTAINMENT)
+  operator      GoalOperator
+  amount        Decimal         @db.Decimal(12, 2)
+  categoryId    String?
+  tagName       String?
+  categoryIds   String[]        @default([])
+  tagFilters    String[]        @default([])
+  tagAggregates String[]        @default([])
+  tagNames      String[]        @default([])
+  walletId      String?
+  appliesTo     GoalAppliesTo   @default(BOTH)
+  startDate     DateTime?
+  endDate       DateTime?
+  recurrence    GoalRecurrence?
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Notification {
+  id           String               @id @default(cuid())
+  userId       String
+  type         NotificationType
+  title        String
+  message      String
+  priority     NotificationPriority @default(MEDIUM)
+  isRead       Boolean              @default(false)
+  isActive     Boolean              @default(true)
+  data         Json?
+  scheduledFor DateTime?
+  triggeredAt  DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, type])
+  @@index([scheduledFor])
+}
+
+model AlertConfiguration {
+  id               String          @id @default(cuid())
+  userId           String
+  type             AlertConfigType
+  isEnabled        Boolean         @default(true)
+  thresholdAmount  Decimal?        @db.Decimal(12, 2)
+  thresholdPercent Float?
+  categoryIds      String[]        @default([])
+  walletIds        String[]        @default([])
+  settings         Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId, isEnabled])
+}
+
+model CreditExpense {
+  id           String            @id @default(cuid())
+  description  String
+  amount       Decimal           @db.Decimal(10, 2)
+  purchaseDate DateTime
+  installments Int               @default(1)
+  type         CreditExpenseType @default(EXPENSE)
+  categoryId   String?
+  creditCardId String
+  userId       String
+  tags         String[]          @default([])
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  billItems    CreditBillItem[]
+  category     Category?         @relation(fields: [categoryId], references: [id])
+  creditCard   CreditCard        @relation(fields: [creditCardId], references: [id])
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purchaseDate])
+  @@index([creditCardId])
+}
+
+model CreditBillItem {
+  id                String        @id @default(cuid())
+  creditExpenseId   String
+  installmentNumber Int
+  amount            Decimal       @db.Decimal(10, 2)
+  dueDate           DateTime
+  billId            String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  bill              CreditBill?   @relation(fields: [billId], references: [id])
+  creditExpense     CreditExpense @relation(fields: [creditExpenseId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@index([dueDate])
+}
+
+model CreditBill {
+  id           String           @id @default(cuid())
+  creditCardId String
+  closingDate  DateTime
+  dueDate      DateTime
+  totalAmount  Decimal          @db.Decimal(10, 2)
+  paidAmount   Decimal          @default(0) @db.Decimal(10, 2)
+  status       BillStatus       @default(PENDING)
+  userId       String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  payments     BillPayment[]
+  creditCard   CreditCard       @relation(fields: [creditCardId], references: [id])
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        CreditBillItem[]
+
+  @@unique([creditCardId, closingDate])
+  @@index([userId, dueDate])
+  @@index([status])
+}
+
+model BillPayment {
+  id          String     @id @default(cuid())
+  billId      String
+  amount      Decimal    @db.Decimal(10, 2)
+  paymentDate DateTime
+  walletId    String
+  description String?
+  userId      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  bill        CreditBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet      Wallet     @relation("BillPayments", fields: [walletId], references: [id])
+
+  @@index([userId, paymentDate])
+  @@index([billId])
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  userId      String
+  badgeType   BadgeType
+  title       String
+  description String
+  earnedAt    DateTime  @default(now())
+  progress    Int       @default(100)
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, badgeType])
+  @@index([earnedAt])
+}
+
+model Challenge {
+  id          String              @id @default(cuid())
+  userId      String
+  type        ChallengeType
+  title       String
+  description String
+  goal        Decimal             @db.Decimal(12, 2)
+  current     Decimal             @default(0) @db.Decimal(12, 2)
+  startDate   DateTime
+  endDate     DateTime
+  status      ChallengeStatus     @default(ACTIVE)
+  reward      String?
+  categoryId  String?
+  difficulty  ChallengeDifficulty @default(MEDIUM)
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  user        User                @relation("UserChallenges", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([endDate])
+}
+
+model UserStats {
+  id                       String    @id @default(cuid())
+  userId                   String    @unique
+  totalAchievements        Int       @default(0)
+  totalChallengesCompleted Int       @default(0)
+  currentStreak            Int       @default(0)
+  longestStreak            Int       @default(0)
+  points                   Int       @default(0)
+  level                    Int       @default(1)
+  lastActivityDate         DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  user                     User      @relation("UserStats", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([points])
+  @@index([level])
+}
+
+model Scenario {
+  id                  String   @id @default(cuid())
+  userId              String
+  name                String
+  description         String?
+  duration            Int
+  initialBalance      Decimal  @db.Decimal(10, 2)
+  monthlyIncome       Decimal  @db.Decimal(10, 2)
+  monthlyExpenses     Decimal  @db.Decimal(10, 2)
+  monthlySavings      Decimal  @db.Decimal(10, 2)
+  incomeChange        Decimal? @db.Decimal(5, 2)
+  expensesChange      Decimal? @db.Decimal(5, 2)
+  savingsChange       Decimal? @db.Decimal(10, 2)
+  oneTimeExpense      Decimal? @db.Decimal(10, 2)
+  oneTimeExpenseMonth Int?
+  oneTimeIncome       Decimal? @db.Decimal(10, 2)
+  oneTimeIncomeMonth  Int?
+  inflation           Decimal? @db.Decimal(5, 2)
+  investmentReturn    Decimal? @db.Decimal(5, 2)
+  color               String   @default("#3B82F6")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation("UserScenarios", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Webhook {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  url           String
+  secret        String
+  isActive      Boolean   @default(true)
+  events        String[]
+  filters       Json?
+  lastTriggered DateTime?
+  successCount  Int       @default(0)
+  failureCount  Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation("UserWebhooks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Integration {
+  id                 String          @id @default(cuid())
+  userId             String
+  platform           IntegrationType
+  isActive           Boolean         @default(true)
+  chatId             String?
+  token              String?
+  phoneNumber        String?
+  settings           Json?
+  enabledCommands    String[]        @default(["balance", "expenses", "summary"])
+  notifyTransactions Boolean         @default(true)
+  notifyGoals        Boolean         @default(true)
+  notifyAlerts       Boolean         @default(true)
+  lastUsed           DateTime?
+  usageCount         Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation("UserIntegrations", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, chatId])
+  @@index([userId])
+  @@index([platform, isActive])
+}
+
+model Authenticator {
+  id                  String    @id @default(cuid())
+  userId              String
+  credentialID        String    @unique
+  credentialPublicKey Bytes
+  counter             BigInt    @default(0)
+  deviceName          String?
+  deviceType          String?
+  transports          String[]  @default([])
+  aaguid              String?
+  lastUsed            DateTime?
+  usageCount          Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation("UserAuthenticators", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([credentialID])
 }
 
 enum CategoryType {
@@ -173,104 +523,10 @@ enum IncomeType {
 }
 
 enum PaymentType {
-  DEBIT        // Débito (carteira)
-  PIX_TRANSFER // PIX/Transferência (carteira)
-  CASH         // Dinheiro (carteira)
-  OTHER        // Outros (carteira)
-  // CREDIT foi removido - agora gastos de crédito usam CreditExpense
-}
-
-// --- Controle de Contas models ---
-
-model Group {
-  id          Int      @id @default(autoincrement())
-  name        String
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  members     Member[]
-  bills       Bill[]
-
-  @@unique([userId, name])
-}
-
-model Member {
-  id        Int               @id @default(autoincrement())
-  name      String
-  phone     String?
-  userId    String
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  groupId   Int
-  group     Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  shares    BillMemberShare[]
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-}
-
-model Bill {
-  id          Int               @id @default(autoincrement())
-  title       String
-  description String?
-  amount      Float
-  dueDate     DateTime
-  paid        Boolean           @default(false)
-  userId      String
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  groupId     Int
-  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  shares      BillMemberShare[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-}
-
-model BillMemberShare {
-  id        Int      @id @default(autoincrement())
-  billId    Int
-  memberId  Int
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount    Float
-  percent   Float?
-  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([billId, memberId])
-}
-
-// Goals / Metas
-model Goal {
-  id          String      @id @default(cuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  description String?
-  type        GoalType
-  kind        GoalKind    @default(ATTAINMENT)
-  operator    GoalOperator
-  amount      Decimal     @db.Decimal(12, 2)
-  categoryId  String?
-  category    Category?   @relation(fields: [categoryId], references: [id])
-  // legacy single references kept for compatibility
-  tagName     String? // filters by tag name
-  // new multi-value filters
-  categoryIds String[]    @default([])
-  tagFilters  String[]    @default([]) // tags to act as filters (must match)
-  tagAggregates String[]  @default([]) // tags to aggregate (included in sum)
-  tagNames    String[]    @default([]) // legacy: additional tag names
-  walletId    String?
-  appliesTo   GoalAppliesTo @default(BOTH)
-  startDate   DateTime?
-  endDate     DateTime?
-  recurrence  GoalRecurrence?
-  active      Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@index([userId])
+  DEBIT
+  PIX_TRANSFER
+  CASH
+  OTHER
 }
 
 enum GoalType {
@@ -294,61 +550,21 @@ enum GoalRecurrence {
 }
 
 enum GoalKind {
-  ATTAINMENT // aim to reach or accumulate an amount (positive)
-  LIMIT // limit to not exceed (e.g., spend <= X), exceeding is negative
-}
-
-// Notifications and Alerts System
-model Notification {
-  id          String           @id @default(cuid())
-  userId      String
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        NotificationType
-  title       String
-  message     String
-  priority    NotificationPriority @default(MEDIUM)
-  isRead      Boolean          @default(false)
-  isActive    Boolean          @default(true)
-  data        Json?            // Additional data related to the notification
-  scheduledFor DateTime?       // For scheduled notifications
-  triggeredAt DateTime?        // When the alert condition was first detected
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@index([userId, isRead])
-  @@index([userId, type])
-  @@index([scheduledFor])
-}
-
-model AlertConfiguration {
-  id               String              @id @default(cuid())
-  userId           String
-  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type             AlertConfigType
-  isEnabled        Boolean             @default(true)
-  thresholdAmount  Decimal?            @db.Decimal(12, 2)
-  thresholdPercent Float?
-  categoryIds      String[]            @default([])
-  walletIds        String[]            @default([])
-  settings         Json?               // Additional configuration data
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  @@unique([userId, type])
-  @@index([userId, isEnabled])
+  ATTAINMENT
+  LIMIT
 }
 
 enum NotificationType {
-  BUDGET_EXCEEDED        // Orçamento excedido
-  UNUSUAL_SPENDING       // Gasto incomum detectado
-  LOW_BALANCE           // Saldo baixo
-  GOAL_AT_RISK          // Meta em risco
-  DUPLICATE_TRANSACTION // Possível transação duplicada
-  RECURRING_DUE         // Lembrete de transação recorrente
-  MONTHLY_SUMMARY       // Resumo mensal
-  ACHIEVEMENT          // Conquista/meta atingida
-  SYSTEM              // Notificação do sistema
-  CUSTOM              // Personalizada
+  BUDGET_EXCEEDED
+  UNUSUAL_SPENDING
+  LOW_BALANCE
+  GOAL_AT_RISK
+  DUPLICATE_TRANSACTION
+  RECURRING_DUE
+  MONTHLY_SUMMARY
+  ACHIEVEMENT
+  SYSTEM
+  CUSTOM
 }
 
 enum NotificationPriority {
@@ -368,218 +584,58 @@ enum AlertConfigType {
   MONTHLY_SUMMARY
 }
 
-// --- Modelos de Crédito ---
-
-model CreditExpense {
-  id           String           @id @default(cuid())
-  description  String
-  amount       Decimal          @db.Decimal(10, 2) // Valor total da compra
-  purchaseDate DateTime         // Data da compra
-  installments Int              @default(1) // Número de parcelas
-  type         CreditExpenseType @default(EXPENSE) // Tipo: gasto ou estorno
-  categoryId   String?
-  category     Category?        @relation(fields: [categoryId], references: [id])
-  creditCardId String
-  creditCard   CreditCard       @relation(fields: [creditCardId], references: [id])
-  userId       String
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tags         String[]         @default([])
-  
-  // Relacionamento com itens da fatura (parcelas)
-  billItems    CreditBillItem[]
-  
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-
-  @@index([userId, purchaseDate])
-  @@index([creditCardId])
-}
-
-model CreditBillItem {
-  id                String        @id @default(cuid())
-  creditExpenseId   String
-  creditExpense     CreditExpense @relation(fields: [creditExpenseId], references: [id], onDelete: Cascade)
-  installmentNumber Int           // Número da parcela (1, 2, 3...)
-  amount            Decimal       @db.Decimal(10, 2) // Valor desta parcela
-  dueDate           DateTime      // Data de vencimento desta parcela
-  billId            String?
-  bill              CreditBill?   @relation(fields: [billId], references: [id])
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@index([billId])
-  @@index([dueDate])
-}
-
-model CreditBill {
-  id           String         @id @default(cuid())
-  creditCardId String
-  creditCard   CreditCard     @relation(fields: [creditCardId], references: [id])
-  closingDate  DateTime       // Data de fechamento da fatura
-  dueDate      DateTime       // Data de vencimento da fatura
-  totalAmount  Decimal        @db.Decimal(10, 2) // Valor total da fatura
-  paidAmount   Decimal        @db.Decimal(10, 2) @default(0) // Valor já pago
-  status       BillStatus     @default(PENDING)
-  userId       String
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Relacionamentos
-  items        CreditBillItem[] // Itens (parcelas) desta fatura
-  payments     BillPayment[]    // Pagamentos desta fatura
-  
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  @@unique([creditCardId, closingDate]) // Uma fatura por cartão por mês
-  @@index([userId, dueDate])
-  @@index([status])
-}
-
-model BillPayment {
-  id          String     @id @default(cuid())
-  billId      String
-  bill        CreditBill @relation(fields: [billId], references: [id], onDelete: Cascade)
-  amount      Decimal    @db.Decimal(10, 2) // Valor pago
-  paymentDate DateTime   // Data do pagamento
-  walletId    String     // Carteira de onde saiu o dinheiro
-  wallet      Wallet     @relation("BillPayments", fields: [walletId], references: [id])
-  description String?    // Descrição opcional do pagamento
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  @@index([userId, paymentDate])
-  @@index([billId])
-}
-
-// Novos enums
 enum CreditExpenseType {
-  EXPENSE   // Gasto normal
-  REFUND    // Estorno/Reembolso
+  EXPENSE
+  REFUND
 }
 
 enum BillStatus {
-  PENDING   // Pendente
-  PAID      // Paga totalmente
-  PARTIAL   // Parcialmente paga
-  OVERDUE   // Vencida
-}
-
-// --- Sistema de Conquistas e Gamificação ---
-
-model Achievement {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
-  badgeType   BadgeType
-  title       String
-  description String
-  earnedAt    DateTime @default(now())
-  progress    Int      @default(100) // 0-100, para mostrar progresso parcial
-  metadata    Json?    // Dados adicionais (ex: categoria, valor economizado)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([userId, badgeType])
-  @@index([earnedAt])
-}
-
-model Challenge {
-  id           String         @id @default(cuid())
-  userId       String
-  user         User           @relation("UserChallenges", fields: [userId], references: [id], onDelete: Cascade)
-  type         ChallengeType
-  title        String
-  description  String
-  goal         Decimal        @db.Decimal(12, 2) // Meta a atingir
-  current      Decimal        @db.Decimal(12, 2) @default(0) // Progresso atual
-  startDate    DateTime
-  endDate      DateTime
-  status       ChallengeStatus @default(ACTIVE)
-  reward       String?        // Descrição da recompensa
-  categoryId   String?        // Categoria relacionada (opcional)
-  difficulty   ChallengeDifficulty @default(MEDIUM)
-  metadata     Json?          // Dados adicionais
-  
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  @@index([userId, status])
-  @@index([endDate])
-}
-
-model UserStats {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  user                  User     @relation("UserStats", fields: [userId], references: [id], onDelete: Cascade)
-  totalAchievements     Int      @default(0)
-  totalChallengesCompleted Int   @default(0)
-  currentStreak         Int      @default(0) // Dias consecutivos usando o app
-  longestStreak         Int      @default(0)
-  points                Int      @default(0) // Sistema de pontos
-  level                 Int      @default(1)
-  lastActivityDate      DateTime?
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@index([points])
-  @@index([level])
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
 }
 
 enum BadgeType {
-  // Economia
-  FIRST_SAVINGS           // Primeira economia registrada
-  SAVINGS_STREAK_7        // 7 dias consecutivos economizando
-  SAVINGS_STREAK_30       // 30 dias consecutivos economizando
-  SAVED_1K               // Economizou R$ 1.000
-  SAVED_5K               // Economizou R$ 5.000
-  SAVED_10K              // Economizou R$ 10.000
-  
-  // Disciplina
-  NO_SPEND_WEEK          // 1 semana sem gastar em categoria específica
-  NO_SPEND_MONTH         // 1 mês sem gastar em categoria específica
-  BUDGET_KEEPER          // Manteve-se no orçamento por 3 meses
-  BILL_MASTER            // Pagou todas as contas em dia por 6 meses
-  
-  // Progresso
-  FIRST_GOAL             // Primeira meta criada
-  GOAL_ACHIEVED          // Meta alcançada
-  GOAL_STREAK_3          // 3 metas alcançadas seguidas
-  EMERGENCY_FUND_50      // 50% da reserva de emergência
-  EMERGENCY_FUND_100     // 100% da reserva de emergência
-  
-  // Engajamento
-  EARLY_BIRD             // Usou o app por 7 dias consecutivos
-  CONSISTENT_USER        // Usou o app por 30 dias consecutivos
-  POWER_USER             // Usou o app por 100 dias consecutivos
-  CATEGORY_MASTER        // Categorizou 100 transações
-  
-  // Especiais
-  DEBT_FREE              // Quitou todas as dívidas
-  INVESTMENT_STARTER     // Primeiro investimento registrado
-  YEAR_REVIEW            // Completou 1 ano no app
+  FIRST_SAVINGS
+  SAVINGS_STREAK_7
+  SAVINGS_STREAK_30
+  SAVED_1K
+  SAVED_5K
+  SAVED_10K
+  NO_SPEND_WEEK
+  NO_SPEND_MONTH
+  BUDGET_KEEPER
+  BILL_MASTER
+  FIRST_GOAL
+  GOAL_ACHIEVED
+  GOAL_STREAK_3
+  EMERGENCY_FUND_50
+  EMERGENCY_FUND_100
+  EARLY_BIRD
+  CONSISTENT_USER
+  POWER_USER
+  CATEGORY_MASTER
+  DEBT_FREE
+  INVESTMENT_STARTER
+  YEAR_REVIEW
 }
 
 enum ChallengeType {
-  SAVINGS                // Economizar X valor
-  NO_SPEND              // Não gastar em categoria
-  BUDGET_LIMIT          // Manter gastos abaixo de X
-  INCOME_INCREASE       // Aumentar renda em X%
-  DEBT_REDUCTION        // Reduzir dívidas em X
-  CATEGORY_CONTROL      // Controlar gastos em categoria
-  CUSTOM                // Personalizado
+  SAVINGS
+  NO_SPEND
+  BUDGET_LIMIT
+  INCOME_INCREASE
+  DEBT_REDUCTION
+  CATEGORY_CONTROL
+  CUSTOM
 }
 
 enum ChallengeStatus {
-  ACTIVE                // Ativo
-  COMPLETED             // Completado
-  FAILED                // Falhou
-  ABANDONED             // Abandonado
+  ACTIVE
+  COMPLETED
+  FAILED
+  ABANDONED
 }
 
 enum ChallengeDifficulty {
@@ -589,141 +645,9 @@ enum ChallengeDifficulty {
   EXPERT
 }
 
-model Scenario {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation("UserScenarios", fields: [userId], references: [id], onDelete: Cascade)
-  
-  name        String
-  description String?
-  duration    Int      // meses
-  
-  // Parâmetros base
-  initialBalance    Decimal  @db.Decimal(10, 2)
-  monthlyIncome     Decimal  @db.Decimal(10, 2)
-  monthlyExpenses   Decimal  @db.Decimal(10, 2)
-  monthlySavings    Decimal  @db.Decimal(10, 2)
-  
-  // Mudanças propostas
-  incomeChange      Decimal? @db.Decimal(5, 2) // percentual
-  expensesChange    Decimal? @db.Decimal(5, 2) // percentual
-  savingsChange     Decimal? @db.Decimal(10, 2)
-  oneTimeExpense    Decimal? @db.Decimal(10, 2)
-  oneTimeExpenseMonth Int?
-  oneTimeIncome     Decimal? @db.Decimal(10, 2)
-  oneTimeIncomeMonth Int?
-  
-  // Parâmetros opcionais
-  inflation         Decimal? @db.Decimal(5, 2)
-  investmentReturn  Decimal? @db.Decimal(5, 2)
-  
-  color       String   @default("#3B82F6")
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([userId])
-}
-
-// Webhook para integrações externas
-model Webhook {
-  id          String        @id @default(cuid())
-  userId      String
-  user        User          @relation("UserWebhooks", fields: [userId], references: [id], onDelete: Cascade)
-  
-  name        String        // Nome descritivo do webhook
-  url         String        // URL de destino
-  secret      String        // Secret para validação (HMAC)
-  isActive    Boolean       @default(true)
-  
-  // Eventos que disparam o webhook
-  events      String[]      // Ex: ["transaction.created", "goal.achieved", "alert.triggered"]
-  
-  // Filtros opcionais
-  filters     Json?         // Filtros personalizados (ex: apenas despesas > 1000)
-  
-  // Estatísticas
-  lastTriggered DateTime?
-  successCount  Int         @default(0)
-  failureCount  Int         @default(0)
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  @@index([userId])
-  @@index([isActive])
-}
-
-// Integrações com serviços externos (Telegram, WhatsApp)
-model Integration {
-  id          String           @id @default(cuid())
-  userId      String
-  user        User             @relation("UserIntegrations", fields: [userId], references: [id], onDelete: Cascade)
-  
-  platform    IntegrationType  // TELEGRAM, WHATSAPP
-  isActive    Boolean          @default(true)
-  
-  // Credenciais (encriptadas)
-  chatId      String?          // ID do chat/grupo
-  token       String?          // Token de acesso
-  phoneNumber String?          // Número de telefone (WhatsApp)
-  
-  // Configurações
-  settings    Json?            // Configurações específicas da plataforma
-  
-  // Comandos habilitados
-  enabledCommands String[]     @default(["balance", "expenses", "summary"])
-  
-  // Notificações
-  notifyTransactions Boolean   @default(true)
-  notifyGoals        Boolean   @default(true)
-  notifyAlerts       Boolean   @default(true)
-  
-  // Estatísticas
-  lastUsed    DateTime?
-  usageCount  Int             @default(0)
-  
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  
-  @@index([userId])
-  @@index([platform, isActive])
-  @@unique([userId, platform, chatId])
-}
-
 enum IntegrationType {
   TELEGRAM
   WHATSAPP
   SLACK
   DISCORD
-}
-
-// Authenticator para WebAuthn (biometria)
-model Authenticator {
-  id                  String    @id @default(cuid())
-  userId              String
-  user                User      @relation("UserAuthenticators", fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Credencial WebAuthn
-  credentialID        String    @unique // ID da credencial (base64url)
-  credentialPublicKey Bytes     // Chave pública da credencial
-  counter             BigInt    @default(0) // Contador de uso (previne replay attacks)
-  
-  // Metadados do dispositivo
-  deviceName          String?   // Nome amigável (ex: "iPhone 15 Pro")
-  deviceType          String?   // "platform" ou "cross-platform"
-  transports          String[]  @default([]) // ["usb", "nfc", "ble", "internal"]
-  
-  // AAGUID (Authenticator Attestation GUID)
-  aaguid              String?
-  
-  // Estatísticas
-  lastUsed            DateTime?
-  usageCount          Int       @default(0)
-  
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
-  @@index([userId])
-  @@index([credentialID])
 }

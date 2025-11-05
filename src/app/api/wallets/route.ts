@@ -64,8 +64,46 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
   const wallets = await prisma.wallet.findMany({
     where: { userId: user.id },
     include: {
-      expenses: true,
-      incomes: true,
+      expenses: {
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          date: true,
+          type: true,
+          paymentType: true,
+          isRecurring: true,
+          startDate: true,
+          endDate: true,
+          dayOfMonth: true,
+          transferId: true,
+          categoryId: true,
+          walletId: true,
+          userId: true,
+          tags: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      incomes: {
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          date: true,
+          isRecurring: true,
+          startDate: true,
+          endDate: true,
+          dayOfMonth: true,
+          transferId: true,
+          categoryId: true,
+          walletId: true,
+          userId: true,
+          tags: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
     },
   });
 
@@ -88,14 +126,18 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
             const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
             const dayInMonth = Math.min(day, lastDayOfMonth);
             const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
-            if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime()) {
+            // Só inclui se a data da ocorrência estiver no intervalo E não for futura
+            if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime() && occDate.getTime() <= upto.getTime()) {
               expanded.push({ ...(r as any), date: occDate.toISOString() } as ExpenseRecord | IncomeRecord);
             }
             cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
           }
         }
       } else {
-  if (r.date && new Date(r.date) <= upto) expanded.push(r);
+        // Para registros não recorrentes, inclui apenas se a data existir e for até hoje
+        if (r.date && new Date(r.date).getTime() <= upto.getTime()) {
+          expanded.push(r);
+        }
       }
     }
     return expanded;

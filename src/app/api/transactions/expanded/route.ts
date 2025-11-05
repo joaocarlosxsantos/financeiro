@@ -26,6 +26,7 @@ interface ExpandedTransaction {
   amount: string;
   date: string;
   type: 'PUNCTUAL' | 'RECURRING';
+  isRecurring: boolean; // Campo booleano para facilitar no frontend
   category: {
     id: string;
     name: string;
@@ -124,6 +125,7 @@ function expandRecurringTransaction(
         amount: transaction.amount.toString(),
         date: formatDate(occurrenceDate),
         type: 'RECURRING',
+        isRecurring: true, // Adiciona campo booleano
         category: transaction.category,
         wallet: transaction.wallet,
         tags: transaction.tags || [],
@@ -268,6 +270,7 @@ export async function GET(req: NextRequest) {
       amount: p.amount.toString(),
       date: formatDate(p.date),
       type: 'PUNCTUAL',
+      isRecurring: false, // Adiciona campo booleano
       category: p.category,
       wallet: p.wallet,
       tags: p.tags || [],
