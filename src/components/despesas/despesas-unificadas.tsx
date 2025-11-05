@@ -294,7 +294,16 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       // Se for recorrente, adiciona os campos necessários
       ...(form.isRecurring && {
         startDate: form.date, // Usa a data do formulário como início
-        dayOfMonth: new Date(form.date).getDate(), // Dia do mês da data selecionada
+        dayOfMonth: (() => {
+          const dateStr = form.date;
+          // Extrai o dia diretamente da string (formato YYYY-MM-DD ou DD/MM/YYYY)
+          if (dateStr.includes('-')) {
+            return parseInt(dateStr.split('-')[2], 10);
+          } else if (dateStr.includes('/')) {
+            return parseInt(dateStr.split('/')[0], 10);
+          }
+          return 1; // fallback
+        })(),
       }),
     };
 

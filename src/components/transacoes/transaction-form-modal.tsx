@@ -27,7 +27,7 @@ export function TransactionFormModal({
   const [form, setForm] = useState({
     description: '',
     amount: '',
-    date: '',
+    date: today,
     categoryId: '',
     walletId: '',
     type: 'expense', // 'expense' ou 'income'

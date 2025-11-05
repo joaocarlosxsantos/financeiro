@@ -114,23 +114,26 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
     const expanded: (ExpenseRecord | IncomeRecord)[] = [];
     for (const r of records) {
       if (r.isRecurring) {
-        const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(1900, 0, 1);
+        // Converte Date do Prisma para Date JS (já vem como Date object)
+        const recStart = r.startDate ? new Date(r.startDate) : r.date ? new Date(r.date) : new Date(Date.UTC(1900, 0, 1, 12, 0, 0, 0));
         const recEnd = r.endDate ? new Date(r.endDate) : upto;
         const from = recStart;
         const to = recEnd < upto ? recEnd : upto;
         if (from.getTime() <= to.getTime()) {
-          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? new Date(r.date).getDate() : 1);
-          let cur = new Date(from.getFullYear(), from.getMonth(), 1);
-          const last = new Date(to.getFullYear(), to.getMonth(), 1);
+          // Usa dayOfMonth do registro, ou extrai da data usando UTC
+          const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? new Date(r.date).getUTCDate() : 1);
+          
+          let cur = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1, 12, 0, 0, 0));
+          const last = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1, 12, 0, 0, 0));
           while (cur.getTime() <= last.getTime()) {
-            const lastDayOfMonth = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+            const lastDayOfMonth = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 0, 12, 0, 0, 0)).getUTCDate();
             const dayInMonth = Math.min(day, lastDayOfMonth);
-            const occDate = new Date(cur.getFullYear(), cur.getMonth(), dayInMonth);
+            const occDate = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), dayInMonth, 12, 0, 0, 0));
             // Só inclui se a data da ocorrência estiver no intervalo E não for futura
             if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime() && occDate.getTime() <= upto.getTime()) {
               expanded.push({ ...(r as any), date: occDate.toISOString() } as ExpenseRecord | IncomeRecord);
             }
-            cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+            cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1, 12, 0, 0, 0));
           }
         }
       } else {

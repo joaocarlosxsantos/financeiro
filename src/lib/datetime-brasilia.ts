@@ -41,10 +41,9 @@ export function formatDateTimeBrasilia(date: Date): string {
 export function parseInputDateBrasilia(dateString: string): Date {
   if (!dateString) return new Date();
   
-  // Se é apenas data (YYYY-MM-DD), cria no fuso horário local
+  // Se é apenas data (YYYY-MM-DD), usa UTC meio-dia para evitar problemas de fuso horário
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
+    return new Date(dateString + 'T12:00:00.000Z');
   }
   
   // Senão, parse normal
@@ -82,11 +81,9 @@ export function formatForInputBrasilia(date: Date): string {
 
 /**
  * Cria uma data no timezone do Brasil a partir de ano, mês e dia
+ * Usa UTC meio-dia para evitar problemas de conversão de fuso horário
  */
 export function createBrasiliaDate(year: number, month: number, day: number): Date {
-  // Cria data local no Brasil (mês é 0-indexado)
-  const brasiliaDate = new Date();
-  brasiliaDate.setFullYear(year, month - 1, day);
-  brasiliaDate.setHours(0, 0, 0, 0);
-  return brasiliaDate;
+  // Usa UTC meio-dia para evitar problemas quando salvando no banco
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 }

@@ -249,7 +249,16 @@ export default function TransacoesContent() {
             ...(form.recurring && {
               startDate: form.recurringStart || form.date,
               endDate: form.recurringEnd || null,
-              dayOfMonth: new Date(form.recurringStart || form.date).getDate(),
+              dayOfMonth: (() => {
+                const dateStr = form.recurringStart || form.date;
+                // Extrai o dia diretamente da string (formato YYYY-MM-DD ou DD/MM/YYYY)
+                if (dateStr.includes('-')) {
+                  return parseInt(dateStr.split('-')[2], 10);
+                } else if (dateStr.includes('/')) {
+                  return parseInt(dateStr.split('/')[0], 10);
+                }
+                return 1; // fallback
+              })(),
             }),
           };
           const url = form.type === 'income' ? '/api/incomes' : '/api/expenses';

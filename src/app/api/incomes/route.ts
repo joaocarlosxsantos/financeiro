@@ -68,15 +68,17 @@ const IncomesQuerySchema = z.object({
 function parseFlexibleDate(input?: string | null): Date | undefined {
   if (!input) return undefined;
   if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
-    const [y, m, d] = input.split('-').map(Number);
-    return new Date(y, m - 1, d);
+    // Formato YYYY-MM-DD - usa UTC meio-dia para evitar problemas de fuso horário
+    return new Date(input + 'T12:00:00.000Z');
   }
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(input)) {
+    // Formato DD/MM/YYYY - usa UTC meio-dia
     const [d, m, y] = input.split('/').map(Number);
-    return new Date(y, m - 1, d);
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
   }
+  // Outros formatos - normaliza para meio-dia UTC
   const dt = new Date(input);
-  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  return new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 12, 0, 0, 0));
 }
 
 export async function GET(req: NextRequest) {
