@@ -457,23 +457,16 @@ export function useDashboardState(): DashboardStateReturn {
         selectedWallet && selectedWallet.length > 0 ? `&walletId=${selectedWallet.join(',')}` : '';
 
       try {
-        const [expVar, expFix, incVar, incFix, tagsList] = await Promise.all([
-          fetchAll(
-            `/api/expenses?type=PUNCTUAL&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
+        // Usar API expandida que inclui todas as ocorrências de transações recorrentes
+        const [expensesData, incomesData, tagsList] = await Promise.all([
+          fetch(
+            `/api/transactions/expanded?type=expense&from=${startStr}&to=${endStr}${walletParam}&limit=500&_=${Date.now()}`,
             fetchOpts
-          ),
-          fetchAll(
-            `/api/expenses?type=RECURRING&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
+          ).then((r) => (r.ok ? r.json() : { data: [] })),
+          fetch(
+            `/api/transactions/expanded?type=income&from=${startStr}&to=${endStr}${walletParam}&limit=500&_=${Date.now()}`,
             fetchOpts
-          ),
-          fetchAll(
-            `/api/incomes?type=PUNCTUAL&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
-            fetchOpts
-          ),
-          fetchAll(
-            `/api/incomes?type=RECURRING&start=${startStr}&end=${endStr}${walletParam}&perPage=200&_=${Date.now()}`,
-            fetchOpts
-          ),
+          ).then((r) => (r.ok ? r.json() : { data: [] })),
           fetch('/api/tags', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : [])),
         ]);
 
@@ -482,8 +475,8 @@ export function useDashboardState(): DashboardStateReturn {
         setTagNames(tagIdToNameLocal);
 
         // Filtrar transferências ANTES de combinar
-        const allExpenses: any[] = [...expVar, ...expFix].filter((e: any) => !isTransferCategory(e));
-        const allIncomes: any[] = [...incVar, ...incFix].filter((i: any) => !isTransferCategory(i));
+        const allExpenses: any[] = (expensesData.data || []).filter((e: any) => !isTransferCategory(e));
+        const allIncomes: any[] = (incomesData.data || []).filter((i: any) => !isTransferCategory(i));
 
         const totalExpensesLocal = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
         const totalIncomeLocal = allIncomes.reduce((sum, i) => sum + Number(i.amount), 0);
@@ -531,17 +524,13 @@ export function useDashboardState(): DashboardStateReturn {
 
         let prevExpensesByCategory: Array<{ category: string; amount: number }> = [];
         try {
-          const [prevExpVar, prevExpFix] = await Promise.all([
-            fetchAll(
-              `/api/expenses?type=PUNCTUAL&start=${prevStartStr}&end=${prevEndStr}${walletParam}&perPage=200&_=${Date.now()}`,
-              { cache: 'no-store', credentials: 'same-origin' }
-            ),
-            fetchAll(
-              `/api/expenses?type=RECURRING&start=${prevStartStr}&end=${prevEndStr}${walletParam}&perPage=200&_=${Date.now()}`,
-              { cache: 'no-store', credentials: 'same-origin' }
-            ),
-          ]);
-          const allPrevExpenses: any[] = [...prevExpVar, ...prevExpFix].filter((e: any) => !isTransferCategory(e));
+          // Usar API expandida para mês anterior também
+          const prevExpensesData = await fetch(
+            `/api/transactions/expanded?type=expense&from=${prevStartStr}&to=${prevEndStr}${walletParam}&limit=500&_=${Date.now()}`,
+            { cache: 'no-store', credentials: 'same-origin' }
+          ).then((r) => (r.ok ? r.json() : { data: [] }));
+
+          const allPrevExpenses: any[] = (prevExpensesData.data || []).filter((e: any) => !isTransferCategory(e));
           const prevExpenseMap = new Map<string, number>();
           for (const e of allPrevExpenses) {
             const key = e.category?.name || 'Sem categoria';
