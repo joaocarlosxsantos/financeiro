@@ -7,12 +7,12 @@ import { authOptions } from '@/lib/auth';
 
 const ExpandedTransactionsQuerySchema = z.object({
   type: z.enum(['expense', 'income'], { errorMap: () => ({ message: 'type deve ser "expense" ou "income"' }) }),
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de from deve ser YYYY-MM-DD'),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de to deve ser YYYY-MM-DD'),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de from deve ser YYYY-MM-DD').nullable().optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de to deve ser YYYY-MM-DD').nullable().optional(),
   categoryIds: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
   walletId: z.string().nullable().optional(),
-  sort: z.enum(['date_asc', 'date_desc', 'amount_asc', 'amount_desc']).optional().default('date_desc'),
+  sort: z.enum(['date_asc', 'date_desc', 'amount_asc', 'amount_desc']).nullable().optional().default('date_desc'),
   page: z.string().nullable().optional().default('1'),
   limit: z.string().nullable().optional().default('100'),
 });
@@ -192,8 +192,9 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(500, Math.max(1, Number(limitStr || '100') || 100));
 
   try {
-    const fromDate = parseDate(from);
-    const toDate = new Date(parseDate(to).getTime() + 86400000 - 1); // Fim do dia
+    // Se from/to não forem fornecidos, usar intervalo amplo (últimos 12 meses)
+    const fromDate = from ? parseDate(from) : new Date(Date.UTC(new Date().getFullYear() - 1, new Date().getMonth(), 1, 12, 0, 0, 0));
+    const toDate = to ? new Date(parseDate(to).getTime() + 86400000 - 1) : new Date(Date.UTC(2099, 11, 31, 23, 59, 59, 999));
 
     const isExpense = type === 'expense';
     const model = isExpense ? prisma.expense : prisma.income;

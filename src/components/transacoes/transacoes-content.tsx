@@ -60,36 +60,37 @@ export default function TransacoesContent() {
       const start = formatYmd(new Date(year, month, 1));
       const end = formatYmd(new Date(year, month + 1, 0));
 
+      console.log('[SUMMARY] Date range:', { start, end });
+
       try {
-        const [expensesVar, expensesFix, incomesVar, incomesFix] = await Promise.all([
-          fetch(`/api/expenses?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/expenses?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/incomes?type=PUNCTUAL&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' }),
-          fetch(`/api/incomes?type=RECURRING&start=${start}&end=${end}&perPage=200`, { cache: 'no-store' })
+        // Usar API de transações expandidas para incluir ocorrências de recorrências
+        const [expensesRes, incomesRes] = await Promise.all([
+          fetch(`/api/transactions/expanded?type=expense&from=${start}&to=${end}&limit=500`, { cache: 'no-store' }),
+          fetch(`/api/transactions/expanded?type=income&from=${start}&to=${end}&limit=500`, { cache: 'no-store' })
         ]);
 
         let totalGastos = 0;
         let totalGanhos = 0;
 
-        if (expensesVar.ok) {
-          const data = await expensesVar.json();
-          totalGastos += data.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
-        }
-        
-        if (expensesFix.ok) {
-          const data = await expensesFix.json();
-          totalGastos += data.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+        if (expensesRes.ok) {
+          const result = await expensesRes.json();
+          console.log('[SUMMARY] Expenses result:', result);
+          totalGastos = result.data.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+        } else {
+          const error = await expensesRes.json();
+          console.error('[SUMMARY] Expenses error:', error);
         }
 
-        if (incomesVar.ok) {
-          const data = await incomesVar.json();
-          totalGanhos += data.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+        if (incomesRes.ok) {
+          const result = await incomesRes.json();
+          console.log('[SUMMARY] Incomes result:', result);
+          totalGanhos = result.data.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+        } else {
+          const error = await incomesRes.json();
+          console.error('[SUMMARY] Incomes error:', error);
         }
-        
-        if (incomesFix.ok) {
-          const data = await incomesFix.json();
-          totalGanhos += data.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
-        }
+
+        console.log('[SUMMARY] Totals:', { totalGastos, totalGanhos, saldo: totalGanhos - totalGastos });
 
         setSummary({
           totalGastos,
