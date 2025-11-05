@@ -111,6 +111,9 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
   const today = new Date();
 
   function expandFixedRecords(records: (ExpenseRecord | IncomeRecord)[], upto: Date) {
+    console.log('📊 expandFixedRecords - Input:', records.length, 'registros');
+    console.log('Recorrentes:', records.filter((r: any) => r.isRecurring).length);
+    
     const expanded: (ExpenseRecord | IncomeRecord)[] = [];
     for (const r of records) {
       if (r.isRecurring) {
@@ -140,16 +143,38 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
         }
       }
     }
+    
+    console.log('📊 expandFixedRecords - Output:', expanded.length, 'registros');
+    
     return expanded;
   }
 
   const walletsWithBalance = wallets.map((w: WalletRecord & { expenses?: ExpenseRecord[]; incomes?: IncomeRecord[] }) => {
+    console.log(`\n🔍 Carteira: ${w.name}`);
+    console.log('Total incomes:', w.incomes?.length);
+    console.log('Incomes recorrentes:', w.incomes?.filter((i: any) => i.isRecurring).length);
+    if (w.incomes?.filter((i: any) => i.isRecurring).length > 0) {
+      console.log('Detalhes dos recorrentes:', w.incomes?.filter((i: any) => i.isRecurring).map((i: any) => ({
+        id: i.id,
+        description: i.description,
+        amount: i.amount,
+        isRecurring: i.isRecurring,
+        startDate: i.startDate,
+        endDate: i.endDate,
+        dayOfMonth: i.dayOfMonth
+      })));
+    }
+    
     // expand incomes and expenses
   const incomesExpanded = expandFixedRecords(w.incomes || [], today);
   const expensesExpanded = expandFixedRecords(w.expenses || [], today);
   const totalIncomes = incomesExpanded.reduce((s: number, i: ExpenseRecord | IncomeRecord) => s + Number((i as any).amount), 0);
   const totalExpenses = expensesExpanded.reduce((s: number, e: ExpenseRecord | IncomeRecord) => s + Number((e as any).amount), 0);
     const balance = totalIncomes - totalExpenses;
+    
+    console.log('Após expansão:', incomesExpanded.length, 'incomes');
+    console.log('Saldo calculado:', balance);
+    
     return { ...w, balance };
   });
 

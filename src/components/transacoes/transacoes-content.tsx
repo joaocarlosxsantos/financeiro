@@ -242,8 +242,15 @@ export default function TransacoesContent() {
             categoryId: form.categoryId,
             walletId: form.walletId,
             type: form.recurring ? 'RECURRING' : 'PUNCTUAL',
-            recurringStart: form.recurring ? form.recurringStart : undefined,
-            recurringEnd: form.recurring ? form.recurringEnd : undefined,
+            isRecurring: form.recurring,
+            paymentType: 'DEBIT',
+            tags: [],
+            // Se for recorrente, adiciona os campos necessários
+            ...(form.recurring && {
+              startDate: form.recurringStart || form.date,
+              endDate: form.recurringEnd || null,
+              dayOfMonth: new Date(form.recurringStart || form.date).getDate(),
+            }),
           };
           const url = form.type === 'income' ? '/api/incomes' : '/api/expenses';
           const res = await fetch(url, {

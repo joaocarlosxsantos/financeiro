@@ -31,6 +31,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         date: dateISO,
         categoryId: data.categoryId || null,
         walletId: data.walletId || null,
+        type: data.type || undefined,
+        isRecurring: data.isRecurring !== undefined ? data.isRecurring : undefined,
+        startDate: data.startDate ? new Date(data.startDate) : undefined,
+        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        dayOfMonth: data.dayOfMonth !== undefined ? data.dayOfMonth : undefined,
       },
     });
   } catch (e) {
@@ -44,6 +49,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           date: dateISO,
           categoryId: data.categoryId || null,
           walletId: data.walletId || null,
+          type: data.type || undefined,
+          isRecurring: data.isRecurring !== undefined ? data.isRecurring : undefined,
+          startDate: data.startDate ? new Date(data.startDate) : undefined,
+          endDate: data.endDate ? new Date(data.endDate) : undefined,
+          dayOfMonth: data.dayOfMonth !== undefined ? data.dayOfMonth : undefined,
         },
       });
     } catch (e2) {

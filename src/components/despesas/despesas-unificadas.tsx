@@ -291,6 +291,11 @@ export default function DespesasUnificadas({ currentDate, defaultDate }: { curre
       paymentType: form.paymentType,
       walletId: form.walletId || null,
       tags: processedTags,
+      // Se for recorrente, adiciona os campos necessários
+      ...(form.isRecurring && {
+        startDate: form.date, // Usa a data do formulário como início
+        dayOfMonth: new Date(form.date).getDate(), // Dia do mês da data selecionada
+      }),
     };
 
     let res;
