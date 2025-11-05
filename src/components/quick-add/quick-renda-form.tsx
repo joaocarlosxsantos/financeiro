@@ -191,8 +191,6 @@ export default function QuickRendaForm() {
       }),
     } as any;
 
-    console.log('🔍 PAYLOAD ENVIADO (INCOME):', payload);
-
     try {
       const res = await fetch('/api/incomes', {
         method: 'POST',

@@ -279,17 +279,6 @@ export async function POST(req: NextRequest) {
     tags = [],
   } = parse.data;
 
-  console.log('🔍 DADOS RECEBIDOS NA API (INCOME):', {
-    isRecurring,
-    startDate,
-    endDate,
-    dayOfMonth,
-    type,
-    description,
-    amount,
-    date
-  });
-
   const income = await prisma.income.create({
     data: {
       description,
@@ -307,15 +296,6 @@ export async function POST(req: NextRequest) {
       tags,
     },
   });
-  
-  console.log('✅ INCOME CRIADO NO BANCO:', {
-    id: income.id,
-    isRecurring: income.isRecurring,
-    startDate: income.startDate,
-    endDate: income.endDate,
-    dayOfMonth: income.dayOfMonth
-  });
-  
   const created = await prisma.income.findUnique({ 
     where: { id: income.id }, 
     include: { 
