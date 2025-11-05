@@ -350,23 +350,47 @@ function parsePdfIndividualLines(text: string) {
 // Função específica para parsing de arquivos TXT de extrato (formato como Alelo)
 function parseTxtExtract(text: string) {
   const transactions: any[] = [];
-  console.log('Tentando parsing de arquivo TXT de extrato');
+  console.log('\n========================================');
+  console.log('INICIANDO parseTxtExtract');
+  console.log('Tamanho do texto:', text.length);
+  console.log('Primeiros 500 caracteres:', text.substring(0, 500));
+  console.log('========================================\n');
   
-  // Remove caracteres especiais e normaliza o texto
-  const normalizedText = text.replace(/•/g, '').replace(/\r/g, '');
-  const lines = normalizedText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  // Remove caracteres especiais, normaliza encoding e mantém o formato de linhas
+  let normalizedText = text
+    .replace(/•/g, '')
+    .replace(/â€¢/g, '') // Remove bullets mal codificados
+    .replace(/\r/g, '')
+    .replace(/Ã§Ã£/g, 'ç') // Corrige "ção"
+    .replace(/Ã­/g, 'í')   // Corrige "í"
+    .replace(/Ã£/g, 'ã')   // Corrige "ã"
+    .replace(/Ãº/g, 'ú')   // Corrige "ú"
+    .replace(/Ã§/g, 'ç');  // Corrige "ç"
+    
+  const allLines = normalizedText.split('\n');
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  console.log('Total de linhas no arquivo:', allLines.length);
+  console.log('\n=== PRIMEIRAS 30 LINHAS ===');
+  for (let i = 0; i < Math.min(30, allLines.length); i++) {
+    console.log(`[${i}] "${allLines[i]}"`);
+  }
+  console.log('=== FIM DAS PRIMEIRAS LINHAS ===\n');
+  
+  // Processa o arquivo linha por linha, mantendo o índice original
+  for (let i = 0; i < allLines.length; i++) {
+    const line = allLines[i].trim();
+    
+    // Pula linhas vazias
+    if (!line) continue;
     
     // Ignora cabeçalhos e informações do cartão
     if (line.includes('Extrato') || 
-        line.includes('•••') || 
+        line.match(/^[•\s]+$/) ||
         line.includes('Periodo') || 
         line.includes('Nome do Portador') || 
         line.includes('CPF:') || 
-        line.includes('Saldo R$') || 
-        line.includes('Último benefício') ||
+        line.match(/^Saldo R\$/i) || 
+        line.match(/^Último benefício/i) ||
         line.includes('about:blank') ||
         line.includes('Consulta de Saldo') ||
         line.includes('MeuAlelo') ||
@@ -376,18 +400,51 @@ function parseTxtExtract(text: string) {
     
     // Procura por data no formato YYYY-MM-DD
     const dateMatch = line.match(/^(\d{4}-\d{2}-\d{2})$/);
-    if (dateMatch && i > 0 && i + 1 < lines.length) {
+    if (dateMatch) {
+      console.log(`\n>>> ENCONTREI UMA DATA: ${line} na linha ${i}`);
+      
       const dateStr = dateMatch[1];
       const [year, month, day] = dateStr.split('-');
       const data = `${day}/${month}/${year}`;
       
-      // Linha anterior deve ser a descrição
-      const descricaoLine = lines[i - 1];
+      // A DESCRIÇÃO está ANTES da data (linha i-1)
+      // O VALOR está DEPOIS da data (linha i+1)
       
-      // Linha seguinte deve ser o valor
-      const valorLine = lines[i + 1];
+      console.log('Procurando descrição antes da linha', i);
+      let descricaoLine = '';
+      for (let j = i - 1; j >= 0; j--) {
+        const prevLine = allLines[j].trim();
+        console.log(`  Checando linha ${j}: "${prevLine}"`);
+        if (prevLine && 
+            !prevLine.includes('Extrato') && 
+            !prevLine.includes('CPF') &&
+            !prevLine.includes('Periodo') &&
+            !prevLine.match(/^Saldo R\$/i)) {
+          descricaoLine = prevLine;
+          console.log(`  >>> ACHEI A DESCRIÇÃO na linha ${j}: "${descricaoLine}"`);
+          break;
+        }
+      }
       
-      // Verifica se o padrão está correto
+      console.log('Procurando valor depois da linha', i);
+      let valorLine = '';
+      for (let j = i + 1; j < allLines.length; j++) {
+        const nextLine = allLines[j].trim();
+        console.log(`  Checando linha ${j}: "${nextLine}"`);
+        if (nextLine && nextLine.match(/^-?\s*R\$/)) {
+          valorLine = nextLine;
+          console.log(`  >>> ACHEI O VALOR na linha ${j}: "${valorLine}"`);
+          break;
+        }
+      }
+      
+      console.log(`\n=== RESULTADO DA BUSCA ===`);
+      console.log('Data:', dateStr, '→', data);
+      console.log('Descrição:', descricaoLine);
+      console.log('Valor:', valorLine);
+      console.log('===========================\n');
+      
+      // Verifica se encontrou descrição e valor
       if (descricaoLine && valorLine) {
         // Processa o valor
         // Processa o valor (aceita tanto "- R$" quanto "-R$" quanto "R$")
@@ -402,10 +459,16 @@ function parseTxtExtract(text: string) {
             valor = -Math.abs(valor);
           } else {
             // Se não tem sinal negativo, verifica se é receita baseado na descrição
-            if (descricaoLine.toLowerCase().includes('benefício') || 
-                descricaoLine.toLowerCase().includes('recarga') ||
-                descricaoLine.toLowerCase().includes('crédito') ||
-                descricaoLine.toLowerCase().includes('depósito')) {
+            const descLower = descricaoLine.toLowerCase();
+            if (descLower.includes('benefício') || 
+                descLower.includes('beneficio') ||  // Sem acento
+                descLower.includes('benefí') ||     // Com encoding ruim
+                descLower.includes('recarga') ||
+                descLower.includes('crédito') ||
+                descLower.includes('credito') ||
+                descLower.includes('caiu') ||
+                descLower.includes('depósito') ||
+                descLower.includes('deposito')) {
               valor = Math.abs(valor); // Receita
             } else {
               // Para extratos de cartão alimentação, sem sinal negativo geralmente são despesas
@@ -416,29 +479,53 @@ function parseTxtExtract(text: string) {
           // Processa a descrição
           let descricao = descricaoLine.trim();
           
+          const descLower = descricao.toLowerCase();
+          
           // Melhora descrições específicas
-          if (descricao.toLowerCase().includes('seu benefício caiu')) {
-            descricao = 'Benefício Alimentação';
-          } else if (descricao.toLowerCase().includes('supermercado')) {
-            descricao = descricao.replace(/SUPERMERCADO/gi, 'Supermercado');
-          } else if (descricao.toLowerCase().includes('outback')) {
-            descricao = descricao.replace(/OUTBACK.*/, 'Outback Steakhouse');
-          } else if (descricao.toLowerCase().includes('mcdonalds')) {
-            descricao = 'McDonalds';
+          if (descLower.includes('benefício') || descLower.includes('benefí') || descLower.includes('caiu')) {
+            if (descLower.includes('caiu')) {
+              descricao = 'Benefício Alimentação';
+            } else {
+              descricao = 'Recarga Benefício';
+            }
+          } else if (descLower.includes('supermercado')) {
+            // Mantém o nome do supermercado mas formata melhor
+            descricao = descricao.split(/\s+/).map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+          } else if (descLower.includes('outback')) {
+            descricao = 'Outback Steakhouse';
+          } else if (descLower.includes('mcdonalds')) {
+            descricao = 'McDonald\'s';
+          } else if (descLower.includes('hasuki')) {
+            descricao = 'Hasuki Sushi';
+          } else {
+            // Formata o nome capitalizando cada palavra
+            descricao = descricao.split(/\s+/).map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
           }
           
           // Sugere categoria baseada na descrição
           let categoriaRecomendada = 'Alimentação';
-          if (descricao.toLowerCase().includes('benefício')) {
-            categoriaRecomendada = 'Receitas';
-          } else if (descricao.toLowerCase().includes('supermercado')) {
-            categoriaRecomendada = 'Supermercado';
-          } else if (descricao.toLowerCase().includes('restaurante') || 
-                     descricao.toLowerCase().includes('outback') ||
-                     descricao.toLowerCase().includes('mcdonalds') ||
-                     descricao.toLowerCase().includes('comercio') ||
-                     descricao.toLowerCase().includes('lanchonete') ||
-                     descricao.toLowerCase().includes('padaria')) {
+          const descFinalLower = descricao.toLowerCase();
+          
+          // Verifica se é recarga de benefício (valores positivos de benefício)
+          if ((descFinalLower.includes('benefício') || 
+               descFinalLower.includes('beneficio') ||
+               descFinalLower.includes('recarga')) && valor > 0) {
+            categoriaRecomendada = 'Recarga de Benefícios';
+          } else if (descFinalLower.includes('supermercado')) {
+            categoriaRecomendada = 'Mercado';
+          } else if (descFinalLower.includes('restaurante') || 
+                     descFinalLower.includes('outback') ||
+                     descFinalLower.includes('mcdonalds') ||
+                     descFinalLower.includes('hasuki') ||
+                     descFinalLower.includes('comercio') ||
+                     descFinalLower.includes('lanchonete') ||
+                     descFinalLower.includes('bar') ||
+                     descFinalLower.includes('quintal') ||
+                     descFinalLower.includes('padaria')) {
             categoriaRecomendada = 'Alimentação';
           }
           
@@ -905,9 +992,9 @@ async function handler(req: NextRequest) {
       preview = await Promise.all(transactions.map(async (t: any) => {
   const data = t.data || t.DTPOSTED || null;
   const valor = t.valor || t.TRNAMT || null;
-  // Sempre usar MEMO como descricao e descricaoOriginal
-  const descricao = t.MEMO || '';
-  const descricaoOriginal = t.MEMO || '';
+  // Para arquivos TXT, usar t.descricao. Para OFX, usar t.MEMO
+  const descricao = t.descricao || t.MEMO || '';
+  const descricaoOriginal = t.descricao || t.MEMO || '';
   console.log(`[DEBUG] Descricao final da transação:`, descricao);
 
   // --- Lógica de sugestão automática de transferência entre contas ---
