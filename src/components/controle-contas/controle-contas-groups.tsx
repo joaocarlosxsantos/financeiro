@@ -47,33 +47,30 @@ function generateWhatsAppMessage(
 ): string {
   let message = `Ola *${memberName}*!\n\n`;
   message += `Segue o resumo das contas do grupo *${groupName}*:\n\n`;
-  message += `-----------------------------------\n\n`;
   
   bills.forEach((bill, index) => {
-    message += `*Conta ${index + 1}: ${bill.name}*\n`;
-    message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
+    message += `*${bill.name}*\n`;
+    //message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
     
     if (bill.shares && bill.shares.length > 0) {
       const memberShare = bill.shares.find((s) => s.memberId === memberId);
       if (memberShare) {
         if (memberShare.type === 'value') {
-          message += `Sua parte: R$ ${memberShare.amount.toFixed(2)}\n`;
+          message += `R$ ${memberShare.amount.toFixed(2)}\n`;
         } else {
           const amount = (memberShare.amount * bill.value) / 100;
-          message += `Sua parte: R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
+          message += `R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
         }
       }
     } else {
       // Divisão igual entre todos os membros
       const equalShare = bill.value / bills.length;
-      message += `Sua parte: R$ ${equalShare.toFixed(2)}\n`;
+      message += `R$ ${equalShare.toFixed(2)}\n`;
     }
     message += `\n`;
   });
   
-  message += `-----------------------------------\n`;
-  message += `*TOTAL A PAGAR: R$ ${memberTotal.toFixed(2)}*\n\n`;
-  message += `Mensagem gerada automaticamente pelo Sistema Financeiro`;
+  message += `*TOTAL: R$ ${memberTotal.toFixed(2)}*\n\n`;
   
   return encodeURIComponent(message);
 }
