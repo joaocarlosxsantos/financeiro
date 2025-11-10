@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, CreditCard } from 'lucide-react';
-import { TransactionRow } from '@/components/importar-extrato/transaction-row';
+import { FaturaTransactionRow } from './fatura-transaction-row';
 
 interface FaturaPreviewProps {
   preview: any[];
@@ -155,7 +155,7 @@ export function FaturaPreview({
           </thead>
           <tbody>
             {registros.map((row, i) => (
-              <TransactionRow
+              <FaturaTransactionRow
                 key={row.id || i}
                 registro={row}
                 index={i}
