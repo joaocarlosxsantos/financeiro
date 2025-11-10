@@ -34,11 +34,12 @@ export function FaturaPreview({
   const [tags, setTags] = useState<any[]>([]);
 
   useEffect(() => {
-    // Inicializar registros
+    // Inicializar registros - garantir que valor seja número
     setRegistros(preview.map((r, idx) => ({
       ...r,
       incluir: true,
       id: `reg-${idx}`,
+      valor: typeof r.valor === 'number' ? r.valor : parseFloat(r.valor) || 0,
     })));
 
     // Buscar categorias
