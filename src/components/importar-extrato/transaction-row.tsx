@@ -71,12 +71,11 @@ export function TransactionRow({
     }
   };
 
-  const formatCurrency = (value: number | string) => {
-    const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(numValue);
+    }).format(value);
   };
 
   const formatDate = (dateString: string) => {

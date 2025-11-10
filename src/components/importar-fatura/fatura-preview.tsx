@@ -125,7 +125,10 @@ export function FaturaPreview({
     onSave(registros);
   }
 
-  const total = registros.reduce((acc, r) => acc + (r.incluir ? r.valor : 0), 0);
+  const total = registros.reduce((acc, r) => {
+    const valor = typeof r.valor === 'number' ? r.valor : parseFloat(r.valor) || 0;
+    return acc + (r.incluir ? valor : 0);
+  }, 0);
   const count = registros.filter((r) => r.incluir).length;
 
   return (
