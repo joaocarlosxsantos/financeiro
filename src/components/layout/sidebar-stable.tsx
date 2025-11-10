@@ -58,6 +58,7 @@ const navigationFinanceiro = {
       { name: 'Transações', href: '/transacoes', icon: ArrowUpDown },
       { name: 'Cartão de Crédito', href: '/credit-management', icon: CreditCard },
       { name: 'Importar Extrato', href: '/importar-extrato', icon: Upload },
+      { name: 'Importar Fatura', href: '/importar-fatura', icon: Upload },
     ]
   },
   planejamento: {
