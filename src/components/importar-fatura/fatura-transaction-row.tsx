@@ -30,9 +30,6 @@ export function FaturaTransactionRow({
   const [showCategoryCreate, setShowCategoryCreate] = React.useState(false);
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [isCreatingCategory, setIsCreatingCategory] = React.useState(false);
-  const [showTagCreate, setShowTagCreate] = React.useState(false);
-  const [newTagName, setNewTagName] = React.useState('');
-  const [isCreatingTag, setIsCreatingTag] = React.useState(false);
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -48,21 +45,6 @@ export function FaturaTransactionRow({
       console.error('Erro ao criar categoria:', error);
     } finally {
       setIsCreatingCategory(false);
-    }
-  };
-
-  const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
-    
-    setIsCreatingTag(true);
-    try {
-      await onCreateTag(newTagName.trim());
-      setShowTagCreate(false);
-      setNewTagName('');
-    } catch (error) {
-      console.error('Erro ao criar tag:', error);
-    } finally {
-      setIsCreatingTag(false);
     }
   };
 
@@ -202,48 +184,13 @@ export function FaturaTransactionRow({
       {/* Tags */}
       <td className="px-4 py-3">
         <div className="space-y-2">
-          <div className="flex gap-2">
-            <MultiTagSelector
-              availableTags={tags}
-              selectedTags={registro.tags || []}
-              onChange={(selectedTags: string[]) => onEdit(index, 'tags', selectedTags)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setShowTagCreate(!showTagCreate)}
-              className="shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Criar nova tag */}
-          {showTagCreate && (
-            <div className="flex gap-2 p-2 bg-muted/50 rounded-md border border-border">
-              <Input
-                value={newTagName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTagName(e.target.value)}
-                placeholder="Nome da tag"
-                className="flex-1"
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleCreateTag();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={handleCreateTag}
-                disabled={isCreatingTag || !newTagName.trim()}
-                size="sm"
-              >
-                {isCreatingTag ? 'Criando...' : 'Criar'}
-              </Button>
-            </div>
-          )}
+          <MultiTagSelector
+            availableTags={tags}
+            selectedTags={registro.tags || []}
+            suggestedTags={[]}
+            onTagsChange={(selectedTags: string[]) => onEdit(index, 'tags', selectedTags)}
+            onCreateTag={onCreateTag}
+          />
         </div>
       </td>
     </tr>
