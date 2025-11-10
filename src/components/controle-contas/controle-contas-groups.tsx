@@ -48,13 +48,13 @@ function generateWhatsAppMessage(
   let message = `Ola *${memberName}*!\n\n`;
   message += `Segue o resumo das contas do grupo *${groupName}*:\n\n`;
   
-  bills.forEach((bill, index) => {
-    message += `*${bill.name}*\n`;
-    message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
-    
+  bills.forEach((bill, ) => {
     if (bill.shares && bill.shares.length > 0) {
+      
       const memberShare = bill.shares.find((s) => s.memberId === memberId);
       if (memberShare) {
+        message += `*${bill.name}*\n`;
+        message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
         if (memberShare.type === 'value') {
           message += `Sua parte: R$ ${memberShare.amount.toFixed(2)}\n`;
         } else {
