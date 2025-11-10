@@ -174,8 +174,9 @@ export function useContasState() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           groupId: selectedGroup,
-          name,
-          value: parseLocaleNumber(value),
+          title: name,
+          amount: parseLocaleNumber(value),
+          dueDate: new Date().toISOString(),
           shares: ids.map(id => ({
             memberId: id,
             type: shareType,
@@ -226,8 +227,8 @@ export function useContasState() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: selectedBill.id,
-          name: editName,
-          value: parseLocaleNumber(editValue),
+          title: editName,
+          amount: parseLocaleNumber(editValue),
           shares: ids.map(id => ({
             memberId: id,
             type: editShareType,
