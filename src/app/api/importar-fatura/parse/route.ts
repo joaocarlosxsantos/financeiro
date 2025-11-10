@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nenhuma transação encontrada no arquivo' }, { status: 400 });
     }
 
-    // Sugerir categorias usando IA (similar ao extrato)
-    const transactionsWithCategories = await suggestCategories(transactions);
+    // Sugerir categorias usando regras simples
+    const transactionsWithCategories = suggestCategories(transactions);
 
     return NextResponse.json({
       success: true,
@@ -157,37 +157,62 @@ function parseValor(valorStr: string): number {
 }
 
 /**
- * Sugerir categorias usando IA
+ * Sugerir categorias usando regras simples
  */
-async function suggestCategories(transactions: any[]): Promise<any[]> {
-  try {
-    // Usar a mesma API de categorização que o extrato
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/ai/categorize-batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        transactions: transactions.map(t => ({
-          descricao: t.descricao,
-          valor: t.valor,
-          tipo: t.tipo
-        }))
-      })
-    });
+function suggestCategories(transactions: any[]): any[] {
+  return transactions.map(t => ({
+    ...t,
+    categoriaSugerida: sugerirCategoria(t.descricao)
+  }));
+}
 
-    if (!response.ok) {
-      console.warn('Erro ao sugerir categorias, continuando sem sugestões');
-      return transactions;
-    }
-
-    const { suggestions } = await response.json();
-
-    return transactions.map((t, index) => ({
-      ...t,
-      categoriaSugerida: suggestions[index]?.categoria || ''
-    }));
-
-  } catch (error) {
-    console.warn('Erro ao sugerir categorias:', error);
-    return transactions;
-  }
+/**
+ * Função simples de sugestão de categoria baseada em palavras-chave
+ */
+function sugerirCategoria(descricao: string): string {
+  if (!descricao) return 'Outros';
+  const desc = descricao.toLowerCase();
+  
+  // Alimentação
+  if (desc.includes('ifood') || desc.includes('rappi') || desc.includes('uber eats')) return 'Alimentação';
+  if (desc.includes('restaurante') || desc.includes('lanchonete') || desc.includes('pizzaria')) return 'Alimentação';
+  if (desc.includes('bar') || desc.includes('café') || desc.includes('padaria')) return 'Alimentação';
+  
+  // Supermercado
+  if (desc.includes('mercado') || desc.includes('carrefour') || desc.includes('extra')) return 'Supermercado';
+  if (desc.includes('pão de açúcar') || desc.includes('walmart') || desc.includes('atacadão')) return 'Supermercado';
+  
+  // Transporte
+  if (desc.includes('uber') || desc.includes('99')) return 'Transporte';
+  if (desc.includes('combustível') || desc.includes('gasolina') || desc.includes('posto')) return 'Transporte';
+  if (desc.includes('estacionamento') || desc.includes('pedágio')) return 'Transporte';
+  
+  // Assinaturas
+  if (desc.includes('spotify') || desc.includes('netflix') || desc.includes('prime video')) return 'Assinaturas';
+  if (desc.includes('amazon prime') || desc.includes('disney+') || desc.includes('youtube premium')) return 'Assinaturas';
+  
+  // Saúde
+  if (desc.includes('farmácia') || desc.includes('drogaria') || desc.includes('remédio')) return 'Saúde';
+  if (desc.includes('hospital') || desc.includes('clínica') || desc.includes('médico')) return 'Saúde';
+  
+  // Lazer
+  if (desc.includes('cinema') || desc.includes('teatro') || desc.includes('show')) return 'Lazer';
+  if (desc.includes('parque') || desc.includes('clube') || desc.includes('academia')) return 'Lazer';
+  
+  // Tecnologia
+  if (desc.includes('google') || desc.includes('apple') || desc.includes('microsoft')) return 'Tecnologia';
+  if (desc.includes('steam') || desc.includes('playstation') || desc.includes('xbox')) return 'Tecnologia';
+  
+  // Educação
+  if (desc.includes('curso') || desc.includes('escola') || desc.includes('faculdade')) return 'Educação';
+  if (desc.includes('livro') || desc.includes('livraria') || desc.includes('universidade')) return 'Educação';
+  
+  // Vestuário
+  if (desc.includes('roupa') || desc.includes('calçado') || desc.includes('tênis')) return 'Vestuário';
+  if (desc.includes('loja') || desc.includes('shopping') || desc.includes('fashion')) return 'Vestuário';
+  
+  // Pagamentos
+  if (desc.includes('pagamento') || desc.includes('boleto') || desc.includes('fatura')) return 'Pagamentos';
+  
+  return 'Outros';
 }
