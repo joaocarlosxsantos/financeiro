@@ -50,27 +50,27 @@ function generateWhatsAppMessage(
   
   bills.forEach((bill, index) => {
     message += `*${bill.name}*\n`;
-    //message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
+    message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
     
     if (bill.shares && bill.shares.length > 0) {
       const memberShare = bill.shares.find((s) => s.memberId === memberId);
       if (memberShare) {
         if (memberShare.type === 'value') {
-          message += `R$ ${memberShare.amount.toFixed(2)}\n`;
+          message += `Sua parte: R$ ${memberShare.amount.toFixed(2)}\n`;
         } else {
           const amount = (memberShare.amount * bill.value) / 100;
-          message += `R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
+          message += `Sua parte: R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
         }
       }
     } else {
       // Divisão igual entre todos os membros
       const equalShare = bill.value / bills.length;
-      message += `R$ ${equalShare.toFixed(2)}\n`;
+      message += `Sua parte: R$ ${equalShare.toFixed(2)}\n`;
     }
     message += `\n`;
   });
   
-  message += `*TOTAL: R$ ${memberTotal.toFixed(2)}*\n\n`;
+  message += `*TOTAL A PAGAR: R$ ${memberTotal.toFixed(2)}*\n\n`;
   
   return encodeURIComponent(message);
 }
