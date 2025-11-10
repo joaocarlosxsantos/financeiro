@@ -1,7 +1,9 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
+import { WhatsAppIcon } from './icons';
 
 interface Member {
   id: number;
@@ -27,6 +29,50 @@ interface ControleContasGroupsProps {
   groupedData: Record<number, GroupData>;
   groupMembers: Record<number, Member[]>;
   loading: boolean;
+}
+
+function formatPhoneForWhatsapp(phone?: string) {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 10 || cleaned.length === 11) return `55${cleaned}`;
+  return cleaned;
+}
+
+function generateWhatsAppMessage(
+  memberName: string,
+  groupName: string,
+  bills: BillWithGroup[],
+  memberTotal: number,
+  memberId: number
+): string {
+  let message = `Olá *${memberName}*! 👋\n\n`;
+  message += `Seguem os detalhes das contas do grupo *${groupName}*:\n\n`;
+  
+  bills.forEach((bill) => {
+    message += `📋 *${bill.name}*\n`;
+    message += `   Valor total: R$ ${bill.value.toFixed(2)}\n`;
+    
+    if (bill.shares && bill.shares.length > 0) {
+      const memberShare = bill.shares.find((s) => s.memberId === memberId);
+      if (memberShare) {
+        if (memberShare.type === 'value') {
+          message += `   Sua parte: R$ ${memberShare.amount.toFixed(2)}\n`;
+        } else {
+          const amount = (memberShare.amount * bill.value) / 100;
+          message += `   Sua parte: R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
+        }
+      }
+    } else {
+      // Divisão igual entre todos os membros
+      const equalShare = bill.value / bills.length;
+      message += `   Sua parte: R$ ${equalShare.toFixed(2)}\n`;
+    }
+    message += `\n`;
+  });
+  
+  message += `💰 *Total a pagar: R$ ${memberTotal.toFixed(2)}*\n\n`;
+  
+  return encodeURIComponent(message);
 }
 
 export function ControleContasGroups({ groupedData, groupMembers, loading }: ControleContasGroupsProps) {
@@ -124,15 +170,45 @@ export function ControleContasGroups({ groupedData, groupMembers, loading }: Con
                 {membersArray.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum membro cadastrado.</p>
                 ) : (
-                  <div className="space-y-2">
-                    {membersArray.map((member) => (
-                      <div key={member.id} className="flex justify-between items-center text-sm">
-                        <span className="font-medium">{member.name}</span>
-                        <span className="font-semibold">
-                          {(totalsByMember[member.id] ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {membersArray.map((member) => {
+                      const memberTotal = totalsByMember[member.id] ?? 0;
+                      
+                      // Gerar mensagem do WhatsApp
+                      const message = generateWhatsAppMessage(
+                        member.name,
+                        groupData.name,
+                        groupData.bills,
+                        memberTotal,
+                        member.id
+                      );
+                      
+                      const phone = formatPhoneForWhatsapp(member.phone);
+                      const whatsappUrl = phone ? `https://wa.me/${phone}?text=${message}` : null;
+                      
+                      return (
+                        <div key={member.id} className="flex justify-between items-center gap-2 text-sm">
+                          <span className="font-medium flex-1">{member.name}</span>
+                          <span className="font-semibold">
+                            {memberTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </span>
+                          {whatsappUrl && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(whatsappUrl, '_blank');
+                              }}
+                              title={`Enviar detalhes para ${member.name}`}
+                            >
+                              <WhatsAppIcon className="h-5 w-5" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
