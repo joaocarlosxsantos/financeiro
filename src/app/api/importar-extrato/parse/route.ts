@@ -2,7 +2,7 @@ import { logger } from '../../../../lib/logger';
 
 // Função simples de simplificação de descrição
 function sugerirCategoria(descricaoSimplificada: string): string {
-  if (!descricaoSimplificada) return 'PIX/TRANSF';
+  if (!descricaoSimplificada) return 'Pix';
   const desc = descricaoSimplificada.toLowerCase();
   // Se for referência ao 'uber' manter associação específica
   if (desc.includes('uber')) return 'Uber/99';
@@ -27,7 +27,7 @@ function sugerirCategoria(descricaoSimplificada: string): string {
     desc.includes('banco do brasil') ||
     desc.includes('caixa')
   )
-    return 'PIX/TRANSF';
+    return 'Pix';
   if (desc.includes('pagseguro') || desc.includes('pag*')) return 'Pagamentos';
   if (desc.includes('google') || desc.includes('apple')) return 'Tecnologia';
   if (desc.includes('farmacia') || desc.includes('drogaria')) return 'Saúde';
@@ -76,9 +76,9 @@ function sugerirCategoria(descricaoSimplificada: string): string {
     desc.includes('debenture')
   )
     return 'Investimentos';
-  if (desc.includes('pix') || desc.includes('transf')) return 'PIX/TRANSF';
+  if (desc.includes('pix') || desc.includes('transf')) return 'Pix';
   // fallback
-  return 'PIX/TRANSF';
+  return 'Pix';
 }
 
 function simplificarDescricao(descricao: string): string {
@@ -872,8 +872,8 @@ async function handler(req: NextRequest) {
             if (normalizar(suggested) === 'transferenciaentrecontas') {
               const descNorm = normalizar(descricao);
               if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
-                console.log('[DEBUG] IA sugeriu Transferência entre contas, mas nome não bateu. Forçando PIX/TRANSF. Desc:', descricao, '| Nome:', user?.name);
-                suggested = 'PIX/TRANSF';
+                console.log('[DEBUG] IA sugeriu Transferência entre contas, mas nome não bateu. Forçando Pix. Desc:', descricao, '| Nome:', user?.name);
+                suggested = 'Pix';
               }
             }
             // Verifica se categoria sugerida existe
@@ -910,8 +910,8 @@ async function handler(req: NextRequest) {
           if (normalizar(categoriaSugerida) === 'transferenciaentrecontas') {
             const descNorm = normalizar(descricao);
             if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
-              console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas nome não bateu. Forçando PIX/TRANSF. Desc:', descricao, '| Nome:', user?.name);
-              categoriaSugerida = 'PIX/TRANSF';
+              console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas nome não bateu. Forçando Pix. Desc:', descricao, '| Nome:', user?.name);
+              categoriaSugerida = 'Pix';
             }
           }
           descricaoMelhorada = descricaoSimplificada || descricao;
@@ -1031,7 +1031,7 @@ async function handler(req: NextRequest) {
                 const descNorm = normalizar(descricao);
                 if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
                   console.log('[DEBUG] IA sugeriu Transferência entre contas, mas não é transferência entre contas (nome não bateu). Descrição:', descricao, '| Nome usuário:', user?.name);
-                  suggested = 'PIX/TRANSF';
+                  suggested = 'Pix';
                 }
               }
               const categoriaExistente = categoriasUsuario.find(
@@ -1065,7 +1065,7 @@ async function handler(req: NextRequest) {
                 const descNorm = normalizar(descricao);
                 if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
                   console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas não é transferência entre contas (nome não bateu). Descrição:', descricao, '| Nome usuário:', user?.name);
-                  categoriaSugerida = 'PIX/TRANSF';
+                  categoriaSugerida = 'Pix';
                 }
               }
               descricaoMelhorada = descricaoSimplificada || descricao;
