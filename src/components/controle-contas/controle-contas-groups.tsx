@@ -45,32 +45,35 @@ function generateWhatsAppMessage(
   memberTotal: number,
   memberId: number
 ): string {
-  let message = `Olá *${memberName}*! 👋\n\n`;
-  message += `Seguem os detalhes das contas do grupo *${groupName}*:\n\n`;
+  let message = `Ola *${memberName}*!\n\n`;
+  message += `Segue o resumo das contas do grupo *${groupName}*:\n\n`;
+  message += `-----------------------------------\n\n`;
   
-  bills.forEach((bill) => {
-    message += `📋 *${bill.name}*\n`;
-    message += `   Valor total: R$ ${bill.value.toFixed(2)}\n`;
+  bills.forEach((bill, index) => {
+    message += `*Conta ${index + 1}: ${bill.name}*\n`;
+    message += `Valor total: R$ ${bill.value.toFixed(2)}\n`;
     
     if (bill.shares && bill.shares.length > 0) {
       const memberShare = bill.shares.find((s) => s.memberId === memberId);
       if (memberShare) {
         if (memberShare.type === 'value') {
-          message += `   Sua parte: R$ ${memberShare.amount.toFixed(2)}\n`;
+          message += `Sua parte: R$ ${memberShare.amount.toFixed(2)}\n`;
         } else {
           const amount = (memberShare.amount * bill.value) / 100;
-          message += `   Sua parte: R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
+          message += `Sua parte: R$ ${amount.toFixed(2)} (${memberShare.amount.toFixed(1)}%)\n`;
         }
       }
     } else {
       // Divisão igual entre todos os membros
       const equalShare = bill.value / bills.length;
-      message += `   Sua parte: R$ ${equalShare.toFixed(2)}\n`;
+      message += `Sua parte: R$ ${equalShare.toFixed(2)}\n`;
     }
     message += `\n`;
   });
   
-  message += `💰 *Total a pagar: R$ ${memberTotal.toFixed(2)}*\n\n`;
+  message += `-----------------------------------\n`;
+  message += `*TOTAL A PAGAR: R$ ${memberTotal.toFixed(2)}*\n\n`;
+  message += `Mensagem gerada automaticamente pelo Sistema Financeiro`;
   
   return encodeURIComponent(message);
 }
@@ -187,23 +190,24 @@ export function ControleContasGroups({ groupedData, groupMembers, loading }: Con
                       const whatsappUrl = phone ? `https://wa.me/${phone}?text=${message}` : null;
                       
                       return (
-                        <div key={member.id} className="flex justify-between items-center gap-2 text-sm">
+                        <div key={member.id} className="flex justify-between items-center gap-3 text-sm">
                           <span className="font-medium flex-1">{member.name}</span>
                           <span className="font-semibold">
                             {memberTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </span>
                           {whatsappUrl && (
                             <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+                              size="default"
+                              variant="outline"
+                              className="h-9 px-3 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 dark:border-green-800 dark:hover:bg-green-950"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(whatsappUrl, '_blank');
                               }}
                               title={`Enviar detalhes para ${member.name}`}
                             >
-                              <WhatsAppIcon className="h-5 w-5" />
+                              <WhatsAppIcon className="h-5 w-5 mr-2" />
+                              <span className="text-xs font-semibold">Enviar</span>
                             </Button>
                           )}
                         </div>
