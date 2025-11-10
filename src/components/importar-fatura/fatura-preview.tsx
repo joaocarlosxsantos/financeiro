@@ -60,8 +60,11 @@ export function FaturaPreview({
     );
   }
 
-  async function handleCreateCategory(name: string, type: 'INCOME' | 'EXPENSE') {
+  async function handleCreateCategory(name: string, categoryType: string) {
     try {
+      // Converter string para o tipo esperado
+      const type = categoryType === 'INCOME' ? 'INCOME' : 'EXPENSE';
+      
       const response = await fetch('/api/categorias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
