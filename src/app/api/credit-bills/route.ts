@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
       perPage: url.searchParams.get('perPage'),
     };
 
-    logger.info('Query params recebidos em /api/credit-bills:', queryParams);
 
     const validationResult = CreditBillsQuerySchema.safeParse(queryParams);
     if (!validationResult.success) {
@@ -92,7 +91,8 @@ export async function GET(request: NextRequest) {
       const monthNum = typeof month === 'number' ? month : parseInt(month as any);
       const startDate = new Date(yearNum, monthNum - 1, 1);
       const endDate = new Date(yearNum, monthNum, 0);
-      where.closingDate = {
+      // Filtrar pela data de vencimento (dueDate), pois a fatura é identificada pelo mês de vencimento
+      where.dueDate = {
         gte: startDate,
         lte: endDate,
       };
@@ -105,16 +105,20 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           creditCard: true,
-          items: {
+          creditExpenses: {
             include: {
-              creditExpense: {
-                include: {
-                  category: true,
-                },
-              },
+              category: true,
             },
             orderBy: {
-              dueDate: 'asc',
+              purchaseDate: 'asc',
+            },
+          },
+          creditIncomes: {
+            include: {
+              category: true,
+            },
+            orderBy: {
+              date: 'asc',
             },
           },
           payments: {
@@ -135,17 +139,26 @@ export async function GET(request: NextRequest) {
       prisma.creditBill.count({ where }),
     ]);
 
-    // Atualizar status das faturas baseado na data atual
+    // Atualizar status e recalcular totalAmount dinamicamente
     const currentDate = new Date();
-    const updatedBills = bills.map((bill: any) => ({
-      ...bill,
-      status: calculateBillStatus(
-        Number(bill.totalAmount),
-        Number(bill.paidAmount),
-        bill.dueDate,
-        currentDate
-      ),
-    }));
+    const updatedBills = bills.map((bill: any) => {
+      // Calcular total real: despesas - créditos
+      const totalExpenses = bill.creditExpenses?.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0) || 0;
+      const totalIncomes = bill.creditIncomes?.reduce((sum: number, inc: any) => sum + Number(inc.amount), 0) || 0;
+      const calculatedTotal = totalExpenses - totalIncomes;
+
+
+      return {
+        ...bill,
+        totalAmount: calculatedTotal, // Usar valor calculado em vez do armazenado
+        status: calculateBillStatus(
+          calculatedTotal,
+          Number(bill.paidAmount),
+          bill.dueDate,
+          currentDate
+        ),
+      };
+    });
 
     return NextResponse.json({
       data: updatedBills,
@@ -217,31 +230,29 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Buscar itens que devem entrar nesta fatura
-    const billItems = await prisma.creditBillItem.findMany({
+    // Buscar despesas que devem entrar nesta fatura (não vinculadas ainda)
+    const creditExpenses = await prisma.creditExpense.findMany({
       where: {
-        billId: null, // Ainda não associados a uma fatura
-        creditExpense: {
-          creditCardId,
-        },
-        dueDate: {
-          gte: new Date(year, month, 1),
-          lte: new Date(year, month + 1, 0),
+        creditCardId,
+        creditBillId: null, // Ainda não associadas a uma fatura
+        purchaseDate: {
+          gte: new Date(year, month - 1, 1),
+          lt: new Date(year, month, 1),
         },
       },
       include: {
-        creditExpense: true,
+        category: true,
       },
     });
 
-    if (billItems.length === 0) {
+    if (creditExpenses.length === 0) {
       return NextResponse.json({
-        error: 'Nenhum item encontrado para esta fatura'
+        error: 'Nenhuma despesa encontrada para esta fatura'
       }, { status: 400 });
     }
 
     // Calcular valor total
-    const totalAmount = billItems.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+    const totalAmount = creditExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
 
     // Criar fatura em transação
     const result = await prisma.$transaction(async (tx: any) => {
@@ -261,15 +272,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Associar os itens à fatura
-      await tx.creditBillItem.updateMany({
+      // Associar as despesas à fatura
+      await tx.creditExpense.updateMany({
         where: {
           id: {
-            in: billItems.map((item: any) => item.id),
+            in: creditExpenses.map((exp: any) => exp.id),
           },
         },
         data: {
-          billId: bill.id,
+          creditBillId: bill.id,
         },
       });
 

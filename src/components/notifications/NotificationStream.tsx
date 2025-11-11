@@ -103,8 +103,8 @@ export function NotificationStream() {
     clearNotifications,
     markAllAsRead
   } = useNotificationStream({
-    onConnect: () => console.log('Conectado ao stream de notificações'),
-    onDisconnect: () => console.log('Desconectado do stream de notificações'),
+    //onConnect: () => console.log('Conectado ao stream de notificações'),
+    //onDisconnect: () => console.log('Desconectado do stream de notificações'),
     onNotification: (notification) => {
      
       // Show browser notification if permission granted

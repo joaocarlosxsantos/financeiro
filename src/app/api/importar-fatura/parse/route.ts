@@ -89,18 +89,16 @@ function parseCSV(text: string): any[] {
     const dateISO = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 
     // Parse do valor (formato R$ 1.234,56 ou -R$ 1.234,56)
-    let valor = parseValor(valorStr);
+    const valor = parseValor(valorStr);
 
-    // Detectar se é crédito (pagamento) ou débito (compra)
-    // Valores negativos são pagamentos/créditos
-    const isCredito = valor < 0;
-    valor = Math.abs(valor);
+    // Valores negativos são pagamentos/estornos/créditos
+    // Manter o sinal negativo para processamento correto
 
     transactions.push({
       data: dateISO,
       descricao: descricao.trim(),
-      valor,
-      tipo: isCredito ? 'credito' : 'debito',
+      valor, // Manter com sinal (positivo ou negativo)
+      tipo: valor < 0 ? 'credito' : 'debito',
       categoriaOriginal: categoriaOriginal?.trim() || 'OUTROS',
       tipoOriginal: tipo?.trim() || '',
       // Campos para o preview

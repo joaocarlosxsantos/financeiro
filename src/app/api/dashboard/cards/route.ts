@@ -284,34 +284,14 @@ export async function GET(req: NextRequest) {
     expandedExpensesAcc.push(...expandRecurringUntilDate(recurringExpensesAcc, endDateFinal));
     expandedIncomesAcc.push(...expandRecurringUntilDate(recurringIncomesAcc, endDateFinal));
 
-    console.log('[SALDO DEBUG] Punctual expenses:', punctualExpensesAcc.length);
-    console.log('[SALDO DEBUG] Recurring expenses (raw):', recurringExpensesAcc.length);
-    console.log('[SALDO DEBUG] Expanded expenses total:', expandedExpensesAcc.length);
-    console.log('[SALDO DEBUG] Punctual incomes:', punctualIncomesAcc.length);
-    console.log('[SALDO DEBUG] Recurring incomes (raw):', recurringIncomesAcc.length);
-    console.log('[SALDO DEBUG] Expanded incomes total:', expandedIncomesAcc.length);
 
     // Remove transferências (incomes E expenses com categoria "Transferência entre Contas")
     const filteredIncomesAcc = expandedIncomesAcc.filter((i: any) => !isTransferCategory(i));
     const filteredExpensesAcc = expandedExpensesAcc.filter((e: any) => !isTransferCategory(e));
-
-    console.log('[SALDO DEBUG] After filtering transfers:');
-    console.log('[SALDO DEBUG] Filtered expenses:', filteredExpensesAcc.length, '(removed', expandedExpensesAcc.length - filteredExpensesAcc.length, 'transfers)');
-    console.log('[SALDO DEBUG] Filtered incomes:', filteredIncomesAcc.length, '(removed', expandedIncomesAcc.length - filteredIncomesAcc.length, 'transfers)');
-
     // Verificar se há transferências nos dados
     const expenseTransfers = expandedExpensesAcc.filter((e: any) => isTransferCategory(e));
     const incomeTransfers = expandedIncomesAcc.filter((i: any) => isTransferCategory(i));
     
-    if (expenseTransfers.length > 0) {
-      console.log('[SALDO DEBUG] Found expense transfers:', expenseTransfers.length);
-      console.log('[SALDO DEBUG] Sample expense transfer:', expenseTransfers[0]);
-    }
-    if (incomeTransfers.length > 0) {
-      console.log('[SALDO DEBUG] Found income transfers:', incomeTransfers.length);
-      console.log('[SALDO DEBUG] Sample income transfer:', incomeTransfers[0]);
-    }
-
     // Soma direta
     const totalExpensesAcc = filteredExpensesAcc.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
     const totalIncomesAcc = filteredIncomesAcc.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0);
@@ -319,19 +299,6 @@ export async function GET(req: NextRequest) {
     // Para comparação: calcular também SEM filtrar transferências
     const totalExpensesWithTransfers = expandedExpensesAcc.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
     const totalIncomesWithTransfers = expandedIncomesAcc.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0);
-    
-    console.log('[SALDO DEBUG] Total expenses acc (filtered):', totalExpensesAcc);
-    console.log('[SALDO DEBUG] Total incomes acc (filtered):', totalIncomesAcc);
-    console.log('[SALDO DEBUG] Saldo acumulado (filtered):', totalIncomesAcc - totalExpensesAcc);
-    console.log('[SALDO DEBUG] ---');
-    console.log('[SALDO DEBUG] Total expenses acc (WITH transfers):', totalExpensesWithTransfers);
-    console.log('[SALDO DEBUG] Total incomes acc (WITH transfers):', totalIncomesWithTransfers);
-    console.log('[SALDO DEBUG] Saldo acumulado (WITH transfers):', totalIncomesWithTransfers - totalExpensesWithTransfers);
-    console.log('[SALDO DEBUG] ---');
-    console.log('[SALDO DEBUG] Transfer impact on expenses:', totalExpensesWithTransfers - totalExpensesAcc);
-    console.log('[SALDO DEBUG] Transfer impact on incomes:', totalIncomesWithTransfers - totalIncomesAcc);
-    console.log('[SALDO DEBUG] Net transfer imbalance:', (totalIncomesWithTransfers - totalIncomesAcc) - (totalExpensesWithTransfers - totalExpensesAcc));
-    
     saldoAcumulado = totalIncomesAcc - totalExpensesAcc;
   }
 

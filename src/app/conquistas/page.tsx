@@ -267,7 +267,7 @@ export default function AchievementsPage() {
                   key={challenge.id}
                   challenge={challenge}
                   onUpdate={(id, current) => {
-                    console.log('Update challenge:', id, current);
+                    //console.log('Update challenge:', id, current);
                   }}
                 />
               ))}

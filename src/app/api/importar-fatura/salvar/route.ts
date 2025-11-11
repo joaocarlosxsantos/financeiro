@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { normalizeDescription } from '@/lib/description-normalizer';
 import { withUserRateLimit, RATE_LIMITS } from '@/lib/rateLimiter';
+import { calculateInstallmentDates, getBillPeriodForInstallment, calculateClosingDate, calculateDueDate, type CreditCard } from '@/lib/credit-utils';
 
 /**
  * API para salvar transações de fatura de cartão de crédito
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.IMPORT_EXTRACT);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const { registros, creditCardId } = await req.json();
+  const { registros, creditCardId, billPeriod } = await req.json();
 
   if (!Array.isArray(registros) || !creditCardId) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
@@ -65,9 +66,13 @@ export async function POST(req: NextRequest) {
     const novasTags: string[] = [];
 
     // Processar cada registro
-    const registrosProcessados = registros.map((reg: any) => {
-      // Para faturas de cartão, crédito = pagamento (positivo), débito = compra (negativo)
-      const tipo: 'INCOME' | 'EXPENSE' = reg.tipo === 'credito' ? 'INCOME' : 'EXPENSE';
+    const registrosProcessados = registros
+      .map((reg: any) => {
+      // Valores negativos são créditos (estornos/pagamentos) que liberam limite
+      // Valores positivos são despesas que consomem limite
+      const valorOriginal = typeof reg.valor === 'number' ? reg.valor : parseFloat(reg.valor) || 0;
+      const isCredito = valorOriginal < 0;
+      const tipo: 'INCOME' | 'EXPENSE' = isCredito ? 'INCOME' : 'EXPENSE';
       let categoriaId = reg.categoriaId;
       let categoriaNome = '';
 
@@ -111,7 +116,9 @@ export async function POST(req: NextRequest) {
         categoriaId: categoriaObj ? categoriaObj.id : undefined,
         tipo,
         tags: tagsFinais,
-        categoriaNome
+        categoriaNome,
+        isCredito, // Flag para indicar que é um crédito
+        valorOriginal, // Preservar o valor original com sinal
       };
     });
 
@@ -165,53 +172,269 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Criar transações
-    const transacoesCriadas = [];
+    // Criar transações e associar às faturas
+    const despesasCriadas: any[] = [];
+    const creditosCriados: any[] = []; // Créditos são gravados como CreditIncome
+    const billsMap = new Map<string, { year: number; month: number; expenses: any[]; incomes: any[] }>();
     
     for (const reg of registrosProcessados) {
       if (!reg.incluir) continue; // Pular se o usuário desmarcou
 
-      const data = new Date(reg.data);
-      const valor = Math.abs(reg.valor);
-      const descricao = normalizeDescription(reg.descricao || 'Compra cartão');
+      // Criar data no fuso horário local (meio-dia para evitar problemas de timezone)
+      const [year, month, day] = reg.data.split('-').map(Number);
+      const data = new Date(year, month - 1, day, 12, 0, 0);
+      
+      const valor = Math.abs(reg.valorOriginal); // Sempre positivo para armazenar
+      const descricao = normalizeDescription(reg.descricao || (reg.isCredito ? 'Crédito/Estorno' : 'Compra cartão'));
 
-      // Criar transação
-      const transaction = await prisma.transaction.create({
-        data: {
-          description: descricao,
-          amount: valor,
-          date: data,
-          type: reg.tipo,
-          userId: user.id,
-          categoryId: reg.categoriaId,
-          creditCardId: creditCardId, // Vincular ao cartão
-          isPaid: false, // Transações de cartão iniciam como não pagas
-        },
-      });
-
-      // Vincular tags se houver
+      // Converter nomes de tags para IDs
+      const tagIds: string[] = [];
       if (reg.tags && reg.tags.length > 0) {
-        const tagIds = reg.tags
-          .map((tagName: string) => tagsCache[tagName.toLowerCase()]?.id)
-          .filter(Boolean);
-
-        if (tagIds.length > 0) {
-          await prisma.transactionTag.createMany({
-            data: tagIds.map((tagId: string) => ({
-              transactionId: transaction.id,
-              tagId: tagId,
-            })),
-            skipDuplicates: true,
-          });
+        for (const tagName of reg.tags) {
+          const tag = tagsCache[tagName.toLowerCase()];
+          if (tag) {
+            tagIds.push(tag.id);
+          }
         }
       }
 
-      transacoesCriadas.push(transaction);
+      if (reg.isCredito) {
+        // Crédito/Estorno - cria CreditIncome vinculado à fatura
+        let targetBillPeriod;
+        let isOutsidePeriod = false;
+        let calculatedBillPeriod = null;
+        
+        if (billPeriod) {
+          // Usuário especificou a fatura - usar sempre o período escolhido
+          targetBillPeriod = billPeriod;
+          
+          // Calcular qual seria o período correto para detectar antecipações
+          const cardData: CreditCard = {
+            id: creditCard.id,
+            name: creditCard.name,
+            dueDay: creditCard.dueDay,
+            closingDay: creditCard.closingDay,
+          };
+          
+          const installmentDates = calculateInstallmentDates(cardData, data, 1, valor);
+          const installmentDate = installmentDates[0];
+          calculatedBillPeriod = getBillPeriodForInstallment(cardData, installmentDate.dueDate);
+          
+          // Verifica se está fora do período para adicionar observação
+          if (calculatedBillPeriod.year !== billPeriod.year || calculatedBillPeriod.month !== billPeriod.month) {
+            isOutsidePeriod = true;
+          }
+        } else {
+          // Modo legado: calcular automaticamente qual fatura
+          const cardData: CreditCard = {
+            id: creditCard.id,
+            name: creditCard.name,
+            dueDay: creditCard.dueDay,
+            closingDay: creditCard.closingDay,
+          };
+          
+          const installmentDates = calculateInstallmentDates(cardData, data, 1, valor);
+          const installmentDate = installmentDates[0];
+          targetBillPeriod = getBillPeriodForInstallment(cardData, installmentDate.dueDate);
+        }
+        
+        const billKey = `${targetBillPeriod.year}-${targetBillPeriod.month}`;
+
+
+        // Agrupar por período de fatura
+        if (!billsMap.has(billKey)) {
+          billsMap.set(billKey, {
+            year: targetBillPeriod.year,
+            month: targetBillPeriod.month,
+            expenses: [],
+            incomes: [],
+          });
+        }
+
+        // Adicionar observação se estiver fora do período
+        let observacao = '';
+        if (isOutsidePeriod && calculatedBillPeriod) {
+          observacao = ` [Antecipado da fatura ${calculatedBillPeriod.month}/${calculatedBillPeriod.year}]`;
+        }
+
+        // Armazenar crédito para criar depois com billId
+        billsMap.get(billKey)!.incomes.push({
+          description: descricao + observacao,
+          amount: valor,
+          date: data,
+          categoryId: reg.categoriaId || null,
+          tags: tagIds,
+        });
+        
+        continue;
+      }
+
+      // Se billPeriod foi fornecido pelo usuário, usar direto
+      // Caso contrário, calcular automaticamente
+      let targetBillPeriod;
+      let isOutsidePeriod = false;
+      let calculatedBillPeriod = null;
+      
+      if (billPeriod) {
+        // Usuário especificou a fatura - usar sempre o período escolhido
+        targetBillPeriod = billPeriod;
+        
+        // Calcular qual seria o período correto para detectar antecipações
+        const cardData: CreditCard = {
+          id: creditCard.id,
+          name: creditCard.name,
+          dueDay: creditCard.dueDay,
+          closingDay: creditCard.closingDay,
+        };
+        
+        const installmentDates = calculateInstallmentDates(cardData, data, 1, valor);
+        const installmentDate = installmentDates[0];
+        calculatedBillPeriod = getBillPeriodForInstallment(cardData, installmentDate.dueDate);
+        
+        // Verifica se está fora do período para adicionar observação
+        if (calculatedBillPeriod.year !== billPeriod.year || calculatedBillPeriod.month !== billPeriod.month) {
+          isOutsidePeriod = true;
+        }
+      } else {
+        // Modo legado: calcular automaticamente qual fatura
+        const cardData: CreditCard = {
+          id: creditCard.id,
+          name: creditCard.name,
+          dueDay: creditCard.dueDay,
+          closingDay: creditCard.closingDay,
+        };
+        
+        const installmentDates = calculateInstallmentDates(cardData, data, 1, valor);
+        const installmentDate = installmentDates[0];
+        targetBillPeriod = getBillPeriodForInstallment(cardData, installmentDate.dueDate);
+      }
+      
+      const billKey = `${targetBillPeriod.year}-${targetBillPeriod.month}`;
+
+      // Agrupar por período de fatura
+      if (!billsMap.has(billKey)) {
+        billsMap.set(billKey, {
+          year: targetBillPeriod.year,
+          month: targetBillPeriod.month,
+          expenses: [],
+          incomes: [],
+        });
+      }
+
+      // Adicionar observação se estiver fora do período
+      let observacao = '';
+      if (isOutsidePeriod && calculatedBillPeriod) {
+        observacao = ` [Antecipado da fatura ${calculatedBillPeriod.month}/${calculatedBillPeriod.year}]`;
+      }
+
+      // Armazenar info temporária para criar depois com billId
+      billsMap.get(billKey)!.expenses.push({
+        description: descricao + observacao,
+        amount: valor,
+        purchaseDate: data,
+        categoryId: reg.categoriaId || null,
+        tags: tagIds,
+      });
     }
 
+    // Criar ou atualizar as faturas para cada período
+    const billsCreated = [];
+    
+    for (const billKey of Array.from(billsMap.keys())) {
+      const billData = billsMap.get(billKey)!;
+      
+      // Calcular datas da fatura baseado no período escolhido
+      // IMPORTANTE: As funções calculateClosingDate/calculateDueDate esperam month 0-based (0-11)
+      // Mas billData.month está em formato 1-based (1-12), então subtraímos 1
+      const closingDate = calculateClosingDate(creditCard as any, billData.year, billData.month - 1);
+      const dueDate = calculateDueDate(creditCard as any, billData.year, billData.month - 1);
+      
+      // Calcular total: despesas - créditos
+      const totalExpenses = billData.expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+      const totalIncomes = billData.incomes.reduce((sum: number, inc: any) => sum + Number(inc.amount), 0);
+      const totalAmount = totalExpenses - totalIncomes;
+
+      // Verificar se a fatura já existe
+      let bill = await prisma.creditBill.findFirst({
+        where: {
+          creditCardId: creditCardId,
+          closingDate: closingDate,
+          userId: user.id,
+        },
+      });
+
+      if (!bill) {
+        // Criar nova fatura
+        bill = await prisma.creditBill.create({
+          data: {
+            userId: user.id,
+            creditCardId: creditCardId,
+            closingDate: closingDate,
+            dueDate: dueDate,
+            totalAmount: totalAmount,
+            paidAmount: 0,
+            status: 'PENDING',
+          },
+        });
+        billsCreated.push(bill);
+      } else {
+        // Atualizar o valor total da fatura existente
+        const newTotal = Number(bill.totalAmount) + totalAmount;
+        bill = await prisma.creditBill.update({
+          where: { id: bill.id },
+          data: { totalAmount: newTotal },
+        });
+      }
+
+      // Criar os CreditExpense vinculados diretamente à fatura
+      for (const expenseData of billData.expenses) {
+        const creditExpense = await prisma.creditExpense.create({
+          data: {
+            description: expenseData.description,
+            amount: expenseData.amount,
+            purchaseDate: expenseData.purchaseDate,
+            installments: 1,
+            type: 'EXPENSE',
+            userId: user.id,
+            categoryId: expenseData.categoryId,
+            creditCardId: creditCardId,
+            creditBillId: bill.id,
+            tags: expenseData.tags,
+          },
+        });
+
+        despesasCriadas.push(creditExpense);
+      }
+
+      // Criar os CreditIncome vinculados diretamente à fatura
+      for (const incomeData of billData.incomes) {
+        const creditIncome = await prisma.creditIncome.create({
+          data: {
+            description: incomeData.description,
+            amount: incomeData.amount,
+            date: incomeData.date,
+            userId: user.id,
+            categoryId: incomeData.categoryId,
+            creditCardId: creditCardId,
+            creditBillId: bill.id,
+            tags: incomeData.tags,
+          },
+        });
+
+        creditosCriados.push(creditIncome);
+      }
+    }
+
+    // Registrar totais importados (não precisa mais atualizar availableCredit)
+    const totalDespesas = despesasCriadas.reduce((sum, exp) => sum + Number(exp.amount), 0);
+    const totalCreditos = creditosCriados.reduce((sum, exp) => sum + Number(exp.amount), 0);
+    
     return NextResponse.json({
       success: true,
-      count: transacoesCriadas.length,
+      count: despesasCriadas.length + creditosCriados.length,
+      despesas: despesasCriadas.length,
+      creditos: creditosCriados.length,
+      billsCreated: billsCreated.length,
       categoriasCriadas: categoriasCriadas.length,
       tagsCriadas: tagsCriadas.length,
     });

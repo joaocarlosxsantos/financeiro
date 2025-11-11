@@ -16,7 +16,8 @@ interface CreditExpense {
   amount: number;
   purchaseDate: string;
   installments: number;
-  type?: 'EXPENSE' | 'REFUND';
+  type?: 'EXPENSE' | 'REFUND' | 'INCOME';
+  isIncome?: boolean; // Flag para créditos vindos de CreditIncome
   creditCard: {
     id: string;
     name: string;
@@ -74,8 +75,9 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         setLoading(true);
         setError(null);
 
-        // Carregar gastos
+        // Carregar gastos E créditos
         let url = '/api/credit-expenses';
+        let incomesUrl = '/api/credit-incomes';
         
         // Se uma data específica for fornecida, filtra por mês
         if (currentDate) {
@@ -83,11 +85,16 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
           const month = currentDate.getMonth();
           const startDate = new Date(year, month, 1).toISOString().split('T')[0];
           const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-          url += `?start=${startDate}&end=${endDate}`;
+          const params = `?start=${startDate}&end=${endDate}`;
+          url += params;
+          incomesUrl += params;
+        } else {
+          
         }
 
-        const [expensesRes, categoriesRes, tagsRes] = await Promise.all([
+        const [expensesRes, incomesRes, categoriesRes, tagsRes] = await Promise.all([
           fetch(url),
+          fetch(incomesUrl),
           fetch('/api/categories'),
           fetch('/api/tags')
         ]);
@@ -98,8 +105,30 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         }
 
         const expensesData = await expensesRes.json();
-        const expenses = expensesData.data || expensesData;
-        setExpenses(Array.isArray(expenses) ? expenses : []);
+        const expensesArray = Array.isArray(expensesData) ? expensesData : (expensesData.data || []);
+
+        // Processar créditos/estornos
+        let incomesArray: any[] = [];
+        if (incomesRes.ok) {
+          const incomesData = await incomesRes.json();
+          incomesArray = Array.isArray(incomesData) ? incomesData : (incomesData.data || []);
+          // Adicionar flag para identificar como crédito
+          incomesArray = incomesArray.map((income: any) => ({
+            ...income,
+            isIncome: true, // Flag para renderizar em verde
+            type: 'INCOME',
+            purchaseDate: income.date, // Compatibilidade com expenses
+          }));
+        }
+
+        // Mesclar e ordenar por data
+        const allTransactions = [...expensesArray, ...incomesArray].sort((a, b) => {
+          const dateA = new Date(a.purchaseDate || a.date);
+          const dateB = new Date(b.purchaseDate || b.date);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setExpenses(allTransactions);
 
         // Carregar categorias e tags se as requisições foram bem-sucedidas
         if (categoriesRes.ok) {
@@ -421,10 +450,21 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex flex-col items-end gap-1">
-                    <span className={`font-semibold ${expense.type === 'REFUND' ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`font-semibold ${
+                      (expense as any).isIncome || expense.type === 'INCOME' 
+                        ? 'text-green-600' 
+                        : expense.type === 'REFUND' 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
                       {formatCurrency(expense.amount)}
                     </span>
                     <div className="flex gap-1">
+                      {((expense as any).isIncome || expense.type === 'INCOME') && (
+                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                          CRÉDITO
+                        </Badge>
+                      )}
                       {expense.type === 'REFUND' && (
                         <Badge variant="outline" className="text-xs text-green-600 border-green-600">
                           ESTORNO

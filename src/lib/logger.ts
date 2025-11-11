@@ -54,7 +54,7 @@ function formatLogMessage(
  */
 export function logInfo(message: string, context?: LogContext): void {
   const formatted = formatLogMessage('info', message, context);
-  console.log(formatted);
+  //console.log(formatted);
 }
 
 /**

@@ -41,6 +41,7 @@ model User {
   creditBills         CreditBill[]
   creditCards         CreditCard[]
   creditExpenses      CreditExpense[]
+  creditIncomes       CreditIncome[]
   expenses            Expense[]
   goals               Goal[]
   groups              Group[]
@@ -66,6 +67,7 @@ model Category {
   updatedAt      DateTime        @updatedAt
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   creditExpenses CreditExpense[]
+  creditIncomes  CreditIncome[]
   expenses       Expense[]
   goals          Goal[]
   incomes        Income[]
@@ -94,6 +96,7 @@ model Expense {
   category    Category?   @relation(fields: [categoryId], references: [id])
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   wallet      Wallet      @relation(fields: [walletId], references: [id])
+  billPayments BillPayment[]
 }
 
 model Income {
@@ -136,21 +139,45 @@ model Wallet {
 }
 
 model CreditCard {
-  id             String          @id @default(cuid())
-  name           String
-  limit          Decimal         @db.Decimal(10, 2)
-  closingDay     Int
-  dueDay         Int
-  bankId         String?
-  userId         String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  creditBills    CreditBill[]
-  bank           Wallet?         @relation("CreditCardBank", fields: [bankId], references: [id])
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  creditExpenses CreditExpense[]
+  id              String          @id @default(cuid())
+  name            String
+  limit           Decimal         @db.Decimal(10, 2)
+  availableCredit Decimal?        @db.Decimal(10, 2)
+  closingDay      Int
+  dueDay          Int
+  bankId          String?
+  userId          String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  creditBills     CreditBill[]
+  bank            Wallet?         @relation("CreditCardBank", fields: [bankId], references: [id])
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditExpenses  CreditExpense[]
+  creditIncomes   CreditIncome[]
 
   @@unique([userId, name])
+}
+
+model CreditIncome {
+  id            String      @id @default(cuid())
+  description   String
+  amount        Decimal     @db.Decimal(10, 2)
+  date          DateTime
+  categoryId    String?
+  userId        String
+  creditCardId  String
+  creditBillId  String?
+  tags          String[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  category      Category?   @relation(fields: [categoryId], references: [id])
+  creditCard    CreditCard  @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  creditBill    CreditBill? @relation(fields: [creditBillId], references: [id], onDelete: SetNull)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([creditCardId])
+  @@index([creditBillId])
 }
 
 model Group {
@@ -289,50 +316,37 @@ model CreditExpense {
   type         CreditExpenseType @default(EXPENSE)
   categoryId   String?
   creditCardId String
+  creditBillId String?
   userId       String
   tags         String[]          @default([])
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  billItems    CreditBillItem[]
   category     Category?         @relation(fields: [categoryId], references: [id])
   creditCard   CreditCard        @relation(fields: [creditCardId], references: [id])
+  creditBill   CreditBill?       @relation(fields: [creditBillId], references: [id], onDelete: SetNull)
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, purchaseDate])
   @@index([creditCardId])
-}
-
-model CreditBillItem {
-  id                String        @id @default(cuid())
-  creditExpenseId   String
-  installmentNumber Int
-  amount            Decimal       @db.Decimal(10, 2)
-  dueDate           DateTime
-  billId            String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  bill              CreditBill?   @relation(fields: [billId], references: [id])
-  creditExpense     CreditExpense @relation(fields: [creditExpenseId], references: [id], onDelete: Cascade)
-
-  @@index([billId])
-  @@index([dueDate])
+  @@index([creditBillId])
 }
 
 model CreditBill {
-  id           String           @id @default(cuid())
-  creditCardId String
-  closingDate  DateTime
-  dueDate      DateTime
-  totalAmount  Decimal          @db.Decimal(10, 2)
-  paidAmount   Decimal          @default(0) @db.Decimal(10, 2)
-  status       BillStatus       @default(PENDING)
-  userId       String
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  payments     BillPayment[]
-  creditCard   CreditCard       @relation(fields: [creditCardId], references: [id])
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items        CreditBillItem[]
+  id             String          @id @default(cuid())
+  creditCardId   String
+  closingDate    DateTime
+  dueDate        DateTime
+  totalAmount    Decimal         @db.Decimal(10, 2)
+  paidAmount     Decimal         @default(0) @db.Decimal(10, 2)
+  status         BillStatus      @default(PENDING)
+  userId         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  payments       BillPayment[]
+  creditCard     CreditCard      @relation(fields: [creditCardId], references: [id])
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditExpenses CreditExpense[]
+  creditIncomes  CreditIncome[]
 
   @@unique([creditCardId, closingDate])
   @@index([userId, dueDate])
@@ -346,15 +360,18 @@ model BillPayment {
   paymentDate DateTime
   walletId    String
   description String?
+  expenseId   String?
   userId      String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   bill        CreditBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  expense     Expense?   @relation(fields: [expenseId], references: [id], onDelete: SetNull)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   wallet      Wallet     @relation("BillPayments", fields: [walletId], references: [id])
 
   @@index([userId, paymentDate])
   @@index([billId])
+  @@index([expenseId])
 }
 
 model Achievement {

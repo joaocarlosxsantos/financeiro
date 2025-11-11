@@ -139,7 +139,7 @@ const OptimizedTransactionsPage = memo(() => {
           searchable={false} // Já temos busca externa
           emptyMessage="Nenhuma transação encontrada"
           onRowClick={(transaction) => {
-            console.log('Transação clicada:', transaction);
+            //console.log('Transação clicada:', transaction);
           }}
         />
       </LazyRender>

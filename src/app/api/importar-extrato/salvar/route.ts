@@ -172,14 +172,6 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Log para debug
-    console.log(`Processando registro inicial: ${reg.descricao || 'sem descrição'}`);
-    console.log(`- categoriaRecomendada: ${reg.categoriaRecomendada || 'nenhuma'}`);
-    console.log(`- categoriaSugerida: ${reg.categoriaSugerida || 'nenhuma'}`);
-    console.log(`- categoriaNome processado: ${categoriaNome || 'nenhum'}`);
-    console.log(`- categoriaObj encontrada: ${categoriaObj ? `${categoriaObj.name} (${categoriaObj.id})` : 'nenhuma'}`);
-    console.log(`- shouldCreateCategory: ${reg.shouldCreateCategory || false}`);
-    
     return { 
       ...reg, 
       categoriaId: categoriaObj ? categoriaObj.id : undefined, 
@@ -231,7 +223,6 @@ export async function POST(req: NextRequest) {
     const nomeNorm = normalizeNome(nova.name);
     const key = `${nomeNorm}|BOTH`;
     if (!categoriasCache[key]) {
-      console.log(`Criando nova categoria: ${nova.name} (normalizada: ${nomeNorm})`);
   const cor = corFixaCategoria(nova.name) || corPorNome(nova.name);
       const cat = await prisma.category.create({
         data: { name: nova.name, type: 'BOTH', userId: user.id, color: cor },
@@ -242,9 +233,7 @@ export async function POST(req: NextRequest) {
       categoriasCache[`${nomeNorm}|INCOME`] = cat;
       categoriasCache[`${nomeNorm}|EXPENSE`] = cat;
       criadas.push(cat as any);
-      
-      console.log(`Categoria criada com ID: ${cat.id}, adicionada ao cache com chaves: ${nomeNorm}|BOTH, ${nomeNorm}|INCOME, ${nomeNorm}|EXPENSE`);
-    }
+          }
   }
 
   // Buscar tags existentes do usuário
@@ -286,7 +275,6 @@ export async function POST(req: NextRequest) {
       categoriaNome = normalizeNome(categoriaId);
     }
     
-    console.log(`Processando registro: ${reg.descricao || 'sem descrição'}, categoria sugerida: ${reg.categoriaRecomendada || reg.categoriaSugerida || 'nenhuma'}, categoria normalizada: ${categoriaNome}`);
     
     // Se for saldo inicial, sempre força o id da categoria Saldo
     if (reg.isSaldoInicial || categoriaNome === 'saldo') {
@@ -304,10 +292,7 @@ export async function POST(req: NextRequest) {
       
       if (categoria) {
         categoriaId = categoria.id;
-        console.log(`✅ Categoria encontrada no cache: ${categoria.name} (ID: ${categoria.id})`);
       } else {
-        console.log(`❌ Categoria não encontrada no cache: ${categoriaNome}. Chaves testadas: ${keyBoth}, ${keyIncome}, ${keyExpense}`);
-        console.log(`Cache disponível:`, Object.keys(categoriasCache));
         categoriaId = undefined;
       }
     } else if (categoriaId && categoriaId.length <= 40) {

@@ -36,8 +36,9 @@ export function FaturaTransactionRow({
     
     setIsCreatingCategory(true);
     try {
-      // Para faturas de cartão, sempre será EXPENSE (débito = compra negativa)
-      const categoryType = 'EXPENSE';
+      // Determinar o tipo baseado no valor
+      const valor = typeof registro.valor === 'number' ? registro.valor : parseFloat(String(registro.valor)) || 0;
+      const categoryType = valor < 0 ? 'INCOME' : 'EXPENSE';
       await onCreateCategory(newCategoryName.trim(), categoryType);
       setShowCategoryCreate(false);
       setNewCategoryName('');
@@ -68,74 +69,79 @@ export function FaturaTransactionRow({
     return dateString;
   };
 
+  // Determinar se é crédito (valor negativo) ou despesa (valor positivo)
+  const valor = typeof registro.valor === 'number' ? registro.valor : parseFloat(String(registro.valor)) || 0;
+  const isCredito = valor < 0;
+  const colorClass = isCredito 
+    ? 'text-green-600 dark:text-green-400' 
+    : 'text-red-600 dark:text-red-400';
+
   return (
-    <tr className="border-b hover:bg-accent/50 transition-colors group" style={{ minHeight: '70px' }}>
+    <tr className="border-b hover:bg-accent/50 transition-colors group">
       {/* Data */}
-      <td className="px-4 py-3 w-28">
-        <div className="text-sm font-medium text-muted-foreground">
+      <td className="px-3 py-2 w-[100px]">
+        <div className="text-xs font-medium text-muted-foreground whitespace-nowrap">
           {formatDate(registro.data)}
         </div>
       </td>
 
       {/* Valor */}
-      <td className="px-4 py-3 text-right w-32">
-        <div className="font-semibold text-sm text-red-600 dark:text-red-400">
+      <td className="px-3 py-2 text-right w-[110px]">
+        <div className={`font-semibold text-xs ${colorClass} whitespace-nowrap`}>
           {formatCurrency(registro.valor)}
         </div>
       </td>
 
       {/* Descrição */}
-      <td className="px-4 py-3">
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Input
-              value={registro.descricao || ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onEdit(index, 'descricao', e.target.value)}
-              placeholder="Descrição da compra"
-              className="flex-1 text-sm"
-            />
-          </div>
-        </div>
+      <td className="px-3 py-2 w-[30%]">
+        <Input
+          value={registro.descricao || ''}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onEdit(index, 'descricao', e.target.value)}
+          placeholder={isCredito ? "Descrição do crédito/estorno" : "Descrição da compra"}
+          className="h-8 text-xs w-full"
+        />
       </td>
 
       {/* Categoria */}
-      <td className="px-4 py-3">
-        <div className="space-y-2">
-          <div className="flex gap-2">
+      <td className="px-3 py-2 w-[25%]">
+        <div className="space-y-1.5">
+          <div className="flex gap-1.5">
             <select
               value={registro.categoriaId || ''}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onEdit(index, 'categoriaId', e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="">Selecionar categoria</option>
-              {categorias.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
+              <option value="">Selecionar</option>
+              {categorias
+                .filter(cat => cat.type === (isCredito ? 'INCOME' : 'EXPENSE'))
+                .map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
             </select>
             <Button
               type="button"
               variant="outline"
               size="icon"
               onClick={() => setShowCategoryCreate(!showCategoryCreate)}
-              className="shrink-0"
+              className="shrink-0 h-8 w-8"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3" />
             </Button>
           </div>
 
           {/* Sugestão da IA */}
           {registro.categoriaSugerida && !registro.categoriaId && (
-            <div className="flex items-center gap-2 bg-primary/5 px-2 py-1 rounded text-xs border border-primary/20">
-              <span className="text-primary font-medium">IA sugere:</span>
-              <span className="text-foreground">{registro.categoriaSugerida}</span>
-              <div className="flex gap-1 ml-auto">
+            <div className="flex items-center gap-1.5 bg-primary/5 px-2 py-1 rounded text-[10px] border border-primary/20">
+              <Wand2 className="h-3 w-3 text-primary shrink-0" />
+              <span className="text-foreground truncate flex-1">{registro.categoriaSugerida}</span>
+              <div className="flex gap-0.5 shrink-0">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="h-5 w-5"
                   onClick={() => onAcceptAISuggestion(index)}
                 >
                   <Check className="h-3 w-3 text-green-600" />
@@ -144,7 +150,7 @@ export function FaturaTransactionRow({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="h-5 w-5"
                   onClick={() => onRejectAISuggestion(index)}
                 >
                   <X className="h-3 w-3 text-red-600" />
@@ -155,12 +161,12 @@ export function FaturaTransactionRow({
 
           {/* Criar nova categoria */}
           {showCategoryCreate && (
-            <div className="flex gap-2 p-2 bg-muted/50 rounded-md border border-border">
+            <div className="flex gap-1.5 p-1.5 bg-muted/50 rounded-md border border-border">
               <Input
                 value={newCategoryName}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCategoryName(e.target.value)}
                 placeholder="Nome da categoria"
-                className="flex-1"
+                className="flex-1 h-7 text-xs"
                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -173,6 +179,7 @@ export function FaturaTransactionRow({
                 onClick={handleCreateCategory}
                 disabled={isCreatingCategory || !newCategoryName.trim()}
                 size="sm"
+                className="h-7 text-xs px-2"
               >
                 {isCreatingCategory ? 'Criando...' : 'Criar'}
               </Button>
@@ -182,16 +189,14 @@ export function FaturaTransactionRow({
       </td>
 
       {/* Tags */}
-      <td className="px-4 py-3">
-        <div className="space-y-2">
-          <MultiTagSelector
-            availableTags={tags}
-            selectedTags={registro.tags || []}
-            suggestedTags={[]}
-            onTagsChange={(selectedTags: string[]) => onEdit(index, 'tags', selectedTags)}
-            onCreateTag={onCreateTag}
-          />
-        </div>
+      <td className="px-3 py-2 w-[25%]">
+        <MultiTagSelector
+          availableTags={tags}
+          selectedTags={registro.tags || []}
+          suggestedTags={[]}
+          onTagsChange={(selectedTags: string[]) => onEdit(index, 'tags', selectedTags)}
+          onCreateTag={onCreateTag}
+        />
       </td>
     </tr>
   );

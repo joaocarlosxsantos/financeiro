@@ -15,7 +15,8 @@ interface CreditExpense {
   amount: number;
   purchaseDate: string;
   installments: number;
-  type?: 'EXPENSE' | 'REFUND';
+  type?: 'EXPENSE' | 'REFUND' | 'INCOME';
+  isIncome?: boolean;
   creditCard: {
     id: string;
     name: string;

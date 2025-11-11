@@ -13,6 +13,10 @@ interface FaturaPreviewProps {
   creditCards: any[];
   selectedCreditCard: string;
   onCreditCardChange: (id: string) => void;
+  billMonth: number;
+  billYear: number;
+  onBillMonthChange: (month: number) => void;
+  onBillYearChange: (year: number) => void;
   onSave: (registros: any[]) => void;
   saving: boolean;
   error: string | null;
@@ -24,6 +28,10 @@ export function FaturaPreview({
   creditCards,
   selectedCreditCard,
   onCreditCardChange,
+  billMonth,
+  billYear,
+  onBillMonthChange,
+  onBillYearChange,
   onSave,
   saving,
   error,
@@ -125,10 +133,20 @@ export function FaturaPreview({
     onSave(registros);
   }
 
-  const total = registros.reduce((acc, r) => {
+  // Calcular totais separados para despesas e créditos
+  const totalDespesas = registros.reduce((acc, r) => {
+    if (!r.incluir) return acc;
     const valor = typeof r.valor === 'number' ? r.valor : parseFloat(r.valor) || 0;
-    return acc + (r.incluir ? valor : 0);
+    return valor > 0 ? acc + valor : acc; // Apenas valores positivos
   }, 0);
+
+  const totalCreditos = registros.reduce((acc, r) => {
+    if (!r.incluir) return acc;
+    const valor = typeof r.valor === 'number' ? r.valor : parseFloat(r.valor) || 0;
+    return valor < 0 ? acc + Math.abs(valor) : acc; // Apenas valores negativos (em positivo)
+  }, 0);
+
+  const totalFinal = totalDespesas - totalCreditos;
   const count = registros.filter((r) => r.incluir).length;
 
   return (
@@ -141,69 +159,98 @@ export function FaturaPreview({
         </Badge>
       </div>
 
-      {/* Tabela de transações */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-background shadow-sm">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-muted text-muted-foreground">
-              <th className="px-4 py-4 text-left font-semibold w-28">Data</th>
-              <th className="px-4 py-4 text-right font-semibold w-32">Valor</th>
-              <th className="px-4 py-4 text-left font-semibold min-w-[350px]">Descrição</th>
-              <th className="px-4 py-4 text-left font-semibold min-w-[180px]">Categoria</th>
-              <th className="px-4 py-4 text-left font-semibold min-w-[160px]">Tags</th>
-            </tr>
-          </thead>
-          <tbody>
-            {registros.map((row, i) => (
-              <FaturaTransactionRow
-                key={row.id || i}
-                registro={row}
-                index={i}
-                categorias={categorias}
-                tags={tags}
-                onEdit={handleEdit}
-                onCreateCategory={handleCreateCategory}
-                onCreateTag={handleCreateTag}
-                onAcceptAISuggestion={handleAcceptAISuggestion}
-                onRejectAISuggestion={handleRejectAISuggestion}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Resumo e seleção de cartão */}
+      {/* Configurações e resumo - ANTES da tabela */}
       <div className="bg-card border rounded-lg p-6 space-y-6">
-        <div>
-          <Label htmlFor="creditCard" className="flex items-center gap-2 mb-2">
-            <CreditCard className="w-4 h-4" />
-            Selecione o Cartão de Crédito
-          </Label>
-          <Select
-            id="creditCard"
-            value={selectedCreditCard}
-            onChange={(e) => onCreditCardChange(e.target.value)}
-            className="w-full"
-            required
-          >
-            <option value="">-- Selecione --</option>
-            {creditCards.map((card) => (
-              <option key={card.id} value={card.id}>
-                {card.name} - Limite: R$ {card.limit?.toFixed(2) || '0.00'}
-              </option>
-            ))}
-          </Select>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+          <strong>📅 Período da Fatura:</strong> Selecione o mês/ano da fatura que está importando. 
+          Transações com datas fora deste período serão marcadas como antecipadas automaticamente.
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="creditCard" className="flex items-center gap-2 mb-2">
+              <CreditCard className="w-4 h-4" />
+              Selecione o Cartão de Crédito
+            </Label>
+            <Select
+              id="creditCard"
+              value={selectedCreditCard}
+              onChange={(e) => onCreditCardChange(e.target.value)}
+              className="w-full"
+              required
+            >
+              <option value="">-- Selecione --</option>
+              {creditCards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.name} - Limite: R$ {Number(card.limit || 0).toFixed(2)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="billMonth" className="mb-2 block">
+              Mês da Fatura
+            </Label>
+            <Select
+              id="billMonth"
+              value={billMonth.toString()}
+              onChange={(e) => onBillMonthChange(parseInt(e.target.value))}
+              className="w-full"
+              required
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                <option key={month} value={month}>
+                  {new Date(2000, month - 1).toLocaleString('pt-BR', { month: 'long' })}
+                </option>
+              ))}
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="billYear" className="mb-2 block">
+              Ano da Fatura
+            </Label>
+            <Select
+              id="billYear"
+              value={billYear.toString()}
+              onChange={(e) => onBillYearChange(parseInt(e.target.value))}
+              className="w-full"
+              required
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-3 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">Transações:</span>
             <span className="ml-2 font-semibold">{count}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Total:</span>
-            <span className="ml-2 font-semibold">
-              R$ {Math.abs(total).toFixed(2)}
+            <span className="text-muted-foreground">Despesas:</span>
+            <span className="ml-2 font-semibold text-red-600">
+              R$ {totalDespesas.toFixed(2)}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Créditos:</span>
+            <span className="ml-2 font-semibold text-green-600">
+              R$ {totalCreditos.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <div className="flex justify-between items-center text-base font-semibold">
+            <span className="text-muted-foreground">Total da Fatura:</span>
+            <span className={totalFinal >= 0 ? 'text-red-600' : 'text-green-600'}>
+              R$ {Math.abs(totalFinal).toFixed(2)}
             </span>
           </div>
         </div>
@@ -228,6 +275,37 @@ export function FaturaPreview({
         >
           {saving ? 'Salvando...' : 'Salvar Fatura'}
         </Button>
+      </div>
+
+      {/* Tabela de transações - DEPOIS dos controles */}
+      <div className="overflow-x-auto rounded-lg border border-border bg-background shadow-sm">
+        <table className="min-w-full table-fixed">
+          <thead>
+            <tr className="bg-muted text-muted-foreground text-xs">
+              <th className="px-3 py-2 text-left font-semibold w-[100px]">Data</th>
+              <th className="px-3 py-2 text-right font-semibold w-[110px]">Valor</th>
+              <th className="px-3 py-2 text-left font-semibold w-[30%]">Descrição</th>
+              <th className="px-3 py-2 text-left font-semibold w-[25%]">Categoria</th>
+              <th className="px-3 py-2 text-left font-semibold w-[25%]">Tags</th>
+            </tr>
+          </thead>
+          <tbody>
+            {registros.map((row, i) => (
+              <FaturaTransactionRow
+                key={row.id || i}
+                registro={row}
+                index={i}
+                categorias={categorias}
+                tags={tags}
+                onEdit={handleEdit}
+                onCreateCategory={handleCreateCategory}
+                onCreateTag={handleCreateTag}
+                onAcceptAISuggestion={handleAcceptAISuggestion}
+                onRejectAISuggestion={handleRejectAISuggestion}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -20,19 +20,24 @@ interface CreditBill {
     name: string;
     bank: string;
   };
-  items: {
+  creditExpenses: {
     id: string;
     description: string;
     amount: number;
     installmentNumber: number;
     totalInstallments: number;
-    creditExpense: {
-      id: string;
-      type: 'EXPENSE' | 'REFUND';
-      description: string;
-      category?: {
-        name: string;
-      };
+    purchaseDate: string;
+    category?: {
+      name: string;
+    };
+  }[];
+  creditIncomes: {
+    id: string;
+    description: string;
+    amount: number;
+    date: string;
+    category?: {
+      name: string;
     };
   }[];
   payments: {
@@ -236,7 +241,9 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
               </div>
               <div>
                 <p className="text-muted-foreground">Itens</p>
-                <p className="font-semibold">{bill.items.length} compra(s)</p>
+                <p className="font-semibold">
+                  {(bill.creditExpenses?.length || 0) + (bill.creditIncomes?.length || 0)} item(s)
+                </p>
               </div>
             </div>
 
@@ -256,43 +263,61 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
             {expandedBill === bill.id && (
               <div className="mt-6 pt-4 border-t">
                 <h4 className="font-semibold mb-3">Itens da Fatura</h4>
-                {bill.items.length === 0 ? (
+                {(() => {
+                  return null;
+                })()}
+                {((bill.creditExpenses?.length || 0) + (bill.creditIncomes?.length || 0)) === 0 ? (
                   <p className="text-muted-foreground text-sm">Nenhum item nesta fatura.</p>
                 ) : (
                   <div className="space-y-2">
-                    {bill.items.map((item) => {
-                      const isRefund = item.creditExpense?.type === 'REFUND';
-                      return (
-                        <div 
-                          key={item.id} 
-                          className={`flex justify-between items-center p-2 rounded ${
-                            isRefund 
-                              ? 'bg-green-50 border border-green-200' 
-                              : 'bg-muted/30'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{item.description}</p>
-                              {isRefund && (
-                                <Badge variant="outline" className="text-green-700 border-green-300">
-                                  ESTORNO
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Parcela {item.installmentNumber} de {item.totalInstallments}
-                              {item.creditExpense?.category && (
-                                <span> • {item.creditExpense.category.name}</span>
-                              )}
-                            </p>
+                    {/* Despesas */}
+                    {bill.creditExpenses?.map((expense) => (
+                      <div 
+                        key={expense.id} 
+                        className="flex justify-between items-center p-2 rounded bg-muted/30"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{expense.description}</p>
                           </div>
-                          <p className={`font-semibold ${isRefund ? 'text-green-700' : ''}`}>
-                            {isRefund ? '-' : ''}{formatCurrency(Math.abs(item.amount))}
+                          <p className="text-xs text-muted-foreground">
+                            Parcela {expense.installmentNumber} de {expense.totalInstallments}
+                            {expense.category && (
+                              <span> • {expense.category.name}</span>
+                            )}
                           </p>
                         </div>
-                      );
-                    })}
+                        <p className="font-semibold text-red-600">
+                          {formatCurrency(expense.amount)}
+                        </p>
+                      </div>
+                    ))}
+
+                    {/* Créditos/Estornos */}
+                    {bill.creditIncomes?.map((income) => (
+                      <div 
+                        key={income.id} 
+                        className="flex justify-between items-center p-2 rounded bg-green-50 border border-green-200"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{income.description}</p>
+                            <Badge variant="outline" className="text-green-700 border-green-300">
+                              CRÉDITO
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(income.date).toLocaleDateString('pt-BR')}
+                            {income.category && (
+                              <span> • {income.category.name}</span>
+                            )}
+                          </p>
+                        </div>
+                        <p className="font-semibold text-green-700">
+                          -{formatCurrency(income.amount)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
 

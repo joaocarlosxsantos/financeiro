@@ -344,7 +344,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                 <div className="flex justify-between text-sm">
                   <span>Disponível:</span>
                   <span className="font-medium text-green-600">
-                    R$ {(creditCard.availableLimit || (creditCard.limit - (creditCard.usedAmount || 0))).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(creditCard.availableLimit ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 

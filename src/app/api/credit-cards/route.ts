@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     where: { userId: user.id },
     include: {
       creditExpenses: true,
+      creditIncomes: true,
       creditBills: true,
       bank: true,
     },
@@ -28,14 +29,22 @@ export async function GET(req: NextRequest) {
   // Calcular o valor utilizado de cada cartão
   const creditCardsWithUsage = creditCards.map((card: any) => {
     // Calcular valor utilizado baseado nos gastos de crédito
-    const totalUsed = (card.creditExpenses || []).reduce((sum: number, expense: any) => {
+    const totalExpenses = (card.creditExpenses || []).reduce((sum: number, expense: any) => {
       return sum + Number(expense.amount);
     }, 0);
     
-    const usedAmount = totalUsed;
-    const calculatedAvailableLimit = Number(card.limit) - usedAmount;
-    // Garantir que o limite disponível não ultrapasse o limite total do cartão
-    const availableLimit = Math.min(calculatedAvailableLimit, Number(card.limit));
+    // Calcular créditos que liberam o limite (pagamentos e estornos)
+    const totalIncomes = (card.creditIncomes || []).reduce((sum: number, income: any) => {
+      return sum + Number(income.amount);
+    }, 0);
+    
+    // Valor usado = despesas - créditos
+    const usedAmount = totalExpenses - totalIncomes;
+    
+    // Limite disponível = limite total - valor usado
+    const availableLimit = Number(card.limit) - usedAmount;
+    
+    // Percentual de uso baseado no limite total
     const usagePercentage = Number(card.limit) > 0 ? (usedAmount / Number(card.limit)) * 100 : 0;
     
     return {

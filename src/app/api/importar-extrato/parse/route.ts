@@ -64,7 +64,7 @@ function sugerirCategoria(descricaoSimplificada: string): string {
     desc.includes('ações') ||
     desc.includes('acao') ||
     desc.includes('ações') ||
-  desc.includes('renda recorrente') ||
+    desc.includes('renda recorrente') ||
     desc.includes('renda variável') ||
     desc.includes('renda variavel') ||
     desc.includes('investimento') ||
@@ -89,7 +89,12 @@ function simplificarDescricao(descricao: string): string {
   // Primeiro: detectar transações de compra no débito/crédito e tentar extrair o merchant
   const isCompraCard =
     desc.includes('compra') &&
-    (desc.includes('débito') || desc.includes('debito') || desc.includes('cr[ée]dito') || desc.includes('credito') || desc.includes('cartao') || desc.includes('cartão'));
+    (desc.includes('débito') ||
+      desc.includes('debito') ||
+      desc.includes('cr[ée]dito') ||
+      desc.includes('credito') ||
+      desc.includes('cartao') ||
+      desc.includes('cartão'));
   if (isCompraCard) {
     // tenta extrair texto após um separador comum ( - , : , — )
     const parts = raw.split(/[-:–—]/);
@@ -104,7 +109,11 @@ function simplificarDescricao(descricao: string): string {
       const num = merchant.match(/(\d{2,})/);
       if (num) return num[1];
       // Remove estrelas e excesso de espaços/pontuação
-      return merchant.replace(/\*/g, '').replace(/[\s]{2,}/g, ' ').replace(/[,.]\s*$/g, '').trim();
+      return merchant
+        .replace(/\*/g, '')
+        .replace(/[\s]{2,}/g, ' ')
+        .replace(/[,.]\s*$/g, '')
+        .trim();
     }
     // Se não encontrou merchant, retornar a descrição completa (não cortar para 'Compra')
     return raw;
@@ -132,7 +141,11 @@ function simplificarDescricao(descricao: string): string {
 
   // Se for nome de pessoa (muitas palavras, sem palavras-chave conhecidas)
   const palavras = raw.replace(/\*/g, '').trim().split(/\s+/);
-  if (palavras.length >= 2 && palavras.length <= 4 && palavras.every((p) => /^[A-Za-zÀ-ÿ]+$/.test(p))) {
+  if (
+    palavras.length >= 2 &&
+    palavras.length <= 4 &&
+    palavras.every((p) => /^[A-Za-zÀ-ÿ]+$/.test(p))
+  ) {
     return palavras.slice(0, 2).join(' ');
   }
 
@@ -149,8 +162,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
 
-
-
 // Função para normalizar texto mal formatado
 function normalizeText(text: string) {
   // Junta todas as letras e remove quebras de linha estranhas
@@ -162,47 +173,47 @@ function normalizeText(text: string) {
 // Função para parsing de texto mal formatado (genérica para qualquer PDF)
 function parseMalformedText(text: string) {
   const transactions: any[] = [];
-  console.log('Usando parsing para texto mal formatado');
-  
+
   // Normaliza o texto primeiro
   const normalizedText = normalizeText(text);
-  console.log('Texto normalizado (500 chars):', normalizedText.substring(0, 500));
-  
+
   // Padrões genéricos para extrair transações baseados no formato normalizado (sem espaços)
   const patterns = [
     // Padrão principal: DESCRICAO2025-10-13-R$92,74 (com sinal negativo)
     /([A-ZÀ-Ú0-9]+?)(\d{4}-\d{2}-\d{2})-R\$([\d.,]+)/g,
     // Padrão para receitas: DESCRICAO2025-10-01R$1000,00 (sem sinal negativo)
-    /([A-ZÀ-Ú0-9]+?)(\d{4}-\d{2}-\d{2})R\$([\d.,]+)/g
+    /([A-ZÀ-Ú0-9]+?)(\d{4}-\d{2}-\d{2})R\$([\d.,]+)/g,
   ];
-  
+
   for (const pattern of patterns) {
     let match;
     pattern.lastIndex = 0;
-    
+
     while ((match = pattern.exec(normalizedText)) !== null) {
       const [fullMatch, descRaw, dateStr, amountRaw] = match;
-      
+
       // Limpa e formata a descrição
       const description = descRaw.trim().replace(/\s{2,}/g, ' ');
-      
+
       // Pula cabeçalhos e textos irrelevantes
-      if (description.length < 3 || 
-          description.includes('Extrato') || 
-          description.includes('Nome') ||
-          description.includes('CPF') ||
-          description.includes('Saldo') ||
-          description.includes('Período')) {
+      if (
+        description.length < 3 ||
+        description.includes('Extrato') ||
+        description.includes('Nome') ||
+        description.includes('CPF') ||
+        description.includes('Saldo') ||
+        description.includes('Período')
+      ) {
         continue;
       }
-      
+
       // Converte data para formato brasileiro
       const [year, month, day] = dateStr.split('-');
       const data = `${day}/${month}/${year}`;
-      
+
       // Converte valor
       let valor = parseFloat(amountRaw.replace(/\./g, '').replace(',', '.'));
-      
+
       // Define se é receita ou despesa baseado no padrão
       if (fullMatch.includes('-R$')) {
         // Tem sinal negativo = despesa
@@ -210,16 +221,18 @@ function parseMalformedText(text: string) {
       } else {
         // Sem sinal negativo = pode ser receita, mas vamos assumir despesa por padrão
         // A menos que contenha palavras que indiquem receita
-        if (description.toLowerCase().includes('benefício') || 
-            description.toLowerCase().includes('recarga') ||
-            description.toLowerCase().includes('crédito') ||
-            description.toLowerCase().includes('depósito')) {
+        if (
+          description.toLowerCase().includes('benefício') ||
+          description.toLowerCase().includes('recarga') ||
+          description.toLowerCase().includes('crédito') ||
+          description.toLowerCase().includes('depósito')
+        ) {
           valor = Math.abs(valor);
         } else {
           valor = -Math.abs(valor);
         }
       }
-      
+
       // Melhora o nome da descrição
       let descricao = description;
       // Adiciona espaços entre palavras de forma mais inteligente
@@ -230,33 +243,33 @@ function parseMalformedText(text: string) {
         .replace(/([A-Z])([A-Z][a-z])/g, '$1$2') // Corrige casos como S UPERMERCADOS
         .replace(/\s+/g, ' ') // Remove espaços duplos
         .trim();
-      
+
       transactions.push({
         data,
         valor,
-        descricao
+        descricao,
       });
-      
-      console.log('Transação extraída:', { data, valor, descricao, original: description });
     }
   }
-  
-  console.log(`Total de transações extraídas: ${transactions.length}`);
+
   return transactions;
 }
 
 // Função para parsing de PDF com registros por data
 function parsePdfGroupedByDate(text: string) {
   const transactions: any[] = [];
-  
+
   // Processa texto normalmente
-  const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-  
+  const lines = text
+    .split('\n')
+    .map((line: string) => line.trim())
+    .filter((line: string) => line.length > 0);
+
   let currentDate = '';
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // Tenta encontrar uma data no formato dd/MM/yyyy ou dd/MM/yy
     const dateMatch = line.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
     if (dateMatch) {
@@ -270,49 +283,55 @@ function parsePdfGroupedByDate(text: string) {
       currentDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
       continue;
     }
-    
+
     // Se temos uma data atual, tenta extrair transações desta linha
     if (currentDate && line.length > 0) {
       // Procura por valor no final da linha (formato: R$ 123,45 ou -123,45 ou 123,45-)
-      const valorMatch = line.match(/(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/);
+      const valorMatch = line.match(
+        /(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/,
+      );
       if (valorMatch) {
         let [, descricao, , valorStr, negativeFlag] = valorMatch;
         descricao = descricao.trim().replace(/^R\$\s*/, '');
-        
+
         // Converte valor para número
         let valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
         if (negativeFlag === '-' || valorStr.startsWith('-')) {
           valor = -Math.abs(valor);
         }
-        
+
         if (descricao && !isNaN(valor)) {
           transactions.push({
             data: currentDate,
             valor,
-            descricao: descricao.trim()
+            descricao: descricao.trim(),
           });
         }
       }
     }
   }
-  
+
   return transactions;
 }
 
 // Função para parsing de PDF com cada linha tendo data, descrição e valor (formato DD/MM/YYYY)
 function parsePdfIndividualLines(text: string) {
   const transactions: any[] = [];
-  console.log('Tentando parsing linha por linha (formato DD/MM/YYYY)');
-  
-  const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-  
+
+  const lines = text
+    .split('\n')
+    .map((line: string) => line.trim())
+    .filter((line: string) => line.length > 0);
+
   // Formato tradicional: data descrição valor na mesma linha
   for (const line of lines) {
     // Padrão tradicional: "01/01/2025 COMPRA SUPERMERCADO ABC -150,00"
-    const lineMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/);
+    const lineMatch = line.match(
+      /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.*?)\s+(R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})(-?)$/,
+    );
     if (lineMatch) {
       let [, dateStr, descricao, , valorStr, negativeFlag] = lineMatch;
-      
+
       // Normaliza a data
       const dateParts = dateStr.split('/');
       if (dateParts.length === 3) {
@@ -323,127 +342,102 @@ function parsePdfIndividualLines(text: string) {
           year = String(currentCentury + parseInt(year));
         }
         const normalizedDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
-        
+
         // Converte valor para número
         let valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
         if (negativeFlag === '-' || valorStr.startsWith('-')) {
           valor = -Math.abs(valor);
         }
-        
+
         if (descricao.trim() && !isNaN(valor)) {
           transactions.push({
             data: normalizedDate,
             valor,
-            descricao: descricao.trim()
+            descricao: descricao.trim(),
           });
-          
-          console.log('Transação DD/MM extraída:', { data: normalizedDate, valor, descricao: descricao.trim() });
         }
       }
     }
   }
-  
-  console.log(`Total de transações DD/MM extraídas: ${transactions.length}`);
+
   return transactions;
 }
 
 // Função específica para parsing de arquivos TXT de extrato (formato como Alelo)
 function parseTxtExtract(text: string) {
   const transactions: any[] = [];
-  console.log('\n========================================');
-  console.log('INICIANDO parseTxtExtract');
-  console.log('Tamanho do texto:', text.length);
-  console.log('Primeiros 500 caracteres:', text.substring(0, 500));
-  console.log('========================================\n');
-  
+
   // Remove caracteres especiais, normaliza encoding e mantém o formato de linhas
   let normalizedText = text
     .replace(/•/g, '')
     .replace(/â€¢/g, '') // Remove bullets mal codificados
     .replace(/\r/g, '')
     .replace(/Ã§Ã£/g, 'ç') // Corrige "ção"
-    .replace(/Ã­/g, 'í')   // Corrige "í"
-    .replace(/Ã£/g, 'ã')   // Corrige "ã"
-    .replace(/Ãº/g, 'ú')   // Corrige "ú"
-    .replace(/Ã§/g, 'ç');  // Corrige "ç"
-    
+    .replace(/Ã­/g, 'í') // Corrige "í"
+    .replace(/Ã£/g, 'ã') // Corrige "ã"
+    .replace(/Ãº/g, 'ú') // Corrige "ú"
+    .replace(/Ã§/g, 'ç'); // Corrige "ç"
+
   const allLines = normalizedText.split('\n');
-  
-  console.log('Total de linhas no arquivo:', allLines.length);
-  console.log('\n=== PRIMEIRAS 30 LINHAS ===');
-  for (let i = 0; i < Math.min(30, allLines.length); i++) {
-    console.log(`[${i}] "${allLines[i]}"`);
-  }
-  console.log('=== FIM DAS PRIMEIRAS LINHAS ===\n');
-  
+
   // Processa o arquivo linha por linha, mantendo o índice original
   for (let i = 0; i < allLines.length; i++) {
     const line = allLines[i].trim();
-    
+
     // Pula linhas vazias
     if (!line) continue;
-    
+
     // Ignora cabeçalhos e informações do cartão
-    if (line.includes('Extrato') || 
-        line.match(/^[•\s]+$/) ||
-        line.includes('Periodo') || 
-        line.includes('Nome do Portador') || 
-        line.includes('CPF:') || 
-        line.match(/^Saldo R\$/i) || 
-        line.match(/^Último benefício/i) ||
-        line.includes('about:blank') ||
-        line.includes('Consulta de Saldo') ||
-        line.includes('MeuAlelo') ||
-        line.match(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}$/)) {
+    if (
+      line.includes('Extrato') ||
+      line.match(/^[•\s]+$/) ||
+      line.includes('Periodo') ||
+      line.includes('Nome do Portador') ||
+      line.includes('CPF:') ||
+      line.match(/^Saldo R\$/i) ||
+      line.match(/^Último benefício/i) ||
+      line.includes('about:blank') ||
+      line.includes('Consulta de Saldo') ||
+      line.includes('MeuAlelo') ||
+      line.match(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}$/)
+    ) {
       continue;
     }
-    
+
     // Procura por data no formato YYYY-MM-DD
     const dateMatch = line.match(/^(\d{4}-\d{2}-\d{2})$/);
     if (dateMatch) {
-      console.log(`\n>>> ENCONTREI UMA DATA: ${line} na linha ${i}`);
-      
       const dateStr = dateMatch[1];
       const [year, month, day] = dateStr.split('-');
       const data = `${day}/${month}/${year}`;
-      
+
       // A DESCRIÇÃO está ANTES da data (linha i-1)
       // O VALOR está DEPOIS da data (linha i+1)
-      
-      console.log('Procurando descrição antes da linha', i);
+
       let descricaoLine = '';
       for (let j = i - 1; j >= 0; j--) {
         const prevLine = allLines[j].trim();
-        console.log(`  Checando linha ${j}: "${prevLine}"`);
-        if (prevLine && 
-            !prevLine.includes('Extrato') && 
-            !prevLine.includes('CPF') &&
-            !prevLine.includes('Periodo') &&
-            !prevLine.match(/^Saldo R\$/i)) {
+        if (
+          prevLine &&
+          !prevLine.includes('Extrato') &&
+          !prevLine.includes('CPF') &&
+          !prevLine.includes('Periodo') &&
+          !prevLine.match(/^Saldo R\$/i)
+        ) {
           descricaoLine = prevLine;
-          console.log(`  >>> ACHEI A DESCRIÇÃO na linha ${j}: "${descricaoLine}"`);
           break;
         }
       }
-      
-      console.log('Procurando valor depois da linha', i);
+
       let valorLine = '';
       for (let j = i + 1; j < allLines.length; j++) {
         const nextLine = allLines[j].trim();
-        console.log(`  Checando linha ${j}: "${nextLine}"`);
         if (nextLine && nextLine.match(/^-?\s*R\$/)) {
           valorLine = nextLine;
-          console.log(`  >>> ACHEI O VALOR na linha ${j}: "${valorLine}"`);
           break;
         }
       }
-      
-      console.log(`\n=== RESULTADO DA BUSCA ===`);
-      console.log('Data:', dateStr, '→', data);
-      console.log('Descrição:', descricaoLine);
-      console.log('Valor:', valorLine);
-      console.log('===========================\n');
-      
+
       // Verifica se encontrou descrição e valor
       if (descricaoLine && valorLine) {
         // Processa o valor
@@ -453,36 +447,42 @@ function parseTxtExtract(text: string) {
           const isNegative = !!valorMatch[1];
           const valueStr = valorMatch[2];
           let valor = parseFloat(valueStr.replace(/\./g, '').replace(',', '.'));
-          
+
           // Trata o sinal
           if (isNegative) {
             valor = -Math.abs(valor);
           } else {
             // Se não tem sinal negativo, verifica se é receita baseado na descrição
             const descLower = descricaoLine.toLowerCase();
-            if (descLower.includes('benefício') || 
-                descLower.includes('beneficio') ||  // Sem acento
-                descLower.includes('benefí') ||     // Com encoding ruim
-                descLower.includes('recarga') ||
-                descLower.includes('crédito') ||
-                descLower.includes('credito') ||
-                descLower.includes('caiu') ||
-                descLower.includes('depósito') ||
-                descLower.includes('deposito')) {
+            if (
+              descLower.includes('benefício') ||
+              descLower.includes('beneficio') || // Sem acento
+              descLower.includes('benefí') || // Com encoding ruim
+              descLower.includes('recarga') ||
+              descLower.includes('crédito') ||
+              descLower.includes('credito') ||
+              descLower.includes('caiu') ||
+              descLower.includes('depósito') ||
+              descLower.includes('deposito')
+            ) {
               valor = Math.abs(valor); // Receita
             } else {
               // Para extratos de cartão alimentação, sem sinal negativo geralmente são despesas
               valor = -Math.abs(valor);
             }
           }
-          
+
           // Processa a descrição
           let descricao = descricaoLine.trim();
-          
+
           const descLower = descricao.toLowerCase();
-          
+
           // Melhora descrições específicas
-          if (descLower.includes('benefício') || descLower.includes('benefí') || descLower.includes('caiu')) {
+          if (
+            descLower.includes('benefício') ||
+            descLower.includes('benefí') ||
+            descLower.includes('caiu')
+          ) {
             if (descLower.includes('caiu')) {
               descricao = 'Benefício Alimentação';
             } else {
@@ -490,81 +490,87 @@ function parseTxtExtract(text: string) {
             }
           } else if (descLower.includes('supermercado')) {
             // Mantém o nome do supermercado mas formata melhor
-            descricao = descricao.split(/\s+/).map(word => 
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
+            descricao = descricao
+              .split(/\s+/)
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
           } else if (descLower.includes('outback')) {
             descricao = 'Outback Steakhouse';
           } else if (descLower.includes('mcdonalds')) {
-            descricao = 'McDonald\'s';
+            descricao = "McDonald's";
           } else if (descLower.includes('hasuki')) {
             descricao = 'Hasuki Sushi';
           } else {
             // Formata o nome capitalizando cada palavra
-            descricao = descricao.split(/\s+/).map(word => 
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
+            descricao = descricao
+              .split(/\s+/)
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
           }
-          
+
           // Sugere categoria baseada na descrição
           let categoriaRecomendada = 'Alimentação';
           const descFinalLower = descricao.toLowerCase();
-          
+
           // Verifica se é recarga de benefício (valores positivos de benefício)
-          if ((descFinalLower.includes('benefício') || 
-               descFinalLower.includes('beneficio') ||
-               descFinalLower.includes('recarga')) && valor > 0) {
+          if (
+            (descFinalLower.includes('benefício') ||
+              descFinalLower.includes('beneficio') ||
+              descFinalLower.includes('recarga')) &&
+            valor > 0
+          ) {
             categoriaRecomendada = 'Recarga de Benefícios';
           } else if (descFinalLower.includes('supermercado')) {
             categoriaRecomendada = 'Mercado';
-          } else if (descFinalLower.includes('restaurante') || 
-                     descFinalLower.includes('outback') ||
-                     descFinalLower.includes('mcdonalds') ||
-                     descFinalLower.includes('hasuki') ||
-                     descFinalLower.includes('comercio') ||
-                     descFinalLower.includes('lanchonete') ||
-                     descFinalLower.includes('bar') ||
-                     descFinalLower.includes('quintal') ||
-                     descFinalLower.includes('padaria')) {
+          } else if (
+            descFinalLower.includes('restaurante') ||
+            descFinalLower.includes('outback') ||
+            descFinalLower.includes('mcdonalds') ||
+            descFinalLower.includes('hasuki') ||
+            descFinalLower.includes('comercio') ||
+            descFinalLower.includes('lanchonete') ||
+            descFinalLower.includes('bar') ||
+            descFinalLower.includes('quintal') ||
+            descFinalLower.includes('padaria')
+          ) {
             categoriaRecomendada = 'Alimentação';
           }
-          
+
           transactions.push({
             data,
             valor,
             descricao,
             categoriaRecomendada,
-            shouldCreateCategory: true
+            shouldCreateCategory: true,
           });
-          
-          console.log('Transação TXT extraída:', { data, valor, descricao, categoriaRecomendada });
         }
       }
     }
   }
-  
-  console.log(`Total de transações TXT extraídas: ${transactions.length}`);
+
   return transactions;
 }
 
 // Função para parsing de extrato com formato estruturado (data YYYY-MM-DD com descrição e valor em linhas separadas)
 function parseStructuredExtract(text: string) {
   const transactions: any[] = [];
-  console.log('Tentando parsing de extrato estruturado (formato YYYY-MM-DD)');
-  
-  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
+
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // Procura por data no formato YYYY-MM-DD
     const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
     if (!dateMatch) continue;
-    
+
     const dateStr = dateMatch[1];
     const [year, month, day] = dateStr.split('-');
     const data = `${day}/${month}/${year}`;
-    
+
     // Procura pela linha anterior que deve conter a descrição
     let descricao = 'Transação';
     if (i > 0) {
@@ -574,40 +580,40 @@ function parseStructuredExtract(text: string) {
         descricao = prevLine;
       }
     }
-    
+
     // Procura pela próxima linha que deve conter o valor
     let valor = 0;
     if (i + 1 < lines.length) {
       const nextLine = lines[i + 1];
-      
+
       // Procura por valor com ou sem sinal negativo
       const valueMatch = nextLine.match(/(-\s*)?R\$\s*([\d.,]+)/);
       if (valueMatch) {
         const isNegative = !!valueMatch[1];
         const valueStr = valueMatch[2];
         valor = parseFloat(valueStr.replace(/\./g, '').replace(',', '.'));
-        
+
         if (isNegative) {
           valor = -Math.abs(valor);
         } else {
           // Para valores positivos, verifica se é um benefício/receita
-          if (descricao.toLowerCase().includes('benefício') || 
-              descricao.toLowerCase().includes('seu benefício caiu') ||
-              descricao.toLowerCase().includes('recarga') ||
-              descricao.toLowerCase().includes('crédito') ||
-              descricao.toLowerCase().includes('depósito')) {
+          if (
+            descricao.toLowerCase().includes('benefício') ||
+            descricao.toLowerCase().includes('seu benefício caiu') ||
+            descricao.toLowerCase().includes('recarga') ||
+            descricao.toLowerCase().includes('crédito') ||
+            descricao.toLowerCase().includes('depósito')
+          ) {
             valor = Math.abs(valor);
           } else {
             // Por padrão, considera como despesa mesmo sem sinal negativo
             valor = -Math.abs(valor);
           }
         }
-        
+
         // Limpa e normaliza a descrição
-        descricao = descricao
-          .replace(/\s+/g, ' ')
-          .trim();
-        
+        descricao = descricao.replace(/\s+/g, ' ').trim();
+
         // Melhora descrições específicas
         if (descricao.toLowerCase().includes('seu benefício caiu')) {
           descricao = 'Benefício Alimentação';
@@ -617,77 +623,81 @@ function parseStructuredExtract(text: string) {
         } else if (descricao.toLowerCase().includes('outback')) {
           descricao = descricao.replace(/OUTBACK.*/, 'Outback Steakhouse');
         }
-        
+
         // Sugere categoria relacionada à alimentação para esse formato
         let categoria = 'Alimentação';
         if (descricao.toLowerCase().includes('benefício')) {
           categoria = 'Receitas'; // Para os benefícios/receitas
         } else if (descricao.toLowerCase().includes('supermercado')) {
           categoria = 'Supermercado';
-        } else if (descricao.toLowerCase().includes('restaurante') || 
-                   descricao.toLowerCase().includes('outback') ||
-                   descricao.toLowerCase().includes('comercio')) {
+        } else if (
+          descricao.toLowerCase().includes('restaurante') ||
+          descricao.toLowerCase().includes('outback') ||
+          descricao.toLowerCase().includes('comercio')
+        ) {
           categoria = 'Alimentação';
         }
-        
+
         transactions.push({
           data,
           valor,
           descricao,
           categoriaRecomendada: categoria,
-          shouldCreateCategory: true
+          shouldCreateCategory: true,
         });
-        
-        console.log('Transação estruturada extraída:', { data, valor, descricao });
       }
     }
   }
-  
-  console.log(`Total de transações estruturadas extraídas: ${transactions.length}`);
+
   return transactions;
 }
-
 
 async function parsePdfExtract(text: string) {
   try {
     // Verifica se é texto mal formatado e usa normalização
     const lines = text.split('\n');
-    const singleCharLines = lines.filter(line => line.trim().length === 1).length;
+    const singleCharLines = lines.filter((line) => line.trim().length === 1).length;
     const ratio = singleCharLines / lines.length;
-    
+
     if (ratio > 0.5) {
-      console.log('Detectado texto mal formatado, usando normalização');
       return parseMalformedText(text);
     }
-    
+
     // Tenta primeiro o formato agrupado por data
     let transactions = parsePdfGroupedByDate(text);
-    
+
     // Se não encontrou transações, tenta o formato individual (DD/MM/YYYY)
     if (transactions.length === 0) {
       transactions = parsePdfIndividualLines(text);
     }
-    
+
     // Se ainda não encontrou, tenta o formato estruturado (YYYY-MM-DD)
     if (transactions.length === 0) {
       transactions = parseStructuredExtract(text);
     }
-    
+
     // Se ainda não encontrou, tenta padrões mais flexíveis
     if (transactions.length === 0) {
       // Busca por qualquer linha que contenha data e valor
-      const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-      
+      const lines = text
+        .split('\n')
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0);
+
       for (const line of lines) {
         // Padrão mais flexível: qualquer data + qualquer valor na linha
-        const flexibleMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}).*?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/);
+        const flexibleMatch = line.match(
+          /(\d{1,2}\/\d{1,2}\/\d{2,4}).*?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})/,
+        );
         if (flexibleMatch) {
           const [, dateStr, valorStr] = flexibleMatch;
-          
+
           // Extrai descrição (tudo entre data e valor)
-          const descricaoMatch = line.match(/\d{1,2}\/\d{1,2}\/\d{2,4}\s+(.*?)\s+-?\d{1,3}(?:\.\d{3})*,\d{2}/);
+          const descricaoMatch = line.match(
+            /\d{1,2}\/\d{1,2}\/\d{2,4}\s+(.*?)\s+-?\d{1,3}(?:\.\d{3})*,\d{2}/,
+          );
           const descricao = descricaoMatch ? descricaoMatch[1].trim() : 'Transação';
-          
+
           // Normaliza data
           const dateParts = dateStr.split('/');
           if (dateParts.length === 3) {
@@ -698,22 +708,22 @@ async function parsePdfExtract(text: string) {
               year = String(currentCentury + parseInt(year));
             }
             const normalizedDate = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
-            
+
             // Converte valor
             const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
-            
+
             if (!isNaN(valor)) {
               transactions.push({
                 data: normalizedDate,
                 valor,
-                descricao
+                descricao,
               });
             }
           }
         }
       }
     }
-    
+
     return transactions;
   } catch (error) {
     console.error('Erro ao processar texto de PDF:', error);
@@ -722,14 +732,13 @@ async function parsePdfExtract(text: string) {
 }
 
 async function handler(req: NextRequest) {
-  console.log('[DEBUG] handler /api/importar-extrato/parse chamado');
   // Busca categorias do usuário logado (se autenticado)
   let categoriasUsuario: any[] = [];
   let user: any = null;
   try {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
-      user = await prisma.user.findUnique({ 
+      user = await prisma.user.findUnique({
         where: { email: session.user.email },
         include: {
           categories: {
@@ -738,65 +747,60 @@ async function handler(req: NextRequest) {
               name: true,
               type: true,
               color: true,
-              icon: true
-            }
-          }
-        }
+              icon: true,
+            },
+          },
+        },
       });
       if (user) {
         categoriasUsuario = user.categories;
       }
     }
   } catch (error) {
-    logger.error(
-      'Erro ao buscar categorias do usuário em /api/importar-extrato/parse',
-      error
-    );
+    logger.error('Erro ao buscar categorias do usuário em /api/importar-extrato/parse', error);
   }
 
   const formData = await req.formData();
   const file = formData.get('file') as File;
   if (!file) return NextResponse.json({ error: 'Arquivo não enviado' }, { status: 400 });
-  
+
   let preview: any[] = [];
   let transactions: any[] = [];
-  
 
-  
   // Processa texto (incluindo texto extraído de PDF)
   if (file.name.endsWith('.txt') || file.type === 'text/plain') {
     try {
       const text = await file.text();
-      console.log('Processando arquivo TXT. Tamanho:', text.length);
-      
+
       // Tenta primeiro o parsing específico para TXT de extrato
       transactions = parseTxtExtract(text) || [];
-      
+
       // Se não encontrou transações com o parser TXT, tenta os parsers de PDF
       if (transactions.length === 0) {
-        console.log('Parser TXT não encontrou transações, tentando parsers de PDF...');
         transactions = await parsePdfExtract(text);
       }
-      
+
       if (transactions.length === 0) {
         return NextResponse.json(
-          { 
-            error: 'Nenhuma transação foi encontrada no texto. Verifique se o arquivo contém dados no formato esperado (data, descrição, valor).',
+          {
+            error:
+              'Nenhuma transação foi encontrada no texto. Verifique se o arquivo contém dados no formato esperado (data, descrição, valor).',
             debug: {
               fileSize: text.length,
               sample: text.substring(0, 200),
-              hasExtractKeywords: text.toLowerCase().includes('extrato') || text.includes('Benefício'),
+              hasExtractKeywords:
+                text.toLowerCase().includes('extrato') || text.includes('Benefício'),
               hasDate: /20\d{2}-\d{2}-\d{2}/.test(text) || /\d{2}\/\d{2}\/\d{4}/.test(text),
-              lines: text.split('\n').length
-            }
+              lines: text.split('\n').length,
+            },
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     } catch (error) {
       return NextResponse.json(
         { error: 'Erro ao processar arquivo de texto', details: String(error) },
-        { status: 400 }
+        { status: 400 },
       );
     }
   }
@@ -828,216 +832,63 @@ async function handler(req: NextRequest) {
         try {
           tagsUsuario = await prisma.tag.findMany({
             where: { userId: user.id },
-            select: { id: true, name: true }
+            select: { id: true, name: true },
           });
         } catch (error) {
           console.error('Erro ao buscar tags:', error);
         }
       }
 
-      preview = await Promise.all(transactions.map(async (t: any, idx: number) => {
-  console.log(`[DEBUG] Transação #${idx + 1} objeto:`, t);
-  console.log(`[DEBUG] Processando transação #${idx + 1}: descricao=`, t.descricao, '| descricaoOriginal=', t.descricaoOriginal, '| MEMO=', t.MEMO);
-        // Normaliza data OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
-        let rawDate = t.DTPOSTED || t.date || '';
-        let data = '';
-        if (rawDate && typeof rawDate === 'string') {
-          const match = rawDate.match(/(\d{4})(\d{2})(\d{2})/);
-          if (match) {
-            // Retorna no formato dd/MM/yyyy para a API de salvar processar corretamente
-            data = `${match[3]}/${match[2]}/${match[1]}`; // dd/MM/yyyy
-          }
-        }
-        const valor = Number(t.TRNAMT || t.amount || 0);
-        const descricao = String(
-          t.MEMO || t.memo || t.NAME || t.name || t.PAYEE || t.payee || '',
-        ).trim();
-
-        // Usa IA para análise da transação
-        let aiAnalysis: any = null;
-        let categoriaRecomendada = '';
-        let categoriaId = '';
-        let descricaoMelhorada = descricao;
-        let tagsRecomendadas: string[] = [];
-        let shouldCreateCategory = false;
-        
-        // --- Lógica robusta: nunca sugerir transferência entre contas se nome do usuário não estiver na descrição ---
-  const normalizar = (str: string) => str ? str.normalize('NFD').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : '';
-        const userNorm = user && user.name ? normalizar(user.name) : '';
-        try {
-          if (user && descricao) {
-            aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
-            let suggested = aiAnalysis.suggestedCategory;
-            // Nunca sugerir transferência entre contas se nome não está na descrição
-            if (normalizar(suggested) === 'transferenciaentrecontas') {
-              const descNorm = normalizar(descricao);
-              if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
-                console.log('[DEBUG] IA sugeriu Transferência entre contas, mas nome não bateu. Forçando Pix. Desc:', descricao, '| Nome:', user?.name);
-                suggested = 'Pix';
-              }
-            }
-            // Verifica se categoria sugerida existe
-            const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-            const categoriaExistente = categoriasUsuario.find(
-              (cat) =>
-                removeAcentos(cat.name.toLowerCase()) ===
-                removeAcentos(suggested.toLowerCase()),
-            );
-            if (categoriaExistente) {
-              categoriaRecomendada = categoriaExistente.name;
-              categoriaId = categoriaExistente.id;
-              shouldCreateCategory = false;
-            } else {
-              categoriaRecomendada = suggested;
-              shouldCreateCategory = true;
-            }
-            descricaoMelhorada = aiAnalysis.enhancedDescription;
-            // Verifica tags e filtra apenas as que não existem
-            const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
-              return !tagsUsuario.some(tagExistente => 
-                removeAcentos(tagExistente.name.toLowerCase()) === 
-                removeAcentos(tagSugerida.toLowerCase())
-              );
-            });
-            tagsRecomendadas = tagsNaoExistentes;
-          }
-        } catch (error) {
-          console.error('Erro na análise IA:', error);
-          // Fallback para método antigo se IA falhar
-          const descricaoSimplificada = simplificarDescricao(descricao);
-          let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-          // Nunca sugerir transferência entre contas se nome não está na descrição
-          if (normalizar(categoriaSugerida) === 'transferenciaentrecontas') {
-            const descNorm = normalizar(descricao);
-            if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
-              console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas nome não bateu. Forçando Pix. Desc:', descricao, '| Nome:', user?.name);
-              categoriaSugerida = 'Pix';
+      preview = await Promise.all(
+        transactions.map(async (t: any, idx: number) => {
+          // Normaliza data OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
+          let rawDate = t.DTPOSTED || t.date || '';
+          let data = '';
+          if (rawDate && typeof rawDate === 'string') {
+            const match = rawDate.match(/(\d{4})(\d{2})(\d{2})/);
+            if (match) {
+              // Retorna no formato dd/MM/yyyy para a API de salvar processar corretamente
+              data = `${match[3]}/${match[2]}/${match[1]}`; // dd/MM/yyyy
             }
           }
-          descricaoMelhorada = descricaoSimplificada || descricao;
-          const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-          const categoriaExistente = categoriasUsuario.find(
-            (cat) =>
-              removeAcentos(cat.name.toLowerCase()) ===
-              removeAcentos(categoriaSugerida.toLowerCase()),
-          );
-          if (categoriaExistente) {
-            categoriaRecomendada = categoriaExistente.name;
-            categoriaId = categoriaExistente.id;
-            shouldCreateCategory = false;
-          } else {
-            categoriaRecomendada = categoriaSugerida;
-            shouldCreateCategory = true;
-          }
-        }
-        
-        return {
-          data,
-          valor,
-          descricao,
-          descricaoOriginal: descricao,
-          descricaoMelhorada,
-          categoriaRecomendada,
-          categoriaId,
-          tagsRecomendadas,
-          shouldCreateCategory,
-          aiAnalysis: aiAnalysis ? {
-            confidence: aiAnalysis.confidence,
-            merchant: aiAnalysis.merchant,
-            location: aiAnalysis.location,
-            categoryType: aiAnalysis.categoryType
-          } : null,
-        };
-      }));
-    } catch (e) {
-      return NextResponse.json(
-        { error: 'Erro ao processar OFX', details: String(e), debug: text.slice(0, 200) },
-        { status: 400 },
-      );
-    }
-  }
-  
-  // Processa transações do PDF (aplicando a mesma lógica de IA que OFX)
-  if (transactions.length > 0) {
-  console.log('[DEBUG] Iniciando processamento do preview');
-    console.log(`Processando ${transactions.length} transações para preview com IA`);
+          const valor = Number(t.TRNAMT || t.amount || 0);
+          const descricao = String(
+            t.MEMO || t.memo || t.NAME || t.name || t.PAYEE || t.payee || '',
+          ).trim();
 
-    // Busca tags do usuário uma só vez para todas as transações
-    let tagsUsuario: any[] = [];
-    if (user) {
-      try {
-        tagsUsuario = await prisma.tag.findMany({
-          where: { userId: user.id },
-          select: { id: true, name: true }
-        });
-      } catch (error) {
-        console.error('Erro ao buscar tags:', error);
-      }
-    }
-
-    // Busca categoria de transferência entre contas
-    // Função robusta de normalização (remove acentos, espaços, pontuação, caixa)
-    const normalizar = (str: string) => str
-      ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-      : '';
-    const categoriasUsuarioNorm = categoriasUsuario.map(cat => ({
-      ...cat,
-      nomeNorm: normalizar(cat.name)
-    }));
-    console.log('[DEBUG] Categorias do usuário normalizadas para comparação:', categoriasUsuarioNorm.map(c => c.nomeNorm));
-    const categoriaTransfer = categoriasUsuarioNorm.find(cat => cat.nomeNorm === 'transferenciaentrecontas');
-    const userNorm = user && user.name ? normalizar(user.name) : '';
-
-    try {
-      preview = await Promise.all(transactions.map(async (t: any) => {
-  const data = t.data || t.DTPOSTED || null;
-  const valor = t.valor || t.TRNAMT || null;
-  // Para arquivos TXT, usar t.descricao. Para OFX, usar t.MEMO
-  const descricao = t.descricao || t.MEMO || '';
-  const descricaoOriginal = t.descricao || t.MEMO || '';
-  console.log(`[DEBUG] Descricao final da transação:`, descricao);
-
-  // --- Lógica de sugestão automática de transferência entre contas ---
-  let categoriaRecomendada = t.categoriaRecomendada || '';
-  let categoriaId = '';
-  let shouldCreateCategory = t.shouldCreateCategory || false;
-  let descricaoMelhorada = descricao;
-  let tagsRecomendadas: string[] = [];
-
-  let isTransferenciaEntreContas = false;
-  console.log('[DEBUG] Checando transferência entre contas para:', descricao, '| userNorm:', userNorm);
-  if (categoriaTransfer && descricao && userNorm.length >= 5) {
-          const descNorm = normalizar(descricao);
-          const match = descNorm.includes(userNorm);
-          console.log('[DEBUG TRANSFERÊNCIA] user.name =', user?.name, '| userNorm =', userNorm, '| descNorm =', descNorm, '| contains =', match);
-          if (match) {
-            isTransferenciaEntreContas = true;
-            categoriaRecomendada = categoriaTransfer.name;
-            categoriaId = categoriaTransfer.id;
-            shouldCreateCategory = false;
-            console.log('[PREVIEW TRANSFERÊNCIA] Usuário:', user.name, '| Normalizado:', userNorm, '| Descrição:', descricao, '| Normalizada:', descNorm);
-          }
-        }
-
-        // Se não for transferência, segue lógica IA/heurística normal
-        if (!isTransferenciaEntreContas) {
+          // Usa IA para análise da transação
           let aiAnalysis: any = null;
+          let categoriaRecomendada = '';
+          let categoriaId = '';
+          let descricaoMelhorada = descricao;
+          let tagsRecomendadas: string[] = [];
+          let shouldCreateCategory = false;
+
+          // --- Lógica robusta: nunca sugerir transferência entre contas se nome do usuário não estiver na descrição ---
+          const normalizar = (str: string) =>
+            str
+              ? str
+                  .normalize('NFD')
+                  .replace(/[^a-zA-Z0-9]/g, '')
+                  .toLowerCase()
+              : '';
+          const userNorm = user && user.name ? normalizar(user.name) : '';
           try {
-            if (user && descricao && !categoriaRecomendada) {
+            if (user && descricao) {
               aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
               let suggested = aiAnalysis.suggestedCategory;
-              // Nunca sugerir 'Transferência entre contas' se não for match do nome
-              if (suggested && normalizar(suggested) === 'transferenciaentrecontas') {
+              // Nunca sugerir transferência entre contas se nome não está na descrição
+              if (normalizar(suggested) === 'transferenciaentrecontas') {
                 const descNorm = normalizar(descricao);
                 if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
-                  console.log('[DEBUG] IA sugeriu Transferência entre contas, mas não é transferência entre contas (nome não bateu). Descrição:', descricao, '| Nome usuário:', user?.name);
                   suggested = 'Pix';
                 }
               }
+              // Verifica se categoria sugerida existe
+              const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
               const categoriaExistente = categoriasUsuario.find(
                 (cat) =>
-                  normalizar(cat.name) ===
-                  normalizar(suggested),
+                  removeAcentos(cat.name.toLowerCase()) === removeAcentos(suggested.toLowerCase()),
               );
               if (categoriaExistente) {
                 categoriaRecomendada = categoriaExistente.name;
@@ -1048,86 +899,239 @@ async function handler(req: NextRequest) {
                 shouldCreateCategory = true;
               }
               descricaoMelhorada = aiAnalysis.enhancedDescription;
+              // Verifica tags e filtra apenas as que não existem
               const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
-                return !tagsUsuario.some(tagExistente => 
-                  normalizar(tagExistente.name) === 
-                  normalizar(tagSugerida)
+                return !tagsUsuario.some(
+                  (tagExistente) =>
+                    removeAcentos(tagExistente.name.toLowerCase()) ===
+                    removeAcentos(tagSugerida.toLowerCase()),
                 );
               });
               tagsRecomendadas = tagsNaoExistentes;
             }
           } catch (error) {
             console.error('Erro na análise IA:', error);
-            if (!categoriaRecomendada) {
-              const descricaoSimplificada = simplificarDescricao(descricao);
-              let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-              if (categoriaSugerida && normalizar(categoriaSugerida).includes('transferenciaentrecontas')) {
-                const descNorm = normalizar(descricao);
-                if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
-                  console.log('[DEBUG] Heurística sugeriu Transferência entre contas, mas não é transferência entre contas (nome não bateu). Descrição:', descricao, '| Nome usuário:', user?.name);
-                  categoriaSugerida = 'Pix';
-                }
-              }
-              descricaoMelhorada = descricaoSimplificada || descricao;
-              const categoriaExistente = categoriasUsuario.find(
-                (cat) =>
-                  normalizar(cat.name) ===
-                  normalizar(categoriaSugerida),
-              );
-              if (categoriaExistente) {
-                categoriaRecomendada = categoriaExistente.name;
-                categoriaId = categoriaExistente.id;
-                shouldCreateCategory = false;
-              } else {
-                categoriaRecomendada = categoriaSugerida;
-                shouldCreateCategory = true;
+            // Fallback para método antigo se IA falhar
+            const descricaoSimplificada = simplificarDescricao(descricao);
+            let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+            // Nunca sugerir transferência entre contas se nome não está na descrição
+            if (normalizar(categoriaSugerida) === 'transferenciaentrecontas') {
+              const descNorm = normalizar(descricao);
+              if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+                categoriaSugerida = 'Pix';
               }
             }
+            descricaoMelhorada = descricaoSimplificada || descricao;
+            const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+            const categoriaExistente = categoriasUsuario.find(
+              (cat) =>
+                removeAcentos(cat.name.toLowerCase()) ===
+                removeAcentos(categoriaSugerida.toLowerCase()),
+            );
+            if (categoriaExistente) {
+              categoriaRecomendada = categoriaExistente.name;
+              categoriaId = categoriaExistente.id;
+              shouldCreateCategory = false;
+            } else {
+              categoriaRecomendada = categoriaSugerida;
+              shouldCreateCategory = true;
+            }
           }
-        }
 
-        // Se categoria veio do parser específico, verificar se já existe no sistema
-        if (categoriaRecomendada && !categoriaId) {
-          const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-          const categoriaExistente = categoriasUsuario.find(
-            (cat) =>
-              removeAcentos(cat.name.toLowerCase()) ===
-              removeAcentos(categoriaRecomendada.toLowerCase()),
-          );
-          if (categoriaExistente) {
-            categoriaId = categoriaExistente.id;
-            shouldCreateCategory = false;
-          } else {
-            shouldCreateCategory = true;
-          }
-        }
-
-        return {
-          data,
-          valor,
-          descricao,
-          descricaoOriginal,
-          descricaoMelhorada,
-          categoriaRecomendada,
-          categoriaId,
-          tagsRecomendadas,
-          shouldCreateCategory,
-          aiAnalysis: null // IA só é relevante para debug, pode ser adicionado se necessário
-        };
-      }));
-    } catch (error) {
-  console.error('[DEBUG] Erro ao processar transações PDF para preview:', error);
+          return {
+            data,
+            valor,
+            descricao,
+            descricaoOriginal: descricao,
+            descricaoMelhorada,
+            categoriaRecomendada,
+            categoriaId,
+            tagsRecomendadas,
+            shouldCreateCategory,
+            aiAnalysis: aiAnalysis
+              ? {
+                  confidence: aiAnalysis.confidence,
+                  merchant: aiAnalysis.merchant,
+                  location: aiAnalysis.location,
+                  categoryType: aiAnalysis.categoryType,
+                }
+              : null,
+          };
+        }),
+      );
+    } catch (e) {
       return NextResponse.json(
-        { error: 'Erro ao processar transações para preview', details: String(error) },
-        { status: 400 }
+        { error: 'Erro ao processar OFX', details: String(e), debug: text.slice(0, 200) },
+        { status: 400 },
       );
     }
   }
-  
-  
+
+  // Processa transações do PDF (aplicando a mesma lógica de IA que OFX)
+  if (transactions.length > 0) {
+    // Busca tags do usuário uma só vez para todas as transações
+    let tagsUsuario: any[] = [];
+    if (user) {
+      try {
+        tagsUsuario = await prisma.tag.findMany({
+          where: { userId: user.id },
+          select: { id: true, name: true },
+        });
+      } catch (error) {
+        console.error('Erro ao buscar tags:', error);
+      }
+    }
+
+    // Busca categoria de transferência entre contas
+    // Função robusta de normalização (remove acentos, espaços, pontuação, caixa)
+    const normalizar = (str: string) =>
+      str
+        ? str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .toLowerCase()
+        : '';
+    const categoriasUsuarioNorm = categoriasUsuario.map((cat) => ({
+      ...cat,
+      nomeNorm: normalizar(cat.name),
+    }));
+    const categoriaTransfer = categoriasUsuarioNorm.find(
+      (cat) => cat.nomeNorm === 'transferenciaentrecontas',
+    );
+    const userNorm = user && user.name ? normalizar(user.name) : '';
+
+    try {
+      preview = await Promise.all(
+        transactions.map(async (t: any) => {
+          const data = t.data || t.DTPOSTED || null;
+          const valor = t.valor || t.TRNAMT || null;
+          // Para arquivos TXT, usar t.descricao. Para OFX, usar t.MEMO
+          const descricao = t.descricao || t.MEMO || '';
+          const descricaoOriginal = t.descricao || t.MEMO || '';
+
+          // --- Lógica de sugestão automática de transferência entre contas ---
+          let categoriaRecomendada = t.categoriaRecomendada || '';
+          let categoriaId = '';
+          let shouldCreateCategory = t.shouldCreateCategory || false;
+          let descricaoMelhorada = descricao;
+          let tagsRecomendadas: string[] = [];
+
+          let isTransferenciaEntreContas = false;
+          if (categoriaTransfer && descricao && userNorm.length >= 5) {
+            const descNorm = normalizar(descricao);
+            const match = descNorm.includes(userNorm);
+            if (match) {
+              isTransferenciaEntreContas = true;
+              categoriaRecomendada = categoriaTransfer.name;
+              categoriaId = categoriaTransfer.id;
+              shouldCreateCategory = false;
+            }
+          }
+
+          // Se não for transferência, segue lógica IA/heurística normal
+          if (!isTransferenciaEntreContas) {
+            let aiAnalysis: any = null;
+            try {
+              if (user && descricao && !categoriaRecomendada) {
+                aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
+                let suggested = aiAnalysis.suggestedCategory;
+                // Nunca sugerir 'Transferência entre contas' se não for match do nome
+                if (suggested && normalizar(suggested) === 'transferenciaentrecontas') {
+                  const descNorm = normalizar(descricao);
+                  if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+                    suggested = 'Pix';
+                  }
+                }
+                const categoriaExistente = categoriasUsuario.find(
+                  (cat) => normalizar(cat.name) === normalizar(suggested),
+                );
+                if (categoriaExistente) {
+                  categoriaRecomendada = categoriaExistente.name;
+                  categoriaId = categoriaExistente.id;
+                  shouldCreateCategory = false;
+                } else {
+                  categoriaRecomendada = suggested;
+                  shouldCreateCategory = true;
+                }
+                descricaoMelhorada = aiAnalysis.enhancedDescription;
+                const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
+                  return !tagsUsuario.some(
+                    (tagExistente) => normalizar(tagExistente.name) === normalizar(tagSugerida),
+                  );
+                });
+                tagsRecomendadas = tagsNaoExistentes;
+              }
+            } catch (error) {
+              console.error('Erro na análise IA:', error);
+              if (!categoriaRecomendada) {
+                const descricaoSimplificada = simplificarDescricao(descricao);
+                let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+                if (
+                  categoriaSugerida &&
+                  normalizar(categoriaSugerida).includes('transferenciaentrecontas')
+                ) {
+                  const descNorm = normalizar(descricao);
+                  if (!(userNorm.length >= 5 && descNorm.includes(userNorm))) {
+                    categoriaSugerida = 'Pix';
+                  }
+                }
+                descricaoMelhorada = descricaoSimplificada || descricao;
+                const categoriaExistente = categoriasUsuario.find(
+                  (cat) => normalizar(cat.name) === normalizar(categoriaSugerida),
+                );
+                if (categoriaExistente) {
+                  categoriaRecomendada = categoriaExistente.name;
+                  categoriaId = categoriaExistente.id;
+                  shouldCreateCategory = false;
+                } else {
+                  categoriaRecomendada = categoriaSugerida;
+                  shouldCreateCategory = true;
+                }
+              }
+            }
+          }
+
+          // Se categoria veio do parser específico, verificar se já existe no sistema
+          if (categoriaRecomendada && !categoriaId) {
+            const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+            const categoriaExistente = categoriasUsuario.find(
+              (cat) =>
+                removeAcentos(cat.name.toLowerCase()) ===
+                removeAcentos(categoriaRecomendada.toLowerCase()),
+            );
+            if (categoriaExistente) {
+              categoriaId = categoriaExistente.id;
+              shouldCreateCategory = false;
+            } else {
+              shouldCreateCategory = true;
+            }
+          }
+
+          return {
+            data,
+            valor,
+            descricao,
+            descricaoOriginal,
+            descricaoMelhorada,
+            categoriaRecomendada,
+            categoriaId,
+            tagsRecomendadas,
+            shouldCreateCategory,
+            aiAnalysis: null, // IA só é relevante para debug, pode ser adicionado se necessário
+          };
+        }),
+      );
+    } catch (error) {
+      console.error('[DEBUG] Erro ao processar transações PDF para preview:', error);
+      return NextResponse.json(
+        { error: 'Erro ao processar transações para preview', details: String(error) },
+        { status: 400 },
+      );
+    }
+  }
+
   if (!preview || preview.length === 0) {
-  console.log('[DEBUG] Checando preview vazio:', preview);
-  console.log('[DEBUG] Preview final:', JSON.stringify(preview, null, 2));
     return NextResponse.json(
       { error: 'Nenhum lançamento encontrado no arquivo.', preview: [] },
       { status: 400 },

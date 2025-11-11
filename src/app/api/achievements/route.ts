@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkAllAchievements } from '@/lib/achievement-checker';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/achievements
  * Retorna todas as conquistas do usuário

@@ -24,7 +24,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { amount, paymentDate, walletId, description } = body;
+    const { amount, paymentDate, walletId, description, expenseId } = body;
 
     // Validações
     if (!amount || !paymentDate || !walletId) {
@@ -37,6 +37,20 @@ export async function POST(
       return NextResponse.json({
         error: 'Valor deve ser maior que zero'
       }, { status: 400 });
+    }
+
+    // Se expenseId foi fornecido, verificar se existe e pertence ao usuário
+    if (expenseId) {
+      const expense = await prisma.expense.findFirst({
+        where: {
+          id: expenseId,
+          userId: user.id,
+        },
+      });
+
+      if (!expense) {
+        return NextResponse.json({ error: 'Despesa não encontrada' }, { status: 404 });
+      }
     }
 
     // Verificar se a fatura existe
@@ -76,7 +90,28 @@ export async function POST(
 
     // Registrar pagamento em transação
     const result = await prisma.$transaction(async (tx: any) => {
-      // Criar o pagamento
+      // Criar ou vincular despesa de pagamento ANTES de criar o payment
+      let expenseRecord;
+      if (expenseId) {
+        // Se foi fornecido um expenseId, verificar se já existe
+        expenseRecord = await tx.expense.findUnique({
+          where: { id: expenseId },
+        });
+      } else {
+        // Criar nova despesa de pagamento
+        expenseRecord = await tx.expense.create({
+          data: {
+            description: description || `Pagamento fatura`,
+            amount: newPaymentAmount,
+            date: new Date(paymentDate),
+            type: 'DEBIT',
+            userId: user.id,
+            walletId,
+          },
+        });
+      }
+
+      // Criar o pagamento vinculado à despesa
       const payment = await tx.billPayment.create({
         data: {
           billId: params.id,
@@ -84,10 +119,12 @@ export async function POST(
           paymentDate: new Date(paymentDate),
           walletId,
           description: description || null,
+          expenseId: expenseRecord?.id || null,
           userId: user.id,
         },
         include: {
           wallet: true,
+          expense: true,
           bill: {
             include: {
               creditCard: true,
@@ -113,9 +150,18 @@ export async function POST(
         },
       });
 
+      // Atualizar o saldo disponível do cartão de crédito
+      // O pagamento libera crédito no cartão
+      const creditCard = await tx.creditCard.findUnique({
+        where: { id: bill.creditCardId },
+      });
+
+      // O crédito disponível é calculado dinamicamente, não precisa atualizar
+
       return {
         payment,
         bill: updatedBill,
+        expense: expenseRecord,
       };
     });
 

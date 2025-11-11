@@ -12,6 +12,8 @@ export default function ImportarFaturaPage() {
   const [preview, setPreview] = useState<any[]>([]);
   const [creditCards, setCreditCards] = useState<any[]>([]);
   const [selectedCreditCard, setSelectedCreditCard] = useState<string>('');
+  const [billMonth, setBillMonth] = useState<number>(new Date().getMonth() + 1);
+  const [billYear, setBillYear] = useState<number>(new Date().getFullYear());
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export default function ImportarFaturaPage() {
         body: JSON.stringify({
           registros,
           creditCardId: selectedCreditCard,
+          billPeriod: { year: billYear, month: billMonth },
         }),
       });
 
@@ -93,8 +96,16 @@ export default function ImportarFaturaPage() {
       const data = await response.json();
       setSuccess(true);
       
+      // Aguardar 2 segundos e resetar para nova importação
       setTimeout(() => {
-        window.location.href = '/credit-cards';
+        setSuccess(false);
+        setStep('upload');
+        setPreview([]);
+        setFile(null);
+        setSelectedCreditCard('');
+        setError(null);
+        // Recarregar cartões para atualizar limites
+        fetchCreditCards();
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar fatura');
@@ -149,6 +160,10 @@ export default function ImportarFaturaPage() {
               creditCards={creditCards}
               selectedCreditCard={selectedCreditCard}
               onCreditCardChange={setSelectedCreditCard}
+              billMonth={billMonth}
+              billYear={billYear}
+              onBillMonthChange={setBillMonth}
+              onBillYearChange={setBillYear}
               onSave={handleSave}
               saving={saving}
               error={error}

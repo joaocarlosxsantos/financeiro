@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { calculateInstallmentDates, createBillsForInstallments } from '@/lib/credit-utils';
+import { 
+  calculateInstallmentDates, 
+  getBillPeriodForInstallment,
+  calculateClosingDate,
+  calculateDueDate 
+} from '@/lib/credit-utils';
 // GET - Listar gastos no cartão de crédito
 export async function GET(request: NextRequest) {
   try {
@@ -47,20 +52,14 @@ export async function GET(request: NextRequest) {
       };
     }
 
+
     const [creditExpenses, total] = await Promise.all([
       prisma.creditExpense.findMany({
         where,
         include: {
           category: true,
           creditCard: true,
-          billItems: {
-            include: {
-              bill: true,
-            },
-            orderBy: {
-              installmentNumber: 'asc',
-            },
-          },
+          creditBill: true,
         },
         orderBy: {
           purchaseDate: 'desc',
@@ -70,6 +69,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.creditExpense.count({ where }),
     ]);
+
 
     // Buscar dados das tags separadamente
     const expensesWithTags = await Promise.all(
@@ -169,7 +169,47 @@ export async function POST(request: NextRequest) {
 
     // Iniciar transação
     const result = await prisma.$transaction(async (tx: any) => {
-      // Criar o gasto principal
+      // Determinar em qual fatura essa despesa deve entrar
+      const billPeriod = getBillPeriodForInstallment(
+        creditCard as any,
+        installmentDates[0].dueDate
+      );
+      
+      // Buscar ou criar a fatura
+      const closingDate = calculateClosingDate(creditCard as any, billPeriod.year, billPeriod.month);
+      const dueDate = calculateDueDate(creditCard as any, billPeriod.year, billPeriod.month);
+      
+      let bill = await tx.creditBill.findFirst({
+        where: {
+          creditCardId,
+          closingDate,
+          userId: user.id,
+        },
+      });
+
+      if (!bill) {
+        bill = await tx.creditBill.create({
+          data: {
+            userId: user.id,
+            creditCardId,
+            closingDate,
+            dueDate,
+            totalAmount: parseFloat(amount),
+            paidAmount: 0,
+            status: 'PENDING',
+          },
+        });
+      } else {
+        // Atualizar o valor total da fatura
+        await tx.creditBill.update({
+          where: { id: bill.id },
+          data: {
+            totalAmount: Number(bill.totalAmount) + parseFloat(amount),
+          },
+        });
+      }
+
+      // Criar o gasto vinculado à fatura
       const creditExpense = await tx.creditExpense.create({
         data: {
           description,
@@ -179,50 +219,25 @@ export async function POST(request: NextRequest) {
           type,
           categoryId: categoryId || null,
           creditCardId,
+          creditBillId: bill.id,
           userId: user.id,
           tags,
         },
         include: {
           category: true,
           creditCard: true,
+          creditBill: true,
         },
       });
 
-      // Criar os itens da fatura (parcelas)
-      const billItems = await Promise.all(
-        installmentDates.map((installment) =>
-          tx.creditBillItem.create({
-            data: {
-              creditExpenseId: creditExpense.id,
-              installmentNumber: installment.installment,
-              amount: installment.value,
-              dueDate: installment.dueDate,
-            },
-          })
-        )
-      );
+      // O crédito disponível é calculado dinamicamente, não precisa atualizar
 
-      return {
-        ...creditExpense,
-        billItems,
-      };
+      return creditExpense;
     });
 
-    // ✨ APÓS criar o gasto, gerar automaticamente as faturas necessárias
-    try {
-      await createBillsForInstallments(
-        prisma,
-        creditCard,
-        installmentDates,
-        user.id
-      );
-    } catch (billError) {
-      console.error('⚠️ Erro ao criar faturas automaticamente:', billError);
-      // Não falhar a requisição, apenas logar o erro
-    }
-
+    // ✨ Retornar o resultado
     return NextResponse.json(result, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Erro ao criar gasto no cartão:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
