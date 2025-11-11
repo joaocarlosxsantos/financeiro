@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Loader2, DollarSign, Receipt, Calendar } from 'lucide-react';
+import { Loader2, DollarSign, Receipt, Calendar, PlusCircle } from 'lucide-react';
+import { PayBillModal } from '../ui/pay-bill-modal';
+import { Select } from '../ui/select';
+import { Label } from '../ui/label';
 
 interface CreditPayment {
   id: string;
@@ -29,6 +32,15 @@ interface CreditPayment {
   createdAt: string;
 }
 
+interface CreditBill {
+  id: string;
+  dueDate: string;
+  totalAmount: number;
+  creditCard: {
+    name: string;
+  };
+}
+
 interface CreditPaymentsListProps {
   currentDate?: Date;
 }
@@ -38,6 +50,10 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [selectedBillId, setSelectedBillId] = useState<string>('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [pendingBills, setPendingBills] = useState<CreditBill[]>([]);
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -74,7 +90,49 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
     };
 
     loadPayments();
+    loadPendingBills();
   }, [currentDate, reloadKey]);
+
+  const loadPendingBills = async () => {
+    try {
+      const response = await fetch('/api/credit-bills?status=PENDING');
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      setPendingBills(data.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar faturas pendentes:', error);
+    }
+  };
+
+  const handleRegisterPayment = async (data: { amount: number; paymentDate: string; walletId: string; expenseId?: string }) => {
+    if (!selectedBillId) return;
+
+    setPaymentLoading(true);
+    try {
+      const response = await fetch(`/api/credit-bills/${selectedBillId}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao registrar pagamento');
+      }
+
+      // Fechar modal e recarregar lista
+      setPayModalOpen(false);
+      setSelectedBillId('');
+      reloadPayments();
+      alert('Pagamento registrado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao registrar pagamento:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao registrar pagamento. Tente novamente.');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   const reloadPayments = () => {
     setReloadKey(prev => prev + 1);
@@ -124,7 +182,7 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
     );
   }
 
-  if (payments.length === 0) {
+  if (payments.length === 0 && pendingBills.length === 0) {
     return (
       <Card>
         <CardContent className="py-8 text-center">
@@ -138,9 +196,113 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
     );
   }
 
+  const selectedBill = pendingBills.find(b => b.id === selectedBillId);
+
   return (
-    <div className="space-y-4">
-      {(payments || []).map((payment) => (
+    <div className="space-y-6">
+      {/* Seção para registrar novo pagamento */}
+      {pendingBills.length > 0 && (
+        <Card className="border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-600 shadow-md">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-gray-900">
+                    Registrar Novo Pagamento
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-600 mt-1">
+                    Selecione uma fatura pendente e registre o pagamento
+                  </CardDescription>
+                </div>
+              </div>
+              {pendingBills.length > 0 && (
+                <Badge className="bg-blue-600 text-white px-3 py-1 text-sm">
+                  {pendingBills.length} {pendingBills.length === 1 ? 'fatura pendente' : 'faturas pendentes'}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="selectBill" className="text-sm font-semibold text-gray-700 mb-2 block">
+                  Selecione a Fatura
+                </Label>
+                <Select
+                  id="selectBill"
+                  value={selectedBillId}
+                  onChange={(e) => setSelectedBillId(e.target.value)}
+                  className="w-full h-12 text-base border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                >
+                  <option value="">Escolha uma fatura para pagar...</option>
+                  {pendingBills.map((bill) => (
+                    <option key={bill.id} value={bill.id}>
+                      {bill.creditCard.name} • {formatCurrency(bill.totalAmount)} • Vence em {formatDate(bill.dueDate)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              {selectedBill && (
+                <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700">Detalhes da Fatura</h4>
+                    <Badge variant="outline" className="text-orange-600 border-orange-300">
+                      Pendente
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Cartão</p>
+                      <p className="font-semibold text-gray-900">{selectedBill.creditCard.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Valor Total</p>
+                      <p className="font-bold text-lg text-red-600">{formatCurrency(selectedBill.totalAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Vencimento</p>
+                      <p className="font-semibold text-gray-900">{formatDate(selectedBill.dueDate)}</p>
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <Button
+                        onClick={() => setPayModalOpen(true)}
+                        disabled={!selectedBillId}
+                        size="lg"
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all h-11 px-6"
+                      >
+                        <DollarSign className="h-5 w-5 mr-2" />
+                        Registrar Pagamento
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!selectedBill && (
+                <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-dashed border-gray-300">
+                  <Receipt className="h-5 w-5 text-gray-400" />
+                  <p className="text-sm text-gray-500">
+                    Selecione uma fatura acima para visualizar os detalhes e registrar o pagamento
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lista de pagamentos já registrados */}
+      {payments.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 pt-4">
+            <Receipt className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-lg font-semibold">Histórico de Pagamentos</h3>
+          </div>
+          {payments.map((payment) => (
         <Card key={payment.id}>
           <CardHeader className="pb-3">
             <div className="flex justify-between items-start">
@@ -196,6 +358,22 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
           </CardContent>
         </Card>
       ))}
+        </>
+      )}
+
+      {/* Modal de pagamento */}
+      {selectedBill && (
+        <PayBillModal
+          open={payModalOpen}
+          onClose={() => {
+            setPayModalOpen(false);
+          }}
+          onConfirm={handleRegisterPayment}
+          billAmount={selectedBill.totalAmount}
+          billDueDate={selectedBill.dueDate}
+          loading={paymentLoading}
+        />
+      )}
     </div>
   );
 }

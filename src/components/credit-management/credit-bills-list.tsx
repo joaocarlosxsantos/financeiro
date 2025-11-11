@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Loader2, Receipt, DollarSign, Calendar, Eye } from 'lucide-react';
+import { PayBillModal } from '../ui/pay-bill-modal';
 
 interface CreditBill {
   id: string;
@@ -14,7 +15,7 @@ interface CreditBill {
   dueDate: string;
   closingDate: string;
   totalAmount: number;
-  status: 'OPEN' | 'CLOSED' | 'PAID' | 'OVERDUE';
+  status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE';
   creditCard: {
     id: string;
     name: string;
@@ -58,6 +59,9 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
   const [error, setError] = useState<string | null>(null);
   const [expandedBill, setExpandedBill] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<CreditBill | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     const loadBills = async () => {
@@ -98,29 +102,35 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
     setReloadKey(prev => prev + 1);
   };
 
-  const payBill = async (billId: string, amount: number) => {
-    const paymentDate = prompt('Data do pagamento (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
-    if (!paymentDate) return;
+  const openPayModal = (bill: CreditBill) => {
+    setSelectedBill(bill);
+    setPayModalOpen(true);
+  };
 
+  const payBill = async (data: { amount: number; paymentDate: string; expenseId?: string }) => {
+    if (!selectedBill) return;
+
+    setPaymentLoading(true);
     try {
-      const response = await fetch(`/api/credit-bills/${billId}/pay`, {
+      const response = await fetch(`/api/credit-bills/${selectedBill.id}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          paymentDate,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         throw new Error('Erro ao registrar pagamento');
       }
 
-      // Recarregar a lista
+      // Fechar modal e recarregar lista
+      setPayModalOpen(false);
+      setSelectedBill(null);
       reloadBills();
     } catch (error) {
       console.error('Erro ao registrar pagamento:', error);
       alert('Erro ao registrar pagamento. Tente novamente.');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -137,10 +147,10 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
 
   const getStatusBadge = (status: CreditBill['status']) => {
     switch (status) {
-      case 'OPEN':
-        return <Badge variant="secondary">Aberta</Badge>;
-      case 'CLOSED':
-        return <Badge variant="outline">Fechada</Badge>;
+      case 'PENDING':
+        return <Badge variant="outline">Pendente</Badge>;
+      case 'PARTIAL':
+        return <Badge variant="secondary">Paga Parcialmente</Badge>;
       case 'PAID':
         return <Badge className="bg-green-100 text-green-800">Paga</Badge>;
       case 'OVERDUE':
@@ -247,10 +257,10 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
               </div>
             </div>
 
-            {bill.status === 'CLOSED' && (
+            {bill.status === 'PENDING' && (
               <div className="mt-4">
                 <Button
-                  onClick={() => payBill(bill.id, bill.totalAmount)}
+                  onClick={() => openPayModal(bill)}
                   className="flex items-center gap-2"
                   size="sm"
                 >
@@ -339,6 +349,21 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
           </CardContent>
         </Card>
       ))}
+
+      {/* Modal de pagamento */}
+      {selectedBill && (
+        <PayBillModal
+          open={payModalOpen}
+          onClose={() => {
+            setPayModalOpen(false);
+            setSelectedBill(null);
+          }}
+          onConfirm={payBill}
+          billAmount={selectedBill.totalAmount}
+          billDueDate={selectedBill.dueDate}
+          loading={paymentLoading}
+        />
+      )}
     </div>
   );
 }
