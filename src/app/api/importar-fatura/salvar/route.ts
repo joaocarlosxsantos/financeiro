@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const rateLimitResponse = await withUserRateLimit(req, user.id, RATE_LIMITS.IMPORT_EXTRACT);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const { registros, creditCardId, billPeriod } = await req.json();
+  const { registros, creditCardId, billPeriod, deleteExisting } = await req.json();
 
   if (!Array.isArray(registros) || !creditCardId) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
@@ -49,6 +49,61 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Se o usuário confirmou a exclusão, excluir faturas existentes
+    if (deleteExisting && billPeriod && billPeriod.year && billPeriod.month) {
+      console.log('🗑️ Excluindo faturas existentes para o período:', billPeriod);
+      
+      // Calcular as datas de fechamento e vencimento para o período especificado
+      // IMPORTANTE: billPeriod.month está em formato 1-based (1-12), então subtraímos 1
+      const closingDate = calculateClosingDate(creditCard as any, billPeriod.year, billPeriod.month - 1);
+      const dueDate = calculateDueDate(creditCard as any, billPeriod.year, billPeriod.month - 1);
+      
+      console.log('📅 Datas calculadas:', {
+        closingDate: closingDate.toISOString().split('T')[0],
+        dueDate: dueDate.toISOString().split('T')[0]
+      });
+
+      // Buscar fatura existente para este período
+      const existingBill = await prisma.creditBill.findFirst({
+        where: {
+          creditCardId: creditCardId,
+          userId: user.id,
+          closingDate: closingDate,
+        },
+        include: {
+          creditExpenses: true,
+          creditIncomes: true,
+        }
+      });
+
+      if (existingBill) {
+        console.log('⚠️ Fatura existente encontrada. Excluindo...', {
+          billId: existingBill.id,
+          expenses: existingBill.creditExpenses.length,
+          incomes: existingBill.creditIncomes.length
+        });
+
+        // Excluir os registros vinculados à fatura (expenses e incomes)
+        // As relações têm onDelete: SetNull, então precisamos excluir manualmente
+        await prisma.creditExpense.deleteMany({
+          where: { creditBillId: existingBill.id }
+        });
+
+        await prisma.creditIncome.deleteMany({
+          where: { creditBillId: existingBill.id }
+        });
+
+        // Excluir a fatura
+        await prisma.creditBill.delete({
+          where: { id: existingBill.id }
+        });
+
+        console.log('✅ Fatura e registros excluídos com sucesso');
+      } else {
+        console.log('ℹ️ Nenhuma fatura existente encontrada para este período');
+      }
+    }
+
     // Buscar categorias existentes
     const categoriasExistentes = await prisma.category.findMany({ 
       where: { userId: user.id } 

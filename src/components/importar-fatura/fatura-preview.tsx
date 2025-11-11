@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, CreditCard } from 'lucide-react';
 import { FaturaTransactionRow } from './fatura-transaction-row';
+import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
 
 interface FaturaPreviewProps {
   preview: any[];
@@ -17,7 +18,7 @@ interface FaturaPreviewProps {
   billYear: number;
   onBillMonthChange: (month: number) => void;
   onBillYearChange: (year: number) => void;
-  onSave: (registros: any[]) => void;
+  onSave: (registros: any[], deleteExisting?: boolean) => void;
   saving: boolean;
   error: string | null;
   success: boolean;
@@ -40,6 +41,9 @@ export function FaturaPreview({
   const [registros, setRegistros] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState<any>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     // Inicializar registros - garantir que valor seja número
@@ -129,9 +133,65 @@ export function FaturaPreview({
     handleEdit(index, 'categoriaSugerida', '');
   }
 
-  function handleSave() {
-    onSave(registros);
+  // Verificar se já existem registros para o período
+  const checkExistingBill = async () => {
+    if (!selectedCreditCard || !billMonth || !billYear) {
+      return null;
+    }
+
+    setIsChecking(true);
+    
+    try {
+      const response = await fetch('/api/importar-fatura/check-existing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creditCardId: selectedCreditCard,
+          year: billYear,
+          month: billMonth,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao verificar fatura existente');
+      }
+
+      const data = await response.json();
+      return data;
+
+    } catch (error) {
+      console.error('Erro ao verificar conflitos:', error);
+      return null;
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  async function handleSave() {
+    // Verificar se já existe fatura para o período
+    const conflictCheck = await checkExistingBill();
+    
+    if (conflictCheck && conflictCheck.hasConflict) {
+      // Mostrar modal de conflito
+      setConflictData(conflictCheck);
+      setShowConflictModal(true);
+    } else {
+      // Não há conflitos, prosseguir com o salvamento
+      onSave(registros, false);
+    }
   }
+
+  const handleConfirmDelete = () => {
+    // Usuário confirmou a exclusão, prosseguir com o salvamento
+    setShowConflictModal(false);
+    onSave(registros, true);
+  };
+
+  const handleCancelDelete = () => {
+    // Usuário cancelou, fechar modal
+    setShowConflictModal(false);
+    setConflictData(null);
+  };
 
   // Calcular totais separados para despesas e créditos
   const totalDespesas = registros.reduce((acc, r) => {
@@ -307,6 +367,16 @@ export function FaturaPreview({
           </tbody>
         </table>
       </div>
+
+      {/* Modal de confirmação de exclusão */}
+      <ConflictResolutionModal
+        open={showConflictModal}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        loading={saving}
+        conflicts={conflictData?.conflicts || []}
+        totalConflicts={conflictData?.totalConflicts || 0}
+      />
     </div>
   );
 }

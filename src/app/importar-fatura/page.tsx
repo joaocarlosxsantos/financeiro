@@ -68,7 +68,7 @@ export default function ImportarFaturaPage() {
     }
   }
 
-  async function handleSave(registros: any[]) {
+  async function handleSave(registros: any[], deleteExisting?: boolean) {
     if (!selectedCreditCard) {
       setError('Selecione um cartão de crédito');
       return;
@@ -85,6 +85,7 @@ export default function ImportarFaturaPage() {
           registros,
           creditCardId: selectedCreditCard,
           billPeriod: { year: billYear, month: billMonth },
+          deleteExisting, // Passa o flag para a API
         }),
       });
 
