@@ -2,6 +2,13 @@
  * Expande registros recorrentes em todas as ocorrências do mês consultado.
  * Para cada registro recorrente, gera uma ocorrência para cada dia de vigência no mês.
  * Pontuais são mantidos como estão.
+ * 
+ * REGRA IMPORTANTE: 
+ * - Inclui recorrentes com endDate = null (vigentes indefinidamente)
+ * - Inclui recorrentes com endDate >= último dia do mês selecionado
+ * - Para meses anteriores ao atual, considera o mês completo
+ * - Para o mês atual, limita até o dia de hoje
+ * 
  * @param records Lista de transações (pontuais e recorrentes)
  * @param year Ano do mês de referência
  * @param month Mês de referência (1-12)
@@ -16,35 +23,52 @@ export function expandRecurringAllOccurrencesForMonth<T extends { type: string; 
 ): T[] {
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const { startDate, endDate } = getEffectiveDateRange(year, month);
-  const dayLimit = isCurrentMonth ? today.getDate() : new Date(year, month, 0).getDate();
+  
+  // Para meses anteriores, considera o último dia do mês
+  // Para o mês atual, limita ao dia de hoje
+  const lastDayOfMonth = new Date(year, month, 0).getDate();
+  const dayLimit = isCurrentMonth ? today.getDate() : lastDayOfMonth;
+  
   const result: T[] = [];
+  
   for (const rec of records) {
     if (rec.type === 'RECURRING') {
-      // Se tem endDate e ela é menor que o início do mês, ignora
-      if (rec.endDate) {
-        const endDateObj = new Date(rec.endDate);
-        if (endDateObj < startDate) continue;
-      }
       const recStart = new Date(rec.date);
-      // Dia da recorrência (ex: salário dia 5)
-      const recDay = Math.min(recStart.getDate(), dayLimit);
-      const occDate = new Date(year, month - 1, recDay);
-      // Só gera se a recorrência já começou
+      const recDay = recStart.getDate();
+      
+      // Calcular o dia válido no mês (considerando meses com menos dias)
+      const validDay = Math.min(recDay, lastDayOfMonth);
+      
+      // Data da ocorrência neste mês
+      const occDate = new Date(year, month - 1, validDay);
+      
+      // VALIDAÇÃO 1: A recorrência já começou?
       if (occDate < recStart) continue;
-      // Só gera se não passou do endDate
+      
+      // VALIDAÇÃO 2: Para mês atual, só inclui até o dia de hoje
+      if (isCurrentMonth && validDay > dayLimit) continue;
+      
+      // VALIDAÇÃO 3: Verificar endDate
       if (rec.endDate) {
         const endDateObj = new Date(rec.endDate);
+        
+        // Se endDate é antes do início do mês, ignora completamente
+        if (endDateObj < startDate) continue;
+        
+        // Se endDate é antes da data da ocorrência, ignora
         if (occDate > endDateObj) continue;
       }
-      // Só inclui se está dentro do mês e dentro do limite do mês atual
-      if (occDate >= startDate && occDate <= endDate && recDay <= dayLimit) {
-        result.push({ ...rec, date: occDate } as T);
-      }
+      // Se endDate é null, inclui sempre (enquanto estiver dentro do período válido)
+      
+      // Inclui a ocorrência
+      result.push({ ...rec, date: occDate } as T);
+      
     } else {
-      // Pontual: mantém
+      // Pontual: mantém como está
       result.push(rec);
     }
   }
+  
   return result;
 }
 /**

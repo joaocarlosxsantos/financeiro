@@ -172,33 +172,49 @@ export async function GET(req: NextRequest) {
 
   const whereBase = { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter };
 
-  // Buscar PUNCTUAL (apenas no período) e RECURRING (sem restrição de data)
-  // Remove transferId: null porque transferências são identificadas pela categoria
+  // ==========================================
+  // CÁLCULO DE GANHOS E DESPESAS TOTAIS
+  // ==========================================
+  // ESTRATÉGIA:
+  // 1. Buscar ganhos/despesas PONTUAIS filtrados pela data do mês
+  // 2. Buscar ganhos/despesas RECORRENTES sem filtro de data
+  // 3. Expandir recorrentes: gerar uma ocorrência para cada um que:
+  //    - Já tenha começado (date <= data da ocorrência)
+  //    - Ainda esteja vigente (endDate = null OU endDate >= último dia do mês)
+  //    - Para mês atual: só até o dia de hoje
+  //    - Para meses anteriores: mês completo
+  // 4. Combinar pontuais + recorrentes expandidos
+  // 5. Somar tudo
+  // ==========================================
+  
   const [punctualExpenses, punctualIncomes, recurringExpenses, recurringIncomes] = await Promise.all([
     prisma.expense.findMany({
       where: { ...whereBase, type: 'PUNCTUAL', date: { gte: startDateObj, lte: endDateObj } },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true }
     }),
     prisma.income.findMany({
       where: { ...whereBase, type: 'PUNCTUAL', date: { gte: startDateObj, lte: endDateObj } },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true }
     }),
     prisma.expense.findMany({
       where: { ...whereBase, type: 'RECURRING' },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true }
     }),
     prisma.income.findMany({
       where: { ...whereBase, type: 'RECURRING' },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true }
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true }
     })
   ]);
-
 
   // Combinar PUNCTUAL + RECURRING
   const allExpenses = [...punctualExpenses, ...recurringExpenses];
   const allIncomes = [...punctualIncomes, ...recurringIncomes];
 
-  // Expandir recorrentes em todas as ocorrências do mês PRIMEIRO
+  // Expandir recorrentes em todas as ocorrências válidas do mês
+  // A função expandRecurringAllOccurrencesForMonth já aplica as regras:
+  // - Inclui recorrentes com endDate = null
+  // - Inclui recorrentes com endDate >= último dia do mês
+  // - Para mês atual, limita até hoje
   const today = new Date();
   const safeYear = typeof year === 'number' && !isNaN(year) ? year : today.getFullYear();
   const safeMonth = typeof month === 'number' && !isNaN(month) ? month : today.getMonth() + 1;
