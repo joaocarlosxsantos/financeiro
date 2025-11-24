@@ -5,6 +5,8 @@ const nextConfig = {
     // Disable ESLint during build to avoid the deprecated options warning
     ignoreDuringBuilds: true,
   },
+  // Habilita output standalone para Docker
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
