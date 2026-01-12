@@ -6,14 +6,13 @@ import { logger } from '@/lib/logger';
 
 export async function POST(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  const params = await context.params;
   const id = params.id;
   const { date } = await req.json();
 

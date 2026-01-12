@@ -208,12 +208,15 @@ export function ExpandedTransactionsTable({
     try {
       if (deleteType === 'single') {
         // Opção 1: Excluir apenas esta ocorrência
-        // Criar uma exclusão específica para esta data (implementar endpoint específico)
         const occurrenceDate = transaction.date;
-        await fetch(`/api/transactions/${originalId}/exclude-occurrence`, {
+        await fetch(`/api/transactions/${originalId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: occurrenceDate }),
+          body: JSON.stringify({ 
+            action: 'exclude-occurrence', 
+            date: occurrenceDate,
+            transactionType: transactionType // Passa se é expense ou income
+          }),
         });
       } else if (deleteType === 'stopRecurring') {
         // Opção 2: Parar recorrência a partir desta data
@@ -226,12 +229,15 @@ export function ExpandedTransactionsTable({
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            endDate: previousDay.toISOString().split('T')[0]
+            endDate: previousDay.toISOString().split('T')[0],
+            transactionType: transactionType
           }),
         });
       } else if (deleteType === 'all') {
         // Opção 3: Excluir todos os registros (comportamento atual)
-        await fetch(`/api/transactions/${originalId}`, { method: 'DELETE' });
+        await fetch(`/api/transactions/${originalId}?transactionType=${transactionType}`, { 
+          method: 'DELETE' 
+        });
       }
 
       setRecurringDeleteModal({ open: false, transaction: null });
