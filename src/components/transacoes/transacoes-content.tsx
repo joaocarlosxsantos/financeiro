@@ -242,8 +242,8 @@ export default function TransacoesContent() {
         onSubmit={async (form) => {
           // Busca os nomes das tags pelos IDs
           const tagNames = form.tagIds
-            .map(tagId => tags.find(t => t.id === tagId)?.name)
-            .filter((name): name is string => name !== undefined);
+            .map((tagId: string) => tags.find(t => t.id === tagId)?.name)
+            .filter((name: string | undefined): name is string => name !== undefined);
 
           // Monta payload
           const payload = {

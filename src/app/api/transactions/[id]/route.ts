@@ -4,11 +4,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
+  const params = await context.params;
   const id = params.id;
   const data = await req.json();
   // Garante que a data está em formato ISO-8601
@@ -33,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       },
       select: { name: true }
     });
-    tagNames = tags.map(tag => tag.name);
+    tagNames = tags.map((tag: { name: string }) => tag.name);
   } else if (data.tagIds && Array.isArray(data.tagIds) && data.tagIds.length === 0) {
     // Array vazio = remover todas as tags
     tagNames = [];
@@ -88,11 +89,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
+  const params = await context.params;
   const id = params.id;
   let deleted = null;
   try {

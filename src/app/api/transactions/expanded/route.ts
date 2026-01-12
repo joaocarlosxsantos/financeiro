@@ -83,6 +83,7 @@ function expandRecurringTransaction(
   }
 
   const expanded: ExpandedTransaction[] = [];
+  const excludedDates = transaction.excludedDates || [];
 
   // Começar do primeiro mês do período
   let currentYear = fromDate.getFullYear();
@@ -116,15 +117,19 @@ function expandRecurringTransaction(
 
     // Criar data da ocorrência
     const occurrenceDate = new Date(Date.UTC(currentYear, currentMonth - 1, dayOfMonth));
+    const occurrenceDateStr = formatDate(occurrenceDate);
 
-    // Verificar se está dentro do período solicitado
-    if (occurrenceDate >= fromDate && occurrenceDate <= toDate) {
+    // Verificar se esta data foi excluída
+    const isExcluded = excludedDates.includes(occurrenceDateStr);
+
+    // Verificar se está dentro do período solicitado e não foi excluída
+    if (occurrenceDate >= fromDate && occurrenceDate <= toDate && !isExcluded) {
       expanded.push({
         id: generateExpandedId(transaction.id, currentYear, currentMonth),
         originalId: transaction.id,
         description: transaction.description,
         amount: transaction.amount.toString(),
-        date: formatDate(occurrenceDate),
+        date: occurrenceDateStr,
         type: 'RECURRING',
         isRecurring: true, // Adiciona campo booleano
         category: transaction.category,

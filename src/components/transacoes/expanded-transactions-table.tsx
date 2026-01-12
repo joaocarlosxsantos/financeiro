@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MoreVertical, Pencil, Trash } from 'lucide-react';
 import { TransactionFormModal } from './transaction-form-modal';
 import { ConfirmDeleteModal } from './confirm-delete-modal';
+import { RecurringDeleteModal } from './recurring-delete-modal';
 
 interface ExpandedTransaction {
   id: string;
@@ -118,6 +119,7 @@ export function ExpandedTransactionsTable({
   // Estado para modais
   const [editModal, setEditModal] = useState<{ open: boolean; transaction: ExpandedTransaction | null }>({ open: false, transaction: null });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; transaction: ExpandedTransaction | null }>({ open: false, transaction: null });
+  const [recurringDeleteModal, setRecurringDeleteModal] = useState<{ open: boolean; transaction: ExpandedTransaction | null }>({ open: false, transaction: null });
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
@@ -159,7 +161,17 @@ export function ExpandedTransactionsTable({
     setEditModal({ open: true, transaction: initialData as any });
   };
   const handleDelete = (transaction: ExpandedTransaction) => {
-    setDeleteModal({ open: true, transaction });
+    // Garante que o outro modal está fechado
+    setDeleteModal({ open: false, transaction: null });
+    setRecurringDeleteModal({ open: false, transaction: null });
+    
+    // Se for um registro recorrente, abre modal com opções
+    if (transaction.type === 'RECURRING') {
+      setRecurringDeleteModal({ open: true, transaction });
+    } else {
+      // Se for pontual, abre modal de confirmação simples
+      setDeleteModal({ open: true, transaction });
+    }
   };
 
   const handleEditSubmit = async (form: any) => {
@@ -185,6 +197,52 @@ export function ExpandedTransactionsTable({
     await fetch(`/api/transactions/${idToDelete}`, { method: 'DELETE' });
     setDeleteModal({ open: false, transaction: null });
     fetchTransactions(true); // preserva scroll
+  };
+
+  const handleRecurringDeleteConfirm = async (deleteType: 'single' | 'stopRecurring' | 'all') => {
+    if (!recurringDeleteModal.transaction) return;
+
+    const transaction = recurringDeleteModal.transaction;
+    const originalId = transaction.isRecurringExpanded ? transaction.originalId : transaction.id;
+
+    try {
+      if (deleteType === 'single') {
+        // Opção 1: Excluir apenas esta ocorrência
+        // Criar uma exclusão específica para esta data (implementar endpoint específico)
+        const occurrenceDate = transaction.date;
+        await fetch(`/api/transactions/${originalId}/exclude-occurrence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: occurrenceDate }),
+        });
+      } else if (deleteType === 'stopRecurring') {
+        // Opção 2: Parar recorrência a partir desta data
+        // Atualizar endDate para o dia anterior a esta ocorrência
+        const currentDate = new Date(transaction.date + 'T00:00:00');
+        const previousDay = new Date(currentDate);
+        previousDay.setDate(previousDay.getDate() - 1);
+        
+        await fetch(`/api/transactions/${originalId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            endDate: previousDay.toISOString().split('T')[0]
+          }),
+        });
+      } else if (deleteType === 'all') {
+        // Opção 3: Excluir todos os registros (comportamento atual)
+        await fetch(`/api/transactions/${originalId}`, { method: 'DELETE' });
+      }
+
+      setRecurringDeleteModal({ open: false, transaction: null });
+      fetchTransactions(true); // preserva scroll
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('transactions:reloadSummary'));
+      }
+    } catch (error) {
+      console.error('Erro ao excluir registro recorrente:', error);
+      alert('Erro ao excluir registro. Tente novamente.');
+    }
   };
 
   if (loading) {
@@ -221,12 +279,27 @@ export function ExpandedTransactionsTable({
         wallets={wallets}
         tags={tags}
       />
-      <ConfirmDeleteModal
-        open={deleteModal.open}
-        onClose={() => setDeleteModal({ open: false, transaction: null })}
-        onConfirm={handleDeleteConfirm}
-        description={deleteModal.transaction?.description}
-      />
+      
+      {/* Renderiza apenas o modal apropriado baseado no estado */}
+      {deleteModal.open && deleteModal.transaction && (
+        <ConfirmDeleteModal
+          open={deleteModal.open}
+          onClose={() => setDeleteModal({ open: false, transaction: null })}
+          onConfirm={handleDeleteConfirm}
+          description={deleteModal.transaction?.description}
+        />
+      )}
+      
+      {recurringDeleteModal.open && recurringDeleteModal.transaction && (
+        <RecurringDeleteModal
+          open={recurringDeleteModal.open}
+          onClose={() => setRecurringDeleteModal({ open: false, transaction: null })}
+          onConfirm={handleRecurringDeleteConfirm}
+          transactionDescription={recurringDeleteModal.transaction?.description || ''}
+          occurrenceDate={recurringDeleteModal.transaction ? formatDate(recurringDeleteModal.transaction.date) : undefined}
+        />
+      )}
+      
       <div ref={tableRef} className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: '600px' }}>
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10">

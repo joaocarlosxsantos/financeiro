@@ -91,6 +91,7 @@ model Expense {
   userId      String
   walletId    String
   tags        String[]
+  excludedDates String[]  @default([])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   category    Category?   @relation(fields: [categoryId], references: [id])
@@ -115,6 +116,7 @@ model Income {
   userId      String
   walletId    String
   tags        String[]
+  excludedDates String[]  @default([])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   category    Category?   @relation(fields: [categoryId], references: [id])
