@@ -16,6 +16,7 @@ export default function TransacoesContent() {
   const [reloadFlag, setReloadFlag] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const { categories, wallets, loading } = useCategoriesAndWallets();
+  const [tags, setTags] = useState<Array<{ id: string; name: string }>>([]);
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl === 'ganhos' ? 'ganhos' : 'gastos');
@@ -44,6 +45,22 @@ export default function TransacoesContent() {
   const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
   const yearLabel = currentDate.getFullYear();
   const today = new Date().toISOString().slice(0, 10);
+
+  // Carregar tags
+  useEffect(() => {
+    async function fetchTags() {
+      try {
+        const res = await fetch('/api/tags?&_=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          setTags(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tags:', error);
+      }
+    }
+    fetchTags();
+  }, []);
 
   // Carregar resumo das transações
   useEffect(() => {
@@ -223,6 +240,11 @@ export default function TransacoesContent() {
         open={showForm}
         onClose={() => setShowForm(false)}
         onSubmit={async (form) => {
+          // Busca os nomes das tags pelos IDs
+          const tagNames = form.tagIds
+            .map(tagId => tags.find(t => t.id === tagId)?.name)
+            .filter((name): name is string => name !== undefined);
+
           // Monta payload
           const payload = {
             description: form.description,
@@ -233,7 +255,7 @@ export default function TransacoesContent() {
             type: form.recurring ? 'RECURRING' : 'PUNCTUAL',
             isRecurring: form.recurring,
             paymentType: 'DEBIT',
-            tags: [],
+            tags: tagNames,
             // Se for recorrente, adiciona os campos necessários
             ...(form.recurring && {
               startDate: form.recurringStart || form.date,
@@ -266,6 +288,7 @@ export default function TransacoesContent() {
         title="Nova Transação"
         categories={categories}
         wallets={wallets}
+        tags={tags}
       />
     </div>
   );
