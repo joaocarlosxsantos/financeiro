@@ -209,108 +209,71 @@ function ScoreGauge({ score }: { score: number }) {
     return () => clearTimeout(timer);
   }, [score]);
 
-  // Calcular ângulo (0-180 graus = semicírculo)
-  // 0 = esquerda (-90°), 50 = meio (0°), 100 = direita (90°)
+  // Calcular preenchimento da barra (0-100%)
   const percentage = animatedScore / 100;
-  const angle = percentage * 180; // 0 a 180 graus
-  const rotation = angle - 90; // Ajustar para começar na esquerda
-
-  // Calcular dash array para o arco SVG (mais preciso que clipPath)
-  const radius = 75; // raio do círculo
-  const circumference = Math.PI * radius; // metade da circunferência (semicírculo)
-  const dashOffset = circumference - (percentage * circumference);
+  
+  // Semicírculo perfeito com centro em (85, 85) e raio 70
+  const centerX = 85;
+  const centerY = 85;
+  const radius = 70;
+  
+  // Calcular o ponto final do arco baseado na porcentagem (0-180 graus)
+  const angle = 180 * percentage; // 0 a 180 graus
+  const angleRad = (angle - 180) * (Math.PI / 180); // Converter para radianos, começando da esquerda
+  
+  const endX = centerX + radius * Math.cos(angleRad);
+  const endY = centerY + radius * Math.sin(angleRad);
+  
+  // Determinar se é arco grande (> 180°)
+  const largeArcFlag = angle > 180 ? 1 : 0;
 
   return (
-    <div className="relative w-56 h-36 mx-auto">
+    <div className="relative w-64 mx-auto">
       {/* Gauge usando SVG para precisão */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox="0 0 170 100"
-        style={{ overflow: 'visible' }}
-      >
-        {/* Fundo do gauge (cinza) */}
-        <path
-          d="M 20 92 A 75 75 0 0 1 150 92"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="12"
-          strokeLinecap="round"
-          className="text-gray-200 dark:text-gray-700"
-        />
-
-        {/* Gauge preenchido (colorido) */}
-        <path
-          d="M 20 92 A 75 75 0 0 1 150 92"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="12"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          className={`transition-all duration-1000 ease-out ${
-            score >= 80
-              ? 'text-green-500'
-              : score >= 60
-              ? 'text-blue-500'
-              : score >= 40
-              ? 'text-yellow-500'
-              : 'text-red-500'
-          }`}
-          style={{
-            transformOrigin: '85px 92px',
-          }}
-        />
-
-        {/* Marcadores de referência */}
-        <g className="text-gray-400 dark:text-gray-600">
-          {/* 0 */}
-          <text x="10" y="98" fontSize="11" fill="currentColor" fontWeight="500">0</text>
-          {/* 50 */}
-          <text x="85" y="24" fontSize="11" fill="currentColor" textAnchor="middle" fontWeight="500">50</text>
-          {/* 100 */}
-          <text x="158" y="98" fontSize="11" fill="currentColor" textAnchor="end" fontWeight="500">100</text>
-        </g>
-      </svg>
-
-      {/* Ponteiro - centralizado e proporcional */}
-      <div 
-        className="absolute left-1/2 origin-bottom transition-transform duration-1000 ease-out" 
-        style={{ 
-          bottom: 'calc(36px)', // Altura do container - posição do centro do arco
-          transform: `translateX(-50%) rotate(${rotation}deg)`,
-          zIndex: 10 
-        }}
-      >
-        {/* Haste do ponteiro */}
-        <div
-          className="w-1.5 h-[72px] bg-gradient-to-t from-gray-900 to-gray-700 dark:from-white dark:to-gray-200"
-          style={{ 
-            borderRadius: '999px',
-            boxShadow: '0 3px 10px rgba(0,0,0,0.4)',
-            transformOrigin: 'bottom center'
-          }}
+      <div className="relative h-32 mb-4">
+        <svg
+          className="absolute inset-x-0 top-0 w-full h-full"
+          viewBox="0 0 170 100"
+          style={{ overflow: 'visible' }}
         >
-          {/* Ponta triangular do ponteiro */}
-          <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[7px] border-b-red-500 shadow-md" />
-        </div>
+          {/* Fundo do gauge (cinza) - semicírculo perfeito */}
+          <path
+            d={`M 15 85 A ${radius} ${radius} 0 0 1 155 85`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="14"
+            strokeLinecap="round"
+            className="text-gray-200 dark:text-gray-700"
+          />
+
+          {/* Gauge preenchido (colorido) - acompanha o score exatamente */}
+          {percentage > 0 && (
+            <path
+              d={`M 15 85 A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="14"
+              strokeLinecap="round"
+              className={`transition-all duration-1000 ease-out ${
+                score >= 80
+                  ? 'text-green-500'
+                  : score >= 60
+                  ? 'text-blue-500'
+                  : score >= 40
+                  ? 'text-yellow-500'
+                  : 'text-red-500'
+              }`}
+            />
+          )}
+        </svg>
       </div>
 
-      {/* Base do ponteiro - fixo no centro */}
-      <div 
-        className="absolute left-1/2 w-5 h-5 bg-gray-900 dark:bg-white rounded-full shadow-xl border-2 border-gray-700 dark:border-gray-300"
-        style={{ 
-          bottom: 'calc(36px - 10px)', // Centralizado
-          transform: 'translateX(-50%)',
-          zIndex: 11 
-        }}
-      />
-
-      {/* Score no centro */}
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-center" style={{ zIndex: 5 }}>
-        <div className={`text-4xl font-bold ${level.color} leading-none`}>
+      {/* Score - completamente abaixo do gauge, fora da área do ponteiro */}
+      <div className="text-center pb-2">
+        <div className={`text-5xl font-bold ${level.color} leading-none mb-1`}>
           {animatedScore}
         </div>
-        <div className="text-xs text-muted-foreground font-medium mt-0.5">/ 100</div>
+        <div className="text-sm text-muted-foreground font-medium">pontos</div>
       </div>
     </div>
   );
