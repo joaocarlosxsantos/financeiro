@@ -141,6 +141,7 @@ export function ExpandedTransactionsTable({
       ...transaction,
       categoryId: transaction.category?.id || '',
       walletId: transaction.wallet?.id || '',
+      type: transactionType, // Usar o tipo correto (expense ou income)
     };
     setEditModal({ open: true, transaction: initialData });
   };
