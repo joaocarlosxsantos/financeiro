@@ -120,30 +120,43 @@ export function ExpandedTransactionsTable({
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; transaction: ExpandedTransaction | null }>({ open: false, transaction: null });
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
 
   // Carregar categorias e carteiras ao montar
   useEffect(() => {
     (async () => {
       try {
-        const [catRes, walRes] = await Promise.all([
+        const [catRes, walRes, tagsRes] = await Promise.all([
           fetch('/api/categories?&_=' + Date.now()),
           fetch('/api/wallets?&_=' + Date.now()),
+          fetch('/api/tags?&_=' + Date.now()),
         ]);
         if (catRes.ok) setCategories(await catRes.json());
         if (walRes.ok) setWallets(await walRes.json());
+        if (tagsRes.ok) setTags(await tagsRes.json());
       } catch {}
     })();
   }, []);
 
   const handleEdit = (transaction: ExpandedTransaction) => {
-    // Extrair categoryId e walletId para o modal
+    // Extrair categoryId, walletId e tagIds para o modal
+    // Converter nomes de tags para IDs
+    const tagIds = transaction.tags
+      .map(tagName => {
+        const tag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+        return tag?.id;
+      })
+      .filter((id): id is string => id !== undefined);
+    
     const initialData = {
       ...transaction,
       categoryId: transaction.category?.id || '',
       walletId: transaction.wallet?.id || '',
-      type: transactionType, // Usar o tipo correto (expense ou income)
+      tagIds: tagIds,
+      transactionType: transactionType, // Tipo expense ou income separado
     };
-    setEditModal({ open: true, transaction: initialData });
+    
+    setEditModal({ open: true, transaction: initialData as any });
   };
   const handleDelete = (transaction: ExpandedTransaction) => {
     setDeleteModal({ open: true, transaction });
@@ -206,6 +219,7 @@ export function ExpandedTransactionsTable({
         title="Editar Transação"
         categories={categories}
         wallets={wallets}
+        tags={tags}
       />
       <ConfirmDeleteModal
         open={deleteModal.open}

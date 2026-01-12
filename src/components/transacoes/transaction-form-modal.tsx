@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ export interface TransactionFormModalProps {
   title?: string;
   categories?: Array<{ id: string; name: string }>;
   wallets?: Array<{ id: string; name: string }>;
+  tags?: Array<{ id: string; name: string }>;
 }
 
 export function TransactionFormModal({
@@ -22,6 +23,7 @@ export function TransactionFormModal({
   title = 'Editar Transação',
   categories = [],
   wallets = [],
+  tags = [],
 }: TransactionFormModalProps) {
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -30,30 +32,59 @@ export function TransactionFormModal({
     date: today,
     categoryId: '',
     walletId: '',
+    tagIds: [] as string[],
     type: 'expense', // 'expense' ou 'income'
     recurring: false,
     recurringStart: today,
     recurringEnd: '',
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
+  const tagsDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (tagsDropdownRef.current && !tagsDropdownRef.current.contains(event.target as Node)) {
+        setIsTagsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
-    if (initialData) {
-      setForm({
-        description: initialData.description || '',
-        amount: initialData.amount || '',
-        date: initialData.date ? initialData.date.slice(0, 10) : '',
-        categoryId: initialData.categoryId || '',
-        walletId: initialData.walletId || '',
-        type: initialData.type || 'expense',
-        recurring: initialData.isRecurring || initialData.recurring || false,
-        recurringStart: initialData.recurringStart || today,
-        recurringEnd: initialData.recurringEnd || '',
-      });
-    } else {
-      setForm(f => ({ ...f, recurringStart: today }));
+    if (open) {
+      if (initialData) {
+        setForm({
+          description: initialData.description || '',
+          amount: initialData.amount || '',
+          date: initialData.date ? initialData.date.slice(0, 10) : '',
+          categoryId: initialData.categoryId || '',
+          walletId: initialData.walletId || '',
+          tagIds: Array.isArray(initialData.tagIds) ? initialData.tagIds : [],
+          type: initialData.transactionType || initialData.type || 'expense',
+          recurring: initialData.isRecurring || initialData.recurring || false,
+          recurringStart: initialData.recurringStart || today,
+          recurringEnd: initialData.recurringEnd || '',
+        });
+      } else {
+        // Reset completo quando não há dados iniciais
+        setForm({
+          description: '',
+          amount: '',
+          date: today,
+          categoryId: '',
+          walletId: '',
+          tagIds: [],
+          type: 'expense',
+          recurring: false,
+          recurringStart: today,
+          recurringEnd: '',
+        });
+      }
     }
-  }, [initialData]);
+  }, [open, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +200,65 @@ export function TransactionFormModal({
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <Label htmlFor="tags">Tags</Label>
+          <div className="relative" ref={tagsDropdownRef}>
+            <button
+              type="button"
+              id="tags"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
+              onClick={() => setIsTagsDropdownOpen(!isTagsDropdownOpen)}
+            >
+              <span className={form.tagIds.length === 0 ? "text-muted-foreground" : ""}>
+                {form.tagIds.length === 0 
+                  ? "Selecione tags..." 
+                  : `${form.tagIds.length} tag(s) selecionada(s)`
+                }
+              </span>
+              <svg
+                className={`h-4 w-4 transition-transform ${isTagsDropdownOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {isTagsDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full rounded-md border border-input bg-background shadow-lg max-h-60 overflow-y-auto">
+                {tags.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    Nenhuma tag disponível
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    {tags.map(t => (
+                      <label
+                        key={t.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.tagIds.includes(t.id)}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setForm(f => ({ ...f, tagIds: [...f.tagIds, t.id] }));
+                            } else {
+                              setForm(f => ({ ...f, tagIds: f.tagIds.filter(id => id !== t.id) }));
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <span className="text-sm flex-1">{t.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex justify-end gap-2 mt-4 md:col-span-2">
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>

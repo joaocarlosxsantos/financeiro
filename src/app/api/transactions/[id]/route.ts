@@ -22,6 +22,28 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
   }
   let updated = null;
+  
+  // Busca os nomes das tags pelos IDs se fornecido
+  let tagNames: string[] | undefined = undefined;
+  if (data.tagIds && Array.isArray(data.tagIds) && data.tagIds.length > 0) {
+    const tags = await prisma.tag.findMany({
+      where: {
+        id: { in: data.tagIds },
+        userId: (await prisma.user.findUnique({ where: { email: session.user.email } }))?.id
+      },
+      select: { name: true }
+    });
+    tagNames = tags.map(tag => tag.name);
+  } else if (data.tagIds && Array.isArray(data.tagIds) && data.tagIds.length === 0) {
+    // Array vazio = remover todas as tags
+    tagNames = [];
+  }
+  
+  // Prepara o campo type apenas se for PUNCTUAL ou RECURRING (não expense/income)
+  const transactionType = (data.type === 'PUNCTUAL' || data.type === 'RECURRING') 
+    ? data.type 
+    : undefined;
+  
   try {
     updated = await prisma.expense.update({
       where: { id, user: { email: session.user.email } },
@@ -31,11 +53,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         date: dateISO,
         categoryId: data.categoryId || null,
         walletId: data.walletId || null,
-        type: data.type || undefined,
+        type: transactionType,
         isRecurring: data.isRecurring !== undefined ? data.isRecurring : undefined,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
         dayOfMonth: data.dayOfMonth !== undefined ? data.dayOfMonth : undefined,
+        ...(tagNames !== undefined && { tags: { set: tagNames } }),
       },
     });
   } catch (e) {
@@ -49,11 +72,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           date: dateISO,
           categoryId: data.categoryId || null,
           walletId: data.walletId || null,
-          type: data.type || undefined,
+          type: transactionType,
           isRecurring: data.isRecurring !== undefined ? data.isRecurring : undefined,
           startDate: data.startDate ? new Date(data.startDate) : undefined,
           endDate: data.endDate ? new Date(data.endDate) : undefined,
           dayOfMonth: data.dayOfMonth !== undefined ? data.dayOfMonth : undefined,
+          ...(tagNames !== undefined && { tags: { set: tagNames } }),
         },
       });
     } catch (e2) {
