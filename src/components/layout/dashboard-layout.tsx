@@ -27,16 +27,16 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
     if (sidebarOpen) {
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'hidden'; // Sempre hidden
     }
     
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'hidden'; // Sempre hidden
     };
   }, [sidebarOpen]);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar desktop */}
       <aside className="hidden md:block h-full">
         <Sidebar />
@@ -56,9 +56,9 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
         </div>
       )}
 
-      <main className="flex-1 overflow-auto w-full">
+      <main className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Topbar mobile otimizada */}
-        <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30 shadow-sm h-16 px-4">
+        <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30 shadow-sm h-16 px-4 flex-none">
           <div className="flex items-center">
             <button
               aria-label="Abrir menu"
@@ -75,7 +75,7 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
             <NotificationCenter className="text-muted-foreground hover:text-foreground" />
           </div>
         </div>
-        <div className={`w-full ${maxWidth} mx-auto p-4 sm:p-8`}>{children}</div>
+        <div className={`w-full ${maxWidth} mx-auto p-4 sm:p-8 overflow-auto flex-1`}>{children}</div>
       </main>
     </div>
   );

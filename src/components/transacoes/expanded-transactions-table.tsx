@@ -353,7 +353,7 @@ export function ExpandedTransactionsTable({
         />
       )}
       
-      <div ref={tableRef} className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: '600px' }}>
+      <div ref={tableRef} className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: '500px' }}>
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
