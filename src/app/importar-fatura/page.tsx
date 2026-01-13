@@ -15,6 +15,15 @@ export default function ImportarFaturaPage() {
   const [selectedCreditCard, setSelectedCreditCard] = useState<string>('');
   const [billMonth, setBillMonth] = useState<number>(new Date().getMonth() + 1);
   const [billYear, setBillYear] = useState<number>(new Date().getFullYear());
+  
+  // Formato YYYY-MM para o MonthSelector
+  const billPeriod = `${billYear}-${billMonth.toString().padStart(2, '0')}`;
+  
+  const setBillPeriod = (period: string) => {
+    const [year, month] = period.split('-').map(Number);
+    setBillYear(year);
+    setBillMonth(month);
+  };
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,10 +173,8 @@ export default function ImportarFaturaPage() {
               creditCards={creditCards}
               selectedCreditCard={selectedCreditCard}
               onCreditCardChange={setSelectedCreditCard}
-              billMonth={billMonth}
-              billYear={billYear}
-              onBillMonthChange={setBillMonth}
-              onBillYearChange={setBillYear}
+              billPeriod={billPeriod}
+              onBillPeriodChange={setBillPeriod}
               onSave={handleSave}
               saving={saving}
               error={error}

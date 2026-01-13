@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
 
 /**
  * API para processar arquivos CSV de fatura de cartão de crédito
@@ -53,8 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nenhuma transação encontrada no arquivo' }, { status: 400 });
     }
 
-    // Sugerir categorias usando regras simples com as categorias existentes
-    const transactionsWithCategories = suggestCategories(transactions, existingCategories);
+    // Sugerir categorias usando IA primeiro, depois regras simples como fallback
+    const transactionsWithCategories = await suggestCategories(transactions, existingCategories, user);
 
     return NextResponse.json({
       success: true,
@@ -171,23 +172,116 @@ function parseValor(valorStr: string): number {
 }
 
 /**
- * Sugerir categorias usando regras simples com categorias existentes
+ * Sugerir categorias usando IA primeiro, depois regras simples como fallback
  */
-function suggestCategories(transactions: any[], existingCategories: any[]): any[] {
-  return transactions.map(t => {
+async function suggestCategories(transactions: any[], existingCategories: any[], user: any): Promise<any[]> {
+  const processedTransactions = [];
+  
+  for (const t of transactions) {
     const valor = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor)) || 0;
     const isCredito = valor < 0;
     const categoryType = isCredito ? 'INCOME' : 'EXPENSE';
     
-    const categoria = sugerirCategoria(t.descricao, existingCategories, categoryType, isCredito);
+    let aiAnalysis: any = null;
+    let categoriaRecomendada = '';
+    let categoriaId = '';
+    let descricaoMelhorada = t.descricao;
+    let tagsRecomendadas: string[] = [];
+    let shouldCreateCategory = false;
+
+    // Função para normalizar texto (igual ao extrato)
+    const normalizar = (str: string) =>
+      str
+        ? str
+            .normalize('NFD')
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .toLowerCase()
+        : '';
+    const userNorm = user && user.name ? normalizar(user.name) : '';
     
-    return {
+    try {
+      if (user && t.descricao) {
+        aiAnalysis = await analyzeTransactionWithAI(t.descricao, valor, existingCategories);
+        let suggested = aiAnalysis.suggestedCategory;
+        
+        // Função para remover acentos (igual ao extrato)
+        const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+        
+        // Verifica se categoria sugerida já existe
+        const categoriaExistente = existingCategories.find(
+          (cat) =>
+            removeAcentos(cat.name.toLowerCase()) === removeAcentos(suggested.toLowerCase()),
+        );
+        
+        if (categoriaExistente) {
+          categoriaRecomendada = categoriaExistente.name;
+          categoriaId = categoriaExistente.id;
+          shouldCreateCategory = false;
+        } else {
+          categoriaRecomendada = suggested;
+          shouldCreateCategory = true;
+        }
+        
+        descricaoMelhorada = aiAnalysis.enhancedDescription;
+        
+        // Verifica tags e filtra apenas as que não existem
+        const tagsExistentes = await prisma.tag.findMany({ 
+          where: { userId: user.id },
+          select: { name: true }
+        });
+        
+        const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
+          return !tagsExistentes.some(
+            (tagExistente) =>
+              removeAcentos(tagExistente.name.toLowerCase()) ===
+              removeAcentos(tagSugerida.toLowerCase()),
+          );
+        });
+        tagsRecomendadas = tagsNaoExistentes;
+      }
+    } catch (error) {
+      console.error('Erro na análise IA:', error);
+      // Fallback para método antigo se IA falhar
+      const categoria = sugerirCategoria(t.descricao, existingCategories, categoryType, isCredito);
+      
+      // Função para remover acentos (igual ao extrato)
+      const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      
+      const categoriaExistente = existingCategories.find(
+        (cat) =>
+          removeAcentos(cat.name.toLowerCase()) ===
+          removeAcentos(categoria.name.toLowerCase()),
+      );
+      
+      if (categoriaExistente) {
+        categoriaRecomendada = categoriaExistente.name;
+        categoriaId = categoriaExistente.id;
+        shouldCreateCategory = false;
+      } else {
+        categoriaRecomendada = categoria.name;
+        shouldCreateCategory = true;
+      }
+    }
+    
+    processedTransactions.push({
       ...t,
-      categoriaSugerida: categoria.name,
-      categoriaId: categoria.id || null, // Se encontrou categoria existente, usar o ID
-      isNewCategory: !categoria.id // Flag para indicar se é categoria nova
-    };
-  });
+      categoriaSugerida: categoriaRecomendada,
+      categoriaId: categoriaId || null,
+      isNewCategory: shouldCreateCategory,
+      descricaoMelhorada,
+      tagsRecomendadas,
+      aiAnalysis: aiAnalysis
+        ? {
+            confidence: aiAnalysis.confidence,
+            merchant: aiAnalysis.merchant,
+            location: aiAnalysis.location,
+            categoryType: aiAnalysis.categoryType,
+          }
+        : null,
+    });
+  }
+  
+  return processedTransactions;
 }
 
 /**

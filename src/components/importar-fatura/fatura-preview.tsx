@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { MonthSelector } from '@/components/ui/month-selector';
 import { Sparkles, CreditCard } from 'lucide-react';
 import { FaturaTransactionRow } from './fatura-transaction-row';
 import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
@@ -15,10 +16,8 @@ interface FaturaPreviewProps {
   creditCards: any[];
   selectedCreditCard: string;
   onCreditCardChange: (id: string) => void;
-  billMonth: number;
-  billYear: number;
-  onBillMonthChange: (month: number) => void;
-  onBillYearChange: (year: number) => void;
+  billPeriod: string; // Formato YYYY-MM
+  onBillPeriodChange: (period: string) => void;
   onSave: (registros: any[], deleteExisting?: boolean) => void;
   saving: boolean;
   error: string | null;
@@ -31,10 +30,8 @@ export function FaturaPreview({
   creditCards,
   selectedCreditCard,
   onCreditCardChange,
-  billMonth,
-  billYear,
-  onBillMonthChange,
-  onBillYearChange,
+  billPeriod,
+  onBillPeriodChange,
   onSave,
   saving,
   error,
@@ -150,11 +147,13 @@ export function FaturaPreview({
 
   // Verificar se já existem registros para o período
   const checkExistingBill = async () => {
-    if (!selectedCreditCard || !billMonth || !billYear) {
+    if (!selectedCreditCard || !billPeriod) {
       return null;
     }
 
     setIsChecking(true);
+    
+    const [year, month] = billPeriod.split('-').map(Number);
     
     try {
       const response = await fetch('/api/importar-fatura/check-existing', {
@@ -162,8 +161,8 @@ export function FaturaPreview({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           creditCardId: selectedCreditCard,
-          year: billYear,
-          month: billMonth,
+          year: year,
+          month: month,
         }),
       });
 
@@ -264,41 +263,11 @@ export function FaturaPreview({
           </div>
           
           <div>
-            <Label htmlFor="billMonth" className="mb-2 block">
-              Mês da Fatura
-            </Label>
-            <Select
-              id="billMonth"
-              value={billMonth.toString()}
-              onChange={(e) => onBillMonthChange(parseInt(e.target.value))}
+            <MonthSelector
+              value={billPeriod}
+              onChange={onBillPeriodChange}
               className="w-full"
-              required
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                <option key={month} value={month}>
-                  {new Date(2000, month - 1).toLocaleString('pt-BR', { month: 'long' })}
-                </option>
-              ))}
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="billYear" className="mb-2 block">
-              Ano da Fatura
-            </Label>
-            <Select
-              id="billYear"
-              value={billYear.toString()}
-              onChange={(e) => onBillYearChange(parseInt(e.target.value))}
-              className="w-full"
-              required
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </Select>
+            />
           </div>
         </div>
 

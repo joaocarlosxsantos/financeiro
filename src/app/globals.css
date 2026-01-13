@@ -12,13 +12,15 @@
 .animate-slide-in-mobile {
   animation: slide-in-mobile 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Corrige ícone do input type=date no modo escuro */
-input[type='date']::-webkit-calendar-picker-indicator {
+/* Corrige ícone do input type=date e type=month no modo escuro */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 
 @media (prefers-color-scheme: light) {
-  .dark input[type='date']::-webkit-calendar-picker-indicator {
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark input[type='month']::-webkit-calendar-picker-indicator {
     filter: none;
   }
   .tabs-list {
