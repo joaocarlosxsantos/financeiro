@@ -216,6 +216,8 @@ export async function DELETE(
       },
       include: {
         creditBill: true,
+        // Incluir registros filhos se for um pai
+        childExpenses: true,
       },
     });
 
@@ -232,24 +234,52 @@ export async function DELETE(
 
     // Usar transação para garantir consistência
     const result = await prisma.$transaction(async (tx: any) => {
-      const billId = existingExpense.creditBillId;
+      const affectedBills = new Set<string>();
+      
+      // Se for um registro PAI (parentExpenseId: null), deletar também todos os filhos
+      if (existingExpense.parentExpenseId === null) {
+        // Buscar todos os registros filhos
+        const childExpenses = await tx.creditExpense.findMany({
+          where: { parentExpenseId: existingExpense.id },
+          select: { id: true, creditBillId: true },
+        });
+        
+        // Adicionar faturas afetadas pelos filhos
+        childExpenses.forEach((child: { id: string; creditBillId: string | null }) => {
+          if (child.creditBillId) {
+            affectedBills.add(child.creditBillId);
+          }
+        });
+        
+        // Deletar todos os filhos
+        if (childExpenses.length > 0) {
+          await tx.creditExpense.deleteMany({
+            where: { parentExpenseId: existingExpense.id },
+          });
+        }
+      }
+      
+      // Adicionar fatura do registro atual (se tiver)
+      if (existingExpense.creditBillId) {
+        affectedBills.add(existingExpense.creditBillId);
+      }
 
-      // Deletar o gasto
+      // Deletar o gasto principal
       await tx.creditExpense.delete({
         where: { id: params.id },
       });
 
-      // Se estava associado a uma fatura, recalcular o total
-      if (billId) {
+      // Recalcular totais de todas as faturas afetadas
+      for (const billId of Array.from(affectedBills)) {
         await recalculateBillTotal(tx, billId);
       }
 
-      return { affectedBill: billId ? 1 : 0 };
+      return { affectedBills: affectedBills.size };
     });
 
     return NextResponse.json({ 
       message: 'Gasto excluído com sucesso',
-      affectedBill: result.affectedBill
+      affectedBills: result.affectedBills
     });
   } catch (error) {
     console.error('Erro ao excluir gasto:', error);
