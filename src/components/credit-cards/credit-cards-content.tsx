@@ -75,15 +75,19 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
     });
   };
 
-  // Data atual para exibição
-  const currentDateTime = new Date().toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+  // Data atual para exibição (calculada apenas no cliente para evitar hydration error)
+  const [currentDateTime, setCurrentDateTime] = useState<string>('');
+  
+  useEffect(() => {
+    setCurrentDateTime(new Date().toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }));
+  }, []);
 
 
 
@@ -386,7 +390,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <div className="flex items-center gap-2">
           <div className="flex items-center space-x-2 px-3 h-10 rounded-md border bg-background">
             <Calendar className="h-4 w-4" />
-            <span className="text-sm font-mono">{currentDateTime}</span>
+            <span className="text-sm font-mono">{currentDateTime || '—'}</span>
           </div>
         </div>
         <Button onClick={() => {
