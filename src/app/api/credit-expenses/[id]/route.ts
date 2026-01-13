@@ -33,6 +33,14 @@ export async function GET(
         category: true,
         creditCard: true,
         creditBill: true,
+        childExpenses: {
+          include: {
+            creditBill: true,
+          },
+          orderBy: {
+            installmentNumber: 'asc',
+          },
+        },
       },
     });
 

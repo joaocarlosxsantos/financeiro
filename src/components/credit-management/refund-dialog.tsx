@@ -25,6 +25,23 @@ interface CreditExpense {
     id: string;
     name: string;
   };
+  // Dados das parcelas filhas (nova estrutura parent-child)
+  childExpenses?: Array<{
+    id: string;
+    installmentNumber: number;
+    amount: number;
+    purchaseDate: string;
+    creditBillId?: string;
+    creditBill?: {
+      id: string;
+      status: 'PENDING' | 'PAID' | 'PARTIAL' | 'OVERDUE';
+      paidAmount: number;
+      totalAmount: number;
+      dueDate: string;
+      closingDate: string;
+    };
+  }>;
+  // Dados das parcelas (compatibilidade com estrutura antiga)
   billItems?: Array<{
     id: string;
     installmentNumber: number;
@@ -47,8 +64,9 @@ interface RefundDialogProps {
 }
 
 export default function RefundDialog({ expense, open, onClose, onSuccess }: RefundDialogProps) {
-  const [refundType, setRefundType] = useState<'FULL' | 'PARTIAL'>('FULL');
+  const [refundType, setRefundType] = useState<'FULL' | 'PARTIAL' | 'INSTALLMENT'>('FULL');
   const [partialAmount, setPartialAmount] = useState('');
+  const [selectedInstallments, setSelectedInstallments] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -69,13 +87,20 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
       return;
     }
 
+    // Usar dados das parcelas filhas (nova estrutura) ou fallback para billItems (compatibilidade)
+    const installments = expense.childExpenses || expense.billItems || [];
+
     // Analisar situação das parcelas
     let paidInstallments = 0;
     let paidAmount = 0;
     let pendingAmount = 0;
 
-    for (const item of expense.billItems || []) {
-      if (item.bill?.status === 'PAID') {
+    for (const item of installments) {
+      const isPaid = expense.childExpenses 
+        ? item.creditBill?.status === 'PAID'
+        : item.bill?.status === 'PAID';
+        
+      if (isPaid) {
         paidInstallments++;
         paidAmount += Number(item.amount) || 0;
       } else {
@@ -100,6 +125,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
     // Resetar form
     setRefundType(canFullRefund ? 'FULL' : 'PARTIAL');
     setPartialAmount('');
+    setSelectedInstallments([]);
     setErrors({});
   }, [expense]);
 
@@ -126,6 +152,12 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
       }
     }
 
+    if (refundType === 'INSTALLMENT') {
+      if (selectedInstallments.length === 0) {
+        newErrors.installments = 'Selecione pelo menos uma parcela para estornar';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -135,19 +167,20 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
 
     setLoading(true);
     try {
-      const refundAmount = refundType === 'FULL' 
-        ? Number(refundAnalysis.totalAmount.toFixed(2))
-        : Number(parseFloat(partialAmount).toFixed(2));
+      let requestBody: any = { refundType };
 
-
+      if (refundType === 'FULL') {
+        requestBody.amount = Number(refundAnalysis.totalAmount.toFixed(2));
+      } else if (refundType === 'PARTIAL') {
+        requestBody.amount = Number(parseFloat(partialAmount).toFixed(2));
+      } else if (refundType === 'INSTALLMENT') {
+        requestBody.selectedInstallments = selectedInstallments;
+      }
 
       const response = await fetch(`/api/credit-expenses/${expense.id}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          refundType,
-          amount: refundAmount,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -253,9 +286,6 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Estorno Completo</span>
-                  {refundAnalysis.canFullRefund && (
-                    <Badge variant="default" className="text-xs">Recomendado</Badge>
-                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Estorna todo o valor da compra ({formatCurrency(refundAnalysis.totalAmount)})
@@ -310,6 +340,132 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
               </div>
             )}
           </div>
+
+          {/* Estorno por Parcelas */}
+          {expense.installments > 1 && (
+            <div className="space-y-2">
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="refundType"
+                  value="INSTALLMENT"
+                  checked={refundType === 'INSTALLMENT'}
+                  onChange={(e) => setRefundType(e.target.value as 'INSTALLMENT')}
+                  className="h-4 w-4"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Estorno por Parcelas</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Selecione quais parcelas específicas deseja estornar
+                  </p>
+                </div>
+              </label>
+
+              {refundType === 'INSTALLMENT' && (
+                <div className="ml-7 space-y-4">
+                  <Label className="text-sm font-medium text-foreground">Selecione as parcelas para estornar:</Label>
+                  <div className="max-h-60 overflow-y-auto space-y-3 border rounded-lg p-3 bg-muted/30">
+                    {(expense.childExpenses || expense.billItems || []).map((item) => {
+                      const isSelected = selectedInstallments.includes(item.installmentNumber);
+                      const isPaid = expense.childExpenses 
+                        ? item.creditBill?.status === 'PAID'
+                        : item.bill?.status === 'PAID';
+                      
+                      return (
+                        <label 
+                          key={item.id} 
+                          className={`flex items-center space-x-4 cursor-pointer p-4 rounded-lg border-2 transition-all duration-200 ${
+                            isSelected 
+                              ? 'border-primary bg-primary/10 shadow-sm' 
+                              : 'border-border bg-card hover:border-muted-foreground hover:shadow-sm'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedInstallments([...selectedInstallments, item.installmentNumber]);
+                              } else {
+                                setSelectedInstallments(selectedInstallments.filter(n => n !== item.installmentNumber));
+                              }
+                            }}
+                            className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <div className="flex-1 grid grid-cols-3 gap-4 items-center">
+                            <div>
+                              <span className={`font-semibold text-sm ${
+                                isSelected ? 'text-primary' : 'text-foreground'
+                              }`}>
+                                Parcela {item.installmentNumber}/{expense.installments}
+                              </span>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDate(
+                                  expense.childExpenses 
+                                    ? item.creditBill?.dueDate || item.purchaseDate
+                                    : item.dueDate
+                                )}
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <span className={`font-bold text-lg ${
+                                isSelected ? 'text-primary' : 'text-foreground'
+                              }`}>
+                                {formatCurrency(item.amount)}
+                              </span>
+                            </div>
+                            <div className="flex justify-end">
+                              <Badge 
+                                variant={isPaid ? 'default' : 'secondary'}
+                                className={`text-xs font-medium ${
+                                  isPaid 
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                                }`}
+                              >
+                                {isPaid ? '✓ Paga' : '⏳ Pendente'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {errors.installments && (
+                    <p className="text-red-500 text-xs">{errors.installments}</p>
+                  )}
+                  {selectedInstallments.length > 0 && (
+                    <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-primary">
+                            {selectedInstallments.length} parcela{selectedInstallments.length > 1 ? 's' : ''} selecionada{selectedInstallments.length > 1 ? 's' : ''}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Estorno será processado conforme status de cada parcela
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-muted-foreground">Valor total</p>
+                          <p className="text-lg font-bold text-primary">
+                            {formatCurrency(
+                              selectedInstallments.reduce((sum, installmentNum) => {
+                                const item = (expense.childExpenses || expense.billItems || [])
+                                  .find(i => i.installmentNumber === installmentNum);
+                                return sum + (item ? Number(item.amount) : 0);
+                              }, 0)
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Informações do que acontecerá */}
@@ -323,11 +479,18 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                   <li>• Todas as parcelas pendentes serão canceladas</li>
                   <li>• O estorno aparecerá como crédito nas próximas faturas</li>
                 </>
-              ) : (
+              ) : refundType === 'PARTIAL' ? (
                 <>
                   <li>• Uma transação de estorno parcial será criada</li>
                   <li>• O valor será aplicado como crédito nas próximas faturas</li>
                   <li>• As parcelas restantes continuarão normalmente</li>
+                </>
+              ) : (
+                <>
+                  <li>• Apenas as parcelas selecionadas serão estornadas</li>
+                  <li>• <strong>Parcelas pagas:</strong> Crédito gerado na fatura atual</li>
+                  <li>• <strong>Parcelas pendentes:</strong> Estorno na mesma fatura da parcela</li>
+                  <li>• As parcelas não selecionadas continuarão normalmente</li>
                 </>
               )}
             </ul>

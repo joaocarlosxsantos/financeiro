@@ -18,7 +18,11 @@ export async function GET(req: NextRequest) {
   const creditCards = await prisma.creditCard.findMany({
     where: { userId: user.id },
     include: {
-      creditExpenses: true,
+      creditExpenses: {
+        include: {
+          childExpenses: true
+        }
+      },
       creditIncomes: true,
       creditBills: true,
       bank: true,
@@ -29,17 +33,54 @@ export async function GET(req: NextRequest) {
   // Calcular o valor utilizado de cada cartão
   const creditCardsWithUsage = creditCards.map((card: any) => {
     // Calcular valor utilizado baseado nos gastos de crédito
-    const totalExpenses = (card.creditExpenses || []).reduce((sum: number, expense: any) => {
-      return sum + Number(expense.amount);
-    }, 0);
+    let totalExpenses = 0;
+    
+    // Primeiro, identificar quais são registros pai (que têm childExpenses)
+    const parentIds = new Set();
+    (card.creditExpenses || []).forEach((expense: any) => {
+      if (expense.childExpenses && expense.childExpenses.length > 0) {
+        parentIds.add(expense.id);
+        // Também marcar os IDs dos children para evitar contagem dupla
+        expense.childExpenses.forEach((child: any) => {
+          parentIds.add(child.id);
+        });
+      }
+    });
+    
+    (card.creditExpenses || []).forEach((expense: any) => {
+      const amount = Number(expense.amount || 0);
+      const hasChildren = expense.childExpenses && expense.childExpenses.length > 0;
+      
+      if (hasChildren) {
+        // Registro pai: contar apenas as parcelas filhas
+        expense.childExpenses.forEach((child: any) => {
+          const childAmount = Number(child.amount || 0);
+          const childType = child.type || 'EXPENSE';
+          
+          if (!childType || childType === 'EXPENSE') {
+            totalExpenses += Math.abs(childAmount);
+          } else if (childType === 'REFUND') {
+            totalExpenses -= Math.abs(childAmount);
+          }
+        });
+      } else if (!parentIds.has(expense.id)) {
+        // Registros independentes (que não fazem parte de estrutura pai-filho)
+        if (!expense.type || expense.type === 'EXPENSE') {
+          totalExpenses += Math.abs(amount);
+        } else if (expense.type === 'REFUND') {
+          totalExpenses -= Math.abs(amount);
+        }
+      }
+    });
     
     // Calcular créditos que liberam o limite (pagamentos e estornos)
     const totalIncomes = (card.creditIncomes || []).reduce((sum: number, income: any) => {
-      return sum + Number(income.amount);
+      return sum + Math.abs(Number(income.amount || 0));
     }, 0);
     
-    // Valor usado = despesas - créditos
-    const usedAmount = totalExpenses - totalIncomes;
+    // Valor usado = despesas (já considerando estornos) - créditos
+    const rawUsedAmount = totalExpenses - totalIncomes;
+    const usedAmount = Math.max(0, rawUsedAmount); // Nunca negativo
     
     // Limite disponível = limite total - valor usado
     const availableLimit = Number(card.limit) - usedAmount;

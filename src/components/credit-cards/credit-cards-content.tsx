@@ -111,7 +111,13 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/credit-cards', { cache: 'no-store' });
+      const timestamp = Date.now();
+      const res = await fetch(`/api/credit-cards?t=${timestamp}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setCreditCards(data);

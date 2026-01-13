@@ -145,24 +145,54 @@ export async function GET(request: NextRequest) {
 
     // Atualizar status e recalcular totalAmount dinamicamente
     const currentDate = new Date();
+    const billsToUpdate = [];
+    
     const updatedBills = bills.map((bill: any) => {
       // Calcular total real: despesas - créditos
       const totalExpenses = bill.creditExpenses?.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0) || 0;
       const totalIncomes = bill.creditIncomes?.reduce((sum: number, inc: any) => sum + Number(inc.amount), 0) || 0;
       const calculatedTotal = totalExpenses - totalIncomes;
 
+      const newStatus = calculateBillStatus(
+        calculatedTotal,
+        Number(bill.paidAmount),
+        bill.dueDate,
+        currentDate
+      );
+
+      // Se o status mudou para PAID e era diferente antes, agendar atualização
+      if (newStatus === 'PAID' && bill.status !== 'PAID') {
+        billsToUpdate.push({
+          id: bill.id,
+          status: 'PAID',
+          totalAmount: calculatedTotal
+        });
+      }
 
       return {
         ...bill,
         totalAmount: calculatedTotal, // Usar valor calculado em vez do armazenado
-        status: calculateBillStatus(
-          calculatedTotal,
-          Number(bill.paidAmount),
-          bill.dueDate,
-          currentDate
-        ),
+        status: newStatus,
       };
     });
+
+    // Atualizar automaticamente faturas que ficaram com valor 0 e devem ser marcadas como pagas
+    if (billsToUpdate.length > 0) {
+      try {
+        await Promise.all(billsToUpdate.map(bill => 
+          prisma.creditBill.update({
+            where: { id: bill.id },
+            data: { 
+              status: bill.status,
+              totalAmount: bill.totalAmount
+            }
+          })
+        ));
+        console.log(`✅ Marcadas ${billsToUpdate.length} faturas como pagas automaticamente (valor = 0)`);
+      } catch (error) {
+        console.error('❌ Erro ao atualizar faturas automaticamente:', error);
+      }
+    }
 
     return NextResponse.json({
       data: updatedBills,
