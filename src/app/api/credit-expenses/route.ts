@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = {
       userId: user.id,
+      parentExpenseId: null, // Mostrar apenas registros PAI na tela de gastos
     };
 
     if (creditCardId) {
@@ -167,19 +168,41 @@ export async function POST(request: NextRequest) {
       parseFloat(amount)
     );
 
-    // Iniciar transação
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Determinar em qual fatura essa despesa deve entrar
+    // Criar o registro PAI primeiro (sem transação)
+    const parentExpense = await prisma.creditExpense.create({
+      data: {
+        description,
+        amount: parseFloat(amount), // Valor TOTAL
+        purchaseDate: new Date(purchaseDate),
+        installments: installments,
+        installmentNumber: 0, // 0 = registro pai
+        parentExpenseId: null,
+        type,
+        categoryId: categoryId || null,
+        creditCardId,
+        creditBillId: null, // Pai não vai para fatura
+        userId: user.id,
+        tags,
+      },
+      include: {
+        category: true,
+        creditCard: true,
+      },
+    });
+
+    // Criar registros FILHOS para cada parcela (sem transação)
+    for (const installmentInfo of installmentDates) {
+      // Determinar em qual fatura essa parcela deve entrar
       const billPeriod = getBillPeriodForInstallment(
         creditCard as any,
-        installmentDates[0].dueDate
+        installmentInfo.dueDate
       );
       
-      // Buscar ou criar a fatura
       const closingDate = calculateClosingDate(creditCard as any, billPeriod.year, billPeriod.month);
       const dueDate = calculateDueDate(creditCard as any, billPeriod.year, billPeriod.month);
       
-      let bill = await tx.creditBill.findFirst({
+      // Buscar ou criar a fatura
+      let bill = await prisma.creditBill.findFirst({
         where: {
           creditCardId,
           closingDate,
@@ -188,34 +211,36 @@ export async function POST(request: NextRequest) {
       });
 
       if (!bill) {
-        bill = await tx.creditBill.create({
+        bill = await prisma.creditBill.create({
           data: {
             userId: user.id,
             creditCardId,
             closingDate,
             dueDate,
-            totalAmount: parseFloat(amount),
+            totalAmount: installmentInfo.value,
             paidAmount: 0,
             status: 'PENDING',
           },
         });
       } else {
-        // Atualizar o valor total da fatura
-        await tx.creditBill.update({
+        // Atualizar total da fatura
+        await prisma.creditBill.update({
           where: { id: bill.id },
           data: {
-            totalAmount: Number(bill.totalAmount) + parseFloat(amount),
+            totalAmount: { increment: installmentInfo.value },
           },
         });
       }
 
-      // Criar o gasto vinculado à fatura
-      const creditExpense = await tx.creditExpense.create({
+      // Criar o registro FILHO (parcela para a fatura)
+      await prisma.creditExpense.create({
         data: {
-          description,
-          amount: parseFloat(amount),
+          description: `${description} (${installmentInfo.installment}/${installmentInfo.totalInstallments})`,
+          amount: installmentInfo.value,
           purchaseDate: new Date(purchaseDate),
-          installments,
+          installments: installmentInfo.totalInstallments,
+          installmentNumber: installmentInfo.installment,
+          parentExpenseId: parentExpense.id,
           type,
           categoryId: categoryId || null,
           creditCardId,
@@ -223,20 +248,11 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           tags,
         },
-        include: {
-          category: true,
-          creditCard: true,
-          creditBill: true,
-        },
       });
+    }
 
-      // O crédito disponível é calculado dinamicamente, não precisa atualizar
-
-      return creditExpense;
-    });
-
-    // ✨ Retornar o resultado
-    return NextResponse.json(result, { status: 201 });
+    // ✨ Retornar o registro pai
+    return NextResponse.json(parentExpense, { status: 201 });
   } catch (error: any) {
     console.error('❌ Erro ao criar gasto no cartão:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });

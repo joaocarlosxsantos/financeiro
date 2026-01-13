@@ -310,23 +310,27 @@ model AlertConfiguration {
 }
 
 model CreditExpense {
-  id           String            @id @default(cuid())
-  description  String
-  amount       Decimal           @db.Decimal(10, 2)
-  purchaseDate DateTime
-  installments Int               @default(1)
-  type         CreditExpenseType @default(EXPENSE)
-  categoryId   String?
-  creditCardId String
-  creditBillId String?
-  userId       String
-  tags         String[]          @default([])
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  category     Category?         @relation(fields: [categoryId], references: [id])
-  creditCard   CreditCard        @relation(fields: [creditCardId], references: [id])
-  creditBill   CreditBill?       @relation(fields: [creditBillId], references: [id], onDelete: SetNull)
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String            @id @default(cuid())
+  description        String
+  amount             Decimal           @db.Decimal(10, 2)
+  purchaseDate       DateTime
+  installments       Int               @default(1)
+  installmentNumber  Int               @default(1)
+  parentExpenseId    String?
+  type               CreditExpenseType @default(EXPENSE)
+  categoryId         String?
+  creditCardId       String
+  creditBillId       String?
+  userId             String
+  tags               String[]          @default([])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  category           Category?         @relation(fields: [categoryId], references: [id])
+  creditCard         CreditCard        @relation(fields: [creditCardId], references: [id])
+  creditBill         CreditBill?       @relation(fields: [creditBillId], references: [id], onDelete: SetNull)
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentExpense      CreditExpense?    @relation("ExpenseInstallments", fields: [parentExpenseId], references: [id], onDelete: Cascade)
+  childExpenses      CreditExpense[]   @relation("ExpenseInstallments")
 
   @@index([userId, purchaseDate])
   @@index([creditCardId])

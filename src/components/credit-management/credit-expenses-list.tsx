@@ -175,20 +175,46 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
     const id = confirmingDelete;
     setConfirmingDelete(null);
 
+    // Encontrar o registro para determinar se é gasto ou crédito
+    const record = expenses.find(e => e.id === id);
+    if (!record) {
+      alert('Registro não encontrado.');
+      return;
+    }
+
+    // Determinar a API correta baseado no tipo
+    const isIncome = (record as any).isIncome || record.type === 'INCOME';
+    const apiUrl = isIncome 
+      ? `/api/credit-incomes/${id}` 
+      : `/api/credit-expenses/${id}`;
+
     try {
-      const response = await fetch(`/api/credit-expenses/${id}`, {
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao excluir gasto');
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        
+        if (response.status === 404) {
+          alert(`${isIncome ? 'Crédito' : 'Gasto'} não encontrado. A lista será atualizada.`);
+          reloadExpenses();
+          return;
+        }
+        
+        if (response.status === 400) {
+          alert(errorData.error || `Não é possível excluir este ${isIncome ? 'crédito' : 'gasto'}.`);
+          return;
+        }
+        
+        throw new Error(errorData.error || `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}`);
       }
 
       // Recarregar a lista
       reloadExpenses();
     } catch (error) {
-      console.error('Erro ao excluir gasto:', error);
-      alert('Erro ao excluir gasto. Tente novamente.');
+      console.error(`Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}:`, error);
+      alert(error instanceof Error ? error.message : `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}. Tente novamente.`);
     }
   };
 
@@ -408,12 +434,25 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                 </td>
                 <td className="px-4 py-3 text-center">
                   <div className="flex flex-col items-center gap-1">
-                    <Badge variant="outline" className="text-xs font-medium">
-                      {expense.installments}x
-                    </Badge>
-                    <div className="text-xs text-muted-foreground">
-                      {formatCurrency(expense.amount / expense.installments)}
-                    </div>
+                    {expense.installments > 1 ? (
+                      <>
+                        <Badge variant="outline" className="text-xs font-medium">
+                          {expense.installments}x
+                        </Badge>
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(expense.amount / expense.installments)}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="secondary" className="text-xs font-medium">
+                          À vista
+                        </Badge>
+                        <div className="text-xs text-muted-foreground">
+                          Valor total
+                        </div>
+                      </>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -469,7 +508,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                         )}
                         className="h-8 w-8 p-0"
                       >
-                        <RotateCcw className="h-3 w-3" />
+                        <RotateCcw className="h-6 w-6" />
                       </Button>
                     )}
                     <Button 
@@ -485,7 +524,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                       title="Editar gasto"
                       className="h-8 w-8 p-0"
                     >
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-6 w-6" />
                     </Button>
                     <Button 
                       size="sm" 
@@ -494,7 +533,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                       title="Excluir gasto"
                       className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-6 w-6" />
                     </Button>
                   </div>
                 </td>

@@ -19,7 +19,10 @@ interface CreditBill {
   creditCard: {
     id: string;
     name: string;
-    bank: string;
+    bank?: {
+      id: string;
+      name: string;
+    };
   };
   creditExpenses: {
     id: string;
@@ -86,7 +89,9 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
       }
 
       const data = await response.json();
-      setBills(data.data && Array.isArray(data.data) ? data.data : []);
+      const billsData = data.data && Array.isArray(data.data) ? data.data : [];
+      
+      setBills(billsData);
     } catch (error) {
       console.error('Erro ao carregar faturas:', error);
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
@@ -219,7 +224,7 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                 </CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <Receipt className="h-4 w-4" />
-                  {bill.creditCard.name} - {bill.creditCard.bank}
+                  {bill.creditCard.name} - {bill.creditCard.bank?.name || 'Sem banco'}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -307,23 +312,23 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                     {bill.creditIncomes?.map((income) => (
                       <div 
                         key={income.id} 
-                        className="flex justify-between items-center p-2 rounded bg-green-50 border border-green-200"
+                        className="flex justify-between items-center p-2 rounded bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{income.description}</p>
-                            <Badge variant="outline" className="text-green-700 border-green-300">
+                            <p className="font-medium text-green-900 dark:text-green-100">{income.description}</p>
+                            <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
                               CRÉDITO
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-green-700 dark:text-green-300">
                             {new Date(income.date).toLocaleDateString('pt-BR')}
                             {income.category && (
                               <span> • {income.category.name}</span>
                             )}
                           </p>
                         </div>
-                        <p className="font-semibold text-green-700">
+                        <p className="font-semibold text-green-700 dark:text-green-300">
                           -{formatCurrency(income.amount)}
                         </p>
                       </div>

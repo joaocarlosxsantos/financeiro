@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { calculateInstallmentDates } from '@/lib/credit-utils';
+import { calculateInstallmentDates, getBillPeriodForInstallment, calculateClosingDate, calculateDueDate } from '@/lib/credit-utils';
+import { recalculateBillTotal } from '@/lib/credit-bill-utils';
 
 // GET - Buscar gasto específico
 export async function GET(
@@ -31,14 +32,7 @@ export async function GET(
       include: {
         category: true,
         creditCard: true,
-        billItems: {
-          include: {
-            bill: true,
-          },
-          orderBy: {
-            installmentNumber: 'asc',
-          },
-        },
+        creditBill: true,
       },
     });
 
@@ -111,11 +105,7 @@ export async function PUT(
         userId: user.id,
       },
       include: {
-        billItems: {
-          include: {
-            bill: true,
-          },
-        },
+        creditBill: true,
       },
     });
 
@@ -123,14 +113,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Gasto não encontrado' }, { status: 404 });
     }
 
-    // Verificar se alguma parcela já está em fatura fechada
-    const hasClosedBills = existingExpense.billItems.some(
-      (item: any) => item.bill && item.bill.status !== 'PENDING'
-    );
-
-    if (hasClosedBills) {
+    // Verificar se está em fatura fechada
+    if (existingExpense.creditBill && existingExpense.creditBill.status !== 'PENDING') {
       return NextResponse.json({
-        error: 'Não é possível editar gastos com parcelas em faturas já fechadas'
+        error: 'Não é possível editar gastos em faturas já fechadas'
       }, { status: 400 });
     }
 
@@ -159,24 +145,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Cartão de crédito não encontrado' }, { status: 404 });
     }
 
-    // Calcular as novas parcelas
-    const installmentDates = calculateInstallmentDates(
-      creditCard,
-      new Date(purchaseDate),
-      installments,
-      parseFloat(amount)
-    );
-
     // Iniciar transação
     const result = await prisma.$transaction(async (tx: any) => {
-      // Deletar itens de fatura existentes
-      await tx.creditBillItem.deleteMany({
-        where: {
-          creditExpenseId: params.id,
-        },
-      });
+      const oldBillId = existingExpense.creditBillId;
 
-      // Atualizar o gasto principal
+      // Atualizar o gasto
       const creditExpense = await tx.creditExpense.update({
         where: { id: params.id },
         data: {
@@ -192,27 +165,21 @@ export async function PUT(
         include: {
           category: true,
           creditCard: true,
+          creditBill: true,
         },
       });
 
-      // Criar os novos itens da fatura (parcelas)
-      const billItems = await Promise.all(
-        installmentDates.map((installment) =>
-          tx.creditBillItem.create({
-            data: {
-              creditExpenseId: creditExpense.id,
-              installmentNumber: installment.installment,
-              amount: installment.value,
-              dueDate: installment.dueDate,
-            },
-          })
-        )
-      );
+      // Recalcular fatura antiga se existir
+      if (oldBillId) {
+        await recalculateBillTotal(tx, oldBillId);
+      }
 
-      return {
-        ...creditExpense,
-        billItems,
-      };
+      // Recalcular fatura nova se for diferente
+      if (creditExpense.creditBillId && creditExpense.creditBillId !== oldBillId) {
+        await recalculateBillTotal(tx, creditExpense.creditBillId);
+      }
+
+      return creditExpense;
     });
 
     return NextResponse.json(result);
@@ -274,17 +241,7 @@ export async function DELETE(
 
       // Se estava associado a uma fatura, recalcular o total
       if (billId) {
-        const totalAmount = await tx.creditExpense.aggregate({
-          where: { creditBillId: billId },
-          _sum: { amount: true },
-        });
-
-        await tx.creditBill.update({
-          where: { id: billId },
-          data: {
-            totalAmount: totalAmount._sum.amount || 0,
-          },
-        });
+        await recalculateBillTotal(tx, billId);
       }
 
       return { affectedBill: billId ? 1 : 0 };

@@ -104,7 +104,11 @@ export async function GET(request: NextRequest) {
       prisma.creditBill.findMany({
         where,
         include: {
-          creditCard: true,
+          creditCard: {
+            include: {
+              bank: true,
+            },
+          },
           creditExpenses: {
             include: {
               category: true,

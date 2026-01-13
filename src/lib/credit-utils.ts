@@ -25,15 +25,15 @@ export interface InstallmentInfo {
  * Calcula as datas de vencimento das parcelas baseado no cartão de crédito
  * 
  * Lógica:
- * - Compras feitas APÓS o fechamento (ex: dia 1 em diante se fechamento é dia 30) 
+ * - Compras feitas APÓS o fechamento (ex: dia 31 se fechamento é dia 30) 
  *   vão para a fatura do MÊS SEGUINTE ao mês seguinte (ou seja, +2 meses)
  * - Compras feitas ATÉ o fechamento (ex: até dia 30)
  *   vão para a fatura do MÊS SEGUINTE (+1 mês)
  * 
  * Exemplo: Fechamento dia 30, vencimento dia 7
- * - Compra em 01/out → Fatura de novembro (vence 07/nov)
- * - Compra em 29/out → Fatura de novembro (vence 07/nov)
- * - Compra em 31/out → Fatura de dezembro (vence 07/dez)
+ * - Compra em 05/jan → Fatura de fevereiro (vence 07/fev)
+ * - Compra em 29/jan → Fatura de fevereiro (vence 07/fev)  
+ * - Compra em 31/jan → Fatura de março (vence 07/mar)
  */
 export function calculateInstallmentDates(
   creditCard: CreditCard,
@@ -46,11 +46,11 @@ export function calculateInstallmentDates(
   
   // Determinar a qual fatura a compra pertence
   const purchaseDay = purchaseDate.getDate();
-  const purchaseMonth = purchaseDate.getMonth();
+  const purchaseMonth = purchaseDate.getMonth(); // 0-based (Jan=0, Fev=1...)
   const purchaseYear = purchaseDate.getFullYear();
   
   // Se a compra foi APÓS o fechamento do mês atual, vai para a fatura do mês seguinte ao próximo (+2)
-  // Se foi ATÉ o fechamento, vai para a fatura do mês seguinte (+1)
+  // Se foi ATÉ o fechamento, vai para a fatura do mês seguinte (+1)  
   const isAfterClosing = purchaseDay > creditCard.closingDay;
   
   for (let i = 0; i < installmentCount; i++) {
@@ -59,13 +59,13 @@ export function calculateInstallmentDates(
     // Se foi até fechamento: primeira parcela +1 mês, depois +2, +3...
     const monthsToAdd = isAfterClosing ? i + 2 : i + 1;
     
-    // Calcular o mês de vencimento da parcela
-    const dueMonth = purchaseMonth + monthsToAdd;
-    const dueYear = purchaseYear + Math.floor(dueMonth / 12);
-    const normalizedDueMonth = dueMonth % 12;
+    // Calcular o mês de vencimento da parcela (0-based)
+    const targetMonth = purchaseMonth + monthsToAdd;
+    const dueYear = purchaseYear + Math.floor(targetMonth / 12);
+    const dueMonth = targetMonth % 12; // Normalized month (0-based)
     
     // Definir o dia de vencimento da fatura
-    const dueDate = new Date(dueYear, normalizedDueMonth, creditCard.dueDay);
+    const dueDate = new Date(dueYear, dueMonth, creditCard.dueDay);
     
     // Ajustar o valor da última parcela para compensar arredondamentos
     const amount = i === installmentCount - 1 
@@ -127,18 +127,12 @@ export function getBillPeriodForInstallment(
   creditCard: CreditCard,
   installmentDueDate: Date
 ): { year: number; month: number } {
-  // Pegar o mês/ano da data de vencimento da parcela
-  const purchaseMonth = installmentDueDate.getMonth(); // 0-based
-  const purchaseYear = installmentDueDate.getFullYear();
+  // A data de vencimento da parcela JÁ É a data de vencimento da fatura
+  // Não precisa fazer conversões complicadas
+  const year = installmentDueDate.getFullYear();
+  const month = installmentDueDate.getMonth(); // 0-based para usar direto nas funções
   
-  // Calcular a data de vencimento da fatura para este período
-  const dueDate = calculateDueDate(creditCard, purchaseYear, purchaseMonth);
-  
-  // O período da fatura é identificado pelo mês do VENCIMENTO da fatura (1-based)
-  return {
-    year: dueDate.getFullYear(),
-    month: dueDate.getMonth() + 1 // Converter de 0-based para 1-based
-  };
+  return { year, month };
 }
 
 /**
