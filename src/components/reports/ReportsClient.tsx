@@ -410,7 +410,8 @@ export default function ReportsClient() {
   }, [type, startDate, endDate, selectedTagIds, selectedCategoryIds, selectedWalletIds, selectedCreditCardIds]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full overflow-hidden space-y-4">
+      <div className="flex-none space-y-4">
       <form
         className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end"
         aria-labelledby="reports-filters"
@@ -585,8 +586,10 @@ export default function ReportsClient() {
           </div>
         </div>
       </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch flex-none">
         <div className="flex items-center gap-2">
           <Button
             aria-label="Página anterior"
@@ -664,13 +667,13 @@ export default function ReportsClient() {
         </div>
       </div>
 
-      <div>
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {loading ? (
-          <div role="status" aria-live="polite">
+          <div role="status" aria-live="polite" className="p-4">
             Carregando...
           </div>
         ) : data.length === 0 ? (
-          <div role="status" aria-live="polite">
+          <div role="status" aria-live="polite" className="p-4">
             Nenhum resultado
             {filterDebug ? (
               <div className="mt-2 text-xs text-slate-500">
@@ -680,7 +683,7 @@ export default function ReportsClient() {
             ) : null}
           </div>
         ) : (
-          <div className="overflow-auto border rounded">
+          <div className="flex-1 overflow-auto border rounded min-h-0">
             <table className="w-full text-left" role="table" aria-label="Tabela de resultados">
               <caption className="sr-only">
                 Resultados do filtro de relatórios (data, tipo, categoria, carteira)
@@ -746,6 +749,7 @@ export default function ReportsClient() {
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
