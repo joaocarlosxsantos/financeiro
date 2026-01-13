@@ -17,8 +17,8 @@ export async function GET() {
   });
 
   const headers = new Headers();
-  // categories rarely change; safe to cache for 60s (adjust as needed)
-  headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  // Desabilitado cache para evitar problemas ao excluir categorias
+  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   return NextResponse.json(categories, { headers });
 }
 
