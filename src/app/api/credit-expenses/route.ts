@@ -198,8 +198,8 @@ export async function POST(request: NextRequest) {
         installmentInfo.dueDate
       );
       
-      const closingDate = calculateClosingDate(creditCard as any, billPeriod.year, billPeriod.month);
-      const dueDate = calculateDueDate(creditCard as any, billPeriod.year, billPeriod.month);
+      const closingDate = calculateClosingDate(creditCard as any, billPeriod.year, billPeriod.month - 1);
+      const dueDate = calculateDueDate(creditCard as any, billPeriod.year, billPeriod.month - 1);
       
       // Buscar ou criar a fatura
       let bill = await prisma.creditBill.findFirst({

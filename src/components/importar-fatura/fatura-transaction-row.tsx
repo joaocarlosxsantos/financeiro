@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { Check, X, Plus, Wand2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { MultiTagSelector } from '../importar-extrato/multi-tag-selector';
@@ -106,10 +107,10 @@ export function FaturaTransactionRow({
       <td className="px-3 py-2 w-[25%]">
         <div className="space-y-1.5">
           <div className="flex gap-1.5">
-            <select
+            <Select
               value={registro.categoriaId || ''}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onEdit(index, 'categoriaId', e.target.value)}
-              className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-8 text-xs"
             >
               <option value="">Selecionar</option>
               {categorias
@@ -119,7 +120,7 @@ export function FaturaTransactionRow({
                     {cat.name}
                   </option>
                 ))}
-            </select>
+            </Select>
             <Button
               type="button"
               variant="outline"

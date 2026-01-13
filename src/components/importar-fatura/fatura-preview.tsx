@@ -11,6 +11,7 @@ import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-mod
 
 interface FaturaPreviewProps {
   preview: any[];
+  categorias?: any[]; // Categorias existentes vindas da API
   creditCards: any[];
   selectedCreditCard: string;
   onCreditCardChange: (id: string) => void;
@@ -26,6 +27,7 @@ interface FaturaPreviewProps {
 
 export function FaturaPreview({
   preview,
+  categorias: categoriasIniciais = [],
   creditCards,
   selectedCreditCard,
   onCreditCardChange,
@@ -54,18 +56,23 @@ export function FaturaPreview({
       valor: typeof r.valor === 'number' ? r.valor : parseFloat(r.valor) || 0,
     })));
 
-    // Buscar categorias
-    fetch('/api/categorias')
-      .then((res) => res.json())
-      .then((data) => setCategorias(data))
-      .catch((err) => console.error('Erro ao buscar categorias:', err));
+    // Se já temos categorias iniciais, usar elas, senão buscar da API
+    if (categoriasIniciais.length > 0) {
+      setCategorias(categoriasIniciais);
+    } else {
+      // Buscar categorias
+      fetch('/api/categories')
+        .then((res) => res.json())
+        .then((data) => setCategorias(data))
+        .catch((err) => console.error('Erro ao buscar categorias:', err));
+    }
 
     // Buscar tags
     fetch('/api/tags')
       .then((res) => res.json())
       .then((data) => setTags(data))
       .catch((err) => console.error('Erro ao buscar tags:', err));
-  }, [preview]);
+  }, [preview, categoriasIniciais]);
 
   function handleEdit(index: number, field: string, value: any) {
     setRegistros((prev) =>
@@ -78,7 +85,7 @@ export function FaturaPreview({
       // Converter string para o tipo esperado
       const type = categoryType === 'INCOME' ? 'INCOME' : 'EXPENSE';
       
-      const response = await fetch('/api/categorias', {
+      const response = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type }),
@@ -116,16 +123,24 @@ export function FaturaPreview({
     const registro = registros[index];
     if (!registro.categoriaSugerida) return;
 
-    const existingCategory = categorias.find(
-      (cat) => cat.name.toLowerCase() === registro.categoriaSugerida.toLowerCase()
-    );
-
-    if (existingCategory) {
-      handleEdit(index, 'categoriaId', existingCategory.id);
+    // Se a IA já identificou uma categoria existente (tem categoriaId)
+    if (registro.categoriaId) {
+      handleEdit(index, 'categoriaId', registro.categoriaId);
     } else {
-      handleEdit(index, 'categoriaId', registro.categoriaSugerida);
+      // Se não tem categoriaId, procurar na lista de categorias
+      const existingCategory = categorias.find(
+        (cat) => cat.name.toLowerCase() === registro.categoriaSugerida.toLowerCase()
+      );
+
+      if (existingCategory) {
+        handleEdit(index, 'categoriaId', existingCategory.id);
+      } else {
+        // Se não existe, marcar como categoria a ser criada
+        handleEdit(index, 'categoriaId', registro.categoriaSugerida);
+      }
     }
 
+    // Limpar sugestão após aceitar
     handleEdit(index, 'categoriaSugerida', '');
   }
 

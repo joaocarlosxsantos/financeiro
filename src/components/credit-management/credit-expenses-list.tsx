@@ -225,7 +225,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         throw new Error(errorData.error || `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}`);
       }
 
-      // Recarregar a lista
+      // Recarregar a listad
       reloadExpenses();
     } catch (error) {
       console.error(`Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}:`, error);

@@ -306,15 +306,9 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        // Adicionar observação se estiver fora do período
-        let observacao = '';
-        if (isOutsidePeriod && calculatedBillPeriod) {
-          observacao = ` [Antecipado da fatura ${calculatedBillPeriod.month}/${calculatedBillPeriod.year}]`;
-        }
-
         // Armazenar crédito para criar depois com billId
         billsMap.get(billKey)!.incomes.push({
-          description: descricao + observacao,
+          description: descricao,
           amount: valor,
           date: data,
           categoryId: reg.categoriaId || null,
@@ -376,15 +370,9 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Adicionar observação se estiver fora do período
-      let observacao = '';
-      if (isOutsidePeriod && calculatedBillPeriod) {
-        observacao = ` [Antecipado da fatura ${calculatedBillPeriod.month}/${calculatedBillPeriod.year}]`;
-      }
-
       // Armazenar info temporária para criar depois com billId
       billsMap.get(billKey)!.expenses.push({
-        description: descricao + observacao,
+        description: descricao,
         amount: valor,
         purchaseDate: data,
         categoryId: reg.categoriaId || null,

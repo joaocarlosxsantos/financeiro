@@ -128,9 +128,9 @@ export function getBillPeriodForInstallment(
   installmentDueDate: Date
 ): { year: number; month: number } {
   // A data de vencimento da parcela JÁ É a data de vencimento da fatura
-  // Não precisa fazer conversões complicadas
+  // Convertemos para base 1 (janeiro = 1) para facilitar uso
   const year = installmentDueDate.getFullYear();
-  const month = installmentDueDate.getMonth(); // 0-based para usar direto nas funções
+  const month = installmentDueDate.getMonth() + 1; // Converter para base 1
   
   return { year, month };
 }
@@ -284,8 +284,8 @@ export async function createBillsForInstallments(
   }
   // Criar ou atualizar as faturas
   for (const period of billsToCreate) {
-    const closingDate = calculateClosingDate(creditCard, period.year, period.month);
-    const dueDate = calculateDueDate(creditCard, period.year, period.month);
+    const closingDate = calculateClosingDate(creditCard, period.year, period.month - 1); // Converter para base 0
+    const dueDate = calculateDueDate(creditCard, period.year, period.month - 1); // Converter para base 0
     
     // Buscar todos os itens que devem entrar nesta fatura
     const billItems = await prisma.creditBillItem.findMany({

@@ -10,6 +10,7 @@ export default function ImportarFaturaPage() {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
   const [preview, setPreview] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<any[]>([]);
   const [creditCards, setCreditCards] = useState<any[]>([]);
   const [selectedCreditCard, setSelectedCreditCard] = useState<string>('');
   const [billMonth, setBillMonth] = useState<number>(new Date().getMonth() + 1);
@@ -60,6 +61,7 @@ export default function ImportarFaturaPage() {
 
       const data = await response.json();
       setPreview(data.transactions);
+      setCategorias(data.categories || []); // Salvar categorias da resposta
       setStep('preview');
     } catch (err: any) {
       setError(err.message || 'Erro ao processar arquivo');
@@ -158,6 +160,7 @@ export default function ImportarFaturaPage() {
             </button>
             <FaturaPreview
               preview={preview}
+              categorias={categorias}
               creditCards={creditCards}
               selectedCreditCard={selectedCreditCard}
               onCreditCardChange={setSelectedCreditCard}
