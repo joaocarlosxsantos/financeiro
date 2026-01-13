@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 
     // Atualizar status e recalcular totalAmount dinamicamente
     const currentDate = new Date();
-    const billsToUpdate = [];
+    const billsToUpdate: { id: string; status: string; totalAmount: number }[] = [];
     
     const updatedBills = bills.map((bill: any) => {
       // Calcular total real: despesas - créditos

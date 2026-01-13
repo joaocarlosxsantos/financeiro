@@ -97,8 +97,8 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
 
     for (const item of installments) {
       const isPaid = expense.childExpenses 
-        ? item.creditBill?.status === 'PAID'
-        : item.bill?.status === 'PAID';
+        ? (item as any).creditBill?.status === 'PAID'
+        : (item as any).bill?.status === 'PAID';
         
       if (isPaid) {
         paidInstallments++;
@@ -370,8 +370,8 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                     {(expense.childExpenses || expense.billItems || []).map((item) => {
                       const isSelected = selectedInstallments.includes(item.installmentNumber);
                       const isPaid = expense.childExpenses 
-                        ? item.creditBill?.status === 'PAID'
-                        : item.bill?.status === 'PAID';
+                        ? (item as any).creditBill?.status === 'PAID'
+                        : (item as any).bill?.status === 'PAID';
                       
                       return (
                         <label 
@@ -404,8 +404,8 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                               <p className="text-xs text-muted-foreground mt-1">
                                 {formatDate(
                                   expense.childExpenses 
-                                    ? item.creditBill?.dueDate || item.purchaseDate
-                                    : item.dueDate
+                                    ? (item as any).creditBill?.dueDate || (item as any).purchaseDate
+                                    : (item as any).dueDate
                                 )}
                               </p>
                             </div>
