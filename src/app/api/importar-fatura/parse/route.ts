@@ -232,7 +232,7 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
         
         const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
           return !tagsExistentes.some(
-            (tagExistente) =>
+            (tagExistente: { name: string }) =>
               removeAcentos(tagExistente.name.toLowerCase()) ===
               removeAcentos(tagSugerida.toLowerCase()),
           );
