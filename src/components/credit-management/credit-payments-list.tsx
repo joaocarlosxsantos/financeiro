@@ -99,7 +99,16 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
       if (!response.ok) return;
       
       const data = await response.json();
-      setPendingBills(data.data || []);
+      const bills = data.data || [];
+      
+      // Ordenar por data de vencimento crescente (mais próximo primeiro)
+      bills.sort((a: CreditBill, b: CreditBill) => {
+        const dateA = new Date(a.dueDate).getTime();
+        const dateB = new Date(b.dueDate).getTime();
+        return dateA - dateB;
+      });
+      
+      setPendingBills(bills);
     } catch (error) {
       console.error('Erro ao carregar faturas pendentes:', error);
     }

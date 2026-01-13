@@ -248,11 +248,7 @@ export async function DELETE(
         userId: user.id,
       },
       include: {
-        billItems: {
-          include: {
-            bill: true,
-          },
-        },
+        creditBill: true,
       },
     });
 
@@ -260,41 +256,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'Gasto não encontrado' }, { status: 404 });
     }
 
-    // Verificar se alguma parcela já está em fatura fechada
-    const hasClosedBills = existingExpense.billItems.some(
-      (item: any) => item.bill && item.bill.status !== 'PENDING'
-    );
-
-    if (hasClosedBills) {
+    // Verificar se está em fatura fechada
+    if (existingExpense.creditBill && existingExpense.creditBill.status !== 'PENDING') {
       return NextResponse.json({
-        error: 'Não é possível excluir gastos com parcelas em faturas já fechadas'
+        error: 'Não é possível excluir gastos em faturas já fechadas'
       }, { status: 400 });
     }
 
     // Usar transação para garantir consistência
     const result = await prisma.$transaction(async (tx: any) => {
-      // 1. Coletar IDs das faturas que serão afetadas
-      const affectedBillIds: string[] = [];
-      for (const item of existingExpense.billItems) {
-        if (item.bill && !affectedBillIds.includes(item.bill.id)) {
-          affectedBillIds.push(item.bill.id);
-        }
-      }
+      const billId = existingExpense.creditBillId;
 
-      // 2. Deletar o gasto (cascade vai deletar os billItems automaticamente)
+      // Deletar o gasto
       await tx.creditExpense.delete({
         where: { id: params.id },
       });
 
-      // 3. Recalcular o valor total das faturas afetadas
-      for (const billId of affectedBillIds) {
-        // Somar todos os itens restantes na fatura
-        const totalAmount = await tx.creditBillItem.aggregate({
-          where: { billId },
+      // Se estava associado a uma fatura, recalcular o total
+      if (billId) {
+        const totalAmount = await tx.creditExpense.aggregate({
+          where: { creditBillId: billId },
           _sum: { amount: true },
         });
 
-        // Atualizar o valor total da fatura (pode ser 0)
         await tx.creditBill.update({
           where: { id: billId },
           data: {
@@ -303,12 +287,12 @@ export async function DELETE(
         });
       }
 
-      return { affectedBills: affectedBillIds.length };
+      return { affectedBill: billId ? 1 : 0 };
     });
 
     return NextResponse.json({ 
       message: 'Gasto excluído com sucesso',
-      affectedBills: result.affectedBills
+      affectedBill: result.affectedBill
     });
   } catch (error) {
     console.error('Erro ao excluir gasto:', error);

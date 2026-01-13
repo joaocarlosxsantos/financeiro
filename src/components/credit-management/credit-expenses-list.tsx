@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Loader2, Edit, Trash2, CreditCard, RotateCcw, AlertTriangle, Plus, X, Check } from 'lucide-react';
+import { Loader2, Edit, Trash2, CreditCard, RotateCcw, AlertTriangle, Plus, X, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import RefundDialog from './refund-dialog';
 import { Modal } from '../ui/modal';
 
@@ -61,13 +61,9 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [selectedExpenseForRefund, setSelectedExpenseForRefund] = useState<CreditExpense | null>(null);
   
-  // Estados para criação de categorias e tags
-  const [categories, setCategories] = useState<any[]>([]);
-  const [tags, setTags] = useState<any[]>([]);
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [showTagForm, setShowTagForm] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newTagName, setNewTagName] = useState('');
+  // Estados para ordenação
+  const [sortColumn, setSortColumn] = useState<'description' | 'amount' | 'purchaseDate' | 'creditCard' | 'category'>('purchaseDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const loadData = async () => {
@@ -92,11 +88,9 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
           
         }
 
-        const [expensesRes, incomesRes, categoriesRes, tagsRes] = await Promise.all([
+        const [expensesRes, incomesRes] = await Promise.all([
           fetch(url),
-          fetch(incomesUrl),
-          fetch('/api/categories'),
-          fetch('/api/tags')
+          fetch(incomesUrl)
         ]);
       
         if (!expensesRes.ok) {
@@ -129,17 +123,6 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         });
 
         setExpenses(allTransactions);
-
-        // Carregar categorias e tags se as requisições foram bem-sucedidas
-        if (categoriesRes.ok) {
-          const categoriesData = await categoriesRes.json();
-          setCategories(categoriesData);
-        }
-        
-        if (tagsRes.ok) {
-          const tagsData = await tagsRes.json();
-          setTags(tagsData);
-        }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         setError(error instanceof Error ? error.message : 'Erro desconhecido');
@@ -213,54 +196,49 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
 
   const deletingExpense = confirmingDelete ? expenses.find((e) => e.id === confirmingDelete) : null;
 
-  // Funções para criar categoria e tag
-  const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return;
-    
-    try {
-      const response = await fetch('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newCategoryName.trim(),
-          type: 'EXPENSE',
-          color: 'var(--c-3b82f6)'
-        })
-      });
-
-      if (response.ok) {
-        const newCategory = await response.json();
-        setCategories(prev => [...prev, newCategory]);
-        setNewCategoryName('');
-        setShowCategoryForm(false);
-      }
-    } catch (error) {
-      console.error('Erro ao criar categoria:', error);
+  // Função para alternar ordenação
+  const handleSort = (column: typeof sortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
   };
 
-  const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
+  // Dados ordenados
+  const sortedExpenses = [...expenses].sort((a, b) => {
+    let comparison = 0;
     
-    try {
-      const response = await fetch('/api/tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newTagName.trim(),
-          color: 'var(--c-6b7280)'
-        })
-      });
-
-      if (response.ok) {
-        const newTag = await response.json();
-        setTags(prev => [...prev, newTag]);
-        setNewTagName('');
-        setShowTagForm(false);
-      }
-    } catch (error) {
-      console.error('Erro ao criar tag:', error);
+    switch (sortColumn) {
+      case 'description':
+        comparison = a.description.localeCompare(b.description);
+        break;
+      case 'amount':
+        comparison = a.amount - b.amount;
+        break;
+      case 'purchaseDate':
+        comparison = new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime();
+        break;
+      case 'creditCard':
+        comparison = a.creditCard.name.localeCompare(b.creditCard.name);
+        break;
+      case 'category':
+        comparison = (a.category?.name || '').localeCompare(b.category?.name || '');
+        break;
     }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Renderizar ícone de ordenação
+  const SortIcon = ({ column }: { column: typeof sortColumn }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1" /> 
+      : <ArrowDown className="h-3 w-3 ml-1" />;
   };
 
   const formatCurrency = (amount: number) => {
@@ -323,123 +301,69 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Gastos de Crédito</h3>
-        <div className="text-sm text-muted-foreground">
-          {expenses.length} {expenses.length === 1 ? 'gasto' : 'gastos'}
-        </div>
-      </div>
 
-      {/* Seção de criação rápida de categorias e tags */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-dashed border-muted-foreground/30">
-        {/* Criar categoria */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-medium text-muted-foreground">Criar Nova Categoria</Label>
-            <span className="text-xs text-muted-foreground">
-              {categories.filter(cat => cat.type === 'EXPENSE' || cat.type === 'BOTH').length} disponíveis
-            </span>
-          </div>
-          {!showCategoryForm ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCategoryForm(true)}
-              className="w-full justify-start"
-            >
-              <Plus className="h-3 w-3 mr-2" />
-              Nova Categoria de Despesa
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nome da categoria"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="text-xs h-8"
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateCategory()}
-              />
-              <Button size="sm" onClick={handleCreateCategory} className="h-8 w-8 p-0">
-                <Check className="h-3 w-3" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  setShowCategoryForm(false);
-                  setNewCategoryName('');
-                }}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Criar tag */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-medium text-muted-foreground">Criar Nova Tag</Label>
-            <span className="text-xs text-muted-foreground">
-              {tags.length} disponíveis
-            </span>
-          </div>
-          {!showTagForm ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowTagForm(true)}
-              className="w-full justify-start"
-            >
-              <Plus className="h-3 w-3 mr-2" />
-              Nova Tag
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nome da tag"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                className="text-xs h-8"
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateTag()}
-              />
-              <Button size="sm" onClick={handleCreateTag} className="h-8 w-8 p-0">
-                <Check className="h-3 w-3" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  setShowTagForm(false);
-                  setNewTagName('');
-                }}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-lg border border-muted bg-background shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-muted bg-background shadow-sm max-h-[650px]">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-muted/60 text-muted-foreground border-b">
-              <th className="px-4 py-3 text-left font-semibold min-w-[200px]">Descrição</th>
-              <th className="px-4 py-3 text-right font-semibold min-w-[120px]">Valor</th>
+              <th 
+                className="px-4 py-3 text-center font-semibold min-w-[160px] cursor-pointer hover:bg-muted transition-colors select-none"
+                onClick={() => handleSort('purchaseDate')}
+              >
+                <div className="flex items-center justify-center">
+                  Data/Hora
+                  <SortIcon column="purchaseDate" />
+                </div>
+              </th>
+              <th 
+                className="px-4 py-3 text-left font-semibold min-w-[200px] cursor-pointer hover:bg-muted transition-colors select-none"
+                onClick={() => handleSort('description')}
+              >
+                <div className="flex items-center">
+                  Descrição
+                  <SortIcon column="description" />
+                </div>
+              </th>
+              <th 
+                className="px-4 py-3 text-right font-semibold min-w-[120px] cursor-pointer hover:bg-muted transition-colors select-none"
+                onClick={() => handleSort('amount')}
+              >
+                <div className="flex items-center justify-end">
+                  Valor
+                  <SortIcon column="amount" />
+                </div>
+              </th>
               <th className="px-4 py-3 text-center font-semibold min-w-[100px]">Parcelas</th>
-              <th className="px-4 py-3 text-center font-semibold min-w-[160px]">Data/Hora</th>
-              <th className="px-4 py-3 text-center font-semibold min-w-[120px]">Cartão</th>
-              <th className="px-4 py-3 text-center font-semibold min-w-[130px]">Categoria</th>
+              <th 
+                className="px-4 py-3 text-center font-semibold min-w-[120px] cursor-pointer hover:bg-muted transition-colors select-none"
+                onClick={() => handleSort('creditCard')}
+              >
+                <div className="flex items-center justify-center">
+                  Cartão
+                  <SortIcon column="creditCard" />
+                </div>
+              </th>
+              <th 
+                className="px-4 py-3 text-center font-semibold min-w-[130px] cursor-pointer hover:bg-muted transition-colors select-none"
+                onClick={() => handleSort('category')}
+              >
+                <div className="flex items-center justify-center">
+                  Categoria
+                  <SortIcon column="category" />
+                </div>
+              </th>
               <th className="px-4 py-3 text-center font-semibold min-w-[150px]">Tags</th>
               <th className="px-4 py-3 text-center font-semibold min-w-[120px]">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {(expenses || []).map((expense) => (
+            {(sortedExpenses || []).map((expense) => (
               <tr key={expense.id} className="border-b hover:bg-accent/50 transition-colors">
+                <td className="px-4 py-3 text-center">
+                  <div className="text-xs font-mono">
+                    {formatDate(expense.purchaseDate)}
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <div className="font-medium text-foreground truncate max-w-[200px]" title={expense.description}>
                     {expense.description}
@@ -493,11 +417,6 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <div className="text-xs font-mono">
-                    {formatDate(expense.purchaseDate)}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-center">
                   <Badge variant="secondary" className="text-xs font-medium">
                     {expense.creditCard.name}
                   </Badge>
@@ -509,18 +428,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                         {expense.category.name}
                       </Badge>
                     ) : (
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-xs text-muted-foreground">Sem categoria</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => setShowCategoryForm(true)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Criar
-                        </Button>
-                      </div>
+                      <span className="text-xs text-muted-foreground">Sem categoria</span>
                     )}
                   </div>
                 </td>
@@ -544,18 +452,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                         })}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-xs text-muted-foreground">Sem tags</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => setShowTagForm(true)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Criar
-                        </Button>
-                      </div>
+                      <span className="text-xs text-muted-foreground">Sem tags</span>
                     )}
                   </div>
                 </td>
@@ -605,6 +502,12 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold"></h3>
+        <div className="text-sm text-muted-foreground">
+          {expenses.length} {expenses.length === 1 ? 'gasto' : 'gastos'}
+        </div>
       </div>
 
       {/* Diálogo de estorno */}
