@@ -33,7 +33,11 @@ export async function DELETE(
         userId: user.id,
       },
       include: {
-        creditBill: true,
+        creditBill: {
+          include: {
+            payments: true, // Incluir pagamentos para verificar se a fatura foi paga
+          }
+        },
       },
     });
 
@@ -41,11 +45,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Crédito não encontrado' }, { status: 404 });
     }
 
-    // Verificar se está em fatura fechada
+    // Verificar se está em fatura fechada E se há pagamentos vinculados
     if (existingIncome.creditBill && existingIncome.creditBill.status !== 'PENDING') {
-      return NextResponse.json({
-        error: 'Não é possível excluir créditos em faturas já fechadas'
-      }, { status: 400 });
+      // Se a fatura está fechada mas não tem pagamentos, permite exclusão
+      const hasPayments = existingIncome.creditBill.payments && existingIncome.creditBill.payments.length > 0;
+      
+      if (hasPayments) {
+        return NextResponse.json({
+          error: 'Não é possível excluir créditos de faturas que já foram pagas'
+        }, { status: 400 });
+      }
+      
+      // Fatura fechada mas sem pagamentos - permite exclusão
+      // (provavelmente foi fechada automaticamente por estar com valor 0)
     }
 
     // Usar transação para garantir consistência

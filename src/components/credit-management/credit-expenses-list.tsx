@@ -165,6 +165,18 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
   };
 
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  
+  // Estado para modal de erro
+  const [errorModal, setErrorModal] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: '',
+    message: ''
+  });
+
+  // Função para mostrar erro em modal
+  const showError = (title: string, message: string) => {
+    setErrorModal({ open: true, title, message });
+  };
 
   const handleDelete = (id: string) => {
     setConfirmingDelete(id);
@@ -197,13 +209,16 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
         
         if (response.status === 404) {
-          alert(`${isIncome ? 'Crédito' : 'Gasto'} não encontrado. A lista será atualizada.`);
+          showError('Registro não encontrado', `${isIncome ? 'Crédito' : 'Gasto'} não encontrado. A lista será atualizada.`);
           reloadExpenses();
           return;
         }
         
         if (response.status === 400) {
-          alert(errorData.error || `Não é possível excluir este ${isIncome ? 'crédito' : 'gasto'}.`);
+          showError(
+            'Operação não permitida',
+            errorData.error || `Não é possível excluir este ${isIncome ? 'crédito' : 'gasto'}.`
+          );
           return;
         }
         
@@ -214,7 +229,10 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
       reloadExpenses();
     } catch (error) {
       console.error(`Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}:`, error);
-      alert(error instanceof Error ? error.message : `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}. Tente novamente.`);
+      showError(
+        'Erro interno',
+        error instanceof Error ? error.message : `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}. Tente novamente.`
+      );
     }
   };
 
@@ -590,6 +608,36 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
           </div>
         </Modal>
       )}
+
+      {/* Modal de erro */}
+      <Modal 
+        open={errorModal.open} 
+        onClose={() => setErrorModal({ open: false, title: '', message: '' })} 
+        size="sm"
+      >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-shrink-0">
+            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-red-700">{errorModal.title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {errorModal.message}
+            </p>
+            <div className="mt-4 sm:mt-6 flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setErrorModal({ open: false, title: '', message: '' })}
+                className="w-full sm:w-auto"
+              >
+                OK
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
