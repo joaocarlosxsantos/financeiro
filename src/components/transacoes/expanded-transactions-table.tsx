@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Pencil, Trash } from 'lucide-react';
+import { MoreVertical, Pencil, Trash, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { TransactionFormModal } from './transaction-form-modal';
 import { ConfirmDeleteModal } from './confirm-delete-modal';
 import { RecurringDeleteModal } from './recurring-delete-modal';
@@ -60,6 +60,8 @@ export function ExpandedTransactionsTable({
   const [data, setData] = useState<ExpandedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<'date' | 'description' | 'category' | 'wallet' | 'amount'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchTransactions();
@@ -113,6 +115,51 @@ export function ExpandedTransactionsTable({
 
   const formatDate = (dateStr: string) => {
     return format(new Date(dateStr + 'T00:00:00'), 'dd/MMM', { locale: pt });
+  };
+
+  // Função para alternar ordenação
+  const handleSort = (column: 'date' | 'description' | 'category' | 'wallet' | 'amount') => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Dados ordenados
+  const sortedData = [...data].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortColumn) {
+      case 'date':
+        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+        break;
+      case 'description':
+        comparison = a.description.localeCompare(b.description);
+        break;
+      case 'category':
+        comparison = (a.category?.name || '').localeCompare(b.category?.name || '');
+        break;
+      case 'wallet':
+        comparison = a.wallet.name.localeCompare(b.wallet.name);
+        break;
+      case 'amount':
+        comparison = Number(a.amount) - Number(b.amount);
+        break;
+    }
+    
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Renderizar ícone de ordenação
+  const SortIcon = ({ column }: { column: typeof sortColumn }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-40" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
 
@@ -310,17 +357,57 @@ export function ExpandedTransactionsTable({
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Data</th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Descrição</th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Categoria</th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Carteira</th>
-              <th className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Valor</th>
+              <th 
+                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                onClick={() => handleSort('date')}
+              >
+                <div className="flex items-center">
+                  Data
+                  <SortIcon column="date" />
+                </div>
+              </th>
+              <th 
+                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                onClick={() => handleSort('description')}
+              >
+                <div className="flex items-center">
+                  Descrição
+                  <SortIcon column="description" />
+                </div>
+              </th>
+              <th 
+                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                onClick={() => handleSort('category')}
+              >
+                <div className="flex items-center">
+                  Categoria
+                  <SortIcon column="category" />
+                </div>
+              </th>
+              <th 
+                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                onClick={() => handleSort('wallet')}
+              >
+                <div className="flex items-center">
+                  Carteira
+                  <SortIcon column="wallet" />
+                </div>
+              </th>
+              <th 
+                className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                onClick={() => handleSort('amount')}
+              >
+                <div className="flex items-center justify-end">
+                  Valor
+                  <SortIcon column="amount" />
+                </div>
+              </th>
               <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tags</th>
               <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {data.map((transaction) => (
+            {sortedData.map((transaction) => (
               <tr
                 key={transaction.id}
                 className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -406,10 +493,10 @@ export function ExpandedTransactionsTable({
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
         <div className="text-sm text-gray-700 dark:text-gray-300">
           <strong className="text-gray-900 dark:text-gray-100">
-            Total ({data.length} transações):
+            Total ({sortedData.length} transações):
           </strong>{' '}
           <span className="font-bold text-gray-900 dark:text-gray-100">
-            {formatAmount(data.reduce((sum, t) => sum + Number(t.amount), 0).toString())}
+            {formatAmount(sortedData.reduce((sum, t) => sum + Number(t.amount), 0).toString())}
           </span>
         </div>
       </div>
