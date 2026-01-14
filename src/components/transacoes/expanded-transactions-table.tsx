@@ -228,8 +228,8 @@ export function ExpandedTransactionsTable({
   const handleEditSubmit = async (form: any) => {
     if (!editModal.transaction) return;
     
-    const originalType = editModal.transaction.transactionType; // 'expense' ou 'income'
-    const newType = form.type; // 'expense' ou 'income'
+    const originalType = transactionType; // 'expense' ou 'income' do componente
+    const newType = form.type; // 'expense' ou 'income' do formulário
     
     // Se o tipo mudou, precisamos deletar da tabela original e criar na nova
     if (originalType !== newType) {
