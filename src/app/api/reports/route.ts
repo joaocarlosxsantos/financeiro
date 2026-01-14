@@ -209,6 +209,8 @@ export async function GET(req: Request) {
   // keep fetched rows accessible for totals calculation
   let incomesFetched: any[] = [];
   let expensesFetched: any[] = [];
+  let creditIncomesFetched: any[] = [];
+  let creditExpensesFetched: any[] = [];
 
     if (type === 'income' || type === 'both') {
       // fetch both fixed and variable incomes matching filters (excluding date filter because we'll handle occurrences)
@@ -273,6 +275,74 @@ export async function GET(req: Request) {
       expensesFetched = expenses;
       const expOcc = await expandRecurringOccurrences(expenses, 'expense');
       results.push(...expOcc);
+    }
+
+    // Buscar CreditIncomes (créditos de cartão)
+    if (type === 'income' || type === 'both') {
+      const creditIncomeWhere: any = {
+        AND: [
+          { userId: user.id },
+          startDate || endDate ? { date: dateFilter } : {},
+          categoryIds ? { categoryId: { in: categoryIds } } : {},
+          creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
+          ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+        ],
+      };
+      const creditIncomes = await prisma.creditIncome.findMany({
+        where: creditIncomeWhere,
+        include: {
+          category: true,
+          creditCard: {
+            include: {
+              bank: true,
+            },
+          },
+        },
+      });
+      creditIncomesFetched = creditIncomes;
+      // Transformar em formato compatível (não são recorrentes)
+      const creditIncOcc = creditIncomes.map((ci: any) => ({
+        ...ci,
+        kind: 'income',
+        isRecurring: false,
+        wallet: null, // CreditIncome não tem wallet, mas tem creditCard
+      }));
+      results.push(...creditIncOcc);
+    }
+
+    // Buscar CreditExpenses (gastos de cartão)
+    if (type === 'expense' || type === 'both') {
+      const creditExpenseWhere: any = {
+        AND: [
+          { userId: user.id },
+          { parentExpenseId: null }, // Apenas registros pai
+          startDate || endDate ? { purchaseDate: dateFilter } : {},
+          categoryIds ? { categoryId: { in: categoryIds } } : {},
+          creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
+          ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+        ],
+      };
+      const creditExpenses = await prisma.creditExpense.findMany({
+        where: creditExpenseWhere,
+        include: {
+          category: true,
+          creditCard: {
+            include: {
+              bank: true,
+            },
+          },
+        },
+      });
+      creditExpensesFetched = creditExpenses;
+      // Transformar em formato compatível (usar purchaseDate como date)
+      const creditExpOcc = creditExpenses.map((ce: any) => ({
+        ...ce,
+        date: ce.purchaseDate, // Mapear purchaseDate para date
+        kind: 'expense',
+        isRecurring: false,
+        wallet: null, // CreditExpense não tem wallet, mas tem creditCard
+      }));
+      results.push(...creditExpOcc);
     }
 
   // ordenar resultados por date asc (padrão de exibição: mais antigo -> mais novo)
@@ -384,12 +454,16 @@ export async function GET(req: Request) {
     const punctualIncomeSum = Number(incomeAgg._sum.amount ?? 0);
     const punctualExpenseSum = Number(expenseAgg._sum.amount ?? 0);
 
+    // Somar CreditIncomes e CreditExpenses
+    const creditIncomeSum = creditIncomesFetched.reduce((sum, ci) => sum + Number(ci.amount ?? 0), 0);
+    const creditExpenseSum = creditExpensesFetched.reduce((sum, ce) => sum + Number(ce.amount ?? 0), 0);
+
     // recurring sums: compute from fetched rows (these were already filtered by category/wallet/tags when loaded)
   const recurringIncomeSum = computeRecurringSum(incomesFetched.filter((i: any) => i.isRecurring));
   const recurringExpenseSum = computeRecurringSum(expensesFetched.filter((e: any) => e.isRecurring));
 
-    const totalIncomes = punctualIncomeSum + recurringIncomeSum;
-    const totalExpenses = punctualExpenseSum + recurringExpenseSum;
+    const totalIncomes = punctualIncomeSum + recurringIncomeSum + creditIncomeSum;
+    const totalExpenses = punctualExpenseSum + recurringExpenseSum + creditExpenseSum;
 
     // fallback raw DB aggregates (kept for debugging / comparison)
     // const incomeAgg = await prisma.income.aggregate({ where: commonWhere, _sum: { amount: true } });
