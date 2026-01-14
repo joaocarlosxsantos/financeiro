@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       },
       select: { name: true },
     });
-    tagNames = tagsFromDb.map(t => t.name);
+    tagNames = tagsFromDb.map((t: { name: string }) => t.name);
   } else if (tags.length > 0) {
     tagNames = tags;
   }
