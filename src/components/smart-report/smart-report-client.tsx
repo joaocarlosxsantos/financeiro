@@ -216,6 +216,21 @@ export default function SmartReportClient() {
         avgIncome3m: totalIncomeValue,
         avgExpense3m: totalExpensesValue,
       };
+
+      // Buscar dados dos cartões de crédito
+      try {
+        const creditCardsRes = await fetch('/api/credit-cards');
+        if (creditCardsRes.ok) {
+          const creditCards = await creditCardsRes.json();
+          // Somar o uso e limite de todos os cartões
+          const totalUsage = creditCards.reduce((sum: number, card: any) => sum + (Number(card.usedAmount) || 0), 0);
+          const totalLimit = creditCards.reduce((sum: number, card: any) => sum + (Number(card.limit) || 0), 0);
+          processedData.creditCardUsage = totalUsage;
+          processedData.creditCardLimit = totalLimit;
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados de cartões de crédito:', error);
+      }
       
       // Gerar insights baseados nos dados processados
       const generatedInsights = generateSmartInsights(processedData);

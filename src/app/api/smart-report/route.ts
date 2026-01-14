@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Buscar PUNCTUAL e RECURRING
-    const [punctualExpenses, punctualIncomes, recurringExpenses, recurringIncomes] = await Promise.all([
+    const [punctualExpenses, punctualIncomes, recurringExpenses, recurringIncomes, creditExpenses, creditIncomes] = await Promise.all([
       prisma.expense.findMany({
         where: { ...whereBase, type: 'PUNCTUAL', transferId: null, date: { gte: startDate, lte: endDate } },
         select: { id: true, amount: true, description: true, date: true, category: { select: { name: true } }, type: true },
@@ -104,12 +104,42 @@ export async function GET(req: NextRequest) {
       prisma.income.findMany({
         where: { ...whereBase, type: 'RECURRING', transferId: null },
         select: { id: true, amount: true, description: true, date: true, category: { select: { name: true } }, type: true },
+      }),
+      // Buscar CreditExpenses (gastos de cartão)
+      prisma.creditExpense.findMany({
+        where: { 
+          user: { email: session.user.email },
+          parentExpenseId: null,
+          purchaseDate: { gte: startDate, lte: endDate }
+        },
+        select: { id: true, amount: true, description: true, purchaseDate: true, category: { select: { name: true } } },
+      }),
+      // Buscar CreditIncomes (créditos de cartão)
+      prisma.creditIncome.findMany({
+        where: {
+          user: { email: session.user.email },
+          date: { gte: startDate, lte: endDate }
+        },
+        select: { id: true, amount: true, description: true, date: true, category: { select: { name: true } } },
       }),
     ]);
 
-    // Combinar PUNCTUAL + RECURRING
-    const allExpenses = [...punctualExpenses, ...recurringExpenses];
-    const allIncomes = [...punctualIncomes, ...recurringIncomes];
+    // Transformar CreditExpenses para formato compatível (mapear purchaseDate para date)
+    const creditExpensesFormatted = creditExpenses.map((ce: any) => ({
+      ...ce,
+      date: ce.purchaseDate,
+      type: 'PUNCTUAL',
+    }));
+
+    // Transformar CreditIncomes para formato compatível
+    const creditIncomesFormatted = creditIncomes.map((ci: any) => ({
+      ...ci,
+      type: 'PUNCTUAL',
+    }));
+
+    // Combinar PUNCTUAL + RECURRING + CREDIT
+    const allExpenses = [...punctualExpenses, ...recurringExpenses, ...creditExpensesFormatted];
+    const allIncomes = [...punctualIncomes, ...recurringIncomes, ...creditIncomesFormatted];
 
     // Filtrar transferências
     const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
@@ -133,7 +163,7 @@ export async function GET(req: NextRequest) {
 
 
     // Previous month
-    const [prevMonthExpenses, prevMonthIncomes] = await Promise.all([
+    const [prevMonthExpenses, prevMonthIncomes, prevMonthCreditExpenses, prevMonthCreditIncomes] = await Promise.all([
       prisma.expense.findMany({
         where: { ...whereBase, transferId: null, date: { gte: prevMonthStart, lte: prevMonthEnd } },
         select: { amount: true },
@@ -142,10 +172,27 @@ export async function GET(req: NextRequest) {
         where: { ...whereBase, transferId: null, date: { gte: prevMonthStart, lte: prevMonthEnd } },
         select: { amount: true },
       }),
+      prisma.creditExpense.findMany({
+        where: { 
+          user: { email: session.user.email },
+          parentExpenseId: null,
+          purchaseDate: { gte: prevMonthStart, lte: prevMonthEnd }
+        },
+        select: { amount: true },
+      }),
+      prisma.creditIncome.findMany({
+        where: {
+          user: { email: session.user.email },
+          date: { gte: prevMonthStart, lte: prevMonthEnd }
+        },
+        select: { amount: true },
+      }),
     ]);
 
-    const prevTotalIncome = prevMonthIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount), 0);
-    const prevTotalExpenses = prevMonthExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+    const prevTotalIncome = prevMonthIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount), 0) +
+                           prevMonthCreditIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount), 0);
+    const prevTotalExpenses = prevMonthExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0) +
+                             prevMonthCreditExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
     const previousMonthBalance = prevTotalIncome - prevTotalExpenses;
 
     // Métricas
@@ -194,13 +241,27 @@ export async function GET(req: NextRequest) {
             select: { amount: true },
           })
         );
+        promises.push(
+          prisma.creditIncome.findMany({
+            where: { user: { email: session.user.email }, date: { gte: s, lte: e } },
+            select: { amount: true },
+          })
+        );
+        promises.push(
+          prisma.creditExpense.findMany({
+            where: { user: { email: session.user.email }, parentExpenseId: null, purchaseDate: { gte: s, lte: e } },
+            select: { amount: true },
+          })
+        );
       }
       const results = await Promise.all(promises);
       let totalIncome3m = 0,
         totalExpense3m = 0;
-      for (let i = 0; i < results.length; i += 2) {
+      for (let i = 0; i < results.length; i += 4) {
         totalIncome3m += results[i].reduce((sum: number, r: any) => sum + Number(r.amount), 0);
         totalExpense3m += results[i + 1].reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+        totalIncome3m += results[i + 2].reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+        totalExpense3m += results[i + 3].reduce((sum: number, r: any) => sum + Number(r.amount), 0);
       }
       avgIncome3m = totalIncome3m / 3;
       avgExpense3m = totalExpense3m / 3;
