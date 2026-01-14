@@ -8,6 +8,7 @@ import { Loader2, DollarSign, Receipt, Calendar, PlusCircle } from 'lucide-react
 import { PayBillModal } from '../ui/pay-bill-modal';
 import { Select } from '../ui/select';
 import { Label } from '../ui/label';
+import { AlertModal } from '../ui/alert-modal';
 
 interface CreditPayment {
   id: string;
@@ -54,6 +55,13 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
   const [selectedBillId, setSelectedBillId] = useState<string>('');
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [pendingBills, setPendingBills] = useState<CreditBill[]>([]);
+  
+  // Estado para modal de alerta
+  const [alertModal, setAlertModal] = useState<{ open: boolean; title?: string; message: string; type?: 'error' | 'success' | 'warning' | 'info' }>({
+    open: false,
+    message: '',
+    type: 'info'
+  });
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -134,10 +142,20 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
       setPayModalOpen(false);
       setSelectedBillId('');
       reloadPayments();
-      alert('Pagamento registrado com sucesso!');
+      setAlertModal({
+        open: true,
+        title: 'Pagamento Registrado',
+        message: 'O pagamento foi registrado com sucesso!',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Erro ao registrar pagamento:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao registrar pagamento. Tente novamente.');
+      setAlertModal({
+        open: true,
+        title: 'Erro ao Registrar Pagamento',
+        message: error instanceof Error ? error.message : 'Erro ao registrar pagamento. Tente novamente.',
+        type: 'error'
+      });
     } finally {
       setPaymentLoading(false);
     }
@@ -383,6 +401,15 @@ export default function CreditPaymentsList({ currentDate }: CreditPaymentsListPr
           loading={paymentLoading}
         />
       )}
+      
+      {/* Modal de alerta */}
+      <AlertModal
+        open={alertModal.open}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={() => setAlertModal({ open: false, message: '', type: 'info' })}
+      />
     </div>
   );
 }

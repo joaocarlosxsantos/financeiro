@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Loader2, Receipt, DollarSign, Calendar, Eye } from 'lucide-react';
 import { PayBillModal } from '../ui/pay-bill-modal';
+import { AlertModal } from '../ui/alert-modal';
 
 interface CreditBill {
   id: string;
@@ -65,6 +66,13 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedBill, setSelectedBill] = useState<CreditBill | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  
+  // Estado para modal de alerta
+  const [alertModal, setAlertModal] = useState<{ open: boolean; title?: string; message: string; type?: 'error' | 'success' | 'warning' | 'info' }>({
+    open: false,
+    message: '',
+    type: 'info'
+  });
 
   useEffect(() => {
     const loadBills = async () => {
@@ -133,7 +141,12 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
       reloadBills();
     } catch (error) {
       console.error('Erro ao registrar pagamento:', error);
-      alert('Erro ao registrar pagamento. Tente novamente.');
+      setAlertModal({
+        open: true,
+        title: 'Erro ao Registrar Pagamento',
+        message: 'Não foi possível registrar o pagamento. Tente novamente.',
+        type: 'error'
+      });
     } finally {
       setPaymentLoading(false);
     }
@@ -369,6 +382,15 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
           loading={paymentLoading}
         />
       )}
+      
+      {/* Modal de alerta */}
+      <AlertModal
+        open={alertModal.open}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={() => setAlertModal({ open: false, message: '', type: 'info' })}
+      />
     </div>
   );
 }

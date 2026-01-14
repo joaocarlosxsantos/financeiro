@@ -9,6 +9,8 @@ import { Label } from '../ui/label';
 import { Loader2, Edit, Trash2, CreditCard, RotateCcw, AlertTriangle, Plus, X, Check, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import RefundDialog from './refund-dialog';
 import { Modal } from '../ui/modal';
+import { AlertModal } from '../ui/alert-modal';
+import { ConfirmModal } from '../ui/confirm-modal';
 
 interface CreditExpense {
   id: string;
@@ -64,6 +66,18 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
   // Estados para ordenação
   const [sortColumn, setSortColumn] = useState<'description' | 'amount' | 'purchaseDate' | 'creditCard' | 'category'>('purchaseDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
+  // Estados para modais
+  const [alertModal, setAlertModal] = useState<{ open: boolean; title?: string; message: string; type?: 'error' | 'success' | 'warning' | 'info' }>({
+    open: false,
+    message: '',
+    type: 'info'
+  });
+  const [confirmDeleteModal, setConfirmDeleteModal] = useState<{ open: boolean; expenseId: string | null; expenseName: string }>({
+    open: false,
+    expenseId: null,
+    expenseName: ''
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -149,7 +163,12 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
       setRefundDialogOpen(true);
     } catch (error) {
       console.error('Erro ao carregar dados da compra:', error);
-      alert('Erro ao carregar dados da compra para estorno');
+      setAlertModal({
+        open: true,
+        title: 'Erro ao Carregar Dados',
+        message: 'Não foi possível carregar os dados da compra para estorno. Tente novamente.',
+        type: 'error'
+      });
     }
   };
 
@@ -164,33 +183,29 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
     setSelectedExpenseForRefund(null);
   };
 
-  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
-  
-  // Estado para modal de erro
-  const [errorModal, setErrorModal] = useState<{ open: boolean; title: string; message: string }>({
-    open: false,
-    title: '',
-    message: ''
-  });
-
-  // Função para mostrar erro em modal
-  const showError = (title: string, message: string) => {
-    setErrorModal({ open: true, title, message });
-  };
-
-  const handleDelete = (id: string) => {
-    setConfirmingDelete(id);
+  const handleDelete = (expense: CreditExpense) => {
+    setConfirmDeleteModal({
+      open: true,
+      expenseId: expense.id,
+      expenseName: expense.description
+    });
   };
 
   const confirmDelete = async () => {
-    if (!confirmingDelete) return;
-    const id = confirmingDelete;
-    setConfirmingDelete(null);
+    const id = confirmDeleteModal.expenseId;
+    if (!id) return;
+    
+    setConfirmDeleteModal({ open: false, expenseId: null, expenseName: '' });
 
     // Encontrar o registro para determinar se é gasto ou crédito
     const record = expenses.find(e => e.id === id);
     if (!record) {
-      alert('Registro não encontrado.');
+      setAlertModal({
+        open: true,
+        title: 'Registro Não Encontrado',
+        message: 'O registro que você está tentando excluir não foi encontrado.',
+        type: 'error'
+      });
       return;
     }
 
@@ -209,36 +224,41 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
         
         if (response.status === 404) {
-          showError('Registro não encontrado', `${isIncome ? 'Crédito' : 'Gasto'} não encontrado. A lista será atualizada.`);
+          setAlertModal({
+            open: true,
+            title: 'Registro Não Encontrado',
+            message: `${isIncome ? 'Crédito' : 'Gasto'} não encontrado. A lista será atualizada.`,
+            type: 'error'
+          });
           reloadExpenses();
           return;
         }
         
         if (response.status === 400) {
-          showError(
-            'Operação não permitida',
-            errorData.error || `Não é possível excluir este ${isIncome ? 'crédito' : 'gasto'}.`
-          );
+          setAlertModal({
+            open: true,
+            title: 'Operação Não Permitida',
+            message: errorData.error || `Não é possível excluir este ${isIncome ? 'crédito' : 'gasto'}.`,
+            type: 'warning'
+          });
           return;
         }
         
         throw new Error(errorData.error || `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}`);
       }
 
-      // Recarregar a listad
+      // Recarregar a lista
       reloadExpenses();
     } catch (error) {
       console.error(`Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}:`, error);
-      showError(
-        'Erro interno',
-        error instanceof Error ? error.message : `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}. Tente novamente.`
-      );
+      setAlertModal({
+        open: true,
+        title: 'Erro ao Excluir',
+        message: error instanceof Error ? error.message : `Erro ao excluir ${isIncome ? 'crédito' : 'gasto'}. Tente novamente.`,
+        type: 'error'
+      });
     }
   };
-
-  const deleteExpense = handleDelete; // Manter compatibilidade com código existente
-
-  const deletingExpense = confirmingDelete ? expenses.find((e) => e.id === confirmingDelete) : null;
 
   // Função para alternar ordenação
   const handleSort = (column: typeof sortColumn) => {
@@ -536,7 +556,12 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                         if (onEdit) {
                           onEdit(expense.id);
                         } else {
-                          alert('Funcionalidade de edição não configurada');
+                          setAlertModal({
+                            open: true,
+                            title: 'Funcionalidade Indisponível',
+                            message: 'A funcionalidade de edição ainda não está configurada.',
+                            type: 'warning'
+                          });
                         }
                       }}
                       title="Editar gasto"
@@ -547,7 +572,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      onClick={() => deleteExpense(expense.id)}
+                      onClick={() => handleDelete(expense)}
                       title="Excluir gasto"
                       className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
@@ -575,69 +600,25 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
         onSuccess={handleRefundSuccess}
       />
 
-      {/* Modal de confirmação de exclusão */}
-      {confirmingDelete && (
-        <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex-shrink-0">
-              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Tem certeza que deseja excluir este {deletingExpense?.type === 'REFUND' ? 'estorno' : 'gasto'}? Esta ação é irreversível e removerá todos os
-                registros relacionados.
-              </p>
-              {deletingExpense && (
-                <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{deletingExpense.description}</p>
-              )}
-              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
-                <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={confirmDelete}
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Excluir
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
+      {/* Modal de alerta */}
+      <AlertModal
+        open={alertModal.open}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={() => setAlertModal({ open: false, message: '', type: 'info' })}
+      />
 
-      {/* Modal de erro */}
-      <Modal 
-        open={errorModal.open} 
-        onClose={() => setErrorModal({ open: false, title: '', message: '' })} 
-        size="sm"
-      >
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex-shrink-0">
-            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-red-700">{errorModal.title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {errorModal.message}
-            </p>
-            <div className="mt-4 sm:mt-6 flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setErrorModal({ open: false, title: '', message: '' })}
-                className="w-full sm:w-auto"
-              >
-                OK
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {/* Modal de confirmação de exclusão */}
+      <ConfirmModal
+        open={confirmDeleteModal.open}
+        title="Confirmar Exclusão"
+        description={`Tem certeza que deseja excluir "${confirmDeleteModal.expenseName}"? Esta ação é irreversível e removerá todos os registros relacionados.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDeleteModal({ open: false, expenseId: null, expenseName: '' })}
+      />
     </div>
   );
 }
