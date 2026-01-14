@@ -227,15 +227,83 @@ export function ExpandedTransactionsTable({
 
   const handleEditSubmit = async (form: any) => {
     if (!editModal.transaction) return;
-    await fetch(`/api/transactions/${editModal.transaction.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    setEditModal({ open: false, transaction: null });
-    fetchTransactions(true); // preserva scroll
-    if (typeof window !== 'undefined' && window.dispatchEvent) {
-      window.dispatchEvent(new CustomEvent('transactions:reloadSummary'));
+    
+    const originalType = editModal.transaction.transactionType; // 'expense' ou 'income'
+    const newType = form.type; // 'expense' ou 'income'
+    
+    // Se o tipo mudou, precisamos deletar da tabela original e criar na nova
+    if (originalType !== newType) {
+      try {
+        // 1. Criar novo registro na tabela de destino
+        const createResponse = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionType: newType,
+            description: form.description,
+            amount: form.amount,
+            date: form.date,
+            categoryId: form.categoryId || null,
+            walletId: form.walletId || null,
+            tagIds: form.tagIds || [],
+            type: form.recurring ? 'RECURRING' : 'PUNCTUAL',
+            isRecurring: form.recurring || false,
+            startDate: form.recurring ? form.recurringStart : null,
+            endDate: form.recurring ? form.recurringEnd : null,
+            dayOfMonth: form.recurring && form.date ? new Date(form.date).getDate() : null,
+          }),
+        });
+        
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
+          throw new Error(errorData.error || 'Erro ao criar nova transação');
+        }
+        
+        // 2. Deletar registro da tabela original
+        const deleteResponse = await fetch(`/api/transactions/${editModal.transaction.id}?transactionType=${originalType}`, {
+          method: 'DELETE',
+        });
+        
+        if (!deleteResponse.ok) {
+          // Se falhou ao deletar, tentar reverter criando um alerta
+          console.error('Erro ao deletar transação original após conversão');
+          alert('Aviso: A nova transação foi criada, mas a antiga não foi removida. Por favor, delete manualmente a transação antiga.');
+        }
+        
+        setEditModal({ open: false, transaction: null });
+        fetchTransactions(true); // preserva scroll
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('transactions:reloadSummary'));
+        }
+      } catch (error) {
+        console.error('Erro ao converter tipo de transação:', error);
+        alert(`Erro ao converter tipo de transação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      }
+    } else {
+      // Tipo não mudou, apenas atualiza normalmente
+      await fetch(`/api/transactions/${editModal.transaction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactionType: originalType,
+          description: form.description,
+          amount: form.amount,
+          date: form.date,
+          categoryId: form.categoryId || null,
+          walletId: form.walletId || null,
+          tagIds: form.tagIds || [],
+          type: form.recurring ? 'RECURRING' : 'PUNCTUAL',
+          isRecurring: form.recurring || false,
+          startDate: form.recurring ? form.recurringStart : null,
+          endDate: form.recurring ? form.recurringEnd : null,
+          dayOfMonth: form.recurring && form.date ? new Date(form.date).getDate() : null,
+        }),
+      });
+      setEditModal({ open: false, transaction: null });
+      fetchTransactions(true); // preserva scroll
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('transactions:reloadSummary'));
+      }
     }
   };
 
