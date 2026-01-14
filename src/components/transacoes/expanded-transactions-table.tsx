@@ -60,7 +60,7 @@ export function ExpandedTransactionsTable({
   const [data, setData] = useState<ExpandedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState<'date' | 'description' | 'category' | 'wallet' | 'amount'>('date');
+  const [sortColumn, setSortColumn] = useState<'date' | 'recurring' | 'description' | 'category' | 'wallet' | 'amount'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export function ExpandedTransactionsTable({
   };
 
   // Função para alternar ordenação
-  const handleSort = (column: 'date' | 'description' | 'category' | 'wallet' | 'amount') => {
+  const handleSort = (column: 'date' | 'recurring' | 'description' | 'category' | 'wallet' | 'amount') => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -134,6 +134,10 @@ export function ExpandedTransactionsTable({
     switch (sortColumn) {
       case 'date':
         comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+        break;
+      case 'recurring':
+        // Ordena por tipo: RECURRING antes de PUNCTUAL
+        comparison = a.type === b.type ? 0 : a.type === 'RECURRING' ? -1 : 1;
         break;
       case 'description':
         comparison = a.description.localeCompare(b.description);
@@ -367,6 +371,15 @@ export function ExpandedTransactionsTable({
                 </div>
               </th>
               <th 
+                className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                onClick={() => handleSort('recurring')}
+              >
+                <div className="flex items-center justify-center">
+                  Recorrente
+                  <SortIcon column="recurring" />
+                </div>
+              </th>
+              <th 
                 className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
                 onClick={() => handleSort('description')}
               >
@@ -414,6 +427,15 @@ export function ExpandedTransactionsTable({
               >
                 <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">
                   {formatDate(transaction.date)}
+                </td>
+                <td className="py-3 px-4 text-center">
+                  {transaction.type === 'RECURRING' || transaction.isRecurringExpanded ? (
+                    <div className="flex items-center justify-center" title="Transação Recorrente">
+                      <span className="inline-block w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                  )}
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
