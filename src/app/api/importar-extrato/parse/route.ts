@@ -368,6 +368,80 @@ function parsePdfIndividualLines(text: string) {
   return transactions;
 }
 
+// Função para parsing de extrato no formato: DESCRIÇÃO YYYY-MM-DD [+-] R$ VALOR (tudo em uma ou várias linhas)
+function parseSingleLineExtract(text: string) {
+  const transactions: any[] = [];
+  
+  // Normaliza o texto
+  const normalizedText = text
+    .replace(/\r/g, '')
+    .replace(/\t/g, ' ')
+    .replace(/\s{2,}/g, ' ');
+  
+  // Tenta extrair transações usando regex global que captura múltiplas ocorrências
+  // Padrão: DESCRIÇÃO DATA [+-] R$ VALOR
+  const pattern = /([A-Z\s\u0370-\u03FF]+?)\s+(\d{4}-\d{2}-\d{2})\s+([-+])\s+R\$\s+([\d.,]+)/gi;
+  let match;
+  
+  while ((match = pattern.exec(normalizedText)) !== null) {
+    let descricao = match[1].trim();
+    const dateStr = match[2];
+    const sinal = match[3];
+    const valorStr = match[4];
+    
+    // Pula se descrição muito curta ou contém palavras de filtro
+    if (descricao.length < 3 || descricao.includes('Extrato') || descricao.includes('Deseja')) {
+      continue;
+    }
+    
+    // Converte data de YYYY-MM-DD para DD/MM/YYYY
+    const [year, month, day] = dateStr.split('-');
+    const data = `${day}/${month}/${year}`;
+    
+    // Converte valor
+    let valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+    
+    // Aplica o sinal
+    if (sinal === '-') {
+      valor = -Math.abs(valor);
+    } else {
+      valor = Math.abs(valor);
+    }
+    
+    // Formata a descrição
+    const descLower = descricao.toLowerCase();
+    let descricaoFinal: string;
+    
+    if (descLower.includes('beneficio') || descLower.includes('caiu')) {
+      descricaoFinal = 'Benefício Alimentação';
+    } else {
+      // Capitaliza cada palavra
+      descricaoFinal = descricao
+        .split(/\s+/)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+    
+    // Sugere categoria
+    let categoriaRecomendada = 'Alimentação';
+    if (valor > 0 && (descLower.includes('beneficio') || descLower.includes('caiu'))) {
+      categoriaRecomendada = 'Recarga de Benefícios';
+    } else if (descLower.includes('supermercado') || descLower.includes('super')) {
+      categoriaRecomendada = 'Mercado';
+    }
+    
+    transactions.push({
+      data,
+      valor,
+      descricao: descricaoFinal,
+      categoriaRecomendada,
+      shouldCreateCategory: true,
+    });
+  }
+  
+  return transactions;
+}
+
 // Função específica para parsing de arquivos TXT de extrato (formato como Alelo)
 function parseTxtExtract(text: string) {
   const transactions: any[] = [];
@@ -668,8 +742,13 @@ async function parsePdfExtract(text: string) {
       return parseMalformedText(text);
     }
 
-    // Tenta primeiro o formato agrupado por data
-    let transactions = parsePdfGroupedByDate(text);
+    // Tenta primeiro o formato de linha única com sinal (DESCRIÇÃO YYYY-MM-DD [+-] R$ VALOR)
+    let transactions = parseSingleLineExtract(text);
+
+    // Se não encontrou transações, tenta o formato agrupado por data
+    if (transactions.length === 0) {
+      transactions = parsePdfGroupedByDate(text);
+    }
 
     // Se não encontrou transações, tenta o formato individual (DD/MM/YYYY)
     if (transactions.length === 0) {
