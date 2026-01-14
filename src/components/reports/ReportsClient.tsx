@@ -10,6 +10,7 @@ import { stableSortByDateAsc } from '@/lib/sort';
 import { Select as UiSelect } from '../ui/select';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_TYPE_LABELS } from '../ui/payment-type-multi-select';
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 type Option = { id: string; name: string };
 
@@ -58,10 +59,10 @@ export default function ReportsClient() {
   const [wallets, setWallets] = useState<Option[]>([]);
   const [creditCards, setCreditCards] = useState<Option[]>([]);
 
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
-  const [selectedCreditCardIds, setSelectedCreditCardIds] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(['__ALL__']);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(['__ALL__']);
+  const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>(['__ALL__']);
+  const [selectedCreditCardIds, setSelectedCreditCardIds] = useState<string[]>(['__ALL__']);
 
   // data & pagination
   const [data, setData] = useState<Row[]>([]);
@@ -72,6 +73,10 @@ export default function ReportsClient() {
   const [totals, setTotals] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [filterDebug, setFilterDebug] = useState<null | { availableTags: string[]; selectedTags: string[] }>(null);
+  
+  // Estados de ordenação
+  const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'description' | 'category' | 'wallet' | 'card' | 'amount'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // select styles for react-select (theme aware)
   const selectStyles = useMemo(() => {
@@ -163,6 +168,20 @@ export default function ReportsClient() {
 
   // fetch data from API with current filters
   async function fetchData(p: number, size?: number) {
+    // Se algum filtro está vazio (array vazio), não mostrar nada
+    if (
+      selectedTagIds.length === 0 ||
+      selectedCategoryIds.length === 0 ||
+      selectedWalletIds.length === 0 ||
+      selectedCreditCardIds.length === 0
+    ) {
+      setData([]);
+      setTotalCount(0);
+      setTotals({ incomes: 0, expenses: 0, net: 0 });
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
       // Key representing the base unfiltered dataset for this type and date range
@@ -173,7 +192,11 @@ export default function ReportsClient() {
 
       // If we have a cached full dataset for the baseKey and the user has selected
       // filters (tags/categories/wallets/creditCards), apply local filtering instead of fetching.
-      const hasFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0 || selectedCreditCardIds.length > 0;
+      const hasFilters = 
+        (selectedTagIds.length > 0 && !selectedTagIds.includes('__ALL__')) || 
+        (selectedCategoryIds.length > 0 && !selectedCategoryIds.includes('__ALL__')) || 
+        (selectedWalletIds.length > 0 && !selectedWalletIds.includes('__ALL__')) || 
+        (selectedCreditCardIds.length > 0 && !selectedCreditCardIds.includes('__ALL__'));
       if (hasFilters && fullDataCache[baseKey]) {
         const allRows = fullDataCache[baseKey];
         // build a tag lookup from loaded tags (id->name and name->name)
@@ -206,7 +229,13 @@ export default function ReportsClient() {
               )
             : [],
         }));
-        const filtered = filterRows(normalizedAllRows as any, selectedCategoryIds, selectedWalletIds, normalizedSelectedTags, selectedCreditCardIds);
+        const filtered = filterRows(
+          normalizedAllRows as any, 
+          selectedCategoryIds.includes('__ALL__') ? [] : selectedCategoryIds, 
+          selectedWalletIds.includes('__ALL__') ? [] : selectedWalletIds, 
+          selectedTagIds.includes('__ALL__') ? [] : normalizedSelectedTags, 
+          selectedCreditCardIds.includes('__ALL__') ? [] : selectedCreditCardIds
+        );
 
   // paginate filtered
         const start = (p - 1) * pageSizeToUse;
@@ -246,10 +275,10 @@ export default function ReportsClient() {
       params.set('type', type);
       params.set('startDate', startDate);
       params.set('endDate', endDate);
-      if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
-      if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
-      if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
-      if (selectedCreditCardIds.length) params.set('creditCardIds', selectedCreditCardIds.join(','));
+      if (selectedTagIds.length && !selectedTagIds.includes('__ALL__')) params.set('tags', selectedTagIds.join(','));
+      if (selectedCategoryIds.length && !selectedCategoryIds.includes('__ALL__')) params.set('categoryIds', selectedCategoryIds.join(','));
+      if (selectedWalletIds.length && !selectedWalletIds.includes('__ALL__')) params.set('walletIds', selectedWalletIds.join(','));
+      if (selectedCreditCardIds.length && !selectedCreditCardIds.includes('__ALL__')) params.set('creditCardIds', selectedCreditCardIds.join(','));
       params.set('page', String(p));
   params.set('pageSize', String(pageSizeToUse));
 
@@ -305,7 +334,11 @@ export default function ReportsClient() {
 
       // cache full dataset when server returned full page matching totalCount (we fetched all rows)
       // We'll cache only when no filters were applied in the request (so base unfiltered data is stored)
-      const requestHadFilters = selectedTagIds.length > 0 || selectedCategoryIds.length > 0 || selectedWalletIds.length > 0 || selectedCreditCardIds.length > 0;
+      const requestHadFilters = 
+        (selectedTagIds.length > 0 && !selectedTagIds.includes('__ALL__')) || 
+        (selectedCategoryIds.length > 0 && !selectedCategoryIds.includes('__ALL__')) || 
+        (selectedWalletIds.length > 0 && !selectedWalletIds.includes('__ALL__')) || 
+        (selectedCreditCardIds.length > 0 && !selectedCreditCardIds.includes('__ALL__'));
       if (!requestHadFilters && (Array.isArray(json.data) && (json.data.length === (json.totalCount || 0) || (json.totalCount || 0) <= pageSizeToUse))) {
         const key = `${type}|${startDate}|${endDate}`;
         setFullDataCache((prev) => ({ ...prev, [key]: rows }));
@@ -324,10 +357,10 @@ export default function ReportsClient() {
       params.set('type', type);
       params.set('startDate', startDate);
       params.set('endDate', endDate);
-      if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
-      if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
-      if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
-      if (selectedCreditCardIds.length) params.set('creditCardIds', selectedCreditCardIds.join(','));
+      if (selectedTagIds.length && !selectedTagIds.includes('__ALL__')) params.set('tags', selectedTagIds.join(','));
+      if (selectedCategoryIds.length && !selectedCategoryIds.includes('__ALL__')) params.set('categoryIds', selectedCategoryIds.join(','));
+      if (selectedWalletIds.length && !selectedWalletIds.includes('__ALL__')) params.set('walletIds', selectedWalletIds.join(','));
+      if (selectedCreditCardIds.length && !selectedCreditCardIds.includes('__ALL__')) params.set('creditCardIds', selectedCreditCardIds.join(','));
       params.set('page', '1');
       const requestSize = totalCount > 0 ? totalCount : 100000;
       params.set('pageSize', String(requestSize));
@@ -382,10 +415,10 @@ export default function ReportsClient() {
       params.set('type', type);
       params.set('startDate', startDate);
       params.set('endDate', endDate);
-      if (selectedTagIds.length) params.set('tags', selectedTagIds.join(','));
-      if (selectedCategoryIds.length) params.set('categoryIds', selectedCategoryIds.join(','));
-      if (selectedWalletIds.length) params.set('walletIds', selectedWalletIds.join(','));
-      if (selectedCreditCardIds.length) params.set('creditCardIds', selectedCreditCardIds.join(','));
+      if (selectedTagIds.length && !selectedTagIds.includes('__ALL__')) params.set('tags', selectedTagIds.join(','));
+      if (selectedCategoryIds.length && !selectedCategoryIds.includes('__ALL__')) params.set('categoryIds', selectedCategoryIds.join(','));
+      if (selectedWalletIds.length && !selectedWalletIds.includes('__ALL__')) params.set('walletIds', selectedWalletIds.join(','));
+      if (selectedCreditCardIds.length && !selectedCreditCardIds.includes('__ALL__')) params.set('creditCardIds', selectedCreditCardIds.join(','));
       const res = await fetch(`/api/reports/export?${params.toString()}`);
       if (!res.ok) throw new Error('Erro ao gerar planilha');
       const blob = await res.blob();
@@ -468,11 +501,52 @@ export default function ReportsClient() {
             <ReactSelect
               aria-label="Carteiras"
               isMulti
-              options={wallets.map((w) => ({ value: w.id, label: w.name }))}
-              value={wallets
-                .filter((w) => selectedWalletIds.includes(w.id))
-                .map((w) => ({ value: w.id, label: w.name }))}
-              onChange={(vals: any) => setSelectedWalletIds((vals || []).map((v: any) => v.value))}
+              options={[{ value: '__ALL__', label: 'Todas' }, ...wallets.map((w) => ({ value: w.id, label: w.name }))]}
+              value={selectedWalletIds.includes('__ALL__') 
+                ? [{ value: '__ALL__', label: 'Todas' }]
+                : wallets
+                    .filter((w) => selectedWalletIds.includes(w.id))
+                    .map((w) => ({ value: w.id, label: w.name }))
+              }
+              onChange={(vals: any) => {
+                const values = (vals || []).map((v: any) => v.value);
+                
+                // Se nada foi selecionado, não selecionar nada (mostra lista vazia)
+                if (values.length === 0) {
+                  setSelectedWalletIds([]);
+                  return;
+                }
+                
+                // Se o usuário selecionou '__ALL__' junto com outros itens
+                if (values.includes('__ALL__') && values.length > 1) {
+                  // Detectar qual item foi adicionado
+                  const addedItem = values.find((v: string) => !selectedWalletIds.includes(v));
+                  
+                  if (addedItem === '__ALL__') {
+                    // Clicou em "Todas", selecionar apenas "Todas"
+                    setSelectedWalletIds(['__ALL__']);
+                  } else {
+                    // Clicou em outro item tendo "Todas" selecionado, manter apenas o novo
+                    setSelectedWalletIds([addedItem]);
+                  }
+                  return;
+                }
+                
+                // Se apenas '__ALL__' está selecionado, manter assim
+                if (values.includes('__ALL__') && values.length === 1) {
+                  setSelectedWalletIds(['__ALL__']);
+                  return;
+                }
+                
+                // Se o usuário selecionou todas as opções manualmente, trocar para '__ALL__'
+                if (values.length === wallets.length && !values.includes('__ALL__')) {
+                  setSelectedWalletIds(['__ALL__']);
+                  return;
+                }
+                
+                // Caso contrário, usar os valores selecionados
+                setSelectedWalletIds(values);
+              }}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
@@ -488,11 +562,59 @@ export default function ReportsClient() {
             <ReactSelect
               aria-label="Cartões de Crédito"
               isMulti
-              options={creditCards.map((c) => ({ value: c.id, label: c.name }))}
-              value={creditCards
-                .filter((c) => selectedCreditCardIds.includes(c.id))
-                .map((c) => ({ value: c.id, label: c.name }))}
-              onChange={(vals: any) => setSelectedCreditCardIds((vals || []).map((v: any) => v.value))}
+              options={[
+                { value: '__ALL__', label: 'Todos' },
+                { value: '__NONE__', label: 'Nenhum' },
+                ...creditCards.map((c) => ({ value: c.id, label: c.name }))
+              ]}
+              value={
+                selectedCreditCardIds.includes('__ALL__') 
+                  ? [{ value: '__ALL__', label: 'Todos' }]
+                  : selectedCreditCardIds.includes('__NONE__')
+                  ? [{ value: '__NONE__', label: 'Nenhum' }]
+                  : creditCards
+                      .filter((c) => selectedCreditCardIds.includes(c.id))
+                      .map((c) => ({ value: c.id, label: c.name }))
+              }
+              onChange={(vals: any) => {
+                const values = (vals || []).map((v: any) => v.value);
+                
+                // Se nada foi selecionado, não selecionar nada (mostra lista vazia)
+                if (values.length === 0) {
+                  setSelectedCreditCardIds([]);
+                  return;
+                }
+                
+                // Se selecionou '__ALL__' ou '__NONE__' junto com outros
+                if ((values.includes('__ALL__') || values.includes('__NONE__')) && values.length > 1) {
+                  // Detectar qual item foi adicionado
+                  const addedItem = values.find((v: string) => !selectedCreditCardIds.includes(v));
+                  
+                  if (addedItem === '__ALL__' || addedItem === '__NONE__') {
+                    // Clicou em "Todos" ou "Nenhum", selecionar apenas ele
+                    setSelectedCreditCardIds([addedItem]);
+                  } else {
+                    // Clicou em outro item tendo especial selecionado, manter apenas o novo
+                    setSelectedCreditCardIds([addedItem]);
+                  }
+                  return;
+                }
+                
+                // Se apenas '__ALL__' ou '__NONE__' está selecionado, manter assim
+                if (values.length === 1 && (values[0] === '__ALL__' || values[0] === '__NONE__')) {
+                  setSelectedCreditCardIds(values);
+                  return;
+                }
+                
+                // Se o usuário selecionou todos os cartões manualmente, trocar para '__ALL__'
+                if (values.length === creditCards.length && !values.includes('__ALL__') && !values.includes('__NONE__')) {
+                  setSelectedCreditCardIds(['__ALL__']);
+                  return;
+                }
+                
+                // Caso contrário, usar os valores selecionados (IDs específicos)
+                setSelectedCreditCardIds(values);
+              }}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
@@ -508,13 +630,52 @@ export default function ReportsClient() {
             <ReactSelect
               aria-label="Categorias"
               isMulti
-              options={categories.map((c) => ({ value: c.id, label: c.name }))}
-              value={categories
-                .filter((c) => selectedCategoryIds.includes(c.id))
-                .map((c) => ({ value: c.id, label: c.name }))}
-              onChange={(vals: any) =>
-                setSelectedCategoryIds((vals || []).map((v: any) => v.value))
+              options={[{ value: '__ALL__', label: 'Todas' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+              value={selectedCategoryIds.includes('__ALL__') 
+                ? [{ value: '__ALL__', label: 'Todas' }]
+                : categories
+                    .filter((c) => selectedCategoryIds.includes(c.id))
+                    .map((c) => ({ value: c.id, label: c.name }))
               }
+              onChange={(vals: any) => {
+                const values = (vals || []).map((v: any) => v.value);
+                
+                // Se nada foi selecionado, não selecionar nada (mostra lista vazia)
+                if (values.length === 0) {
+                  setSelectedCategoryIds([]);
+                  return;
+                }
+                
+                // Se o usuário selecionou '__ALL__' junto com outros itens
+                if (values.includes('__ALL__') && values.length > 1) {
+                  // Detectar qual item foi adicionado
+                  const addedItem = values.find((v: string) => !selectedCategoryIds.includes(v));
+                  
+                  if (addedItem === '__ALL__') {
+                    // Clicou em "Todas", selecionar apenas "Todas"
+                    setSelectedCategoryIds(['__ALL__']);
+                  } else {
+                    // Clicou em outro item tendo "Todas" selecionado, manter apenas o novo
+                    setSelectedCategoryIds([addedItem]);
+                  }
+                  return;
+                }
+                
+                // Se apenas '__ALL__' está selecionado, manter assim
+                if (values.includes('__ALL__') && values.length === 1) {
+                  setSelectedCategoryIds(['__ALL__']);
+                  return;
+                }
+                
+                // Se o usuário selecionou todas as categorias manualmente, trocar para '__ALL__'
+                if (values.length === categories.length && !values.includes('__ALL__')) {
+                  setSelectedCategoryIds(['__ALL__']);
+                  return;
+                }
+                
+                // Caso contrário, usar os valores selecionados
+                setSelectedCategoryIds(values);
+              }}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
@@ -530,11 +691,59 @@ export default function ReportsClient() {
             <ReactSelect
               aria-label="Tags"
               isMulti
-              options={tags.map((t) => ({ value: t.id, label: t.name }))}
-              value={tags
-                .filter((t) => selectedTagIds.includes(t.id))
-                .map((t) => ({ value: t.id, label: t.name }))}
-              onChange={(vals: any) => setSelectedTagIds((vals || []).map((v: any) => v.value))}
+              options={[
+                { value: '__ALL__', label: 'Todas' },
+                { value: '__NONE__', label: 'Nenhuma' },
+                ...tags.map((t) => ({ value: t.id, label: t.name }))
+              ]}
+              value={
+                selectedTagIds.includes('__ALL__') 
+                  ? [{ value: '__ALL__', label: 'Todas' }]
+                  : selectedTagIds.includes('__NONE__')
+                  ? [{ value: '__NONE__', label: 'Nenhuma' }]
+                  : tags
+                      .filter((t) => selectedTagIds.includes(t.id))
+                      .map((t) => ({ value: t.id, label: t.name }))
+              }
+              onChange={(vals: any) => {
+                const values = (vals || []).map((v: any) => v.value);
+                
+                // Se nada foi selecionado, não selecionar nada (mostra lista vazia)
+                if (values.length === 0) {
+                  setSelectedTagIds([]);
+                  return;
+                }
+                
+                // Se selecionou '__ALL__' ou '__NONE__' junto com outros
+                if ((values.includes('__ALL__') || values.includes('__NONE__')) && values.length > 1) {
+                  // Detectar qual item foi adicionado
+                  const addedItem = values.find((v: string) => !selectedTagIds.includes(v));
+                  
+                  if (addedItem === '__ALL__' || addedItem === '__NONE__') {
+                    // Clicou em "Todas" ou "Nenhuma", selecionar apenas ele
+                    setSelectedTagIds([addedItem]);
+                  } else {
+                    // Clicou em outro item tendo especial selecionado, manter apenas o novo
+                    setSelectedTagIds([addedItem]);
+                  }
+                  return;
+                }
+                
+                // Se apenas '__ALL__' ou '__NONE__' está selecionado, manter assim
+                if (values.length === 1 && (values[0] === '__ALL__' || values[0] === '__NONE__')) {
+                  setSelectedTagIds(values);
+                  return;
+                }
+                
+                // Se o usuário selecionou todas as tags manualmente, trocar para '__ALL__'
+                if (values.length === tags.length && !values.includes('__ALL__') && !values.includes('__NONE__')) {
+                  setSelectedTagIds(['__ALL__']);
+                  return;
+                }
+                
+                // Caso contrário, usar os valores selecionados (IDs específicos)
+                setSelectedTagIds(values);
+              }}
               styles={selectStyles}
               menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
               menuPosition={'fixed'}
@@ -683,44 +892,149 @@ export default function ReportsClient() {
             ) : null}
           </div>
         ) : (
-          <div className="flex-1 overflow-auto border rounded min-h-0">
-            <table className="w-full text-left" role="table" aria-label="Tabela de resultados">
-              <caption className="sr-only">
-                Resultados do filtro de relatórios (data, tipo, categoria, carteira)
-              </caption>
-              <thead>
-                <tr>
-                  <th className="p-2">Data</th>
-                  <th className="p-2">Tipo</th>
-                  <th className="p-2">Descrição</th>
-                  <th className="p-2">Categoria</th>
-                  <th className="p-2">Carteira</th>
-                  <th className="p-2">Cartão</th>
-                  <th className="p-2">Tipo Pgto</th>
-                  <th className="p-2">Tags</th>
-                  <th className="p-2">Recorrente</th>
-                  <th className="p-2">Valor</th>
+          (() => {
+            // Função de ordenação
+            const handleSort = (column: typeof sortColumn) => {
+              if (sortColumn === column) {
+                setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+              } else {
+                setSortColumn(column);
+                setSortDirection('asc');
+              }
+            };
+
+            // Ícone de ordenação
+            const SortIcon = ({ column }: { column: typeof sortColumn }) => {
+              if (sortColumn !== column) {
+                return <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />;
+              }
+              return sortDirection === 'asc' ? (
+                <ArrowUp className="ml-1 h-4 w-4" />
+              ) : (
+                <ArrowDown className="ml-1 h-4 w-4" />
+              );
+            };
+
+            // Ordenar dados
+            const sortedData = [...data].sort((a, b) => {
+              let comparison = 0;
+              
+              switch (sortColumn) {
+                case 'date':
+                  comparison = new Date(a.date || '').getTime() - new Date(b.date || '').getTime();
+                  break;
+                case 'type':
+                  comparison = (a.kind || '').localeCompare(b.kind || '');
+                  break;
+                case 'description':
+                  comparison = (a.description || '').localeCompare(b.description || '');
+                  break;
+                case 'category':
+                  comparison = (a.categoryName || '').localeCompare(b.categoryName || '');
+                  break;
+                case 'wallet':
+                  comparison = (a.walletName || '').localeCompare(b.walletName || '');
+                  break;
+                case 'card':
+                  comparison = (a.creditCardName || '').localeCompare(b.creditCardName || '');
+                  break;
+                case 'amount':
+                  comparison = (a.amount || 0) - (b.amount || 0);
+                  break;
+              }
+              
+              return sortDirection === 'asc' ? comparison : -comparison;
+            });
+
+            return (
+          <div className="flex-1 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                  <th 
+                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center">
+                      Data
+                      <SortIcon column="date" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('type')}
+                  >
+                    <div className="flex items-center">
+                      Tipo
+                      <SortIcon column="type" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('description')}
+                  >
+                    <div className="flex items-center">
+                      Descrição
+                      <SortIcon column="description" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center">
+                      Categoria
+                      <SortIcon column="category" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('wallet')}
+                  >
+                    <div className="flex items-center">
+                      Carteira
+                      <SortIcon column="wallet" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('card')}
+                  >
+                    <div className="flex items-center">
+                      Cartão
+                      <SortIcon column="card" />
+                    </div>
+                  </th>
+                  <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tipo Pgto</th>
+                  <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tags</th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Recorrente</th>
+                  <th 
+                    className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    onClick={() => handleSort('amount')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Valor
+                      <SortIcon column="amount" />
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {data.map((d) => (
+                {sortedData.map((d) => (
                   <tr
                     key={d.id}
-                    className="border-t focus:outline-none focus:ring-2 focus:ring-primary/60"
-                    tabIndex={0}
-                    role="row"
-                    aria-label={`${d.date} ${d.kind} ${d.description}`}
+                    className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <td className="p-2">
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">
                       {d.date ? new Date(d.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''}
                     </td>
-                    <td className="p-2">{d.kind === 'income' ? 'Ganhos' : 'Gastos'}</td>
-                    <td className="p-2">{d.description}</td>
-                    <td className="p-2">{d.categoryName ?? '-'}</td>
-                    <td className="p-2">{d.walletName ?? '-'}</td>
-                    <td className="p-2">{d.creditCardName ?? '-'}</td>
-                    <td className="p-2">{getPaymentTypeLabel(d.paymentType)}</td>
-                    <td className="p-2">
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.kind === 'income' ? 'Ganhos' : 'Gastos'}</td>
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.description}</td>
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.categoryName ?? '-'}</td>
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.walletName ?? '-'}</td>
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.creditCardName ?? '-'}</td>
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{getPaymentTypeLabel(d.paymentType)}</td>
+                    <td className="py-3 px-4">
                       {Array.isArray(d.tags) && d.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {d.tags.map((t: string, i: number) => (
@@ -733,11 +1047,19 @@ export default function ReportsClient() {
                           ))}
                         </div>
                       ) : (
-                        '-'
+                        <span className="text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
-                    <td className="p-2">{d.isRecurring ? 'Sim' : 'Não'}</td>
-                    <td className="p-2">
+                    <td className="py-3 px-4 text-center">
+                      {d.isRecurring ? (
+                        <div className="flex items-center justify-center">
+                          <span className="inline-block w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100 font-medium">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
@@ -748,6 +1070,8 @@ export default function ReportsClient() {
               </tbody>
             </table>
           </div>
+            );
+          })()
         )}
       </div>
       </div>

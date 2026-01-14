@@ -26,10 +26,14 @@ export async function GET(req: Request) {
   const endDate = qp.get('endDate');
   const categoryIds = qp.get('categoryIds') ? qp.get('categoryIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
   const walletIds = qp.get('walletIds') ? qp.get('walletIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
-  const creditCardIds = qp.get('creditCardIds') ? qp.get('creditCardIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
+  
+  // Parse creditCardIds and check for special __NONE__ value
+  const rawCreditCardIds = qp.get('creditCardIds') ? qp.get('creditCardIds')!.split(',').filter(Boolean).map(id => id.trim()) : undefined;
+  const creditCardIds = rawCreditCardIds?.includes('__NONE__') ? undefined : rawCreditCardIds;
+  const creditCardIsNone = rawCreditCardIds?.includes('__NONE__') || false;
   
   // Sanitize tags input to prevent injection attacks
-  const tags = qp.get('tags') 
+  const rawTags = qp.get('tags') 
     ? qp.get('tags')!
         .split(',')
         .filter(Boolean)
@@ -37,6 +41,10 @@ export async function GET(req: Request) {
         .filter(tag => tag.length > 0 && tag.length <= 100) // Limit tag length
         .map(tag => tag.replace(/[^\w\s\-\_\.]/g, '')) // Remove special chars except alphanumeric, spaces, dashes, underscores, dots
     : undefined;
+  
+  // Parse tags and check for special __NONE__ value
+  const tags = rawTags?.includes('__NONE__') ? undefined : rawTags;
+  const tagsIsNone = rawTags?.includes('__NONE__') || false;
     
   const page = Number(qp.get('page') || '1');
   const pageSize = Math.min(500, Math.max(1, Number(qp.get('pageSize') || '50')));
@@ -111,15 +119,20 @@ export async function GET(req: Request) {
   try {
     const results: Array<any> = [];
     // where common used for counts/aggregates
+    // Build AND array and filter out empty objects to prevent Prisma validation errors
+    const commonWhereConditions = [
+      { userId: user.id },
+      startDate || endDate ? { date: dateFilter } : {},
+      categoryIds ? { categoryId: { in: categoryIds } } : {},
+      walletIds ? { walletId: { in: walletIds } } : {},
+      creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
+      creditCardIsNone ? { creditCardId: null } : {},
+      ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+      ...(tagsIsNone ? [{ OR: [{ tags: { isEmpty: true } }, { tags: null }] }] : []),
+    ];
+    
     const commonWhere: any = {
-      AND: [
-        { userId: user.id },
-        startDate || endDate ? { date: dateFilter } : {},
-        categoryIds ? { categoryId: { in: categoryIds } } : {},
-        walletIds ? { walletId: { in: walletIds } } : {},
-        creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
-        ...(tags ? [buildTagFilter(tagNames, tags)] : []),
-      ],
+      AND: commonWhereConditions.filter(obj => typeof obj === 'object' && Object.keys(obj).length > 0),
     };
 
     // Helper to expand recurring records into occurrences within the interval
@@ -214,7 +227,16 @@ export async function GET(req: Request) {
 
     if (type === 'income' || type === 'both') {
       // fetch both fixed and variable incomes matching filters (excluding date filter because we'll handle occurrences)
-      const incomeWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
+      const incomeWhereBaseConditions = [
+        { userId: user.id }, 
+        categoryIds ? { categoryId: { in: categoryIds } } : {}, 
+        walletIds ? { walletId: { in: walletIds } } : {},
+        tagsIsNone ? { OR: [{ tags: { isEmpty: true } }, { tags: null }] } : {}
+      ];
+      
+      const incomeWhereBase: any = { 
+        AND: incomeWhereBaseConditions.filter(obj => typeof obj === 'object' && Object.keys(obj).length > 0),
+      };
       const incomeWhere = { ...incomeWhereBase, ...(tags ? { AND: [ ...(incomeWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
       let incomes = await prisma.income.findMany({ where: incomeWhere, include: { category: true, wallet: true } });
       
@@ -247,7 +269,16 @@ export async function GET(req: Request) {
     }
 
     if (type === 'expense' || type === 'both') {
-      const expenseWhereBase: any = { AND: [ { userId: user.id }, categoryIds ? { categoryId: { in: categoryIds } } : {}, walletIds ? { walletId: { in: walletIds } } : {} ] };
+      const expenseWhereBaseConditions = [
+        { userId: user.id }, 
+        categoryIds ? { categoryId: { in: categoryIds } } : {}, 
+        walletIds ? { walletId: { in: walletIds } } : {},
+        tagsIsNone ? { OR: [{ tags: { isEmpty: true } }, { tags: null }] } : {}
+      ];
+      
+      const expenseWhereBase: any = { 
+        AND: expenseWhereBaseConditions.filter(obj => typeof obj === 'object' && Object.keys(obj).length > 0),
+      };
       const expenseWhere = { ...expenseWhereBase, ...(tags ? { AND: [ ...(expenseWhereBase.AND || []), buildTagFilter(tagNames, tags) ] } : {} ) };
       let expenses = await prisma.expense.findMany({ where: expenseWhere, include: { category: true, wallet: true } });
       
@@ -278,15 +309,19 @@ export async function GET(req: Request) {
     }
 
     // Buscar CreditIncomes (créditos de cartão)
-    if (type === 'income' || type === 'both') {
+    // Nota: CreditIncome sempre tem creditCardId (obrigatório), então pulamos quando __NONE__ está selecionado
+    if ((type === 'income' || type === 'both') && !creditCardIsNone) {
+      const creditIncomeWhereConditions = [
+        { userId: user.id },
+        startDate || endDate ? { date: dateFilter } : {},
+        categoryIds ? { categoryId: { in: categoryIds } } : {},
+        creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
+        ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+        ...(tagsIsNone ? [{ OR: [{ tags: { isEmpty: true } }, { tags: null }] }] : []),
+      ];
+      
       const creditIncomeWhere: any = {
-        AND: [
-          { userId: user.id },
-          startDate || endDate ? { date: dateFilter } : {},
-          categoryIds ? { categoryId: { in: categoryIds } } : {},
-          creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
-          ...(tags ? [buildTagFilter(tagNames, tags)] : []),
-        ],
+        AND: creditIncomeWhereConditions.filter(obj => typeof obj === 'object' && Object.keys(obj).length > 0),
       };
       const creditIncomes = await prisma.creditIncome.findMany({
         where: creditIncomeWhere,
@@ -311,16 +346,20 @@ export async function GET(req: Request) {
     }
 
     // Buscar CreditExpenses (gastos de cartão)
-    if (type === 'expense' || type === 'both') {
+    // Nota: CreditExpense sempre tem creditCardId (obrigatório), então pulamos quando __NONE__ está selecionado
+    if ((type === 'expense' || type === 'both') && !creditCardIsNone) {
+      const creditExpenseWhereConditions = [
+        { userId: user.id },
+        { parentExpenseId: null }, // Apenas registros pai
+        startDate || endDate ? { purchaseDate: dateFilter } : {},
+        categoryIds ? { categoryId: { in: categoryIds } } : {},
+        creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
+        ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+        ...(tagsIsNone ? [{ OR: [{ tags: { isEmpty: true } }, { tags: null }] }] : []),
+      ];
+      
       const creditExpenseWhere: any = {
-        AND: [
-          { userId: user.id },
-          { parentExpenseId: null }, // Apenas registros pai
-          startDate || endDate ? { purchaseDate: dateFilter } : {},
-          categoryIds ? { categoryId: { in: categoryIds } } : {},
-          creditCardIds ? { creditCardId: { in: creditCardIds } } : {},
-          ...(tags ? [buildTagFilter(tagNames, tags)] : []),
-        ],
+        AND: creditExpenseWhereConditions.filter(obj => typeof obj === 'object' && Object.keys(obj).length > 0),
       };
       const creditExpenses = await prisma.creditExpense.findMany({
         where: creditExpenseWhere,
