@@ -76,6 +76,7 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
           startDate: true,
           endDate: true,
           dayOfMonth: true,
+          excludedDates: true,
           transferId: true,
           categoryId: true,
           walletId: true,
@@ -95,6 +96,7 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
           startDate: true,
           endDate: true,
           dayOfMonth: true,
+          excludedDates: true,
           transferId: true,
           categoryId: true,
           walletId: true,
@@ -123,14 +125,25 @@ import { z } from 'zod';export async function GET(req: NextRequest) {
           // Usa dayOfMonth do registro, ou extrai da data usando UTC
           const day = typeof r.dayOfMonth === 'number' && r.dayOfMonth > 0 ? r.dayOfMonth : (r.date ? new Date(r.date).getUTCDate() : 1);
           
+          // Obter lista de datas excluídas
+          const excludedDates = Array.isArray((r as any).excludedDates) ? (r as any).excludedDates : [];
+          
           let cur = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1, 12, 0, 0, 0));
           const last = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1, 12, 0, 0, 0));
           while (cur.getTime() <= last.getTime()) {
             const lastDayOfMonth = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 0, 12, 0, 0, 0)).getUTCDate();
             const dayInMonth = Math.min(day, lastDayOfMonth);
             const occDate = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), dayInMonth, 12, 0, 0, 0));
-            // Só inclui se a data da ocorrência estiver no intervalo E não for futura
-            if (occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime() && occDate.getTime() <= upto.getTime()) {
+            
+            // Verificar se esta data está nas datas excluídas
+            const occDateStr = occDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            const isExcluded = excludedDates.some((exDate: string) => {
+              const exDateStr = new Date(exDate).toISOString().split('T')[0];
+              return exDateStr === occDateStr;
+            });
+            
+            // Só inclui se a data da ocorrência estiver no intervalo E não for futura E não estiver excluída
+            if (!isExcluded && occDate.getTime() >= from.getTime() && occDate.getTime() <= to.getTime() && occDate.getTime() <= upto.getTime()) {
               expanded.push({ ...(r as any), date: occDate.toISOString() } as ExpenseRecord | IncomeRecord);
             }
             cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1, 12, 0, 0, 0));

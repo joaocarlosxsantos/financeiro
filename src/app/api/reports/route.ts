@@ -186,6 +186,21 @@ export async function GET(req: Request) {
           const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
           const day = Math.min(desiredDay, lastDay);
           const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
+          
+          // Verificar se esta data está nas datas excluídas
+          const occDateStr = occDate.toISOString().split('T')[0]; // YYYY-MM-DD
+          const excludedDates = Array.isArray(r.excludedDates) ? r.excludedDates : [];
+          const isExcluded = excludedDates.some((exDate: string) => {
+            const exDateStr = new Date(exDate).toISOString().split('T')[0];
+            return exDateStr === occDateStr;
+          });
+          
+          if (isExcluded) {
+            cursor.setMonth(cursor.getMonth() + 1);
+            months += 1;
+            continue;
+          }
+          
           // NOVA REGRA: se mês atual, só inclui recorrente até o dia atual
           const isCurrentMonth = today.getFullYear() === occDate.getUTCFullYear() && today.getMonth() === occDate.getUTCMonth();
           if (isCurrentMonth && occDate.getUTCDate() > today.getDate()) {
