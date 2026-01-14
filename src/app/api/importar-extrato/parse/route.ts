@@ -161,6 +161,11 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
+import { 
+  buildLearningMap, 
+  suggestFromHistory, 
+  type HistoricalTransaction 
+} from '@/lib/smart-categorization';
 
 // Função para normalizar texto mal formatado
 function normalizeText(text: string) {
@@ -735,6 +740,9 @@ async function handler(req: NextRequest) {
   // Busca categorias do usuário logado (se autenticado)
   let categoriasUsuario: any[] = [];
   let user: any = null;
+  let learningMap: any[] = [];
+  let historyAvailable = false;
+  
   try {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
@@ -754,6 +762,101 @@ async function handler(req: NextRequest) {
       });
       if (user) {
         categoriasUsuario = user.categories;
+        
+        // Busca histórico de transações para auto-categorização
+        try {
+          const dateLimit = new Date();
+          dateLimit.setMonth(dateLimit.getMonth() - 6); // Últimos 6 meses
+          
+          // Busca despesas categorizadas
+          const expenses = await prisma.expense.findMany({
+            where: {
+              userId: user.id,
+              date: { gte: dateLimit },
+              OR: [
+                { categoryId: { not: null } },
+                { tags: { isEmpty: false } },
+              ],
+            },
+            select: {
+              id: true,
+              description: true,
+              amount: true,
+              date: true,
+              categoryId: true,
+              tags: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+            orderBy: { date: 'desc' },
+            take: 500,
+          });
+          
+          // Busca receitas categorizadas
+          const incomes = await prisma.income.findMany({
+            where: {
+              userId: user.id,
+              date: { gte: dateLimit },
+              OR: [
+                { categoryId: { not: null } },
+                { tags: { isEmpty: false } },
+              ],
+            },
+            select: {
+              id: true,
+              description: true,
+              amount: true,
+              date: true,
+              categoryId: true,
+              tags: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+            orderBy: { date: 'desc' },
+            take: 500,
+          });
+          
+          // Formata histórico para o sistema de categorização
+          const history: HistoricalTransaction[] = [
+            ...expenses.map((e: any) => ({
+              id: e.id,
+              description: e.description,
+              categoryId: e.categoryId,
+              categoryName: e.category?.name,
+              tags: e.tags || [],
+              amount: Number(e.amount),
+              date: e.date,
+              type: 'EXPENSE' as const,
+            })),
+            ...incomes.map((i: any) => ({
+              id: i.id,
+              description: i.description,
+              categoryId: i.categoryId,
+              categoryName: i.category?.name,
+              tags: i.tags || [],
+              amount: Number(i.amount),
+              date: i.date,
+              type: 'INCOME' as const,
+            })),
+          ];
+          
+          if (history.length > 0) {
+            learningMap = buildLearningMap(history);
+            historyAvailable = true;
+            logger.info(`Mapa de aprendizado criado com ${learningMap.length} padrões únicos de ${history.length} transações`);
+          }
+        } catch (error) {
+          logger.error('Erro ao buscar histórico para auto-categorização:', error);
+          // Continua sem o histórico
+        }
       }
     }
   } catch (error) {
@@ -856,13 +959,17 @@ async function handler(req: NextRequest) {
             t.MEMO || t.memo || t.NAME || t.name || t.PAYEE || t.payee || '',
           ).trim();
 
-          // Usa IA para análise da transação
-          let aiAnalysis: any = null;
+          // Determina tipo da transação
+          const transactionType: 'INCOME' | 'EXPENSE' = valor > 0 ? 'INCOME' : 'EXPENSE';
+          
           let categoriaRecomendada = '';
           let categoriaId = '';
           let descricaoMelhorada = descricao;
           let tagsRecomendadas: string[] = [];
           let shouldCreateCategory = false;
+          let smartSuggestion: any = null;
+          let aiAnalysis: any = null;
+          let suggestionSource = 'none'; // 'smart', 'ai', ou 'fallback'
 
           // --- Lógica robusta: nunca sugerir transferência entre contas se nome do usuário não estiver na descrição ---
           const normalizar = (str: string) =>
@@ -873,10 +980,35 @@ async function handler(req: NextRequest) {
                   .toLowerCase()
               : '';
           const userNorm = user && user.name ? normalizar(user.name) : '';
+          
           try {
-            if (user && descricao) {
+            // 1. PRIMEIRO: Tenta auto-categorização baseada em histórico
+            if (historyAvailable && learningMap.length > 0) {
+              smartSuggestion = suggestFromHistory(
+                descricao,
+                Math.abs(valor),
+                transactionType,
+                learningMap
+              );
+              
+              // Usa sugestão do histórico se confiança >= 60%
+              if (smartSuggestion.confidence >= 60) {
+                categoriaRecomendada = smartSuggestion.categoryName || '';
+                categoriaId = smartSuggestion.categoryId || '';
+                tagsRecomendadas = smartSuggestion.tags || [];
+                descricaoMelhorada = descricao; // Mantém descrição original
+                shouldCreateCategory = false; // Categoria já existe no histórico
+                suggestionSource = 'smart';
+                
+                logger.info(`Smart categorization: "${descricao}" -> "${categoriaRecomendada}" (${smartSuggestion.confidence}% confidence)`);
+              }
+            }
+            
+            // 2. SEGUNDO: Se smart categorization não teve confiança suficiente, usa IA
+            if (suggestionSource === 'none' && user && descricao) {
               aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
               let suggested = aiAnalysis.suggestedCategory;
+              
               // Nunca sugerir transferência entre contas se nome não está na descrição
               if (normalizar(suggested) === 'transferenciaentrecontas') {
                 const descNorm = normalizar(descricao);
@@ -884,6 +1016,7 @@ async function handler(req: NextRequest) {
                   suggested = 'Pix';
                 }
               }
+              
               // Verifica se categoria sugerida existe
               const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
               const categoriaExistente = categoriasUsuario.find(
@@ -899,6 +1032,7 @@ async function handler(req: NextRequest) {
                 shouldCreateCategory = true;
               }
               descricaoMelhorada = aiAnalysis.enhancedDescription;
+              
               // Verifica tags e filtra apenas as que não existem
               const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
                 return !tagsUsuario.some(
@@ -908,12 +1042,14 @@ async function handler(req: NextRequest) {
                 );
               });
               tagsRecomendadas = tagsNaoExistentes;
+              suggestionSource = 'ai';
             }
           } catch (error) {
-            console.error('Erro na análise IA:', error);
-            // Fallback para método antigo se IA falhar
+            console.error('Erro na análise:', error);
+            // 3. FALLBACK: método antigo se tudo falhar
             const descricaoSimplificada = simplificarDescricao(descricao);
             let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+            
             // Nunca sugerir transferência entre contas se nome não está na descrição
             if (normalizar(categoriaSugerida) === 'transferenciaentrecontas') {
               const descNorm = normalizar(descricao);
@@ -936,6 +1072,7 @@ async function handler(req: NextRequest) {
               categoriaRecomendada = categoriaSugerida;
               shouldCreateCategory = true;
             }
+            suggestionSource = 'fallback';
           }
 
           return {
@@ -948,6 +1085,12 @@ async function handler(req: NextRequest) {
             categoriaId,
             tagsRecomendadas,
             shouldCreateCategory,
+            suggestionSource, // Para debug
+            smartMatch: smartSuggestion ? {
+              confidence: smartSuggestion.confidence,
+              matchReason: smartSuggestion.matchReason,
+              matchedDescription: smartSuggestion.matchedTransaction?.description,
+            } : null,
             aiAnalysis: aiAnalysis
               ? {
                   confidence: aiAnalysis.confidence,
@@ -1009,6 +1152,9 @@ async function handler(req: NextRequest) {
           // Para arquivos TXT, usar t.descricao. Para OFX, usar t.MEMO
           const descricao = t.descricao || t.MEMO || '';
           const descricaoOriginal = t.descricao || t.MEMO || '';
+          
+          // Determina tipo da transação
+          const transactionType: 'INCOME' | 'EXPENSE' = valor > 0 ? 'INCOME' : 'EXPENSE';
 
           // --- Lógica de sugestão automática de transferência entre contas ---
           let categoriaRecomendada = t.categoriaRecomendada || '';
@@ -1016,6 +1162,8 @@ async function handler(req: NextRequest) {
           let shouldCreateCategory = t.shouldCreateCategory || false;
           let descricaoMelhorada = descricao;
           let tagsRecomendadas: string[] = [];
+          let smartSuggestion: any = null;
+          let suggestionSource = 'none'; // 'smart', 'ai', 'transfer', ou 'fallback'
 
           let isTransferenciaEntreContas = false;
           if (categoriaTransfer && descricao && userNorm.length >= 5) {
@@ -1026,16 +1174,41 @@ async function handler(req: NextRequest) {
               categoriaRecomendada = categoriaTransfer.name;
               categoriaId = categoriaTransfer.id;
               shouldCreateCategory = false;
+              suggestionSource = 'transfer';
             }
           }
 
-          // Se não for transferência, segue lógica IA/heurística normal
+          // Se não for transferência, segue lógica smart/IA/heurística normal
           if (!isTransferenciaEntreContas) {
-            let aiAnalysis: any = null;
             try {
-              if (user && descricao && !categoriaRecomendada) {
+              // 1. PRIMEIRO: Tenta auto-categorização baseada em histórico
+              if (historyAvailable && learningMap.length > 0 && !categoriaRecomendada) {
+                smartSuggestion = suggestFromHistory(
+                  descricao,
+                  Math.abs(valor),
+                  transactionType,
+                  learningMap
+                );
+                
+                // Usa sugestão do histórico se confiança >= 60%
+                if (smartSuggestion.confidence >= 60) {
+                  categoriaRecomendada = smartSuggestion.categoryName || '';
+                  categoriaId = smartSuggestion.categoryId || '';
+                  tagsRecomendadas = smartSuggestion.tags || [];
+                  descricaoMelhorada = descricao;
+                  shouldCreateCategory = false;
+                  suggestionSource = 'smart';
+                  
+                  logger.info(`Smart categorization (PDF/TXT): "${descricao}" -> "${categoriaRecomendada}" (${smartSuggestion.confidence}% confidence)`);
+                }
+              }
+              
+              // 2. SEGUNDO: Se smart não teve confiança suficiente, usa IA
+              let aiAnalysis: any = null;
+              if (suggestionSource === 'none' && user && descricao && !categoriaRecomendada) {
                 aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
                 let suggested = aiAnalysis.suggestedCategory;
+                
                 // Nunca sugerir 'Transferência entre contas' se não for match do nome
                 if (suggested && normalizar(suggested) === 'transferenciaentrecontas') {
                   const descNorm = normalizar(descricao);
@@ -1061,9 +1234,11 @@ async function handler(req: NextRequest) {
                   );
                 });
                 tagsRecomendadas = tagsNaoExistentes;
+                suggestionSource = 'ai';
               }
             } catch (error) {
-              console.error('Erro na análise IA:', error);
+              console.error('Erro na análise:', error);
+              // 3. FALLBACK: método antigo se tudo falhar
               if (!categoriaRecomendada) {
                 const descricaoSimplificada = simplificarDescricao(descricao);
                 let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
@@ -1088,6 +1263,7 @@ async function handler(req: NextRequest) {
                   categoriaRecomendada = categoriaSugerida;
                   shouldCreateCategory = true;
                 }
+                suggestionSource = 'fallback';
               }
             }
           }
@@ -1118,7 +1294,12 @@ async function handler(req: NextRequest) {
             categoriaId,
             tagsRecomendadas,
             shouldCreateCategory,
-            aiAnalysis: null, // IA só é relevante para debug, pode ser adicionado se necessário
+            suggestionSource, // Para debug
+            smartMatch: smartSuggestion ? {
+              confidence: smartSuggestion.confidence,
+              matchReason: smartSuggestion.matchReason,
+              matchedDescription: smartSuggestion.matchedTransaction?.description,
+            } : null,
           };
         }),
       );

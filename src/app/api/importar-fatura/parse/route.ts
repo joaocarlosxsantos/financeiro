@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
+import { 
+  buildLearningMap, 
+  suggestFromHistory, 
+  type HistoricalTransaction 
+} from '@/lib/smart-categorization';
+import { logger } from '@/lib/logger';
 
 /**
  * API para processar arquivos CSV de fatura de cartão de crédito
@@ -31,6 +37,104 @@ export async function POST(request: NextRequest) {
       select: { id: true, name: true, type: true }
     });
 
+    // Busca histórico de transações de cartão para auto-categorização
+    let learningMap: any[] = [];
+    let historyAvailable = false;
+    
+    try {
+      const dateLimit = new Date();
+      dateLimit.setMonth(dateLimit.getMonth() - 6); // Últimos 6 meses
+      
+      // Busca despesas de cartão categorizadas
+      const creditExpenses = await prisma.creditExpense.findMany({
+        where: {
+          userId: user.id,
+          purchaseDate: { gte: dateLimit },
+          OR: [
+            { categoryId: { not: null } },
+            { tags: { isEmpty: false } },
+          ],
+        },
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          purchaseDate: true,
+          categoryId: true,
+          tags: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { purchaseDate: 'desc' },
+        take: 500,
+      });
+      
+      // Busca receitas/créditos de cartão categorizadas
+      const creditIncomes = await prisma.creditIncome.findMany({
+        where: {
+          userId: user.id,
+          date: { gte: dateLimit },
+          OR: [
+            { categoryId: { not: null } },
+            { tags: { isEmpty: false } },
+          ],
+        },
+        select: {
+          id: true,
+          description: true,
+          amount: true,
+          date: true,
+          categoryId: true,
+          tags: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { date: 'desc' },
+        take: 500,
+      });
+      
+      // Formata histórico para o sistema de categorização
+      const history: HistoricalTransaction[] = [
+        ...creditExpenses.map((e: any) => ({
+          id: e.id,
+          description: e.description,
+          categoryId: e.categoryId,
+          categoryName: e.category?.name,
+          tags: e.tags || [],
+          amount: Number(e.amount),
+          date: e.purchaseDate,
+          type: 'EXPENSE' as const,
+        })),
+        ...creditIncomes.map((i: any) => ({
+          id: i.id,
+          description: i.description,
+          categoryId: i.categoryId,
+          categoryName: i.category?.name,
+          tags: i.tags || [],
+          amount: Number(i.amount),
+          date: i.date,
+          type: 'INCOME' as const,
+        })),
+      ];
+      
+      if (history.length > 0) {
+        learningMap = buildLearningMap(history);
+        historyAvailable = true;
+        logger.info(`Mapa de aprendizado de faturas criado com ${learningMap.length} padrões únicos de ${history.length} transações`);
+      }
+    } catch (error) {
+      logger.error('Erro ao buscar histórico para auto-categorização de faturas:', error);
+      // Continua sem o histórico
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -54,8 +158,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nenhuma transação encontrada no arquivo' }, { status: 400 });
     }
 
-    // Sugerir categorias usando IA primeiro, depois regras simples como fallback
-    const transactionsWithCategories = await suggestCategories(transactions, existingCategories, user);
+    // Sugerir categorias usando smart-categorization primeiro, depois IA, depois regras simples como fallback
+    const transactionsWithCategories = await suggestCategories(transactions, existingCategories, user, learningMap, historyAvailable);
 
     return NextResponse.json({
       success: true,
@@ -172,22 +276,25 @@ function parseValor(valorStr: string): number {
 }
 
 /**
- * Sugerir categorias usando IA primeiro, depois regras simples como fallback
+ * Sugerir categorias usando smart-categorization primeiro, depois IA, depois regras simples como fallback
  */
-async function suggestCategories(transactions: any[], existingCategories: any[], user: any): Promise<any[]> {
+async function suggestCategories(transactions: any[], existingCategories: any[], user: any, learningMap: any[], historyAvailable: boolean): Promise<any[]> {
   const processedTransactions = [];
   
   for (const t of transactions) {
     const valor = typeof t.valor === 'number' ? t.valor : parseFloat(String(t.valor)) || 0;
     const isCredito = valor < 0;
     const categoryType = isCredito ? 'INCOME' : 'EXPENSE';
+    const transactionType: 'INCOME' | 'EXPENSE' = isCredito ? 'INCOME' : 'EXPENSE';
     
-    let aiAnalysis: any = null;
     let categoriaRecomendada = '';
     let categoriaId = '';
     let descricaoMelhorada = t.descricao;
     let tagsRecomendadas: string[] = [];
     let shouldCreateCategory = false;
+    let smartSuggestion: any = null;
+    let aiAnalysis: any = null;
+    let suggestionSource = 'none'; // 'smart', 'ai', ou 'fallback'
 
     // Função para normalizar texto (igual ao extrato)
     const normalizar = (str: string) =>
@@ -200,7 +307,30 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
     const userNorm = user && user.name ? normalizar(user.name) : '';
     
     try {
-      if (user && t.descricao) {
+      // 1. PRIMEIRO: Tenta auto-categorização baseada em histórico
+      if (historyAvailable && learningMap.length > 0) {
+        smartSuggestion = suggestFromHistory(
+          t.descricao,
+          Math.abs(valor),
+          transactionType,
+          learningMap
+        );
+        
+        // Usa sugestão do histórico se confiança >= 60%
+        if (smartSuggestion.confidence >= 60) {
+          categoriaRecomendada = smartSuggestion.categoryName || '';
+          categoriaId = smartSuggestion.categoryId || '';
+          tagsRecomendadas = smartSuggestion.tags || [];
+          descricaoMelhorada = t.descricao; // Mantém descrição original
+          shouldCreateCategory = false; // Categoria já existe no histórico
+          suggestionSource = 'smart';
+          
+          logger.info(`Smart categorization (Fatura): "${t.descricao}" -> "${categoriaRecomendada}" (${smartSuggestion.confidence}% confidence)`);
+        }
+      }
+      
+      // 2. SEGUNDO: Se smart categorization não teve confiança suficiente, usa IA
+      if (suggestionSource === 'none' && user && t.descricao) {
         aiAnalysis = await analyzeTransactionWithAI(t.descricao, valor, existingCategories);
         let suggested = aiAnalysis.suggestedCategory;
         
@@ -209,7 +339,7 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
         
         // Verifica se categoria sugerida já existe
         const categoriaExistente = existingCategories.find(
-          (cat) =>
+          (cat: any) =>
             removeAcentos(cat.name.toLowerCase()) === removeAcentos(suggested.toLowerCase()),
         );
         
@@ -238,28 +368,32 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
           );
         });
         tagsRecomendadas = tagsNaoExistentes;
+        suggestionSource = 'ai';
       }
     } catch (error) {
-      console.error('Erro na análise IA:', error);
-      // Fallback para método antigo se IA falhar
-      const categoria = sugerirCategoria(t.descricao, existingCategories, categoryType, isCredito);
-      
-      // Função para remover acentos (igual ao extrato)
-      const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
-      
-      const categoriaExistente = existingCategories.find(
-        (cat) =>
-          removeAcentos(cat.name.toLowerCase()) ===
-          removeAcentos(categoria.name.toLowerCase()),
-      );
-      
-      if (categoriaExistente) {
-        categoriaRecomendada = categoriaExistente.name;
-        categoriaId = categoriaExistente.id;
-        shouldCreateCategory = false;
-      } else {
-        categoriaRecomendada = categoria.name;
-        shouldCreateCategory = true;
+      console.error('Erro na análise:', error);
+      // 3. FALLBACK: método antigo se tudo falhar
+      if (suggestionSource === 'none') {
+        const categoria = sugerirCategoria(t.descricao, existingCategories, categoryType, isCredito);
+        
+        // Função para remover acentos (igual ao extrato)
+        const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+        
+        const categoriaExistente = existingCategories.find(
+          (cat: any) =>
+            removeAcentos(cat.name.toLowerCase()) ===
+            removeAcentos(categoria.name.toLowerCase()),
+        );
+        
+        if (categoriaExistente) {
+          categoriaRecomendada = categoriaExistente.name;
+          categoriaId = categoriaExistente.id;
+          shouldCreateCategory = false;
+        } else {
+          categoriaRecomendada = categoria.name;
+          shouldCreateCategory = true;
+        }
+        suggestionSource = 'fallback';
       }
     }
     
@@ -270,6 +404,12 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
       isNewCategory: shouldCreateCategory,
       descricaoMelhorada,
       tagsRecomendadas,
+      suggestionSource, // Para debug
+      smartMatch: smartSuggestion ? {
+        confidence: smartSuggestion.confidence,
+        matchReason: smartSuggestion.matchReason,
+        matchedDescription: smartSuggestion.matchedTransaction?.description,
+      } : null,
       aiAnalysis: aiAnalysis
         ? {
             confidence: aiAnalysis.confidence,

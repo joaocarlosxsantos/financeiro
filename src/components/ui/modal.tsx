@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 
 export interface ModalProps {
   open: boolean;
@@ -85,11 +86,14 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
   const contentPaddingClass = size === 'sm' ? 'px-4 pb-4 pt-3' : 'px-4 sm:px-8 pb-6 sm:pb-8 pt-2';
 
-  return (
+  if (!open) return null;
+
+  const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
       aria-hidden={!open}
+      style={{ overflow: 'auto' }}
     >
       <div
         ref={modalRef}
@@ -97,7 +101,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
         role="dialog"
         aria-modal="true"
         aria-label={title ?? 'Modal'}
-        className={`bg-background border border-border rounded-lg shadow-lg w-full mx-2 sm:mx-4 relative animate-in fade-in zoom-in-95 p-0 flex flex-col ${outerSizeClass}`}
+        className={`bg-background border border-border rounded-lg shadow-lg w-full mx-auto my-auto relative animate-in fade-in zoom-in-95 p-0 flex flex-col ${outerSizeClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -119,4 +123,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       </div>
     </div>
   );
+
+  // Renderiza o modal usando portal para garantir que apareça no topo da página
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }

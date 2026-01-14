@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Check, X, Info, Wand2 } from 'lucide-react';
 import { normalizeDescription } from '@/lib/description-normalizer';
+import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
 
 interface ExtratoPreviewProps {
   preview: any[];
@@ -43,6 +44,9 @@ export function ExtratoPreview({
   const [registros, setRegistros] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState<any>(null);
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
 
   // Descobre a data do primeiro lançamento do extrato
   const dataPrimeiroLancamento = React.useMemo(() => {
@@ -192,6 +196,56 @@ export function ExtratoPreview({
     }
   }
 
+  // Verificar conflitos de registros existentes
+  async function checkExistingRecords() {
+    if (!selectedWallet || registros.length === 0) {
+      return null;
+    }
+
+    setIsCheckingConflicts(true);
+
+    try {
+      // Calcular período dos registros
+      const dates = registros.map(r => {
+        if (typeof r.data === 'string' && r.data.includes('/')) {
+          const [d, m, y] = r.data.split('/');
+          return new Date(Number(y), Number(m) - 1, Number(d));
+        }
+        return new Date(r.data);
+      }).filter(d => !isNaN(d.getTime()));
+
+      if (dates.length === 0) return null;
+
+      const startDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      const endDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+      const response = await fetch('/api/importar-extrato/check-existing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periods: [{
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+            sourceFile: fileName || 'Extrato'
+          }],
+          walletId: selectedWallet
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao verificar registros existentes');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Erro ao verificar conflitos:', error);
+      return null;
+    } finally {
+      setIsCheckingConflicts(false);
+    }
+  }
+
   // Função para criar tag automaticamente
   async function handleCreateTag(tagName: string) {
     try {
@@ -297,6 +351,19 @@ export function ExtratoPreview({
   }
 
   async function handleSaveComSaldo(saldoAnterior?: number, deleteExisting?: boolean) {
+    // Se deleteExisting não foi definido, verificar conflitos primeiro
+    if (deleteExisting === undefined) {
+      const conflictCheck = await checkExistingRecords();
+      
+      if (conflictCheck && conflictCheck.hasConflict) {
+        // Mostrar modal de conflito
+        setConflictData(conflictCheck);
+        setShowConflictModal(true);
+        return; // Não prosseguir ainda
+      }
+    }
+
+    // Prosseguir com o salvamento
     let novosRegistros = [...registros];
 
     // Processar sugestões da IA automaticamente se o usuário não fez seleções
@@ -367,6 +434,17 @@ export function ExtratoPreview({
     
     onSave(novosRegistros, saldoAnterior, deleteExisting);
   }
+
+  const handleConfirmDelete = () => {
+    setShowConflictModal(false);
+    // Chamar novamente com deleteExisting = true
+    handleSaveComSaldo(undefined, true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowConflictModal(false);
+    setConflictData(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -452,6 +530,18 @@ export function ExtratoPreview({
             id: 'single-file',
             preview: registros
           }] : undefined}
+        />
+      )}
+      
+      {/* Modal de resolução de conflitos */}
+      {showConflictModal && conflictData && (
+        <ConflictResolutionModal
+          open={showConflictModal}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          loading={saving || isCheckingConflicts}
+          conflicts={conflictData.periods || []}
+          totalConflicts={conflictData.totalConflicts || 0}
         />
       )}
     </div>

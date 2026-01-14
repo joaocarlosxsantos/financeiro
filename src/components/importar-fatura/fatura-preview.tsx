@@ -191,14 +191,56 @@ export function FaturaPreview({
       setShowConflictModal(true);
     } else {
       // Não há conflitos, prosseguir com o salvamento
-      onSave(registros, false);
+      processSave(false);
     }
   }
+
+  const processSave = async (deleteExisting: boolean) => {
+    // Processar criação de categorias e tags antes de salvar
+    for (const registro of registros) {
+      // Se usuário não selecionou categoria e existe recomendação da IA
+      if (!registro.categoriaId && registro.categoriaSugerida && registro.isNewCategory) {
+        try {
+          const categoryType = registro.valor < 0 ? 'INCOME' : 'EXPENSE';
+          const newCategory = await handleCreateCategory(registro.categoriaSugerida, categoryType);
+          if (newCategory) {
+            registro.categoriaId = newCategory.id;
+            registro.isNewCategory = false;
+          }
+        } catch (error) {
+          console.error('Erro ao criar categoria automaticamente:', error);
+        }
+      } else if (!registro.categoriaId && registro.categoriaSugerida && !registro.isNewCategory) {
+        // Se categoria já existe, apenas definir o nome para o backend resolver
+        registro.categoriaId = registro.categoriaSugerida;
+      }
+
+      // Criar tags que precisam ser criadas
+      if (registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0) {
+        const tagsToCreate = registro.tagsRecomendadas.filter((tagName: string) => 
+          !tags.some((existingTag: any) => existingTag.name.toLowerCase() === tagName.toLowerCase())
+        );
+        
+        for (const tagName of tagsToCreate) {
+          try {
+            await handleCreateTag(tagName);
+          } catch (error) {
+            console.error('Erro ao criar tag automaticamente:', error);
+          }
+        }
+        
+        // Adicionar todas as tags recomendadas às tags do registro
+        registro.tags = [...(registro.tags || []), ...registro.tagsRecomendadas];
+      }
+    }
+
+    onSave(registros, deleteExisting);
+  };
 
   const handleConfirmDelete = () => {
     // Usuário confirmou a exclusão, prosseguir com o salvamento
     setShowConflictModal(false);
-    onSave(registros, true);
+    processSave(true);
   };
 
   const handleCancelDelete = () => {
@@ -313,11 +355,11 @@ export function FaturaPreview({
 
         <Button
           onClick={handleSave}
-          disabled={!selectedCreditCard || saving || success}
+          disabled={!selectedCreditCard || saving || success || isChecking}
           className="w-full"
           size="lg"
         >
-          {saving ? 'Salvando...' : 'Salvar Fatura'}
+          {isChecking ? 'Verificando registros existentes...' : (saving ? 'Salvando...' : 'Salvar Fatura')}
         </Button>
       </div>
 
