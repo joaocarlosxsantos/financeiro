@@ -150,6 +150,70 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
     setReloadKey(prev => prev + 1);
   };
 
+  // Função para obter cor do banco
+  const getBankColor = (bankName: string | null | undefined): string => {
+    if (!bankName) return 'bg-gray-600 text-white';
+    const normalizedBank = bankName.toLowerCase().trim();
+    
+    // Mapeamento de cores por banco
+    const bankColors: { [key: string]: string } = {
+      'nubank': 'bg-purple-600 text-white',
+      'nu': 'bg-purple-600 text-white',
+      'inter': 'bg-orange-500 text-white',
+      'banco inter': 'bg-orange-500 text-white',
+      'itaú': 'bg-blue-600 text-white',
+      'itau': 'bg-blue-600 text-white',
+      'bradesco': 'bg-red-600 text-white',
+      'santander': 'bg-red-700 text-white',
+      'banco do brasil': 'bg-yellow-500 text-gray-900',
+      'bb': 'bg-yellow-500 text-gray-900',
+      'caixa': 'bg-blue-800 text-white',
+      'caixa econômica': 'bg-blue-800 text-white',
+      'caixa economica': 'bg-blue-800 text-white',
+      'c6': 'bg-gray-800 text-white',
+      'c6 bank': 'bg-gray-800 text-white',
+      'picpay': 'bg-green-500 text-white',
+      'next': 'bg-green-600 text-white',
+      'original': 'bg-green-700 text-white',
+      'banco original': 'bg-green-700 text-white',
+      'neon': 'bg-blue-500 text-white',
+      'will bank': 'bg-purple-500 text-white',
+      'will': 'bg-purple-500 text-white',
+      'btg': 'bg-blue-900 text-white',
+      'btg pactual': 'bg-blue-900 text-white',
+      'safra': 'bg-blue-700 text-white',
+      'banco safra': 'bg-blue-700 text-white',
+      'sicoob': 'bg-green-800 text-white',
+      'sicredi': 'bg-green-900 text-white',
+      'xs': 'bg-pink-600 text-white',
+      'xp': 'bg-yellow-600 text-gray-900',
+      'xp investimentos': 'bg-yellow-600 text-gray-900',
+      'modal': 'bg-indigo-600 text-white',
+      'banco modal': 'bg-indigo-600 text-white',
+      'bs2': 'bg-teal-600 text-white',
+      'mercado pago': 'bg-blue-400 text-white',
+      'stone': 'bg-green-600 text-white',
+      'pagseguro': 'bg-green-500 text-white',
+      'magalu': 'bg-blue-500 text-white',
+      'magalu bank': 'bg-blue-500 text-white',
+    };
+    
+    // Procurar correspondência exata primeiro
+    if (bankColors[normalizedBank]) {
+      return bankColors[normalizedBank];
+    }
+    
+    // Procurar correspondência parcial
+    for (const [key, color] of Object.entries(bankColors)) {
+      if (normalizedBank.includes(key) || key.includes(normalizedBank)) {
+        return color;
+      }
+    }
+    
+    // Cor padrão se não encontrar
+    return 'bg-gray-600 text-white';
+  };
+
   const handleRefundClick = async (expense: CreditExpense) => {
     // Buscar dados completos da compra para o estorno
     try {
@@ -494,7 +558,10 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <Badge variant="secondary" className="text-xs font-medium">
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-xs font-medium ${getBankColor(expense.creditCard.bank?.name)}`}
+                  >
                     {expense.creditCard.name}
                   </Badge>
                 </td>
@@ -505,7 +572,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                         {expense.category.name}
                       </Badge>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Sem categoria</span>
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </div>
                 </td>
@@ -529,7 +596,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                         })}
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Sem tags</span>
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </div>
                 </td>

@@ -47,7 +47,11 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         category: true,
-        creditCard: true,
+        creditCard: {
+          include: {
+            bank: true,
+          },
+        },
       },
       orderBy: {
         date: 'desc',
