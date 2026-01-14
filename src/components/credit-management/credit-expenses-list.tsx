@@ -23,7 +23,10 @@ interface CreditExpense {
   creditCard: {
     id: string;
     name: string;
-    bank: string;
+    bank?: {
+      id: string;
+      name: string;
+    } | null;
   };
   category?: {
     id: string;
