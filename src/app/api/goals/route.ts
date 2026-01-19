@@ -110,9 +110,7 @@ export async function GET(req: NextRequest) {
       };
     }));
 
-    const headers = new Headers();
-    headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
-    return NextResponse.json(results, { headers });
+    return NextResponse.json(results);
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: 'Erro' }, { status: 500 });
