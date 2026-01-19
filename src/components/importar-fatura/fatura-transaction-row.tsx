@@ -114,7 +114,14 @@ export function FaturaTransactionRow({
             >
               <option value="">Selecionar</option>
               {categorias
-                .filter(cat => cat.type === (isCredito ? 'INCOME' : 'EXPENSE'))
+                .filter(cat => {
+                  // Para créditos: mostrar apenas INCOME e BOTH
+                  if (isCredito) {
+                    return cat.type === 'INCOME' || cat.type === 'BOTH';
+                  }
+                  // Para despesas: mostrar apenas EXPENSE e BOTH
+                  return cat.type === 'EXPENSE' || cat.type === 'BOTH';
+                })
                 .map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}

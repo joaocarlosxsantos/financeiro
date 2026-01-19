@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
     const closingDate = calculateClosingDate(creditCard as any, year, month - 1);
     const dueDate = calculateDueDate(creditCard as any, year, month - 1);
 
-    // Buscar fatura existente
-    const existingBill = await prisma.creditBill.findFirst({
+    // Buscar TODAS as faturas existentes para este período
+    const existingBills = await prisma.creditBill.findMany({
       where: {
         creditCardId: creditCardId,
         userId: user.id,
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    if (!existingBill) {
+    if (existingBills.length === 0) {
       return NextResponse.json({
         hasConflict: false,
         conflicts: [],
@@ -68,15 +68,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Calcular totais
-    const totalExpenses = existingBill.creditExpenses.length;
-    const totalIncomes = existingBill.creditIncomes.length;
+    // Calcular totais de TODAS as faturas encontradas
+    let totalExpenses = 0;
+    let totalIncomes = 0;
+    
+    existingBills.forEach((bill: any) => {
+      totalExpenses += bill.creditExpenses.length;
+      totalIncomes += bill.creditIncomes.length;
+    });
+    
     const totalConflicts = totalExpenses + totalIncomes;
 
     const conflicts = [{
       startDate: closingDate.toISOString().split('T')[0],
       endDate: dueDate.toISOString().split('T')[0],
-      sourceFile: `Fatura ${month}/${year}`,
+      sourceFile: `Fatura ${month}/${year} (${existingBills.length} fatura${existingBills.length > 1 ? 's' : ''})`,
       count: totalConflicts,
       incomesCount: totalIncomes,
       expensesCount: totalExpenses,
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
       hasConflict: true,
       conflicts,
       totalConflicts,
-      billId: existingBill.id,
+      billIds: existingBills.map((b: any) => b.id),
     });
 
   } catch (error) {

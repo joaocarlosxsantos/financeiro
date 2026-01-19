@@ -29,7 +29,7 @@ export interface CategorySuggestion {
   categoryName?: string;
   tags: string[];
   confidence: number; // 0-100
-  matchReason: 'exact' | 'high_similarity' | 'partial' | 'keyword' | 'none';
+  matchReason: 'exact' | 'high_similarity' | 'partial' | 'merchant' | 'keyword' | 'none';
   matchedTransaction?: {
     id: string;
     description: string;
@@ -124,6 +124,30 @@ function extractKeywords(description: string): string[] {
   return words
     .sort((a, b) => b.length - a.length)
     .slice(0, 5);
+}
+
+/**
+ * Extrai possível nome de estabelecimento comercial da descrição
+ * Estabelecimentos geralmente aparecem no início da descrição
+ */
+function extractMerchantName(description: string): string {
+  // Normaliza mas mantém estrutura
+  const normalized = description
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  
+  // Remove prefixos comuns de cartão
+  const cleaned = normalized
+    .replace(/^(compra\s+)?parcelado\s+/i, '')
+    .replace(/^parc\s+\d+\/\d+\s+/i, '')
+    .replace(/^(compra\s+)?debito\s+/i, '')
+    .replace(/^(compra\s+)?credito\s+/i, '')
+    .trim();
+  
+  // Pega primeiras 2-3 palavras (geralmente o nome do estabelecimento)
+  const words = cleaned.split(/\s+/).filter(w => w.length > 2);
+  return words.slice(0, 3).join(' ');
 }
 
 /**
@@ -252,12 +276,13 @@ export function suggestFromHistory(
   
   const bestMatch = similarities[0];
   
-  if (bestMatch && bestMatch.similarity >= 80) {
+  // 2. Match com similaridade alta (>75%, reduzido de 80%)
+  if (bestMatch && bestMatch.similarity >= 75) {
     return {
       categoryId: bestMatch.mapping.categoryId,
       categoryName: bestMatch.mapping.categoryName,
       tags: bestMatch.mapping.tags,
-      confidence: Math.round(bestMatch.similarity * 0.9), // Desconta um pouco
+      confidence: Math.round(bestMatch.similarity * 0.95), // Menos desconto
       matchReason: 'high_similarity',
       matchedTransaction: {
         id: '',
@@ -267,13 +292,13 @@ export function suggestFromHistory(
     };
   }
   
-  // 3. Tenta match parcial (60-79%)
-  if (bestMatch && bestMatch.similarity >= 60) {
+  // 3. Match parcial (50-74%, reduzido de 60-79%)
+  if (bestMatch && bestMatch.similarity >= 50) {
     return {
       categoryId: bestMatch.mapping.categoryId,
       categoryName: bestMatch.mapping.categoryName,
       tags: bestMatch.mapping.tags,
-      confidence: Math.round(bestMatch.similarity * 0.7), // Desconto maior
+      confidence: Math.round(bestMatch.similarity * 0.75), // Menos desconto
       matchReason: 'partial',
       matchedTransaction: {
         id: '',
@@ -283,7 +308,40 @@ export function suggestFromHistory(
     };
   }
   
-  // 4. Tenta match por palavra-chave
+  // 4. Tenta match por nome de estabelecimento
+  const merchantName = extractMerchantName(description);
+  if (merchantName && merchantName.length > 3) {
+    const merchantMatches = relevantMappings.filter(m => {
+      const mappingMerchant = extractMerchantName(m.originalDescription);
+      return mappingMerchant && merchantName.includes(mappingMerchant);
+    });
+    
+    if (merchantMatches.length > 0) {
+      // Ordena por frequência e data
+      merchantMatches.sort((a, b) => {
+        if (a.frequency !== b.frequency) {
+          return b.frequency - a.frequency;
+        }
+        return b.lastUsed.getTime() - a.lastUsed.getTime();
+      });
+      
+      const merchantMatch = merchantMatches[0];
+      return {
+        categoryId: merchantMatch.categoryId,
+        categoryName: merchantMatch.categoryName,
+        tags: merchantMatch.tags,
+        confidence: 55 + (merchantMatch.frequency * 5), // Base 55% + bônus por frequência
+        matchReason: 'merchant',
+        matchedTransaction: {
+          id: '',
+          description: merchantMatch.originalDescription,
+          similarity: 70,
+        },
+      };
+    }
+  }
+  
+  // 5. Tenta match por palavra-chave
   const keywords = extractKeywords(description);
   const keywordMatches = relevantMappings.filter(m => {
     const mappingKeywords = extractKeywords(m.originalDescription);
@@ -304,7 +362,7 @@ export function suggestFromHistory(
       categoryId: keywordMatch.categoryId,
       categoryName: keywordMatch.categoryName,
       tags: keywordMatch.tags,
-      confidence: 40 + (keywordMatch.frequency * 5), // Base 40% + bônus por frequência
+      confidence: 45 + (keywordMatch.frequency * 5), // Base 45% + bônus por frequência (reduzido de 40)
       matchReason: 'keyword',
       matchedTransaction: {
         id: '',

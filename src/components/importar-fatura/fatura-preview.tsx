@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { Sparkles, CreditCard } from 'lucide-react';
+import { Sparkles, CreditCard, Info, Wand2 } from 'lucide-react';
 import { FaturaTransactionRow } from './fatura-transaction-row';
 import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
 
@@ -145,6 +145,16 @@ export function FaturaPreview({
     handleEdit(index, 'categoriaSugerida', '');
   }
 
+  // Função para normalizar descrições em massa
+  const handleNormalizeAllDescriptions = () => {
+    setRegistros((prev) =>
+      prev.map((r) => ({
+        ...r,
+        descricao: r.descricaoMelhorada || r.descricao,
+      }))
+    );
+  };
+
   // Verificar se já existem registros para o período
   const checkExistingBill = async () => {
     if (!selectedCreditCard || !billPeriod) {
@@ -266,16 +276,72 @@ export function FaturaPreview({
   const count = registros.filter((r) => r.incluir).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">Pré-visualização da Fatura</h2>
+        <h2 className="text-lg font-semibold">Pré-visualização dos dados</h2>
         <Badge className="bg-blue-100 text-blue-800">
           <Sparkles className="w-4 h-4 mr-1" />
           IA Ativada
         </Badge>
       </div>
+      
+      <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+          <Info className="w-4 h-4" />
+          <span>
+            A IA analisou suas transações de cartão e sugeriu categorias automaticamente.
+            Revise as sugestões antes de salvar.
+          </span>
+        </div>
+      </div>
 
-      {/* Configurações e resumo - ANTES da tabela */}
+      {/* Tabela de transações - PRIMEIRO */}
+      <div className="overflow-x-auto rounded-lg border border-border bg-background shadow-sm">
+        <table className="min-w-full">
+          <thead>
+            <tr className="bg-muted text-muted-foreground">
+              <th className="px-4 py-4 text-left font-semibold w-28">Data</th>
+              <th className="px-4 py-4 text-right font-semibold w-32">Valor</th>
+              <th className="px-4 py-4 text-left font-semibold min-w-[350px]">
+                <div className="flex items-center justify-between">
+                  <span>Descrição</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleNormalizeAllDescriptions}
+                    className="h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors border border-purple-200 hover:border-purple-300"
+                    title="Simplificar todas as descrições automaticamente"
+                  >
+                    <Wand2 className="w-3 h-3 mr-1" />
+                    Simplificar tudo
+                  </Button>
+                </div>
+              </th>
+              <th className="px-4 py-4 text-left font-semibold min-w-[180px]">Categoria</th>
+              <th className="px-4 py-4 text-left font-semibold min-w-[160px]">Tags</th>
+            </tr>
+          </thead>
+          <tbody>
+            {registros.map((row, i) => (
+              <FaturaTransactionRow
+                key={row.id || i}
+                registro={row}
+                index={i}
+                categorias={categorias}
+                tags={tags}
+                onEdit={handleEdit}
+                onCreateCategory={handleCreateCategory}
+                onCreateTag={handleCreateTag}
+                onAcceptAISuggestion={handleAcceptAISuggestion}
+                onRejectAISuggestion={handleRejectAISuggestion}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Configurações e resumo - DEPOIS da tabela */}
       <div className="bg-card border rounded-lg p-6 space-y-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
           <strong>📅 Período da Fatura:</strong> Selecione o mês/ano da fatura que está importando. 
@@ -361,37 +427,6 @@ export function FaturaPreview({
         >
           {isChecking ? 'Verificando registros existentes...' : (saving ? 'Salvando...' : 'Salvar Fatura')}
         </Button>
-      </div>
-
-      {/* Tabela de transações - DEPOIS dos controles */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-background shadow-sm">
-        <table className="min-w-full table-fixed">
-          <thead>
-            <tr className="bg-muted text-muted-foreground text-xs">
-              <th className="px-3 py-2 text-left font-semibold w-[100px]">Data</th>
-              <th className="px-3 py-2 text-right font-semibold w-[110px]">Valor</th>
-              <th className="px-3 py-2 text-left font-semibold w-[30%]">Descrição</th>
-              <th className="px-3 py-2 text-left font-semibold w-[25%]">Categoria</th>
-              <th className="px-3 py-2 text-left font-semibold w-[25%]">Tags</th>
-            </tr>
-          </thead>
-          <tbody>
-            {registros.map((row, i) => (
-              <FaturaTransactionRow
-                key={row.id || i}
-                registro={row}
-                index={i}
-                categorias={categorias}
-                tags={tags}
-                onEdit={handleEdit}
-                onCreateCategory={handleCreateCategory}
-                onCreateTag={handleCreateTag}
-                onAcceptAISuggestion={handleAcceptAISuggestion}
-                onRejectAISuggestion={handleRejectAISuggestion}
-              />
-            ))}
-          </tbody>
-        </table>
       </div>
 
       {/* Modal de confirmação de exclusão */}
