@@ -60,6 +60,9 @@ export function DashboardContent() {
         onTourClick={() => state.setTourOpen(true)}
         onQuickAddSuccess={state.handleQuickAddSuccess}
         smartInsights={state.smartInsights}
+        wallets={state.wallets}
+        selectedWallet={state.selectedWallet}
+        setSelectedWallet={state.setSelectedWallet}
       />
 
       {/* Gráficos */}

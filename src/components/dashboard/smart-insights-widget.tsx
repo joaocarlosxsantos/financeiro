@@ -108,6 +108,11 @@ function InsightCard({
   insight: SmartInsight; 
   onDismiss?: () => void;
 }) {
+  // Validação defensiva: garantir que insight tem todas as propriedades necessárias
+  if (!insight || !insight.type || !insight.title || !insight.message) {
+    return null;
+  }
+
   const colors = getInsightColors(insight.type);
   const icon = getInsightIcon(insight.type);
 
@@ -161,8 +166,15 @@ export function SmartInsightsWidget({
   const [dismissedIndexes, setDismissedIndexes] = useState<Set<number>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Filtrar insights não descartados
-  const activeInsights = insights.filter((_, i) => !dismissedIndexes.has(i));
+  // Validação e filtro de insights válidos e não descartados
+  const validInsights = insights.filter(insight => 
+    insight && 
+    insight.type && 
+    insight.title && 
+    insight.message
+  );
+  
+  const activeInsights = validInsights.filter((_, i) => !dismissedIndexes.has(i));
 
   // Se não há insights, não renderizar nada
   if (activeInsights.length === 0) {

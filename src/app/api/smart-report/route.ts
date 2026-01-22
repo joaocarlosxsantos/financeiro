@@ -51,6 +51,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
+  // Buscar informações do usuário incluindo o nome
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { name: true }
+  });
+  
+  const userName = user?.name || '';
+
   const { searchParams } = new URL(req.url);
   const rawWalletId = searchParams.get('walletId');
   const queryParams = {
@@ -141,9 +149,9 @@ export async function GET(req: NextRequest) {
     const allExpenses = [...punctualExpenses, ...recurringExpenses, ...creditExpensesFormatted];
     const allIncomes = [...punctualIncomes, ...recurringIncomes, ...creditIncomesFormatted];
 
-    // Filtrar transferências
-    const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e));
-    const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i));
+    // Filtrar transferências (com nome do usuário)
+    const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e, userName));
+    const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i, userName));
 
 
 

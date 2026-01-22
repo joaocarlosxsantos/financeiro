@@ -234,11 +234,58 @@ export async function fetchRecurringTransactions(
 }
 
 /**
- * Função auxiliar para verificar se é categoria de transferência
+ * Função auxiliar para normalizar texto (remover acentos, lowercase, remover espaços extras)
  */
-export function isTransferCategory(item: any): boolean {
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Função auxiliar para verificar se é categoria de transferência
+ * Robusta contra variações de espaços, capitalização e undefined
+ * 
+ * REGRA: Para ser considerada transferência entre contas:
+ * 1. Deve ter a categoria "Transferência entre Contas"
+ * 2. E deve conter o nome do usuário na descrição (quando userName for fornecido)
+ * 
+ * @param item - Transação (expense ou income)
+ * @param userName - Nome do usuário (opcional). Se fornecido, também verifica se está na descrição.
+ *                   Se não fornecido, apenas valida a categoria (modo de compatibilidade para frontend).
+ * @returns true se for transferência entre contas (COM o nome do usuário na descrição, se userName for fornecido)
+ */
+export function isTransferCategory(item: any, userName?: string): boolean {
+  // Verifica se item tem categoria
+  if (!item || !item.category) return false;
+  
   const cat = item.category?.name || '';
-  return cat.trim().toLowerCase() === 'transferência entre contas';
+  if (!cat || typeof cat !== 'string') return false;
+  
+  // Normaliza: remove espaços extras, converte para lowercase
+  const normalized = normalizeText(cat);
+  
+  // Verifica se é categoria de transferência
+  if (normalized !== 'transferencia entre contas') return false;
+  
+  // Se userName não foi fornecido, retorna true apenas pela categoria
+  // Isso mantém compatibilidade com código frontend que não tem acesso ao userName
+  if (!userName || typeof userName !== 'string' || userName.trim() === '') {
+    return true;
+  }
+  
+  // Se userName foi fornecido, verifica se o nome do usuário está na descrição
+  const description = item.description || '';
+  if (!description || typeof description !== 'string') return false;
+  
+  const normalizedDescription = normalizeText(description);
+  const normalizedUserName = normalizeText(userName);
+  
+  // Verifica se o nome do usuário está presente na descrição
+  return normalizedDescription.includes(normalizedUserName);
 }
 
 /**

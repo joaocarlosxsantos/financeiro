@@ -39,6 +39,7 @@ import {
   ArrowRight,
   ChevronDown,
 } from 'lucide-react';
+import WalletMultiSelect from '@/components/ui/wallet-multi-select';
 import QuickDespesaForm from '../quick-add/quick-despesa-form';
 import QuickRendaForm from '../quick-add/quick-renda-form';
 import QuickCardForm from '../quick-add/quick-card-form';
@@ -66,6 +67,16 @@ interface DashboardCardsProps {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   onDateChange: (date: Date) => void;
+
+  // Wallet filter
+  wallets: Array<{ id: string; name: string; type: string }>;
+  selectedWallet: string[];
+  setSelectedWallet: (v: string[]) => void;
+
+  // Wallet filter
+  wallets: Array<{ id: string; name: string; type: string }>;
+  selectedWallet: string[];
+  setSelectedWallet: (v: string[]) => void;
 
   // Modal states
   modal: null | 'income' | 'expense' | 'balance' | 'diff';
@@ -253,6 +264,9 @@ function DateNavigationHeader({
   onNextMonth,
   onDateChange,
   onTourClick,
+  wallets,
+  selectedWallet,
+  setSelectedWallet,
 }: {
   monthYearLabel: string;
   isAtCurrentMonth: boolean;
@@ -261,6 +275,9 @@ function DateNavigationHeader({
   onNextMonth: () => void;
   onDateChange: (date: Date) => void;
   onTourClick?: () => void;
+  wallets: Array<{ id: string; name: string; type: string }>;
+  selectedWallet: string[];
+  setSelectedWallet: (v: string[]) => void;
 }): JSX.Element {
   const [monthSelectorOpen, setMonthSelectorOpen] = useState(false);
 
@@ -289,16 +306,17 @@ function DateNavigationHeader({
   ];
 
   return (
-    <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={onPreviousMonth}
-        aria-label="Mês anterior"
-        className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
-      >
-        <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
-      </Button>
+    <div className="flex w-full sm:w-auto items-center gap-1 sm:gap-2 flex-wrap">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onPreviousMonth}
+          aria-label="Mês anterior"
+          className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+        >
+          <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+        </Button>
       
       <Popover open={monthSelectorOpen} onOpenChange={setMonthSelectorOpen}>
         <PopoverTrigger asChild>
@@ -368,6 +386,17 @@ function DateNavigationHeader({
       >
         <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
       </Button>
+      </div>
+      
+      {/* Wallet Filter */}
+      <div className="w-full sm:w-auto min-w-[200px]">
+        <WalletMultiSelect
+          wallets={wallets}
+          value={selectedWallet}
+          onChange={setSelectedWallet}
+        />
+      </div>
+      
       {onTourClick && (
         <Button
           variant="secondary"
@@ -581,6 +610,9 @@ export function DashboardCards({
   onTourClick,
   onQuickAddSuccess,
   smartInsights,
+  wallets,
+  selectedWallet,
+  setSelectedWallet,
 }: DashboardCardsProps): JSX.Element {
   return (
     <>
@@ -598,11 +630,14 @@ export function DashboardCards({
           onNextMonth={onNextMonth}
           onDateChange={onDateChange}
           onTourClick={onTourClick}
+          wallets={wallets}
+          selectedWallet={selectedWallet}
+          setSelectedWallet={setSelectedWallet}
         />
       </div>
 
       {/* Smart Insights Widget */}
-      {smartInsights && smartInsights.length > 0 && (
+      {smartInsights && Array.isArray(smartInsights) && smartInsights.length > 0 && (
         <SmartInsightsWidget insights={smartInsights} />
       )}
 

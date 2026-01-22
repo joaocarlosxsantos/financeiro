@@ -60,6 +60,14 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
+  // Buscar informações do usuário incluindo o nome
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { name: true }
+  });
+  
+  const userName = user?.name || '';
+
   const { searchParams } = new URL(req.url);
   const walletId = parseCsvParam(searchParams.get('walletId'));
   const paymentType = parseCsvParam(searchParams.get('paymentType'));
@@ -121,8 +129,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Combinar pontuais + recorrentes expandidas e filtrar transferências
-  const allExpenses = [...expVar, ...expandedFixed].filter((e: any) => !isTransferCategory(e));
+  // Combinar pontuais + recorrentes expandidas e filtrar transferências (com nome do usuário)
+  const allExpenses = [...expVar, ...expandedFixed].filter((e: any) => !isTransferCategory(e, userName));
 
   // dailyByCategory
   const days: string[] = [];
@@ -253,8 +261,8 @@ export async function GET(req: NextRequest) {
     }
   }
   
-  // Combinar pontuais + recorrentes expandidas e filtrar transferências
-  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory].filter((i: any) => !isTransferCategory(i));
+  // Combinar pontuais + recorrentes expandidas e filtrar transferências (com nome do usuário)
+  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory].filter((i: any) => !isTransferCategory(i, userName));
   const incomeMap = new Map<string, { amount: number; color: string }>();
   for (const i of allIncomesThisMonth) {
     const key = i.category?.name || 'Sem categoria';
@@ -374,8 +382,8 @@ export async function GET(req: NextRequest) {
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
   }
-  // Combinar pontuais + recorrentes expandidas e filtrar transferências
-  const incomesCombined = [...incVarList, ...expandedFixedIncomes].filter((i: any) => !isTransferCategory(i));
+  // Combinar pontuais + recorrentes expandidas e filtrar transferências (com nome do usuário)
+  const incomesCombined = [...incVarList, ...expandedFixedIncomes].filter((i: any) => !isTransferCategory(i, userName));
   for (const i of incomesCombined) {
     if (!i.date) continue;
     const key = toYmd(new Date(i.date));
