@@ -47,8 +47,10 @@ export function DashboardContent() {
         summary={state.summary}
         monthYearLabel={`${state.currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`}
         isAtCurrentMonth={state.isAtCurrentMonth}
+        currentDate={state.currentDate}
         onPreviousMonth={state.handlePreviousMonth}
         onNextMonth={state.handleNextMonth}
+        onDateChange={state.setCurrentDate}
         modal={state.modal}
         setModal={state.setModal}
         quickAddOpen={state.quickAddOpen}

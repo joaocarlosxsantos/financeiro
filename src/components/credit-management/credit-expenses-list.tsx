@@ -87,7 +87,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
       try {
         setLoading(true);
         setError(null);
-
+        
         // Carregar gastos E créditos
         let url = '/api/credit-expenses';
         let incomesUrl = '/api/credit-incomes';
