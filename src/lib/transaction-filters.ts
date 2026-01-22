@@ -8,6 +8,7 @@
  * - Inclui recorrentes com endDate >= último dia do mês selecionado
  * - Para meses anteriores ao atual, considera o mês completo
  * - Para o mês atual, limita até o dia de hoje
+ * - Exclui datas que estão no array excludedDates
  * 
  * @param records Lista de transações (pontuais e recorrentes)
  * @param year Ano do mês de referência
@@ -15,7 +16,7 @@
  * @param today Data de hoje (para limitar recorrentes no mês atual)
  * @returns Lista expandida de transações
  */
-export function expandRecurringAllOccurrencesForMonth<T extends { type: string; date: Date|string; endDate?: Date|string|null }>(
+export function expandRecurringAllOccurrencesForMonth<T extends { type: string; date: Date|string; endDate?: Date|string|null; excludedDates?: string[] }>(
   records: T[],
   year: number,
   month: number,
@@ -40,7 +41,14 @@ export function expandRecurringAllOccurrencesForMonth<T extends { type: string; 
       const validDay = Math.min(recDay, lastDayOfMonth);
       
       // Data da ocorrência neste mês
-      const occDate = new Date(year, month - 1, validDay);
+      const occDate = new Date(year, month - 1, validDay, 12, 0, 0, 0);
+      
+      // Formatar data para comparação com excludedDates (YYYY-MM-DD)
+      const occDateString = occDate.toISOString().split('T')[0];
+      const excludedDates = rec.excludedDates || [];
+      
+      // VALIDAÇÃO 0: Verificar se a data está excluída
+      if (excludedDates.includes(occDateString)) continue;
       
       // VALIDAÇÃO 1: A recorrência já começou?
       if (occDate < recStart) continue;

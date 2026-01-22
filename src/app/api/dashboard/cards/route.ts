@@ -11,7 +11,7 @@ import { authOptions } from '../../../../lib/auth';
 // @ts-ignore
 import { logger } from '../../../../lib/logger';
 // @ts-ignore
-import { fetchAllTransactions, getEffectiveDateRange, isTransferCategory, filterRecurringByDay, expandRecurringAllOccurrencesForMonth } from '../../../../lib/transaction-filters';
+import { fetchAllTransactions, getEffectiveDateRange, filterRecurringByDay, expandRecurringAllOccurrencesForMonth } from '../../../../lib/transaction-filters';
 
 /**
  * Dashboard Cards API Endpoint
@@ -180,6 +180,7 @@ export async function GET(req: NextRequest) {
 
   const whereBase = { user: { email: session.user.email }, ...walletFilter, ...paymentTypeFilter };
 
+
   // ==========================================
   // CÁLCULO DE GANHOS E DESPESAS TOTAIS
   // ==========================================
@@ -206,11 +207,11 @@ export async function GET(req: NextRequest) {
     }),
     prisma.expense.findMany({
       where: { ...whereBase, type: 'RECURRING' },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true, description: true }
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true, description: true, excludedDates: true }
     }),
     prisma.income.findMany({
       where: { ...whereBase, type: 'RECURRING' },
-      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true, description: true }
+      select: { amount: true, category: { select: { name: true } }, type: true, date: true, endDate: true, description: true, excludedDates: true }
     })
   ]);
 
@@ -229,158 +230,21 @@ export async function GET(req: NextRequest) {
   const expandedIncomes = expandRecurringAllOccurrencesForMonth(allIncomes, safeYear, safeMonth, today);
   const expandedExpenses = expandRecurringAllOccurrencesForMonth(allExpenses, safeYear, safeMonth, today);
 
-  // Log para debug - contar transferências antes de filtrar
-  const transferExpensesBefore = expandedExpenses.filter((e: any) => isTransferCategory(e, userName));
-  const transferIncomesBefore = expandedIncomes.filter((i: any) => isTransferCategory(i, userName));
-  
-  logger.info('Dashboard Cards - Transferências encontradas', {
-    userId: session.user.email,
-    userName: userName,
-    month: `${safeYear}-${safeMonth}`,
-    transferExpensesCount: transferExpensesBefore.length,
-    transferIncomesCount: transferIncomesBefore.length,
-    totalExpensesBeforeFilter: expandedExpenses.length,
-    totalIncomesBeforeFilter: expandedIncomes.length,
-  });
-
-  // DEPOIS filtra transferências
-  // Remove incomes E expenses com categoria "Transferência entre Contas" E que contenham o nome do usuário na descrição
-  const filteredIncomes = expandedIncomes.filter((i: any) => !isTransferCategory(i, userName));
-  const filteredExpenses = expandedExpenses.filter((e: any) => !isTransferCategory(e, userName));
-  
-  logger.info('Dashboard Cards - Após filtrar transferências', {
-    userId: session.user.email,
-    month: `${safeYear}-${safeMonth}`,
-    filteredExpensesCount: filteredExpenses.length,
-    filteredIncomesCount: filteredIncomes.length,
-  });
-
-  // Calcular totais
-  const totalExpenses = filteredExpenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
-  const totalIncomes = filteredIncomes.reduce((sum: number, inc: any) => sum + Number(inc.amount || 0), 0);
+  // Calcular totais (sem filtrar transferências)
+  const totalIncomes = expandedIncomes.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0);
+  const totalExpenses = expandedExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
   const balance = totalIncomes - totalExpenses;
 
-
-
-  // Saldo acumulado: busca TODAS as transações até a data final
-  // Usa API interna expandida para incluir todas as ocorrências de recorrências
-  let saldoAcumulado = 0;
-  if (year && month) {
-    const { endDate: endDateFinal } = getEffectiveDateRange(year, month);
-    
-    // Busca TODAS as transações separando PUNCTUAL de RECURRING
-    const [punctualExpensesAcc, recurringExpensesAcc, punctualIncomesAcc, recurringIncomesAcc] = await Promise.all([
-      prisma.expense.findMany({
-        where: { ...whereBase, type: 'PUNCTUAL', date: { lte: endDateFinal } },
-        select: { amount: true, category: { select: { name: true } }, type: true, date: true, description: true }
-      }),
-      prisma.expense.findMany({
-        where: { ...whereBase, type: 'RECURRING' },
-        select: { amount: true, category: { select: { name: true } }, type: true, date: true, startDate: true, endDate: true, dayOfMonth: true, description: true }
-      }),
-      prisma.income.findMany({
-        where: { ...whereBase, type: 'PUNCTUAL', date: { lte: endDateFinal } },
-        select: { amount: true, category: { select: { name: true } }, type: true, date: true, description: true }
-      }),
-      prisma.income.findMany({
-        where: { ...whereBase, type: 'RECURRING' },
-        select: { amount: true, category: { select: { name: true } }, type: true, date: true, startDate: true, endDate: true, dayOfMonth: true, description: true }
-      })
-    ]);
-
-    // Expandir recorrências: criar uma ocorrência para cada mês desde startDate até endDateFinal
-    const expandedExpensesAcc: any[] = [...punctualExpensesAcc];
-    const expandedIncomesAcc: any[] = [...punctualIncomesAcc];
-
-    // Função auxiliar para expandir recorrências até uma data
-    const expandRecurringUntilDate = (transactions: any[], untilDate: Date) => {
-      const expanded: any[] = [];
-      for (const t of transactions) {
-        const recStart = t.startDate ?? t.date;
-        const recEnd = t.endDate ?? untilDate;
-        const effectiveEnd = recEnd < untilDate ? recEnd : untilDate;
-        
-        if (!recStart) continue;
-        
-        const dayOfMonth = typeof t.dayOfMonth === 'number' && t.dayOfMonth > 0 
-          ? t.dayOfMonth 
-          : new Date(t.date).getDate();
-
-        // Iterar por cada mês desde recStart até effectiveEnd
-        let currentDate = new Date(recStart.getFullYear(), recStart.getMonth(), 1);
-        const lastDate = new Date(effectiveEnd.getFullYear(), effectiveEnd.getMonth(), 1);
-
-        while (currentDate <= lastDate) {
-          const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-          const day = Math.min(dayOfMonth, lastDay);
-          const occDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, 12, 0, 0, 0);
-
-          // Verificar se a ocorrência está dentro do range válido
-          if (occDate >= recStart && occDate <= effectiveEnd) {
-            expanded.push({ ...t, date: occDate });
-          }
-
-          currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-        }
-      }
-      return expanded;
-    };
-
-    expandedExpensesAcc.push(...expandRecurringUntilDate(recurringExpensesAcc, endDateFinal));
-    expandedIncomesAcc.push(...expandRecurringUntilDate(recurringIncomesAcc, endDateFinal));
-
-    // Log para debug - verificar transferências no saldo acumulado
-    const transferExpensesAccBefore = expandedExpensesAcc.filter((e: any) => isTransferCategory(e, userName));
-    const transferIncomesAccBefore = expandedIncomesAcc.filter((i: any) => isTransferCategory(i, userName));
-    
-    logger.info('Dashboard Cards - Saldo Acumulado - Transferências encontradas', {
-      userId: session.user.email,
-      userName: userName,
-      untilDate: endDateFinal,
-      transferExpensesAccCount: transferExpensesAccBefore.length,
-      transferIncomesAccCount: transferIncomesAccBefore.length,
-      totalExpensesAccBeforeFilter: expandedExpensesAcc.length,
-      totalIncomesAccBeforeFilter: expandedIncomesAcc.length,
-    });
-
-    // Remove transferências (incomes E expenses com categoria "Transferência entre Contas" E que contenham o nome do usuário)
-    const filteredIncomesAcc = expandedIncomesAcc.filter((i: any) => !isTransferCategory(i, userName));
-    const filteredExpensesAcc = expandedExpensesAcc.filter((e: any) => !isTransferCategory(e, userName));
-    // Verificar se há transferências nos dados
-    const expenseTransfers = expandedExpensesAcc.filter((e: any) => isTransferCategory(e, userName));
-    const incomeTransfers = expandedIncomesAcc.filter((i: any) => isTransferCategory(i, userName));
-    
-    // Soma direta
-    const totalExpensesAcc = filteredExpensesAcc.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-    const totalIncomesAcc = filteredIncomesAcc.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0);
-    
-    // Para comparação: calcular também SEM filtrar transferências
-    const totalExpensesWithTransfers = expandedExpensesAcc.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-    const totalIncomesWithTransfers = expandedIncomesAcc.reduce((sum: number, i: any) => sum + Number(i.amount || 0), 0);
-    saldoAcumulado = totalIncomesAcc - totalExpensesAcc;
-  }
-
-  // Limite diário: simple heuristic similar to frontend logic
-  let limiteDiario = 0;
-  if (year && month) {
-    // compute days remaining
-    const hoje = new Date();
-    const fim = new Date(year, month, 0);
-    let diasRestantes = 0;
-    if (year < hoje.getFullYear() || (year === hoje.getFullYear() && month - 1 < hoje.getMonth())) diasRestantes = 0;
-    else diasRestantes = Math.max(1, fim.getDate() - (year === hoje.getFullYear() && month - 1 === hoje.getMonth() ? hoje.getDate() : 1) + 1);
-    limiteDiario = diasRestantes > 0 ? saldoAcumulado / diasRestantes : 0;
-  }
-
   // Wallets list
-  const wallets = await prisma.wallet.findMany({ where: { user: { email: session.user.email } }, select: { id: true, name: true, type: true } });
+  const wallets = await prisma.wallet.findMany({ 
+    where: { user: { email: session.user.email } }, 
+    select: { id: true, name: true, type: true } 
+  });
 
   return NextResponse.json({
     totalExpenses,
     totalIncomes,
     balance,
-    saldoAcumulado,
-    limiteDiario,
     wallets,
   });
 }

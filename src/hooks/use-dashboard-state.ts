@@ -251,19 +251,63 @@ export function useDashboardState(): DashboardStateReturn {
           selectedPaymentTypes && selectedPaymentTypes.length > 0
             ? `&paymentType=${selectedPaymentTypes.join(',')}`
             : '';
-        const res = await fetch(
-          `/api/dashboard/cards?year=${year}&month=${month}${walletParam}${paymentTypeParam}`,
-          { cache: 'no-store', signal: controller.signal }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
+        
+        console.log('🔄 Buscando dados do dashboard...', { year, month });
+        
+        // Buscar dados dos cards (ganhos/gastos do mês)
+        const [cardsRes, accBalanceRes] = await Promise.all([
+          fetch(
+            `/api/dashboard/cards?year=${year}&month=${month}${walletParam}${paymentTypeParam}`,
+            { cache: 'no-store', signal: controller.signal }
+          ),
+          fetch(
+            `/api/dashboard/accumulated-balance?year=${year}&month=${month}${walletParam}${paymentTypeParam}`,
+            { cache: 'no-store', signal: controller.signal }
+          ),
+        ]);
+        
+        console.log('✅ Respostas recebidas:', { 
+          cardsOk: cardsRes.ok, 
+          accBalanceOk: accBalanceRes.ok 
+        });
+        
+        if (!cardsRes.ok || !accBalanceRes.ok) return;
+        
+        const cardsData = await cardsRes.json();
+        const accBalanceData = await accBalanceRes.json();
 
-        setTotalExpenses(data.totalExpenses || 0);
-        setTotalIncome(data.totalIncomes || 0);
-        setSaldoDoMes((data.totalIncomes || 0) - (data.totalExpenses || 0));
-        setSaldoAcumulado(data.saldoAcumulado || 0);
-        setLimiteDiario(data.limiteDiario || 0);
-        if (Array.isArray(data.wallets)) setWallets(data.wallets);
+        console.log('📊 Dados recebidos:', { 
+          totalExpenses: cardsData.totalExpenses,
+          totalIncomes: cardsData.totalIncomes,
+          balance: cardsData.balance,
+          accumulatedBalance: accBalanceData.accumulatedBalance 
+        });
+
+        setTotalExpenses(cardsData.totalExpenses || 0);
+        setTotalIncome(cardsData.totalIncomes || 0);
+        setSaldoDoMes(cardsData.balance || 0);
+        setSaldoAcumulado(accBalanceData.accumulatedBalance || 0);
+        
+        // Calcular limite diário no frontend
+        const hoje = new Date();
+        const isCurrentMonth = hoje.getFullYear() === year && hoje.getMonth() + 1 === month;
+        const isPastMonth = year < hoje.getFullYear() || (year === hoje.getFullYear() && month < hoje.getMonth() + 1);
+        
+        if (isPastMonth) {
+          // Mês passado: limite diário = 0
+          setLimiteDiario(0);
+        } else if (isCurrentMonth) {
+          // Mês atual: limite diário = saldo acumulado / dias restantes do mês
+          const ultimoDiaDoMes = new Date(year, month, 0).getDate();
+          const diaAtual = hoje.getDate();
+          const diasRestantes = Math.max(1, ultimoDiaDoMes - diaAtual + 1);
+          setLimiteDiario((accBalanceData.accumulatedBalance || 0) / diasRestantes);
+        } else {
+          // Mês futuro: não deveria acontecer, mas por precaução
+          setLimiteDiario(0);
+        }
+        
+        if (Array.isArray(cardsData.wallets)) setWallets(cardsData.wallets);
       } catch (e) {
         if ((e as any)?.name === 'AbortError') return;
       }
