@@ -73,11 +73,6 @@ interface DashboardCardsProps {
   selectedWallet: string[];
   setSelectedWallet: (v: string[]) => void;
 
-  // Wallet filter
-  wallets: Array<{ id: string; name: string; type: string }>;
-  selectedWallet: string[];
-  setSelectedWallet: (v: string[]) => void;
-
   // Modal states
   modal: null | 'income' | 'expense' | 'balance' | 'diff';
   setModal: (v: null | 'income' | 'expense' | 'balance' | 'diff') => void;
