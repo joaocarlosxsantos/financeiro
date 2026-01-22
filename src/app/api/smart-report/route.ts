@@ -4,7 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import { logger } from '../../../lib/logger';
-import { getEffectiveDateRange, isTransferCategory, filterRecurringByDay, expandRecurringAllOccurrencesForMonth } from '../../../lib/transaction-filters';
+import { getEffectiveDateRange, filterRecurringByDay, expandRecurringAllOccurrencesForMonth } from '../../../lib/transaction-filters';
 import { getMonthRange } from '../../../lib/utils';
 // Expande receitas recorrentes em ocorrências reais do mês consultado
 function expandRecurringIncomesForMonth(records: any[], year: number, month: number, today: Date) {
@@ -119,16 +119,10 @@ export async function GET(req: NextRequest) {
     const allExpenses = [...punctualExpenses, ...recurringExpenses];
     const allIncomes = [...punctualIncomes, ...recurringIncomes];
 
-    // Filtrar transferências (com nome do usuário)
-    const filteredExpenses = allExpenses.filter((e: any) => !isTransferCategory(e, userName));
-    const filteredIncomes = allIncomes.filter((i: any) => !isTransferCategory(i, userName));
-
-
-
   // Expandir recorrentes em todas as ocorrências do mês para ganhos e despesas (igual dashboard)
   const today = new Date();
-  const finalIncomes = expandRecurringAllOccurrencesForMonth(filteredIncomes, year, monthNum, today);
-  const finalExpenses = expandRecurringAllOccurrencesForMonth(filteredExpenses, year, monthNum, today);
+  const finalIncomes = expandRecurringAllOccurrencesForMonth(allIncomes, year, monthNum, today);
+  const finalExpenses = expandRecurringAllOccurrencesForMonth(allExpenses, year, monthNum, today);
 
 
   // Calcular totais

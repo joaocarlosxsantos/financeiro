@@ -4,7 +4,6 @@ import { formatYmd } from '../../../../lib/utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { countMonthlyOccurrences } from '../../../../lib/recurring-utils';
-import { isTransferCategory } from '../../../../lib/transaction-filters';
 
 /**
  * Dashboard Charts API Endpoint
@@ -129,22 +128,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Combinar pontuais + recorrentes expandidas e filtrar transferências (com nome do usuário)
-  const allExpenses = [...expVar, ...expandedFixed].filter((e: any) => !isTransferCategory(e, userName));
+  // Combinar pontuais + recorrentes expandidas
+  const allExpenses = [...expVar, ...expandedFixed];
 
   // dailyByCategory
   const days: string[] = [];
   for (let d = 1; d <= effectiveEnd.getDate(); d++) days.push(toYmd(new Date(year, month - 1, d)));
 
-  const categories = Array.from(new Set(allExpenses.map((e) => e.category?.name || 'Sem categoria')))
-    .filter(c => c !== 'Transferência entre Contas'); // Excluir categoria de transferência
+  const categories = Array.from(new Set(allExpenses.map((e) => e.category?.name || 'Sem categoria')));
   const dailyByCategory = days.map((date) => {
     const row: Record<string, any> = { date };
     for (const c of categories) row[c] = 0;
     for (const e of allExpenses.filter((x) => x.date && toYmd(new Date(x.date)) === date)) {
       const key = e.category?.name || 'Sem categoria';
-      // Excluir categoria de transferência dos gráficos diários
-      if (key === 'Transferência entre Contas') continue;
       row[key] += Number(e.amount || 0);
     }
     return row;
@@ -203,8 +199,6 @@ export async function GET(req: NextRequest) {
   const expenseMap = new Map<string, { amount: number; color: string }>();
   for (const e of allExpensesThisMonth) {
     const key = e.category?.name || 'Sem categoria';
-    // Excluir categoria de transferência dos gráficos
-    if (key === 'Transferência entre Contas') continue;
     // fallback consistente com frontend: despesas usam muted-foreground quando não há cor
     const color = e.category?.color || 'hsl(var(--muted-foreground))';
     const cur = expenseMap.get(key) || { amount: 0, color };
@@ -261,12 +255,11 @@ export async function GET(req: NextRequest) {
     }
   }
   
-  // Combinar pontuais + recorrentes expandidas e filtrar transferências (com nome do usuário)
-  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory].filter((i: any) => !isTransferCategory(i, userName));
+  // Combinar pontuais + recorrentes expandidas
+  const allIncomesThisMonth = [...incVarThis, ...expandedFixedIncomesForCategory];
   const incomeMap = new Map<string, { amount: number; color: string }>();
   for (const i of allIncomesThisMonth) {
     const key = i.category?.name || 'Sem categoria';
-    if (key === 'Transferência entre Contas') continue;
     // fallback consistente: rendas usam --success quando não há cor
     const color = i.category?.color || 'hsl(var(--success))';
     const cur = incomeMap.get(key) || { amount: 0, color };
@@ -305,8 +298,6 @@ export async function GET(req: NextRequest) {
   const prevMap = new Map<string, number>();
   for (const e of prevAll) {
     const key = e.category?.name || 'Sem categoria';
-    // Excluir categoria de transferência dos gráficos
-    if (key === 'Transferência entre Contas') continue;
     prevMap.set(key, (prevMap.get(key) || 0) + Number(e.amount || 0));
   }
   const categoriesWithDiff = expensesByCategory.map((c) => ({ category: c.category, amount: c.amount, prevAmount: prevMap.get(c.category) || 0, diff: c.amount - (prevMap.get(c.category) || 0) }));
@@ -382,8 +373,8 @@ export async function GET(req: NextRequest) {
       cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     }
   }
-  // Combinar pontuais + recorrentes expandidas e filtrar transferências (com nome do usuário)
-  const incomesCombined = [...incVarList, ...expandedFixedIncomes].filter((i: any) => !isTransferCategory(i, userName));
+  // Combinar pontuais + recorrentes expandidas
+  const incomesCombined = [...incVarList, ...expandedFixedIncomes];
   for (const i of incomesCombined) {
     if (!i.date) continue;
     const key = toYmd(new Date(i.date));
