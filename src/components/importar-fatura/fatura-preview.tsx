@@ -288,24 +288,8 @@ export function FaturaPreview({
         // Se categoria já existe, apenas definir o nome para o backend resolver
         registro.categoriaId = registro.categoriaSugerida;
       }
-
-      // Criar tags que precisam ser criadas
-      if (registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0) {
-        const tagsToCreate = registro.tagsRecomendadas.filter((tagName: string) => 
-          !tags.some((existingTag: any) => existingTag.name.toLowerCase() === tagName.toLowerCase())
-        );
-        
-        for (const tagName of tagsToCreate) {
-          try {
-            await handleCreateTag(tagName);
-          } catch (error) {
-            console.error('Erro ao criar tag automaticamente:', error);
-          }
-        }
-        
-        // Adicionar todas as tags recomendadas às tags do registro
-        registro.tags = [...(registro.tags || []), ...registro.tagsRecomendadas];
-      }
+      // Tags não são mais sugeridas/criadas automaticamente: o usuário escolhe
+      // e cria as suas próprias na tabela (ver seletor de tags na linha).
     }
 
     onSave(registros, deleteExisting);

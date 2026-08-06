@@ -34,14 +34,13 @@ export async function POST(req: NextRequest) {
     data: string; 
     valor: number; 
     categoriaId?: string; 
-    categoriaSugerida?: string; 
+    categoriaSugerida?: string;
     categoriaRecomendada?: string; // Categoria sugerida pela IA
     shouldCreateCategory?: boolean; // Se deve criar a categoria recomendada
-    tagsRecomendadas?: string[]; // Tags sugeridas pela IA
-    descricao?: string; 
-    descricaoSimplificada?: string; 
+    descricao?: string;
+    descricaoSimplificada?: string;
     isSaldoInicial?: boolean;
-    tags?: string[]; // Tags selecionadas pelo usuário ou recomendadas pela IA
+    tags?: string[]; // Tags selecionadas manualmente pelo usuário
   };
   if (!Array.isArray(registros) || !carteiraId) {
     return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
@@ -158,21 +157,11 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Processar tags recomendadas pela IA se o usuário não definiu tags manualmente
-    let tagsFinais = reg.tags || [];
-    if ((!reg.tags || reg.tags.length === 0) && reg.tagsRecomendadas && reg.tagsRecomendadas.length > 0) {
-      // Usuário não definiu tags, usar recomendações da IA
-      tagsFinais = [...reg.tagsRecomendadas];
-      
-      // Adicionar tags que precisam ser criadas à lista de novas tags
-      for (const tagRecomendada of reg.tagsRecomendadas) {
-        if (!novasTags.includes(tagRecomendada)) {
-          novasTags.push(tagRecomendada);
-        }
-      }
-    }
-    
-    return { 
+    // Tags são sempre as que o usuário selecionou/criou manualmente — não há
+    // mais sugestão automática de tags.
+    const tagsFinais = reg.tags || [];
+
+    return {
       ...reg, 
       categoriaId: categoriaObj ? categoriaObj.id : undefined, 
       tipo,

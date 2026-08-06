@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, X, Plus, Check } from 'lucide-react';
+import { X, Plus, Check } from 'lucide-react';
 
 interface MultiTagSelectorProps {
   selectedTags: string[];
   availableTags: Array<{ id: string; name: string }>;
-  suggestedTags: string[];
   onTagsChange: (tags: string[]) => void;
   onCreateTag: (tagName: string) => Promise<void>;
 }
@@ -15,7 +14,6 @@ interface MultiTagSelectorProps {
 export function MultiTagSelector({
   selectedTags,
   availableTags,
-  suggestedTags,
   onTagsChange,
   onCreateTag
 }: MultiTagSelectorProps) {
@@ -38,7 +36,7 @@ export function MultiTagSelector({
   // Cria uma nova tag
   const handleCreateTag = async () => {
     if (!newTagName.trim()) return;
-    
+
     setIsCreatingTag(true);
     try {
       await onCreateTag(newTagName.trim());
@@ -48,26 +46,6 @@ export function MultiTagSelector({
       console.error('Erro ao criar tag:', error);
     } finally {
       setIsCreatingTag(false);
-    }
-  };
-
-  // Adiciona tag sugerida (cria se não existir)
-  const addSuggestedTag = async (suggestedTagName: string) => {
-    // Verifica se a tag já existe
-    const existingTag = availableTags.find(t => 
-      t.name.toLowerCase() === suggestedTagName.toLowerCase()
-    );
-
-    if (existingTag) {
-      addTag(existingTag.id);
-    } else {
-      // Cria a tag e adiciona
-      try {
-        await onCreateTag(suggestedTagName);
-        // Após criar, a tag será adicionada automaticamente via callback
-      } catch (error) {
-        console.error('Erro ao criar tag sugerida:', error);
-      }
     }
   };
 
@@ -120,43 +98,6 @@ export function MultiTagSelector({
             </option>
           ))}
       </select>
-
-      {/* Tags sugeridas pela IA */}
-      {suggestedTags && suggestedTags.length > 0 && (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-blue-500 dark:text-blue-400" />
-            <span className="text-xs text-blue-600 dark:text-blue-400">Sugeridas pela IA:</span>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {suggestedTags.map((suggestedTag, index) => {
-              // Verifica se a tag já está selecionada
-              const existingTag = availableTags.find(t => 
-                t.name.toLowerCase() === suggestedTag.toLowerCase()
-              );
-              const isAlreadySelected = existingTag && selectedTags.includes(existingTag.id);
-
-              return (
-                <Badge
-                  key={index}
-                  variant="outline"
-                  className={`text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 flex items-center gap-1 border-blue-300 dark:border-blue-600 text-blue-600 dark:text-blue-400 ${
-                    isAlreadySelected ? 'bg-blue-100 dark:bg-blue-950/30 border-blue-400 dark:border-blue-500' : ''
-                  }`}
-                  onClick={() => {
-                    if (!isAlreadySelected) {
-                      addSuggestedTag(suggestedTag);
-                    }
-                  }}
-                >
-                  {suggestedTag}
-                  {isAlreadySelected && <Check className="w-3 h-3" />}
-                </Badge>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Criar nova tag */}
       <div className="space-y-1">

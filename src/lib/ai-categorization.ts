@@ -21,6 +21,12 @@ export interface TransactionAnalysis {
   confidence: number;
   shouldCreateCategory: boolean;
   categoryType: 'EXPENSE' | 'INCOME' | 'BOTH';
+  /**
+   * Sempre vazio. Tags não são mais sugeridas automaticamente — a ideia da
+   * tag é o usuário marcar algo específico dele (ex: "viagem-europa"), então
+   * só faz sentido quando ele mesmo cria/aplica. Campo mantido no tipo por
+   * compatibilidade com quem já consome este retorno.
+   */
   suggestedTags: string[];
   merchant?: string;
   location?: string;
@@ -86,9 +92,6 @@ export async function analyzeTransactionWithAI(
     );
   }
 
-  // Sugere tags baseadas no contexto
-  const suggestedTags = suggestTags(enhancedDescription, merchantInfo);
-
   return {
     originalDescription: description,
     enhancedDescription,
@@ -99,7 +102,7 @@ export async function analyzeTransactionWithAI(
         cat.name.toLowerCase() === categorySuggestion.name.toLowerCase()
       ),
     categoryType,
-    suggestedTags,
+    suggestedTags: [], // Tags não são mais sugeridas automaticamente (ver TransactionAnalysis.suggestedTags)
     merchant: merchantInfo.merchant,
     location: merchantInfo.location
   };
@@ -142,7 +145,6 @@ function extractMerchantInfo(description: string): {
   merchant?: string;
   location?: string;
   category_hint?: string;
-  tags_hint?: string[];
 } {
   const desc = description.toLowerCase();
 
@@ -152,7 +154,6 @@ function extractMerchantInfo(description: string): {
     return {
       merchant: merchantMatch.canonicalName,
       category_hint: merchantMatch.category,
-      tags_hint: merchantMatch.tags,
     };
   }
 
@@ -346,29 +347,6 @@ function findSimilarCategory(
 }
 
 /**
- * Sugere tags apenas para casos esporádicos específicos, mais as tags
- * já associadas ao estabelecimento reconhecido pelo merchant-dictionary
- * (ex: "delivery", "streaming", "combustivel").
- */
-function suggestTags(description: string, merchantInfo: any): string[] {
-  const tags: string[] = [...(merchantInfo?.tags_hint || [])];
-  const desc = description.toLowerCase();
-
-  // Tags apenas para situações específicas e esporádicas
-  if (desc.includes('emergencia') || desc.includes('urgente')) tags.push('Emergência');
-  if (desc.includes('viagem') || desc.includes('turismo')) tags.push('Viagem');
-  if (desc.includes('presente') || desc.includes('gift')) tags.push('Presente');
-  if (desc.includes('desconto') || desc.includes('promocao')) tags.push('Promoção');
-  if (desc.includes('parcelado') || desc.includes('parcela')) tags.push('Parcelado');
-  if (desc.includes('bonus') || desc.includes('premiacao')) tags.push('Bônus');
-  if (desc.includes('reembolso') || desc.includes('devolucao')) tags.push('Reembolso');
-  if (desc.includes('multa') || desc.includes('juros')) tags.push('Multa/Juros');
-
-  // Remove duplicatas e limita para não poluir
-  return Array.from(new Set(tags)).slice(0, 4);
-}
-
-/**
  * Retorna cor da categoria
  */
 function getCategoryColor(categoryName: string): string {
@@ -526,109 +504,20 @@ export async function analyzeFormDescription(
     icon: categorySuggestion.icon
   } : undefined;
 
-  // Sugere tags baseadas na descrição
-  const suggestedTagNames = generateSmartTags(enhancedDescription, merchantInfo);
+  // Tags não são mais sugeridas automaticamente: a ideia da tag é o usuário
+  // marcar algo específico dele (ex: "viagem-europa-2026") para depois somar
+  // gastos por aquele agrupamento — uma lista genérica de tags "online",
+  // "urgente", "delivery" etc. gerada pelo sistema não serve a esse
+  // propósito e só teria sido ruído. Mantido `tags: []` para não quebrar
+  // quem consome `FormSuggestions`.
   const tagSuggestions: SmartSuggestion[] = [];
 
-  for (const tagName of suggestedTagNames) {
-    const existingTag = existingTags.find(
-      tag => tag.name.toLowerCase() === tagName.toLowerCase()
-    );
-
-    tagSuggestions.push({
-      type: 'tag',
-      name: tagName,
-      confidence: 0.8,
-      isNew: !existingTag
-    });
-  }
-
   // Calcula confiança geral
-  const overallConfidence = Math.max(
-    categorySuggestion.confidence,
-    tagSuggestions.length > 0 ? 0.7 : 0
-  );
+  const overallConfidence = categorySuggestion.confidence;
 
   return {
     category: categoryResult,
     tags: tagSuggestions,
     confidence: overallConfidence
   };
-}
-
-/**
- * Gera tags inteligentes baseadas na descrição
- */
-function generateSmartTags(description: string, merchantInfo: any): string[] {
-  const tags: string[] = [];
-  const desc = description.toLowerCase();
-
-  // Tags baseadas em padrões de comportamento
-  const tagPatterns = {
-    // Localização
-    'online': /online|internet|web|digital/i,
-    'presencial': /loja|balcão|presencial|físico/i,
-    
-    // Frequência  
-    'recorrente': /mensal|anual|assinatura|recorrente|todo mês/i,
-    'eventual': /única vez|esporádico|eventual/i,
-    
-    // Método de pagamento
-    'cartão': /cartão|card|débito|crédito/i,
-    'pix': /pix/i,
-    'dinheiro': /dinheiro|espécie|cash/i,
-    'boleto': /boleto|bancário/i,
-    
-    // Características específicas
-    'urgente': /urgente|emergência|emergencial/i,
-    'planejado': /planejado|programado|agendado/i,
-    'promocional': /promoção|desconto|oferta|promo/i,
-    'parcelado': /parcel|prestação|dividido/i,
-    
-    // Contexto temporal
-    'fim-de-semana': /sábado|domingo|fim de semana|weekend/i,
-    'feriado': /feriado|natal|ano novo|páscoa/i,
-    
-    // Essencial vs não essencial
-    'essencial': /água|luz|energia|gás|aluguel|medicamento|saúde/i,
-    'lazer': /cinema|teatro|jogo|diversão|entretenimento|festa/i,
-    
-    // Tamanho/valor
-    'alto-valor': merchantInfo?.category_hint === 'Investimentos' || desc.includes('investimento'),
-    'pequeno-gasto': false // será calculado baseado no valor se disponível
-  };
-
-  // Verifica cada padrão
-  for (const [tag, pattern] of Object.entries(tagPatterns)) {
-    if (typeof pattern === 'boolean' && pattern) {
-      tags.push(tag);
-    } else if (pattern instanceof RegExp && pattern.test(description)) {
-      tags.push(tag);
-    }
-  }
-
-  // Tags baseadas no merchant/categoria
-  if (merchantInfo?.merchant) {
-    const merchant = merchantInfo.merchant.toLowerCase();
-    
-    // Tags específicas por tipo de estabelecimento
-    if (['uber', '99', 'taxi'].some(t => merchant.includes(t))) {
-      tags.push('transporte-app');
-    }
-    
-    if (['ifood', 'delivery', 'entrega'].some(t => merchant.includes(t))) {
-      tags.push('delivery');
-    }
-    
-    if (['netflix', 'spotify', 'amazon-prime'].some(t => merchant.includes(t))) {
-      tags.push('streaming');
-    }
-    
-    if (['mercado', 'supermercado', 'açougue', 'padaria'].some(t => merchant.includes(t))) {
-      tags.push('compras-casa');
-    }
-  }
-
-  // Limita a 3-4 tags para não poluir
-  return tags.slice(0, 4);
 }

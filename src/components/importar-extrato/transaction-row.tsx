@@ -2,7 +2,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, X, Plus, Wand2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { MultiTagSelector } from './multi-tag-selector';
 import { normalizeDescription } from '@/lib/description-normalizer';
 
 interface TransactionRowProps {
@@ -308,50 +307,6 @@ export function TransactionRow({
                   </div>
                 ) : null;
               })}
-            </div>
-          )}
-
-          {/* Sugestões de IA para tags */}
-          {registro.tagsRecomendadas && registro.tagsRecomendadas.length > 0 && (
-            <div className="space-y-1">
-              {registro.tagsRecomendadas.map((tagName: string) => (
-                <div key={tagName} className="flex items-center gap-2 bg-primary/5 px-2 py-1 rounded text-xs border border-primary/20">
-                  <span className="text-primary font-medium">IA sugere:</span>
-                  <span className="text-foreground">{tagName}</span>
-                  <div className="flex gap-1 ml-auto">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        // Adicionar tag sugerida à lista
-                        const currentTags = registro.tags || [];
-                        if (!currentTags.includes(tagName)) {
-                          onEdit(index, 'tags', [...currentTags, tagName]);
-                        }
-                      }}
-                      className="h-4 w-4 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                      title="Aceitar sugestão"
-                    >
-                      <Check className="w-2 h-2" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        // Remover sugestão
-                        const newSuggestions = registro.tagsRecomendadas.filter((name: string) => name !== tagName);
-                        onEdit(index, 'tagsRecomendadas', newSuggestions);
-                      }}
-                      className="h-4 w-4 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      title="Rejeitar sugestão"
-                    >
-                      <X className="w-2 h-2" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
             </div>
           )}
 

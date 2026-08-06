@@ -138,17 +138,9 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Processar tags
-      let tagsFinais = reg.tags || [];
-      if ((!reg.tags || reg.tags.length === 0) && reg.tagsRecomendadas && reg.tagsRecomendadas.length > 0) {
-        tagsFinais = [...reg.tagsRecomendadas];
-        
-        for (const tagRecomendada of reg.tagsRecomendadas) {
-          if (!novasTags.includes(tagRecomendada)) {
-            novasTags.push(tagRecomendada);
-          }
-        }
-      }
+      // Tags são sempre as que o usuário selecionou/criou manualmente — não há
+      // mais sugestão automática de tags.
+      const tagsFinais = reg.tags || [];
 
       return {
         ...reg,

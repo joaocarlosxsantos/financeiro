@@ -23,8 +23,6 @@ export interface MerchantEntry {
   /** Nome da categoria sugerida (deve casar com os nomes já usados no app quando possível). */
   category: string;
   categoryType: CategoryType;
-  /** Tags sugeridas opcionais. */
-  tags?: string[];
   /**
    * Palavras/trechos (minúsculos, sem acento) que identificam este
    * estabelecimento dentro da descrição normalizada.
@@ -36,7 +34,6 @@ export interface MerchantMatch {
   canonicalName: string;
   category: string;
   categoryType: CategoryType;
-  tags: string[];
   /** 0-1 */
   confidence: number;
   matchedKeyword: string;
@@ -74,10 +71,10 @@ export function normalizeForDictionary(text: string): string {
 
 export const MERCHANT_DICTIONARY: MerchantEntry[] = [
   // ---------- Transporte por app / táxi ----------
-  { canonicalName: 'Uber', category: 'Transporte', categoryType: 'EXPENSE', tags: ['transporte-app'], keywords: ['uber trip', 'uber* trip', 'uber ', 'uber'] },
-  { canonicalName: '99', category: 'Transporte', categoryType: 'EXPENSE', tags: ['transporte-app'], keywords: ['99pop', '99 pop', '99app', '99 app', '99*'] },
-  { canonicalName: 'Cabify', category: 'Transporte', categoryType: 'EXPENSE', tags: ['transporte-app'], keywords: ['cabify'] },
-  { canonicalName: 'InDriver', category: 'Transporte', categoryType: 'EXPENSE', tags: ['transporte-app'], keywords: ['indriver', 'in driver'] },
+  { canonicalName: 'Uber', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['uber trip', 'uber* trip', 'uber ', 'uber'] },
+  { canonicalName: '99', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['99pop', '99 pop', '99app', '99 app', '99*'] },
+  { canonicalName: 'Cabify', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['cabify'] },
+  { canonicalName: 'InDriver', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['indriver', 'in driver'] },
   { canonicalName: 'Táxi', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['taxi'] },
   { canonicalName: 'Estacionamento', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['estacionamento', 'estapar', 'zona azul', 'parkee'] },
   { canonicalName: 'Pedágio', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['pedagio', 'sem parar', 'conectcar', 'veloe'] },
@@ -85,18 +82,18 @@ export const MERCHANT_DICTIONARY: MerchantEntry[] = [
   { canonicalName: 'Ônibus', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['bilhete unico', 'onibus'] },
 
   // ---------- Combustível ----------
-  { canonicalName: 'Shell', category: 'Transporte', categoryType: 'EXPENSE', tags: ['combustivel'], keywords: ['shell'] },
-  { canonicalName: 'Ipiranga', category: 'Transporte', categoryType: 'EXPENSE', tags: ['combustivel'], keywords: ['ipiranga'] },
-  { canonicalName: 'Petrobras/BR', category: 'Transporte', categoryType: 'EXPENSE', tags: ['combustivel'], keywords: ['petrobras', 'br distribuidora', 'posto br'] },
-  { canonicalName: 'Ale Combustíveis', category: 'Transporte', categoryType: 'EXPENSE', tags: ['combustivel'], keywords: ['ale combustiveis', 'posto ale'] },
-  { canonicalName: 'Posto de Combustível', category: 'Transporte', categoryType: 'EXPENSE', tags: ['combustivel'], keywords: ['posto de combustivel', 'auto posto', 'posto '] },
+  { canonicalName: 'Shell', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['shell'] },
+  { canonicalName: 'Ipiranga', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['ipiranga'] },
+  { canonicalName: 'Petrobras/BR', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['petrobras', 'br distribuidora', 'posto br'] },
+  { canonicalName: 'Ale Combustíveis', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['ale combustiveis', 'posto ale'] },
+  { canonicalName: 'Posto de Combustível', category: 'Transporte', categoryType: 'EXPENSE', keywords: ['posto de combustivel', 'auto posto', 'posto '] },
 
   // ---------- Delivery de comida ----------
-  { canonicalName: 'iFood', category: 'Alimentação', categoryType: 'EXPENSE', tags: ['delivery'], keywords: ['ifood', 'ifd*', 'ifd '] },
-  { canonicalName: 'Rappi', category: 'Alimentação', categoryType: 'EXPENSE', tags: ['delivery'], keywords: ['rappi'] },
-  { canonicalName: 'Uber Eats', category: 'Alimentação', categoryType: 'EXPENSE', tags: ['delivery'], keywords: ['uber eats', 'ubereats'] },
-  { canonicalName: '99 Food', category: 'Alimentação', categoryType: 'EXPENSE', tags: ['delivery'], keywords: ['99 food', '99food'] },
-  { canonicalName: 'Aiqfome', category: 'Alimentação', categoryType: 'EXPENSE', tags: ['delivery'], keywords: ['aiqfome'] },
+  { canonicalName: 'iFood', category: 'Alimentação', categoryType: 'EXPENSE', keywords: ['ifood', 'ifd*', 'ifd '] },
+  { canonicalName: 'Rappi', category: 'Alimentação', categoryType: 'EXPENSE', keywords: ['rappi'] },
+  { canonicalName: 'Uber Eats', category: 'Alimentação', categoryType: 'EXPENSE', keywords: ['uber eats', 'ubereats'] },
+  { canonicalName: '99 Food', category: 'Alimentação', categoryType: 'EXPENSE', keywords: ['99 food', '99food'] },
+  { canonicalName: 'Aiqfome', category: 'Alimentação', categoryType: 'EXPENSE', keywords: ['aiqfome'] },
 
   // ---------- Fast food / restaurantes conhecidos ----------
   { canonicalName: "McDonald's", category: 'Alimentação', categoryType: 'EXPENSE', keywords: ['mcdonald', 'mc donald', 'mcdonalds'] },
@@ -144,18 +141,18 @@ export const MERCHANT_DICTIONARY: MerchantEntry[] = [
   { canonicalName: 'Plano de Saúde', category: 'Saúde', categoryType: 'EXPENSE', keywords: ['unimed', 'amil', 'sulamerica saude', 'hapvida', 'notredame', 'bradesco saude', 'plano de saude'] },
 
   // ---------- Streaming / assinaturas ----------
-  { canonicalName: 'Netflix', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['netflix'] },
-  { canonicalName: 'Spotify', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['spotify'] },
-  { canonicalName: 'Amazon Prime', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['amazon prime', 'prime video'] },
-  { canonicalName: 'Disney+', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['disney plus', 'disney+', 'disney '] },
-  { canonicalName: 'HBO Max/Max', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['hbo max', 'hbo ', 'max app'] },
-  { canonicalName: 'YouTube Premium', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['youtube premium', 'youtube music'] },
-  { canonicalName: 'Deezer', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['deezer'] },
-  { canonicalName: 'Apple Music/iCloud', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['apple music', 'icloud', 'apple.com/bill'] },
-  { canonicalName: 'Paramount+', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['paramount plus', 'paramount+'] },
-  { canonicalName: 'Globoplay', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['globoplay'] },
-  { canonicalName: 'Crunchyroll', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['crunchyroll'] },
-  { canonicalName: 'Star+', category: 'Assinaturas', categoryType: 'EXPENSE', tags: ['streaming'], keywords: ['star plus', 'star+'] },
+  { canonicalName: 'Netflix', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['netflix'] },
+  { canonicalName: 'Spotify', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['spotify'] },
+  { canonicalName: 'Amazon Prime', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['amazon prime', 'prime video'] },
+  { canonicalName: 'Disney+', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['disney plus', 'disney+', 'disney '] },
+  { canonicalName: 'HBO Max/Max', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['hbo max', 'hbo ', 'max app'] },
+  { canonicalName: 'YouTube Premium', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['youtube premium', 'youtube music'] },
+  { canonicalName: 'Deezer', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['deezer'] },
+  { canonicalName: 'Apple Music/iCloud', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['apple music', 'icloud', 'apple.com/bill'] },
+  { canonicalName: 'Paramount+', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['paramount plus', 'paramount+'] },
+  { canonicalName: 'Globoplay', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['globoplay'] },
+  { canonicalName: 'Crunchyroll', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['crunchyroll'] },
+  { canonicalName: 'Star+', category: 'Assinaturas', categoryType: 'EXPENSE', keywords: ['star plus', 'star+'] },
 
   // ---------- Academia / esportes ----------
   { canonicalName: 'Smart Fit', category: 'Academia', categoryType: 'EXPENSE', keywords: ['smart fit', 'smartfit'] },
@@ -212,14 +209,14 @@ export const MERCHANT_DICTIONARY: MerchantEntry[] = [
   { canonicalName: 'Algar Telecom', category: 'Telefonia', categoryType: 'EXPENSE', keywords: ['algar telecom', 'algar '] },
 
   // ---------- Contas / utilidades / moradia ----------
-  { canonicalName: 'Enel', category: 'Contas', categoryType: 'EXPENSE', tags: ['energia'], keywords: ['enel'] },
-  { canonicalName: 'CPFL Energia', category: 'Contas', categoryType: 'EXPENSE', tags: ['energia'], keywords: ['cpfl'] },
-  { canonicalName: 'Cemig', category: 'Contas', categoryType: 'EXPENSE', tags: ['energia'], keywords: ['cemig'] },
-  { canonicalName: 'Copel', category: 'Contas', categoryType: 'EXPENSE', tags: ['energia'], keywords: ['copel'] },
-  { canonicalName: 'Light', category: 'Contas', categoryType: 'EXPENSE', tags: ['energia'], keywords: ['light sa', 'light servicos'] },
-  { canonicalName: 'Sabesp', category: 'Contas', categoryType: 'EXPENSE', tags: ['agua'], keywords: ['sabesp'] },
-  { canonicalName: 'Copasa', category: 'Contas', categoryType: 'EXPENSE', tags: ['agua'], keywords: ['copasa'] },
-  { canonicalName: 'Comgás', category: 'Contas', categoryType: 'EXPENSE', tags: ['gas'], keywords: ['comgas'] },
+  { canonicalName: 'Enel', category: 'Contas', categoryType: 'EXPENSE', keywords: ['enel'] },
+  { canonicalName: 'CPFL Energia', category: 'Contas', categoryType: 'EXPENSE', keywords: ['cpfl'] },
+  { canonicalName: 'Cemig', category: 'Contas', categoryType: 'EXPENSE', keywords: ['cemig'] },
+  { canonicalName: 'Copel', category: 'Contas', categoryType: 'EXPENSE', keywords: ['copel'] },
+  { canonicalName: 'Light', category: 'Contas', categoryType: 'EXPENSE', keywords: ['light sa', 'light servicos'] },
+  { canonicalName: 'Sabesp', category: 'Contas', categoryType: 'EXPENSE', keywords: ['sabesp'] },
+  { canonicalName: 'Copasa', category: 'Contas', categoryType: 'EXPENSE', keywords: ['copasa'] },
+  { canonicalName: 'Comgás', category: 'Contas', categoryType: 'EXPENSE', keywords: ['comgas'] },
   { canonicalName: 'Condomínio', category: 'Moradia', categoryType: 'EXPENSE', keywords: ['condominio'] },
   { canonicalName: 'Aluguel', category: 'Moradia', categoryType: 'EXPENSE', keywords: ['aluguel', 'locacao imovel', 'imobiliaria'] },
 
@@ -347,7 +344,6 @@ export function identifyMerchant(rawDescription: string): MerchantMatch | null {
             canonicalName: entry.canonicalName,
             category: entry.category,
             categoryType: entry.categoryType,
-            tags: entry.tags ? [...entry.tags] : [],
             confidence,
             matchedKeyword: keyword,
           };

@@ -297,7 +297,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
     let categoriaRecomendada = '';
     let categoriaId = '';
     let descricaoMelhorada = t.descricao;
-    let tagsRecomendadas: string[] = [];
     let shouldCreateCategory = false;
     let smartSuggestion: any = null;
     let aiAnalysis: any = null;
@@ -329,7 +328,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
         if (smartSuggestion.confidence >= 50) {
           categoriaRecomendada = smartSuggestion.categoryName || '';
           categoriaId = smartSuggestion.categoryId || '';
-          tagsRecomendadas = smartSuggestion.tags || [];
           // Alta confiança (match exato ou muito similar a uma transação já
           // categorizada pelo usuário) -> reaproveita a descrição já usada.
           const altaConfiancaDescricao =
@@ -370,22 +368,7 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
         }
         
         descricaoMelhorada = aiAnalysis.enhancedDescription;
-        
-        // Verifica tags e filtra apenas as que não existem
-        const tagsExistentes = await prisma.tag.findMany({ 
-          where: { userId: user.id },
-          select: { name: true }
-        });
-        
-        const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
-          return !tagsExistentes.some(
-            (tagExistente: { name: string }) =>
-              removeAcentos(tagExistente.name.toLowerCase()) ===
-              removeAcentos(tagSugerida.toLowerCase()),
-          );
-        });
-        tagsRecomendadas = tagsNaoExistentes;
-        
+
         // Se a IA sugeriu "Outros", não marcar como fonte e deixar fallback tentar
         if (removeAcentos(categoriaRecomendada.toLowerCase()) !== 'outros') {
           suggestionSource = 'ai';
@@ -402,7 +385,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
     if (suggestionSource === 'none') {
       let categoriaSugerida: string;
       let merchantCanonicalName: string | null = null;
-      let merchantTags: string[] = [];
 
       if (isCredito) {
         // Lado de crédito de fatura: pagamento, estorno, cashback, ajuste
@@ -414,7 +396,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
           if (merchantMatch) {
             categoriaSugerida = merchantMatch.category;
             merchantCanonicalName = merchantMatch.canonicalName;
-            merchantTags = merchantMatch.tags;
           } else {
             categoriaSugerida = 'Crédito Cartão';
           }
@@ -424,7 +405,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
         if (merchantMatch) {
           categoriaSugerida = merchantMatch.category;
           merchantCanonicalName = merchantMatch.canonicalName;
-          merchantTags = merchantMatch.tags;
         } else {
           const catOnly = suggestCategoryOnly(t.descricao, 'EXPENSE');
           categoriaSugerida = catOnly?.category || 'Compras';
@@ -453,9 +433,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
       if (merchantCanonicalName) {
         descricaoMelhorada = merchantCanonicalName;
       }
-      if (merchantTags.length > 0) {
-        tagsRecomendadas = Array.from(new Set([...tagsRecomendadas, ...merchantTags]));
-      }
       suggestionSource = 'fallback';
     }
     
@@ -467,7 +444,6 @@ async function suggestCategories(transactions: any[], existingCategories: any[],
       categoriaId: categoriaId || null,
       isNewCategory: shouldCreateCategory,
       descricaoMelhorada,
-      tagsRecomendadas,
       suggestionSource, // Para debug
       smartMatch: smartSuggestion ? {
         confidence: smartSuggestion.confidence,

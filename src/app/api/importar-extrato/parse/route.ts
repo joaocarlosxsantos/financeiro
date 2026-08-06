@@ -83,7 +83,7 @@ import { identifyMerchant, suggestCategoryOnly } from '@/lib/merchant-dictionary
 function fallbackCategorizeAndDescribe(
   descricao: string,
   transactionType: 'INCOME' | 'EXPENSE',
-): { categoria: string; descricaoMelhorada: string; tags: string[] } {
+): { categoria: string; descricaoMelhorada: string } {
   const simplified = simplificarDescricao(descricao);
   const merchantMatch =
     identifyMerchant(descricao) ||
@@ -93,7 +93,6 @@ function fallbackCategorizeAndDescribe(
     return {
       categoria: merchantMatch.category,
       descricaoMelhorada: merchantMatch.canonicalName,
-      tags: merchantMatch.tags,
     };
   }
 
@@ -101,7 +100,6 @@ function fallbackCategorizeAndDescribe(
   return {
     categoria: catOnly?.category || 'Outros',
     descricaoMelhorada: simplified || descricao,
-    tags: [],
   };
 }
 
@@ -946,19 +944,6 @@ async function handler(req: NextRequest) {
           { status: 400 },
         );
       }
-      // Busca tags do usuário uma só vez para todas as transações
-      let tagsUsuario: any[] = [];
-      if (user) {
-        try {
-          tagsUsuario = await prisma.tag.findMany({
-            where: { userId: user.id },
-            select: { id: true, name: true },
-          });
-        } catch (error) {
-          console.error('Erro ao buscar tags:', error);
-        }
-      }
-
       preview = await Promise.all(
         transactions.map(async (t: any, idx: number) => {
           // Normaliza data OFX (YYYYMMDD ou YYYYMMDDHHMMSS)
@@ -982,7 +967,6 @@ async function handler(req: NextRequest) {
           let categoriaRecomendada = '';
           let categoriaId = '';
           let descricaoMelhorada = descricao;
-          let tagsRecomendadas: string[] = [];
           let shouldCreateCategory = false;
           let smartSuggestion: any = null;
           let aiAnalysis: any = null;
@@ -1012,7 +996,6 @@ async function handler(req: NextRequest) {
               if (smartSuggestion.confidence >= 60) {
                 categoriaRecomendada = smartSuggestion.categoryName || '';
                 categoriaId = smartSuggestion.categoryId || '';
-                tagsRecomendadas = smartSuggestion.tags || [];
                 // Alta confiança (match exato ou muito similar a uma transação já
                 // categorizada pelo usuário) -> reaproveita a descrição já usada,
                 // em vez de manter o texto cru do banco.
@@ -1023,16 +1006,16 @@ async function handler(req: NextRequest) {
                 descricaoMelhorada = altaConfiancaDescricao || descricao;
                 shouldCreateCategory = false; // Categoria já existe no histórico
                 suggestionSource = 'smart';
-                
+
                 logger.info(`Smart categorization: "${descricao}" -> "${categoriaRecomendada}" (${smartSuggestion.confidence}% confidence)`);
               }
             }
-            
+
             // 2. SEGUNDO: Se smart categorization não teve confiança suficiente, usa IA
             if (suggestionSource === 'none' && user && descricao) {
               aiAnalysis = await analyzeTransactionWithAI(descricao, valor, categoriasUsuario);
               let suggested = aiAnalysis.suggestedCategory;
-              
+
               // Nunca sugerir transferência entre contas se nome não está na descrição
               if (normalizar(suggested) === 'transferenciaentrecontas') {
                 const descNorm = normalizar(descricao);
@@ -1040,7 +1023,7 @@ async function handler(req: NextRequest) {
                   suggested = 'Pix';
                 }
               }
-              
+
               // Verifica se categoria sugerida existe
               const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
               const categoriaExistente = categoriasUsuario.find(
@@ -1056,16 +1039,6 @@ async function handler(req: NextRequest) {
                 shouldCreateCategory = true;
               }
               descricaoMelhorada = aiAnalysis.enhancedDescription;
-              
-              // Verifica tags e filtra apenas as que não existem
-              const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
-                return !tagsUsuario.some(
-                  (tagExistente) =>
-                    removeAcentos(tagExistente.name.toLowerCase()) ===
-                    removeAcentos(tagSugerida.toLowerCase()),
-                );
-              });
-              tagsRecomendadas = tagsNaoExistentes;
               suggestionSource = 'ai';
             }
           } catch (error) {
@@ -1082,7 +1055,6 @@ async function handler(req: NextRequest) {
               }
             }
             descricaoMelhorada = fb.descricaoMelhorada;
-            tagsRecomendadas = fb.tags;
             const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
             const categoriaExistente = categoriasUsuario.find(
               (cat) =>
@@ -1108,7 +1080,6 @@ async function handler(req: NextRequest) {
             descricaoMelhorada,
             categoriaRecomendada,
             categoriaId,
-            tagsRecomendadas,
             shouldCreateCategory,
             suggestionSource, // Para debug
             smartMatch: smartSuggestion ? {
@@ -1137,19 +1108,6 @@ async function handler(req: NextRequest) {
 
   // Processa transações do PDF (aplicando a mesma lógica de IA que OFX)
   if (transactions.length > 0) {
-    // Busca tags do usuário uma só vez para todas as transações
-    let tagsUsuario: any[] = [];
-    if (user) {
-      try {
-        tagsUsuario = await prisma.tag.findMany({
-          where: { userId: user.id },
-          select: { id: true, name: true },
-        });
-      } catch (error) {
-        console.error('Erro ao buscar tags:', error);
-      }
-    }
-
     // Busca categoria de transferência entre contas
     // Função robusta de normalização (remove acentos, espaços, pontuação, caixa)
     const normalizar = (str: string) =>
@@ -1186,7 +1144,6 @@ async function handler(req: NextRequest) {
           let categoriaId = '';
           let shouldCreateCategory = t.shouldCreateCategory || false;
           let descricaoMelhorada = descricao;
-          let tagsRecomendadas: string[] = [];
           let smartSuggestion: any = null;
           let suggestionSource = 'none'; // 'smart', 'ai', 'transfer', ou 'fallback'
 
@@ -1219,7 +1176,6 @@ async function handler(req: NextRequest) {
                 if (smartSuggestion.confidence >= 60) {
                   categoriaRecomendada = smartSuggestion.categoryName || '';
                   categoriaId = smartSuggestion.categoryId || '';
-                  tagsRecomendadas = smartSuggestion.tags || [];
                   const altaConfiancaDescricao =
                     (smartSuggestion.matchReason === 'exact' ||
                       smartSuggestion.matchReason === 'high_similarity') &&
@@ -1257,12 +1213,6 @@ async function handler(req: NextRequest) {
                   shouldCreateCategory = true;
                 }
                 descricaoMelhorada = aiAnalysis.enhancedDescription;
-                const tagsNaoExistentes = aiAnalysis.suggestedTags.filter((tagSugerida: string) => {
-                  return !tagsUsuario.some(
-                    (tagExistente) => normalizar(tagExistente.name) === normalizar(tagSugerida),
-                  );
-                });
-                tagsRecomendadas = tagsNaoExistentes;
                 suggestionSource = 'ai';
               }
             } catch (error) {
@@ -1281,7 +1231,6 @@ async function handler(req: NextRequest) {
                   }
                 }
                 descricaoMelhorada = fb.descricaoMelhorada;
-                tagsRecomendadas = fb.tags;
                 const categoriaExistente = categoriasUsuario.find(
                   (cat) => normalizar(cat.name) === normalizar(categoriaSugerida),
                 );
@@ -1322,7 +1271,6 @@ async function handler(req: NextRequest) {
             descricaoMelhorada,
             categoriaRecomendada,
             categoriaId,
-            tagsRecomendadas,
             shouldCreateCategory,
             suggestionSource, // Para debug
             smartMatch: smartSuggestion ? {
