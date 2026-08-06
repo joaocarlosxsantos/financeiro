@@ -119,13 +119,24 @@ export async function GET(req: Request) {
       let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
       const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
       let months = 0;
+      const today = new Date();
       while (cursor <= endCursor && months < 24) {
   const originalDay = r.date ? new Date(r.date).getUTCDate() : 1;
         let desiredDay = (r.dayOfMonth && Number.isFinite(r.dayOfMonth)) ? Number(r.dayOfMonth) : originalDay;
         const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
         const day = Math.min(desiredDay, lastDay);
         const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
-        if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) {
+
+        // IMPORTANTE: replicar as mesmas regras de /api/reports, senão o Excel exportado
+        // inclui ocorrências que a tela de relatórios não mostra (excludedDates e
+        // ocorrências futuras do mês corrente).
+        const occDateStr = occDate.toISOString().split('T')[0];
+        const excludedDates = Array.isArray(r.excludedDates) ? r.excludedDates : [];
+        const isExcluded = excludedDates.some((exDate: string) => new Date(exDate).toISOString().split('T')[0] === occDateStr);
+        const isCurrentMonth = today.getFullYear() === occDate.getUTCFullYear() && today.getMonth() === occDate.getUTCMonth();
+        const isFutureInCurrentMonth = isCurrentMonth && occDate.getUTCDate() > today.getDate();
+
+        if (!isExcluded && !isFutureInCurrentMonth && (!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) {
           const occId = `${r.id}::${occDate.getUTCFullYear()}-${String(occDate.getUTCMonth()+1).padStart(2,'0')}-${String(occDate.getUTCDate()).padStart(2,'0')}`;
           occurrences.push({ ...r, kind, date: occDate, occurrenceId: occId });
         }
@@ -149,79 +160,13 @@ export async function GET(req: Request) {
 
   const results = [ ...(await expandFixedOccurrencesLocal(incomesRaw, 'income')), ...(await expandFixedOccurrencesLocal(expensesRaw, 'expense')) ].sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // totals: compute same way as /api/reports
-  // - variable (non-fixed) records via DB aggregate with date filter
-  // - fixed records by summing expanded occurrences
-  const variableIncomeWhere: any = {
-    AND: [
-      { userId: user.id },
-      { isRecurring: false },
-      startDate || endDate ? { date: dateFilter } : {},
-      categoryIds ? { categoryId: { in: categoryIds } } : {},
-      walletIds ? { walletId: { in: walletIds } } : {},
-      tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
-    ],
-  };
-  const variableExpenseWhere: any = {
-    AND: [
-      { userId: user.id },
-      { isRecurring: false },
-      startDate || endDate ? { date: dateFilter } : {},
-      categoryIds ? { categoryId: { in: categoryIds } } : {},
-      walletIds ? { walletId: { in: walletIds } } : {},
-      tagNames && tagNames.length ? { tags: { hasSome: tagNames } } : {},
-    ],
-  };
-
-  const [incomeAgg, expenseAgg] = await Promise.all([
-    prisma.income.aggregate({ where: variableIncomeWhere, _sum: { amount: true } }),
-    prisma.expense.aggregate({ where: variableExpenseWhere, _sum: { amount: true } }),
-  ]);
-
-  const variableIncomeSum = Number(incomeAgg._sum.amount ?? 0);
-  const variableExpenseSum = Number(expenseAgg._sum.amount ?? 0);
-
-  // compute fixed sums by reproducing expansion logic (limited months etc.)
-  const computeFixedSum = (rows: any[]) => {
-    let sum = 0;
-    const sDate = parsedStartDate;
-    const eDate = parsedEndDate;
-    const getLastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
-    for (const r of rows) {
-      if (!r.isRecurring) continue;
-      const seriesStart = r.startDate ? new Date(r.startDate) : new Date(r.date);
-      const seriesEnd = r.endDate ? new Date(r.endDate) : null;
-      const from = sDate && sDate > seriesStart ? sDate : seriesStart;
-      const to = eDate && seriesEnd ? (eDate < seriesEnd ? eDate : seriesEnd) : (eDate || seriesEnd || null);
-      if (!to) {
-        const occDate = from;
-        if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) sum += Number(r.amount ?? 0);
-        continue;
-      }
-      let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
-      const endCursor = new Date(to.getFullYear(), to.getMonth(), 1);
-      let months = 0;
-      const originalDay = r.date ? new Date(r.date).getUTCDate() : 1;
-      while (cursor <= endCursor && months < 24) {
-        let desiredDay = (r.dayOfMonth && Number.isFinite(r.dayOfMonth)) ? Number(r.dayOfMonth) : originalDay;
-        const lastDay = getLastDayOfMonth(cursor.getFullYear(), cursor.getMonth());
-        const day = Math.min(desiredDay, lastDay);
-        const occDate = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth(), day, 12, 0, 0));
-        if ((!sDate || occDate.getTime() >= sDate.getTime()) && (!eDate || occDate.getTime() <= eDate.getTime())) {
-          sum += Number(r.amount ?? 0);
-        }
-        cursor.setMonth(cursor.getMonth() + 1);
-        months += 1;
-      }
-    }
-    return sum;
-  };
-
-  const fixedIncomeSum = computeFixedSum(incomesRaw.filter((i: any) => i.isRecurring));
-  const fixedExpenseSum = computeFixedSum(expensesRaw.filter((e: any) => e.isRecurring));
-
-  const totalIncomes = variableIncomeSum + fixedIncomeSum;
-  const totalExpenses = variableExpenseSum + fixedExpenseSum;
+  // IMPORTANTE: assim como em /api/reports, os totais do resumo são somados diretamente de
+  // `results` (a mesma lista, já expandida com excludedDates/corte do mês atual aplicados,
+  // que vira as linhas da aba "Detalhes"). Antes, o resumo era recalculado por
+  // computeFixedSum/variableIncomeWhere de forma independente e podia divergir da aba de
+  // detalhes e da tela de relatórios.
+  const totalIncomes = results.filter((r: any) => r.kind === 'income').reduce((s: number, r: any) => s + Number(r.amount ?? 0), 0);
+  const totalExpenses = results.filter((r: any) => r.kind === 'expense').reduce((s: number, r: any) => s + Number(r.amount ?? 0), 0);
 
   // Criar workbook em memória (permite aplicar estilos/numFmt corretamente)
   const wb = new ExcelJS.Workbook();

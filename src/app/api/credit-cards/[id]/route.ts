@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { calculateCreditCardUsage } from '@/lib/credit-utils';
 
 export async function GET(
   req: NextRequest,
@@ -18,14 +19,19 @@ export async function GET(
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
   }
 
+  // Observação: CreditCard não tem relações "expenses"/"incomes" (essas existem em
+  // Wallet/Category/User); o modelo correto para gastos/ganhos de cartão é
+  // creditExpenses/creditIncomes. O include anterior ("expenses"/"incomes") referenciava
+  // campos inexistentes e fazia essa rota falhar em runtime.
   const creditCard = await prisma.creditCard.findFirst({
-    where: { 
+    where: {
       id: params.id,
-      userId: user.id 
+      userId: user.id
     },
     include: {
-      expenses: true,
-      incomes: true,
+      creditExpenses: { include: { childExpenses: true } },
+      creditIncomes: true,
+      creditBills: true,
       bank: true,
     }
   });
@@ -34,7 +40,14 @@ export async function GET(
     return NextResponse.json({ error: 'Cartão não encontrado' }, { status: 404 });
   }
 
-  return NextResponse.json(creditCard);
+  const { usedAmount, availableLimit, usagePercentage } = calculateCreditCardUsage({
+    limit: Number(creditCard.limit),
+    creditExpenses: creditCard.creditExpenses || [],
+    creditIncomes: creditCard.creditIncomes || [],
+    creditBills: creditCard.creditBills || [],
+  });
+
+  return NextResponse.json({ ...creditCard, usedAmount, availableLimit, usagePercentage });
 }
 
 export async function PUT(

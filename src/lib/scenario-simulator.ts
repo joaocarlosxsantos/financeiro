@@ -100,34 +100,42 @@ export function simulateScenario(params: ScenarioParameters): ScenarioResult {
       monthExpenses *= inflationFactor;
     }
     
-    // Calcula novo saldo
+    // Calcula novo saldo em conta corrente (antes de investir a poupança do mês)
     const netChange = monthIncome - monthExpenses;
     currentBalance += netChange;
-    
-    // Investe a economia mensal
+
+    // Investe a economia mensal: o valor poupado SAI do saldo em conta e vira "investido".
+    // Antes, `savings` era somado a `investedAmount` sem nunca ser subtraído de
+    // `currentBalance`, contando o mesmo dinheiro duas vezes no patrimônio final.
     if (savings > 0) {
+      currentBalance -= savings;
       investedAmount += savings;
-      
+
       // Aplica retorno de investimento
       if (params.investmentReturn) {
         investedAmount *= (1 + params.investmentReturn / 100);
       }
     }
-    
+
+    // Patrimônio total do mês = saldo em conta + valor investido.
+    // Usamos essa mesma definição para o gráfico mensal (balance) e para o resumo
+    // (finalBalance/highestBalance/lowestBalance), para os números não divergirem entre si.
+    const totalWealth = currentBalance + investedAmount;
+
     // Atualiza estatísticas
     totalIncome += monthIncome;
     totalExpenses += monthExpenses;
     totalSaved += savings;
-    balanceSum += currentBalance;
-    lowestBalance = Math.min(lowestBalance, currentBalance);
-    highestBalance = Math.max(highestBalance, currentBalance);
-    
+    balanceSum += totalWealth;
+    lowestBalance = Math.min(lowestBalance, totalWealth);
+    highestBalance = Math.max(highestBalance, totalWealth);
+
     monthlyData.push({
       month,
       income: monthIncome,
       expenses: monthExpenses,
       savings,
-      balance: currentBalance,
+      balance: totalWealth,
       invested: investedAmount,
     });
   }

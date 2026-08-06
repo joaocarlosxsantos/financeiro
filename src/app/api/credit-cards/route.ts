@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { calculateCreditCardUsage } from '@/lib/credit-utils';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -31,68 +32,23 @@ export async function GET(req: NextRequest) {
   });
 
   // Calcular o valor utilizado de cada cartão
+  // Usa a mesma função (calculateCreditCardUsage) usada por /api/credit-cards/[id] e
+  // /api/shortcuts/credit-cards, para evitar que as três rotas divirjam de novo.
+  // IMPORTANTE: o valor pago em faturas (CreditBill.paidAmount) também libera limite,
+  // não apenas CreditIncome — antes o limite nunca voltava após pagar a fatura.
   const creditCardsWithUsage = creditCards.map((card: any) => {
-    // Calcular valor utilizado baseado nos gastos de crédito
-    let totalExpenses = 0;
-    
-    // Primeiro, identificar quais são registros pai (que têm childExpenses)
-    const parentIds = new Set();
-    (card.creditExpenses || []).forEach((expense: any) => {
-      if (expense.childExpenses && expense.childExpenses.length > 0) {
-        parentIds.add(expense.id);
-        // Também marcar os IDs dos children para evitar contagem dupla
-        expense.childExpenses.forEach((child: any) => {
-          parentIds.add(child.id);
-        });
-      }
+    const { usedAmount, availableLimit, usagePercentage } = calculateCreditCardUsage({
+      limit: Number(card.limit),
+      creditExpenses: card.creditExpenses || [],
+      creditIncomes: card.creditIncomes || [],
+      creditBills: card.creditBills || [],
     });
-    
-    (card.creditExpenses || []).forEach((expense: any) => {
-      const amount = Number(expense.amount || 0);
-      const hasChildren = expense.childExpenses && expense.childExpenses.length > 0;
-      
-      if (hasChildren) {
-        // Registro pai: contar apenas as parcelas filhas
-        expense.childExpenses.forEach((child: any) => {
-          const childAmount = Number(child.amount || 0);
-          const childType = child.type || 'EXPENSE';
-          
-          if (!childType || childType === 'EXPENSE') {
-            totalExpenses += Math.abs(childAmount);
-          } else if (childType === 'REFUND') {
-            totalExpenses -= Math.abs(childAmount);
-          }
-        });
-      } else if (!parentIds.has(expense.id)) {
-        // Registros independentes (que não fazem parte de estrutura pai-filho)
-        if (!expense.type || expense.type === 'EXPENSE') {
-          totalExpenses += Math.abs(amount);
-        } else if (expense.type === 'REFUND') {
-          totalExpenses -= Math.abs(amount);
-        }
-      }
-    });
-    
-    // Calcular créditos que liberam o limite (pagamentos e estornos)
-    const totalIncomes = (card.creditIncomes || []).reduce((sum: number, income: any) => {
-      return sum + Math.abs(Number(income.amount || 0));
-    }, 0);
-    
-    // Valor usado = despesas (já considerando estornos) - créditos
-    const rawUsedAmount = totalExpenses - totalIncomes;
-    const usedAmount = Math.max(0, rawUsedAmount); // Nunca negativo
-    
-    // Limite disponível = limite total - valor usado
-    const availableLimit = Number(card.limit) - usedAmount;
-    
-    // Percentual de uso baseado no limite total
-    const usagePercentage = Number(card.limit) > 0 ? (usedAmount / Number(card.limit)) * 100 : 0;
-    
+
     return {
       ...card,
       usedAmount,
       availableLimit,
-      usagePercentage: Math.max(0, Math.min(100, usagePercentage)),
+      usagePercentage,
     };
   });
 

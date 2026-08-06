@@ -162,8 +162,13 @@ export function calculateBillStatus(
     return 'PAID';
   }
   
-  // Se o valor pago é maior ou igual ao total, está paga
-  if (paidAmount >= totalAmount) {
+  // Se o valor pago é maior ou igual ao total, está paga.
+  // Usa uma tolerância de meio centavo: paidAmount/totalAmount normalmente chegam como
+  // Number já convertido de somas de Decimal, e somas sucessivas de decimais em Number
+  // podem gerar erro de arredondamento (ex.: 0.1 + 0.2 = 0.30000000000000004), fazendo
+  // paidAmount ficar infinitesimalmente abaixo de totalAmount mesmo com o valor total pago
+  // — a fatura ficaria presa em PARTIAL/OVERDUE para sempre.
+  if (paidAmount >= totalAmount - 0.005) {
     return 'PAID';
   }
   
@@ -174,6 +179,76 @@ export function calculateBillStatus(
   
   // Sem pagamento
   return currentDate > dueDate ? 'OVERDUE' : 'PENDING';
+}
+
+/**
+ * Calcula o valor utilizado, limite disponível e percentual de uso de um cartão.
+ *
+ * IMPORTANTE: o valor pago em faturas (BillPayment, refletido em CreditBill.paidAmount)
+ * também libera limite, assim como estornos (CreditIncome). Antes desta correção o
+ * limite disponível só era recalculado a partir de CreditIncome, então pagar a fatura
+ * nunca liberava o limite do cartão.
+ */
+export interface CreditCardUsageExpenseItem {
+  id: string;
+  amount: number;
+  type?: string; // 'EXPENSE' | 'REFUND'
+  childExpenses?: Array<{ id: string; amount: number; type?: string }>;
+}
+
+export function calculateCreditCardUsage(params: {
+  limit: number;
+  creditExpenses?: CreditCardUsageExpenseItem[];
+  creditIncomes?: Array<{ amount: number }>;
+  creditBills?: Array<{ paidAmount: number }>;
+}): { usedAmount: number; availableLimit: number; usagePercentage: number } {
+  const { limit, creditExpenses = [], creditIncomes = [], creditBills = [] } = params;
+
+  // Identificar registros "pai" (parcelados) para não contar o valor total junto com as parcelas filhas
+  const parentIds = new Set<string>();
+  for (const expense of creditExpenses) {
+    if (expense.childExpenses && expense.childExpenses.length > 0) {
+      parentIds.add(expense.id);
+      for (const child of expense.childExpenses) parentIds.add(child.id);
+    }
+  }
+
+  let totalExpenses = 0;
+  for (const expense of creditExpenses) {
+    const hasChildren = expense.childExpenses && expense.childExpenses.length > 0;
+    if (hasChildren) {
+      for (const child of expense.childExpenses!) {
+        const childAmount = Number(child.amount || 0);
+        if (!child.type || child.type === 'EXPENSE') totalExpenses += Math.abs(childAmount);
+        else if (child.type === 'REFUND') totalExpenses -= Math.abs(childAmount);
+      }
+    } else if (!parentIds.has(expense.id)) {
+      const amount = Number(expense.amount || 0);
+      if (!expense.type || expense.type === 'EXPENSE') totalExpenses += Math.abs(amount);
+      else if (expense.type === 'REFUND') totalExpenses -= Math.abs(amount);
+    }
+  }
+
+  // Créditos que liberam o limite: estornos diretos no cartão (CreditIncome)
+  const totalIncomes = creditIncomes.reduce((sum, income) => sum + Math.abs(Number(income.amount || 0)), 0);
+
+  // Créditos que liberam o limite: valor efetivamente pago nas faturas (BillPayment, via CreditBill.paidAmount)
+  const totalBillPayments = creditBills.reduce((sum, bill) => sum + Math.max(0, Number(bill.paidAmount || 0)), 0);
+
+  const rawUsedAmount = totalExpenses - totalIncomes - totalBillPayments;
+  const usedAmount = Math.max(0, rawUsedAmount); // Nunca negativo
+
+  const safeLimit = Number(limit) || 0;
+  // Não força availableLimit a ficar >= 0: se usedAmount > limite (estouro), o valor
+  // negativo é informativo. Mantém o mesmo comportamento já usado em /api/credit-cards.
+  const availableLimit = safeLimit - usedAmount;
+  const usagePercentage = safeLimit > 0 ? (usedAmount / safeLimit) * 100 : 0;
+
+  return {
+    usedAmount,
+    availableLimit,
+    usagePercentage: Math.max(0, Math.min(100, usagePercentage)),
+  };
 }
 
 /**

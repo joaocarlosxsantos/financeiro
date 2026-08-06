@@ -4,12 +4,37 @@
  */
 
 /**
- * Obtém a data/hora atual no fuso horário GMT-3 (Brasil)
+ * Obtém a data/hora atual no fuso horário de Brasília (America/Sao_Paulo).
+ *
+ * IMPORTANTE: um objeto Date do JS guarda só um instante absoluto — getters locais
+ * (getFullYear/getMonth/getDate/...) usam o fuso horário do AMBIENTE onde o código roda,
+ * não um fuso "embutido" no valor. A implementação anterior subtraía manualmente 3h de
+ * `new Date()`, o que já estava incorreto no caso mais comum (usuário/servidor cujo
+ * relógio já está em horário de Brasília): descontava mais 3h em cima de um horário que já
+ * era o correto, deslocando a data para trás (grave perto da meia-noite, trocava o dia/mês).
+ *
+ * Esta versão lê os componentes de data/hora em America/Sao_Paulo via Intl.DateTimeFormat
+ * (a mesma abordagem já usada em formatDateBrasilia) e reconstrói um Date cujos getters
+ * locais retornam exatamente esses componentes — funciona corretamente independentemente
+ * do fuso horário do ambiente (browser do usuário ou servidor em UTC).
  */
 export function getNowBrasilia(): Date {
   const now = new Date();
-  // Cria uma nova data considerando o offset GMT-3
-  return new Date(now.getTime() - (3 * 60 * 60 * 1000));
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const hour = get('hour') % 24; // Intl pode retornar "24" para meia-noite com hour12:false
+
+  return new Date(get('year'), get('month') - 1, get('day'), hour, get('minute'), get('second'));
 }
 
 /**

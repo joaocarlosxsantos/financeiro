@@ -192,14 +192,10 @@ export async function DELETE(
     }
 
     // Deletar a fatura em transação
+    // Obs.: CreditExpense/CreditIncome têm onDelete: SetNull em creditBillId,
+    // então o Prisma já desassocia os itens automaticamente ao excluir a fatura
+    // (não existe mais o modelo CreditBillItem no schema atual).
     await prisma.$transaction(async (tx: any) => {
-      // Desassociar os itens da fatura
-      await tx.creditBillItem.updateMany({
-        where: { billId: params.id },
-        data: { billId: null },
-      });
-
-      // Deletar a fatura
       await tx.creditBill.delete({
         where: { id: params.id },
       });

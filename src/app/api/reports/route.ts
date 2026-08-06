@@ -487,6 +487,7 @@ export async function GET(req: Request) {
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
         ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+        ...(tagsIsNone ? [{ OR: [{ tags: { isEmpty: true } }, { tags: null }] }] : []),
       ],
     };
     const punctualExpenseWhere: any = {
@@ -497,6 +498,7 @@ export async function GET(req: Request) {
         categoryIds ? { categoryId: { in: categoryIds } } : {},
         walletIds ? { walletId: { in: walletIds } } : {},
         ...(tags ? [buildTagFilter(tagNames, tags)] : []),
+        ...(tagsIsNone ? [{ OR: [{ tags: { isEmpty: true } }, { tags: null }] }] : []),
       ],
     };
 
@@ -512,12 +514,20 @@ export async function GET(req: Request) {
     const creditIncomeSum = creditIncomesFetched.reduce((sum, ci) => sum + Number(ci.amount ?? 0), 0);
     const creditExpenseSum = creditExpensesFetched.reduce((sum, ce) => sum + Number(ce.amount ?? 0), 0);
 
-    // recurring sums: compute from fetched rows (these were already filtered by category/wallet/tags when loaded)
+    // recurring sums (mantidos só para o payload de debug abaixo — não usados nos totais reais)
   const recurringIncomeSum = computeRecurringSum(incomesFetched.filter((i: any) => i.isRecurring));
   const recurringExpenseSum = computeRecurringSum(expensesFetched.filter((e: any) => e.isRecurring));
 
-    const totalIncomes = punctualIncomeSum + recurringIncomeSum + creditIncomeSum;
-    const totalExpenses = punctualExpenseSum + recurringExpenseSum + creditExpenseSum;
+    // IMPORTANTE: os totais exibidos (totals.incomes/expenses/net) são somados diretamente
+    // de `results` — a MESMA lista (já expandida e filtrada: excludedDates, corte de
+    // ocorrências futuras do mês atual, tags "sem tag", categoria/carteira/cartão) que
+    // alimenta a listagem paginada (`pageData`). Antes, o total era recalculado por
+    // `computeRecurringSum`/`punctualIncomeWhere`/`punctualExpenseWhere`, que não aplicavam
+    // essas mesmas regras e por isso divergiam do que a tela realmente mostrava (ex.: uma
+    // ocorrência futura do mês corrente, ou excluída pelo usuário, contava no total mas
+    // não aparecia na lista).
+    const totalIncomes = results.filter((r) => r.kind === 'income').reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+    const totalExpenses = results.filter((r) => r.kind === 'expense').reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
 
     // fallback raw DB aggregates (kept for debugging / comparison)
     // const incomeAgg = await prisma.income.aggregate({ where: commonWhere, _sum: { amount: true } });

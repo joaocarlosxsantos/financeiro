@@ -600,9 +600,16 @@ export function useDashboardState(): DashboardStateReturn {
           .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
         const topExpenseCategories = expenseDiffAll.slice(0, 5);
 
-        setTotalIncome(totalIncomeLocal);
-        setTotalExpenses(totalExpensesLocal);
-        setSaldoDoMes(totalIncomeLocal - totalExpensesLocal);
+        // IMPORTANTE: NÃO chamar setTotalIncome/setTotalExpenses/setSaldoDoMes aqui.
+        // O Effect 1 (fetchCards, acima) já é a fonte correta desses três valores: ele usa
+        // /api/dashboard/cards, que respeita o filtro selectedPaymentTypes. Este efeito
+        // busca via /api/transactions/expanded SEM parâmetro de paymentType e tem mais
+        // round-trips em sequência (Promise.all + fetch adicional do mês anterior), então
+        // tende a resolver DEPOIS do Effect 1 e sobrescrevia os totais já filtrados com os
+        // totais de todos os tipos de pagamento — o filtro de forma de pagamento parecia não
+        // ter efeito nos cards. totalIncomeLocal/totalExpensesLocal ficam sem uso agora
+        // (mantidos apenas para não mexer no restante deste efeito, que já calculava
+        // expensesByCategory/incomesByCategory a partir de allExpenses/allIncomes à parte).
         setIsLoading(false);
       } catch (e) {
         setIsLoading(false);

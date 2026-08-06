@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { expandRecurringAllOccurrencesForMonth } from '@/lib/transaction-filters';
 
 // Helper to parse month YYYY-MM to start/end Date
 function monthRange(month?: string) {
@@ -9,7 +10,7 @@ function monthRange(month?: string) {
   const [y, m] = month.split('-').map(Number);
   const start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
   const end = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
-  return { start, end };
+  return { start, end, year: y, month: m };
 }
 
 export async function GET(req: NextRequest) {
@@ -34,56 +35,64 @@ export async function GET(req: NextRequest) {
       const start = g.type === 'TIMED' ? g.startDate ?? undefined : range?.start;
       const end = g.type === 'TIMED' ? g.endDate ?? undefined : range?.end;
 
-      if (appliesTo === 'EXPENSES' || appliesTo === 'BOTH') {
-    // build where clause supporting multiple categories/tags
-    const where: any = { userId: user.id };
-        if (start) where.date = { gte: start };
-        if (end) where.date = { ...where.date, lte: end };
-        // categories: support categoryId (legacy) and categoryIds (array)
-        if (g.categoryId) where.categoryId = g.categoryId;
-        if (g.categoryIds && g.categoryIds.length > 0) where.categoryId = { in: g.categoryIds };
-        // tags: tagFilters must be matched (AND semantics not supported by Prisma's has for arrays), we'll treat tagFilters as OR across tags
-        if (g.tagName) where.tags = { has: g.tagName };
-        if (g.tagFilters && g.tagFilters.length > 0) where.OR = g.tagFilters.map((t: string) => ({ tags: { has: t } }));
-        if (g.walletId) where.walletId = g.walletId;
+      // Monta o where "base" (categoria/tag/carteira) comum às duas estratégias abaixo.
+      // Corrige bug: antes, metas RECURRING somavam o mesmo lançamento recorrente duas vezes
+      // (uma vez no agregado por `date` e outra vez, sem nenhum filtro de período, no bloco
+      // "fixed"), e ainda ignoravam startDate/endDate — uma recorrência já encerrada
+      // continuava contribuindo para currentAmount em qualquer mês consultado.
+      const buildBaseWhere = () => {
+        const w: any = { userId: user.id };
+        if (g.categoryId) w.categoryId = g.categoryId;
+        if (g.categoryIds && g.categoryIds.length > 0) w.categoryId = { in: g.categoryIds };
+        if (g.tagName) w.tags = { has: g.tagName };
+        if (g.tagFilters && g.tagFilters.length > 0) w.OR = g.tagFilters.map((t: string) => ({ tags: { has: t } }));
+        if (g.walletId) w.walletId = g.walletId;
+        return w;
+      };
 
-        const agg = await prisma.expense.aggregate({ _sum: { amount: true }, where });
-        current += Number(agg._sum.amount ?? 0);
+      async function sumForModel(model: 'expense' | 'income'): Promise<number> {
+        const client = model === 'expense' ? prisma.expense : prisma.income;
+        let sum = 0;
 
-        // add fixed occurrences simplification: if expense.isRecurring true and overlaps range, add amount
         if (g.type === 'RECURRING' && range) {
-          const fixedWhere: any = { userId: user.id, isRecurring: true };
-          if (g.categoryId) fixedWhere.categoryId = g.categoryId;
-          if (g.categoryIds && g.categoryIds.length > 0) fixedWhere.categoryId = { in: g.categoryIds };
-          if (g.tagName) fixedWhere.tags = { has: g.tagName };
-          if (g.tagFilters && g.tagFilters.length > 0) fixedWhere.OR = g.tagFilters.map((t: string) => ({ tags: { has: t } }));
-          const fixed = await prisma.expense.findMany({ where: fixedWhere });
-          fixed.forEach((f: any) => { current += Number(f.amount); });
+          // Pontuais: soma direta pela data dentro do mês da meta
+          const punctualWhere = { ...buildBaseWhere(), type: 'PUNCTUAL', date: { gte: range.start, lte: range.end } };
+          const punctualAgg = await client.aggregate({ _sum: { amount: true }, where: punctualWhere });
+          sum += Number(punctualAgg._sum.amount ?? 0);
+
+          // Recorrentes: expande as ocorrências reais do mês (mesma lógica usada no dashboard),
+          // respeitando startDate/endDate/excludedDates — cada recorrência conta uma única vez.
+          const recurringWhere = { ...buildBaseWhere(), type: 'RECURRING' };
+          const recurringRecords = await client.findMany({
+            where: recurringWhere,
+            select: { id: true, amount: true, date: true, endDate: true, excludedDates: true, type: true },
+          });
+          const occurrences = expandRecurringAllOccurrencesForMonth(
+            recurringRecords as any,
+            range.year,
+            range.month,
+            new Date()
+          );
+          for (const occ of occurrences) sum += Number((occ as any).amount);
+        } else {
+          // TIMED (ou sem período informado): mantém o comportamento original —
+          // soma tudo cuja `date` caia dentro do intervalo da meta.
+          const where: any = buildBaseWhere();
+          if (start) where.date = { gte: start };
+          if (end) where.date = { ...where.date, lte: end };
+          const agg = await client.aggregate({ _sum: { amount: true }, where });
+          sum += Number(agg._sum.amount ?? 0);
         }
+
+        return sum;
+      }
+
+      if (appliesTo === 'EXPENSES' || appliesTo === 'BOTH') {
+        current += await sumForModel('expense');
       }
 
       if (appliesTo === 'INCOMES' || appliesTo === 'BOTH') {
-  const where: any = { userId: user.id };
-        if (start) where.date = { gte: start };
-        if (end) where.date = { ...where.date, lte: end };
-  if (g.categoryId) where.categoryId = g.categoryId;
-  if (g.categoryIds && g.categoryIds.length > 0) where.categoryId = { in: g.categoryIds };
-  if (g.tagName) where.tags = { has: g.tagName };
-  if (g.tagFilters && g.tagFilters.length > 0) where.OR = g.tagFilters.map((t: string) => ({ tags: { has: t } }));
-  if (g.walletId) where.walletId = g.walletId;
-
-        const agg = await prisma.income.aggregate({ _sum: { amount: true }, where });
-        current += Number(agg._sum.amount ?? 0);
-
-        if (g.type === 'RECURRING' && range) {
-          const fixedWhere: any = { userId: user.id, isRecurring: true };
-          if (g.categoryId) fixedWhere.categoryId = g.categoryId;
-          if (g.categoryIds && g.categoryIds.length > 0) fixedWhere.categoryId = { in: g.categoryIds };
-          if (g.tagName) fixedWhere.tags = { has: g.tagName };
-          if (g.tagFilters && g.tagFilters.length > 0) fixedWhere.OR = g.tagFilters.map((t: string) => ({ tags: { has: t } }));
-          const fixed = await prisma.income.findMany({ where: fixedWhere });
-          fixed.forEach((f: any) => { current += Number(f.amount); });
-        }
+        current += await sumForModel('income');
       }
 
       return {
