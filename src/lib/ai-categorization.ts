@@ -1,7 +1,18 @@
 /**
  * Serviço de categorização inteligente usando IA
  * Melhora a importação de extratos com análise automática de transações
+ *
+ * IMPORTANTE: apesar do nome, este módulo é 100% baseado em regras/dicionário
+ * (sem chamada a LLM externa). O reconhecimento de estabelecimentos e
+ * categorias do dia a dia foi unificado em '@/lib/merchant-dictionary' —
+ * a mesma base é usada aqui e nas rotas de importação de extrato/fatura,
+ * para não haver mais divergência de cobertura entre os fluxos.
  */
+import {
+  identifyMerchant,
+  suggestCategoryOnly,
+  type MerchantMatch,
+} from './merchant-dictionary';
 
 export interface TransactionAnalysis {
   originalDescription: string;
@@ -63,11 +74,15 @@ export async function analyzeTransactionWithAI(
       confidence: 0.95
     };
   } else {
-    // Sugere categoria baseada na descrição melhorada (padrão)
+    // Sugere categoria baseada na descrição melhorada (padrão), aproveitando
+    // a categoria já identificada pelo dicionário de estabelecimentos
+    // (merchantInfo.category_hint) quando houver, em vez de tentar
+    // redescobrir a categoria a partir do texto novamente.
     categorySuggestion = suggestCategoryFromDescription(
       enhancedDescription,
       categoryType,
-      existingCategories
+      existingCategories,
+      merchantInfo.category_hint
     );
   }
 
@@ -127,65 +142,20 @@ function extractMerchantInfo(description: string): {
   merchant?: string;
   location?: string;
   category_hint?: string;
+  tags_hint?: string[];
 } {
   const desc = description.toLowerCase();
-  
-  // Estabelecimentos conhecidos do dia a dia
-  const knownEstablishments = {
-    // Transporte
-    'uber': 'Transporte',
-    '99pop': 'Transporte', 
-    '99': 'Transporte',
-    'taxi': 'Transporte',
-    
-    // Delivery de comida
-    'ifood': 'Alimentação',
-    'uber eats': 'Alimentação',
-    'rappi': 'Alimentação',
-    
-    // Supermercados
-    'carrefour': 'Supermercado',
-    'pao de acucar': 'Supermercado',
-    'extra': 'Supermercado',
-    'big': 'Supermercado',
-    'atacadao': 'Supermercado',
-    'walmart': 'Supermercado',
-    'gbarbosa': 'Supermercado',
-    
-    // Streaming/Assinaturas
-    'netflix': 'Assinaturas',
-    'spotify': 'Assinaturas',
-    'amazon prime': 'Assinaturas',
-    'disney': 'Assinaturas',
-    'youtube': 'Assinaturas',
-    
-    // Marketplace
-    'mercado livre': 'Compras Online',
-    'amazon': 'Compras Online',
-    'magazine': 'Compras Online',
-    'americanas': 'Compras Online',
-    
-    // Farmácias
-    'drogasil': 'Saúde',
-    'pacheco': 'Saúde',
-    'raia': 'Saúde',
-    'droga raia': 'Saúde',
-    'farmacia': 'Saúde',
-    'drogaria': 'Saúde'
-  };
-  
-  // Verifica estabelecimentos conhecidos
-  for (const [establishment, category] of Object.entries(knownEstablishments)) {
-    if (desc.includes(establishment)) {
-      return {
-        merchant: establishment.split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' '),
-        category_hint: category
-      };
-    }
+
+  // Estabelecimentos conhecidos do dia a dia — base unificada em merchant-dictionary.ts
+  const merchantMatch: MerchantMatch | null = identifyMerchant(description);
+  if (merchantMatch) {
+    return {
+      merchant: merchantMatch.canonicalName,
+      category_hint: merchantMatch.category,
+      tags_hint: merchantMatch.tags,
+    };
   }
-  
+
   // PIX - mantém a descrição completa para saber origem/destino
   if (desc.includes('pix')) {
     const pixPatterns = [
@@ -213,23 +183,6 @@ function extractMerchantInfo(description: string): {
   }
   
   return {};
-}
-
-/**
- * Formata o nome do estabelecimento
- */
-function formatMerchantName(name: string): string {
-  if (!name) return '';
-  
-  // Remove números mascarados (ex: "99* 99*" -> "99")
-  name = name.replace(/\d+\*\s*/g, (match) => match.replace(/\*/g, '').trim());
-  
-  // Capitaliza palavras
-  return name
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
-    .trim();
 }
 
 /**
@@ -297,63 +250,52 @@ function enhanceDescription(originalDesc: string, merchantInfo: any): string {
 }
 
 /**
- * Sugere categoria baseada na descrição
+ * Sugere categoria baseada na descrição.
+ *
+ * Ordem de prioridade:
+ * 1. `merchantCategoryHint` — categoria já identificada pelo dicionário de
+ *    estabelecimentos (merchant-dictionary.ts) via extractMerchantInfo,
+ *    quando o chamador já a tiver descoberto (evita reprocessar o texto).
+ * 2. `suggestCategoryOnly` (merchant-dictionary.ts) — buckets de palavras-
+ *    chave genéricas por categoria (ex: "farmacia" sem citar a marca).
+ * 3. "Outros", como antes.
  */
 function suggestCategoryFromDescription(
   description: string,
   type: 'EXPENSE' | 'INCOME',
-  existingCategories: Array<{ name: string; type: string }>
+  existingCategories: Array<{ name: string; type: string }>,
+  merchantCategoryHint?: string
 ): CategorySuggestion {
-  const desc = description.toLowerCase();
-  
-  // Mapeamento simplificado e prático de categorias do dia a dia
-  const categoryMappings = {
-    // Despesas
-    EXPENSE: {
-      'supermercado': ['mercado', 'supermercado', 'carrefour', 'extra', 'big', 'atacadao', 'walmart', 'gbarbosa', 'pao de acucar', 'feira', 'hortifruti', 'acougue'],
-      'alimentação': ['ifood', 'uber eats', 'rappi', 'restaurante', 'lanchonete', 'bar', 'padaria', 'pizza', 'burguer', 'mcdonald', 'subway', 'bk'],
-      'transporte': ['uber', '99', '99pop', 'taxi', 'posto', 'gasolina', 'combustivel', 'shell', 'petrobras', 'ipiranga'],
-      'farmácia': ['farmacia', 'drogaria', 'drogasil', 'pacheco', 'raia', 'droga raia', 'remedio'],
-      'assinaturas': ['netflix', 'spotify', 'amazon prime', 'disney', 'youtube', 'globoplay', 'paramount'],
-      'casa': ['aluguel', 'condominio', 'luz', 'energia', 'cemig', 'copasa', 'agua', 'gas', 'internet', 'vivo', 'claro', 'tim', 'oi'],
-      'transferência': ['pix', 'ted', 'doc', 'transferencia'],
-      'compras online': ['mercado livre', 'amazon', 'magazine', 'americanas', 'casas bahia', 'extra.com'],
-      'cartão de crédito': ['fatura', 'nubank', 'inter', 'itau', 'bradesco', 'santander', 'bb'],
-      'outros': []
-    },
-    // Receitas
-    INCOME: {
-      'salário': ['salario', 'salário', 'pagamento', 'empresa', 'trabalho'],
-      'transferência': ['pix', 'ted', 'doc', 'transferencia', 'recebimento'],
-      'vendas': ['venda', 'mercado livre', 'vendas'],
-      'investimentos': ['rendimento', 'dividendos', 'juros', 'aplicacao'],
-      'benefícios': ['fgts', 'pis', 'auxilio', 'inss'],
-      'outros': []
-    }
-  };
-  
-  const mappings = categoryMappings[type];
-  let bestMatch: CategorySuggestion = {
-    name: type === 'EXPENSE' ? 'Outros' : 'Outros',
-    type,
-    color: '#6B7280',
-    confidence: 0.5 // Confiança mais alta para garantir sugestão
-  };
-  
-  // Procura a melhor categoria
-  for (const [categoryName, keywords] of Object.entries(mappings)) {
-    const confidence = calculateCategoryConfidence(desc, keywords);
-    if (confidence > bestMatch.confidence) {
+  let bestMatch: CategorySuggestion;
+
+  if (merchantCategoryHint) {
+    bestMatch = {
+      name: merchantCategoryHint,
+      type,
+      color: getCategoryColor(merchantCategoryHint),
+      icon: getCategoryIcon(merchantCategoryHint),
+      confidence: 0.9,
+    };
+  } else {
+    const bucketMatch = suggestCategoryOnly(description, type);
+    if (bucketMatch) {
       bestMatch = {
-        name: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
+        name: bucketMatch.category,
         type,
-        color: getCategoryColor(categoryName),
-        icon: getCategoryIcon(categoryName),
-        confidence
+        color: getCategoryColor(bucketMatch.category),
+        icon: getCategoryIcon(bucketMatch.category),
+        confidence: bucketMatch.confidence,
+      };
+    } else {
+      bestMatch = {
+        name: 'Outros',
+        type,
+        color: '#6B7280',
+        confidence: 0.5, // Confiança mais alta para garantir sugestão
       };
     }
   }
-  
+
   // Verifica se já existe uma categoria similar
   const existingMatch = findSimilarCategory(bestMatch.name, existingCategories);
   if (existingMatch) {
@@ -363,30 +305,8 @@ function suggestCategoryFromDescription(
       confidence: Math.min(bestMatch.confidence + 0.2, 1.0)
     };
   }
-  
-  return bestMatch;
-}
 
-/**
- * Calcula a confiança da categoria baseada nas palavras-chave
- */
-function calculateCategoryConfidence(description: string, keywords: string[]): number {
-  if (keywords.length === 0) return 0.4;
-  
-  const desc = description.toLowerCase();
-  let maxScore = 0;
-  
-  for (const keyword of keywords) {
-    const keywordLower = keyword.toLowerCase();
-    
-    // Match exato = alta confiança
-    if (desc.includes(keywordLower)) {
-      maxScore = Math.max(maxScore, 0.9);
-    }
-  }
-  
-  // Se não encontrou correspondência, baixa confiança
-  return maxScore > 0 ? maxScore : 0.4;
+  return bestMatch;
 }
 
 /**
@@ -426,12 +346,14 @@ function findSimilarCategory(
 }
 
 /**
- * Sugere tags apenas para casos esporádicos específicos
+ * Sugere tags apenas para casos esporádicos específicos, mais as tags
+ * já associadas ao estabelecimento reconhecido pelo merchant-dictionary
+ * (ex: "delivery", "streaming", "combustivel").
  */
 function suggestTags(description: string, merchantInfo: any): string[] {
-  const tags: string[] = [];
+  const tags: string[] = [...(merchantInfo?.tags_hint || [])];
   const desc = description.toLowerCase();
-  
+
   // Tags apenas para situações específicas e esporádicas
   if (desc.includes('emergencia') || desc.includes('urgente')) tags.push('Emergência');
   if (desc.includes('viagem') || desc.includes('turismo')) tags.push('Viagem');
@@ -441,9 +363,9 @@ function suggestTags(description: string, merchantInfo: any): string[] {
   if (desc.includes('bonus') || desc.includes('premiacao')) tags.push('Bônus');
   if (desc.includes('reembolso') || desc.includes('devolucao')) tags.push('Reembolso');
   if (desc.includes('multa') || desc.includes('juros')) tags.push('Multa/Juros');
-  
-  // Máximo 2 tags para não poluir
-  return tags.slice(0, 2);
+
+  // Remove duplicatas e limita para não poluir
+  return Array.from(new Set(tags)).slice(0, 4);
 }
 
 /**
@@ -452,21 +374,37 @@ function suggestTags(description: string, merchantInfo: any): string[] {
 function getCategoryColor(categoryName: string): string {
   const colorMap: Record<string, string> = {
     'supermercado': '#10B981',
-    'alimentação': '#EF4444', 
+    'alimentação': '#EF4444',
     'transporte': '#3B82F6',
     'farmácia': '#EC4899',
+    'saúde': '#EC4899',
     'assinaturas': '#8B5CF6',
     'casa': '#84CC16',
+    'moradia': '#84CC16',
+    'contas': '#84CC16',
     'transferência': '#6B7280',
     'compras online': '#F59E0B',
+    'compras': '#F59E0B',
     'cartão de crédito': '#F97316',
     'salário': '#10B981',
     'vendas': '#F59E0B',
     'investimentos': '#10B981',
     'benefícios': '#8B5CF6',
+    'lazer': '#8B5CF6',
+    'academia': '#22C55E',
+    'vestuário': '#EC4899',
+    'tecnologia': '#3B82F6',
+    'educação': '#3B82F6',
+    'telefonia': '#3B82F6',
+    'pet': '#F59E0B',
+    'beleza': '#EC4899',
+    'pagamento cartão': '#10B981',
+    'estorno': '#10B981',
+    'cashback': '#10B981',
+    'ajuste': '#6B7280',
     'outros': '#6B7280'
   };
-  
+
   return colorMap[categoryName.toLowerCase()] || '#6B7280';
 }
 
@@ -479,21 +417,35 @@ function getCategoryIcon(categoryName: string): string | undefined {
     'supermercado': '🛒',
     'transporte': '🚗',
     'saúde': '⚕️',
+    'farmácia': '💊',
     'educação': '📚',
     'lazer': '🎬',
     'tecnologia': '💻',
     'assinaturas': '📱',
     'casa': '🏠',
+    'moradia': '🏠',
+    'contas': '💡',
     'roupas': '👕',
+    'vestuário': '👕',
     'investimentos': '💰',
     'impostos': '📋',
     'cartão de crédito': '💳',
     'transferência': '💸',
     'salário': '💼',
     'freelance': '🔨',
-    'vendas': '💰'
+    'vendas': '💰',
+    'academia': '🏋️',
+    'telefonia': '📶',
+    'pet': '🐾',
+    'beleza': '💅',
+    'pagamento cartão': '✅',
+    'estorno': '↩️',
+    'cashback': '🤑',
+    'ajuste': '⚖️',
+    'compras': '🛍️',
+    'compras online': '🛍️',
   };
-  
+
   return iconMap[categoryName.toLowerCase()];
 }
 
@@ -554,7 +506,8 @@ export async function analyzeFormDescription(
   const categorySuggestion = suggestCategoryFromDescription(
     enhancedDescription,
     transactionType,
-    existingCategories
+    existingCategories,
+    merchantInfo.category_hint
   );
 
   // Verifica se a categoria existe

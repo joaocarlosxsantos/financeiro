@@ -201,7 +201,7 @@ export function FaturaTransactionRow({
         <MultiTagSelector
           availableTags={tags}
           selectedTags={registro.tags || []}
-          suggestedTags={[]}
+          suggestedTags={registro.tagsRecomendadas || []}
           onTagsChange={(selectedTags: string[]) => onEdit(index, 'tags', selectedTags)}
           onCreateTag={onCreateTag}
         />

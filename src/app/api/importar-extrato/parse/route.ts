@@ -1,86 +1,5 @@
 import { logger } from '../../../../lib/logger';
 
-// Função simples de simplificação de descrição
-function sugerirCategoria(descricaoSimplificada: string): string {
-  if (!descricaoSimplificada) return 'Pix';
-  const desc = descricaoSimplificada.toLowerCase();
-  // Se for referência ao 'uber' manter associação específica
-  if (desc.includes('uber')) return 'Uber/99';
-  // Se for apenas número (ex: '99') ou conter 99 pop, mapear para Compras Cartão
-  if (desc === '99' || desc.includes('99 pop')) return 'Compras Cartão';
-  // Se for uma string numérica mascarada (ex: '99* 99*' -> '99'), tratar como compra cartão
-  if (/^\d+$/.test(desc)) return 'Compras Cartão';
-  if (desc.includes('ifood')) return 'Ifood';
-  if (
-    desc.includes('mercado') ||
-    desc.includes('carrefour') ||
-    desc.includes('pao de acucar') ||
-    desc.includes('supermercado')
-  )
-    return 'Supermercado';
-  if (desc.includes('spotify') || desc.includes('netflix') || desc.includes('prime video'))
-    return 'Assinaturas';
-  if (
-    desc.includes('nubank') ||
-    desc.includes('itau') ||
-    desc.includes('santander') ||
-    desc.includes('banco do brasil') ||
-    desc.includes('caixa')
-  )
-    return 'Pix';
-  if (desc.includes('pagseguro') || desc.includes('pag*')) return 'Pagamentos';
-  if (desc.includes('google') || desc.includes('apple')) return 'Tecnologia';
-  if (desc.includes('farmacia') || desc.includes('drogaria')) return 'Saúde';
-  if (
-    desc.includes('bar') ||
-    desc.includes('restaurante') ||
-    desc.includes('lanchonete') ||
-    desc.includes('food')
-  )
-    return 'Alimentação';
-  if (desc.includes('cinema') || desc.includes('lazer') || desc.includes('parque')) return 'Lazer';
-  // Tentativa de capturar compras no cartão/débito
-  if (
-    desc.includes('compra') ||
-    desc.includes('compras') ||
-    desc.includes('compra débito') ||
-    desc.includes('compra debito') ||
-    desc.includes('compra crédito') ||
-    desc.includes('compra credito') ||
-    desc.includes('cartao') ||
-    desc.includes('cartão')
-  )
-    return 'Compras Cartão';
-  if (desc.includes('educac') || desc.includes('Educac')) return 'Educação';
-  if (desc.includes('Fatura') || desc.includes('fatura')) return 'Fatura Cartão';
-  if (desc.includes('FGTS') || desc.includes('Fgts') || desc.includes('fgts')) return 'FGTS';
-  // Investimentos
-  if (
-    desc.includes('cdb') ||
-    desc.includes('tesouro') ||
-    desc.includes('lci') ||
-    desc.includes('lca') ||
-    desc.includes('fundo') ||
-    desc.includes('ações') ||
-    desc.includes('acao') ||
-    desc.includes('ações') ||
-    desc.includes('renda recorrente') ||
-    desc.includes('renda variável') ||
-    desc.includes('renda variavel') ||
-    desc.includes('investimento') ||
-    desc.includes('investimentos') ||
-    desc.includes('b3') ||
-    desc.includes('fiis') ||
-    desc.includes('fii') ||
-    desc.includes('debênture') ||
-    desc.includes('debenture')
-  )
-    return 'Investimentos';
-  if (desc.includes('pix') || desc.includes('transf')) return 'Pix';
-  // fallback
-  return 'Pix';
-}
-
 function simplificarDescricao(descricao: string): string {
   if (!descricao) return '';
   const raw = descricao.trim();
@@ -119,25 +38,11 @@ function simplificarDescricao(descricao: string): string {
     return raw;
   }
 
-  // Dicionário de padrões comuns (não sobrescrever casos específicos acima)
-  if (desc.includes('uber')) return 'Uber';
-  if (desc.includes('99*') || desc.includes('99 pop')) return '99 Pop';
-  if (desc.includes('ifd') || desc.includes('ifood')) return 'Ifood';
-  if (desc.includes('mercado livre')) return 'Mercado Livre';
-  if (desc.includes('nubank')) return 'Nubank';
-  if (desc.includes('pag*') || desc.includes('pagseguro')) return 'PagSeguro';
-  if (desc.includes('pix')) return 'Pix';
-  if (desc.includes('itau')) return 'Itaú';
-  if (desc.includes('santander')) return 'Santander';
-  if (desc.includes('banco do brasil')) return 'Banco do Brasil';
-  if (desc.includes('caixa economica')) return 'Caixa';
-  if (desc.includes('spotify')) return 'Spotify';
-  if (desc.includes('netflix')) return 'Netflix';
-  if (desc.includes('amazon')) return 'Amazon';
-  if (desc.includes('google')) return 'Google';
-  if (desc.includes('apple')) return 'Apple';
-  if (desc.includes('Pagamento Fatura') || desc.includes('fatura')) return 'Fatura';
-  if (desc.includes('FGTS') || desc.includes('Fgts') || desc.includes('fgts')) return 'FGTS';
+  // Nota: reconhecimento de marca/estabelecimento (Uber, iFood, Nubank, etc.)
+  // agora é feito de forma centralizada por identifyMerchant() em
+  // '@/lib/merchant-dictionary', chamado pelos handlers abaixo. Esta função
+  // permanece responsável apenas pela extração estrutural (texto de compra
+  // no cartão, nome de pessoa em PIX, heurística genérica).
 
   // Se for nome de pessoa (muitas palavras, sem palavras-chave conhecidas)
   const palavras = raw.replace(/\*/g, '').trim().split(/\s+/);
@@ -161,11 +66,44 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzeTransactionWithAI } from '@/lib/ai-categorization';
-import { 
-  buildLearningMap, 
-  suggestFromHistory, 
-  type HistoricalTransaction 
+import {
+  buildLearningMap,
+  suggestFromHistory,
+  type HistoricalTransaction,
 } from '@/lib/smart-categorization';
+import { identifyMerchant, suggestCategoryOnly } from '@/lib/merchant-dictionary';
+
+/**
+ * Último recurso de categorização (quando smart-categorization e a IA não
+ * retornaram nada): usa o dicionário unificado de estabelecimentos/categorias
+ * (o mesmo usado pelo parser de fatura e por ai-categorization.ts) para
+ * tentar reconhecer a marca/estabelecimento e, se não achar, ao menos a
+ * categoria por palavra-chave genérica.
+ */
+function fallbackCategorizeAndDescribe(
+  descricao: string,
+  transactionType: 'INCOME' | 'EXPENSE',
+): { categoria: string; descricaoMelhorada: string; tags: string[] } {
+  const simplified = simplificarDescricao(descricao);
+  const merchantMatch =
+    identifyMerchant(descricao) ||
+    (simplified && simplified !== descricao ? identifyMerchant(simplified) : null);
+
+  if (merchantMatch) {
+    return {
+      categoria: merchantMatch.category,
+      descricaoMelhorada: merchantMatch.canonicalName,
+      tags: merchantMatch.tags,
+    };
+  }
+
+  const catOnly = suggestCategoryOnly(descricao, transactionType);
+  return {
+    categoria: catOnly?.category || 'Outros',
+    descricaoMelhorada: simplified || descricao,
+    tags: [],
+  };
+}
 
 // Função para normalizar texto mal formatado
 function normalizeText(text: string) {
@@ -1075,7 +1013,14 @@ async function handler(req: NextRequest) {
                 categoriaRecomendada = smartSuggestion.categoryName || '';
                 categoriaId = smartSuggestion.categoryId || '';
                 tagsRecomendadas = smartSuggestion.tags || [];
-                descricaoMelhorada = descricao; // Mantém descrição original
+                // Alta confiança (match exato ou muito similar a uma transação já
+                // categorizada pelo usuário) -> reaproveita a descrição já usada,
+                // em vez de manter o texto cru do banco.
+                const altaConfiancaDescricao =
+                  (smartSuggestion.matchReason === 'exact' ||
+                    smartSuggestion.matchReason === 'high_similarity') &&
+                  smartSuggestion.matchedTransaction?.description;
+                descricaoMelhorada = altaConfiancaDescricao || descricao;
                 shouldCreateCategory = false; // Categoria já existe no histórico
                 suggestionSource = 'smart';
                 
@@ -1125,10 +1070,10 @@ async function handler(req: NextRequest) {
             }
           } catch (error) {
             console.error('Erro na análise:', error);
-            // 3. FALLBACK: método antigo se tudo falhar
-            const descricaoSimplificada = simplificarDescricao(descricao);
-            let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
-            
+            // 3. FALLBACK: dicionário unificado de estabelecimentos/categorias
+            const fb = fallbackCategorizeAndDescribe(descricao, transactionType);
+            let categoriaSugerida = fb.categoria;
+
             // Nunca sugerir transferência entre contas se nome não está na descrição
             if (normalizar(categoriaSugerida) === 'transferenciaentrecontas') {
               const descNorm = normalizar(descricao);
@@ -1136,7 +1081,8 @@ async function handler(req: NextRequest) {
                 categoriaSugerida = 'Pix';
               }
             }
-            descricaoMelhorada = descricaoSimplificada || descricao;
+            descricaoMelhorada = fb.descricaoMelhorada;
+            tagsRecomendadas = fb.tags;
             const removeAcentos = (str: string) => str.normalize('NFD').replace(/[̀-ͯ]/g, '');
             const categoriaExistente = categoriasUsuario.find(
               (cat) =>
@@ -1274,7 +1220,11 @@ async function handler(req: NextRequest) {
                   categoriaRecomendada = smartSuggestion.categoryName || '';
                   categoriaId = smartSuggestion.categoryId || '';
                   tagsRecomendadas = smartSuggestion.tags || [];
-                  descricaoMelhorada = descricao;
+                  const altaConfiancaDescricao =
+                    (smartSuggestion.matchReason === 'exact' ||
+                      smartSuggestion.matchReason === 'high_similarity') &&
+                    smartSuggestion.matchedTransaction?.description;
+                  descricaoMelhorada = altaConfiancaDescricao || descricao;
                   shouldCreateCategory = false;
                   suggestionSource = 'smart';
                   
@@ -1317,10 +1267,10 @@ async function handler(req: NextRequest) {
               }
             } catch (error) {
               console.error('Erro na análise:', error);
-              // 3. FALLBACK: método antigo se tudo falhar
+              // 3. FALLBACK: dicionário unificado de estabelecimentos/categorias
               if (!categoriaRecomendada) {
-                const descricaoSimplificada = simplificarDescricao(descricao);
-                let categoriaSugerida = sugerirCategoria(descricaoSimplificada);
+                const fb = fallbackCategorizeAndDescribe(descricao, transactionType);
+                let categoriaSugerida = fb.categoria;
                 if (
                   categoriaSugerida &&
                   normalizar(categoriaSugerida).includes('transferenciaentrecontas')
@@ -1330,7 +1280,8 @@ async function handler(req: NextRequest) {
                     categoriaSugerida = 'Pix';
                   }
                 }
-                descricaoMelhorada = descricaoSimplificada || descricao;
+                descricaoMelhorada = fb.descricaoMelhorada;
+                tagsRecomendadas = fb.tags;
                 const categoriaExistente = categoriasUsuario.find(
                   (cat) => normalizar(cat.name) === normalizar(categoriaSugerida),
                 );

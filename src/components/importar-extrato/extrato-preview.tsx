@@ -9,6 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles, Check, X, Info, Wand2 } from 'lucide-react';
 import { normalizeDescription } from '@/lib/description-normalizer';
 import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
+import {
+  CategoryConfirmationModal,
+  type PendingNewCategory,
+  type CategoryDecision,
+} from '@/components/ui/category-confirmation-modal';
 
 interface ExtratoPreviewProps {
   preview: any[];
@@ -47,6 +52,31 @@ export function ExtratoPreview({
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState<any>(null);
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
+  const [showCategoryConfirm, setShowCategoryConfirm] = useState(false);
+  const [pendingNewCategories, setPendingNewCategories] = useState<PendingNewCategory[]>([]);
+  const [pendingSaveArgs, setPendingSaveArgs] = useState<{
+    saldoAnterior?: number;
+    deleteExisting?: boolean;
+  } | null>(null);
+
+  // Levanta, sem duplicar, as categorias novas que seriam criadas
+  // automaticamente ao salvar (usadas na tela de confirmação em lote).
+  function collectPendingNewCategories(regs: any[]): PendingNewCategory[] {
+    const map = new Map<string, PendingNewCategory>();
+    for (const r of regs) {
+      if (!r.categoriaId && r.categoriaRecomendada && r.shouldCreateCategory) {
+        const key = r.categoriaRecomendada;
+        const type: 'EXPENSE' | 'INCOME' = r.valor < 0 ? 'EXPENSE' : 'INCOME';
+        const existing = map.get(key);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          map.set(key, { originalName: key, type, count: 1 });
+        }
+      }
+    }
+    return Array.from(map.values());
+  }
 
   // Descobre a data do primeiro lançamento do extrato
   const dataPrimeiroLancamento = React.useMemo(() => {
@@ -350,11 +380,15 @@ export function ExtratoPreview({
     return iconMap[categoryName.toLowerCase()] || null;
   }
 
-  async function handleSaveComSaldo(saldoAnterior?: number, deleteExisting?: boolean) {
+  async function handleSaveComSaldo(
+    saldoAnterior?: number,
+    deleteExisting?: boolean,
+    categoryDecisions?: Record<string, CategoryDecision>,
+  ) {
     // Se deleteExisting não foi definido, verificar conflitos primeiro
     if (deleteExisting === undefined) {
       const conflictCheck = await checkExistingRecords();
-      
+
       if (conflictCheck && conflictCheck.hasConflict) {
         // Mostrar modal de conflito
         setConflictData(conflictCheck);
@@ -363,8 +397,37 @@ export function ExtratoPreview({
       }
     }
 
-    // Prosseguir com o salvamento
-    let novosRegistros = [...registros];
+    // Se ainda não passamos pela tela de confirmação de categorias novas,
+    // mostra ela antes de criar qualquer coisa automaticamente.
+    if (!categoryDecisions) {
+      const pending = collectPendingNewCategories(registros);
+      if (pending.length > 0) {
+        setPendingNewCategories(pending);
+        setPendingSaveArgs({ saldoAnterior, deleteExisting });
+        setShowCategoryConfirm(true);
+        return;
+      }
+    }
+
+    // Prosseguir com o salvamento, aplicando as decisões da tela de
+    // confirmação (renomear ou não criar) quando houver.
+    let novosRegistros = registros.map((r) => {
+      if (
+        categoryDecisions &&
+        !r.categoriaId &&
+        r.categoriaRecomendada &&
+        r.shouldCreateCategory
+      ) {
+        const decision = categoryDecisions[r.categoriaRecomendada];
+        if (decision) {
+          if (decision.skip) {
+            return { ...r, categoriaRecomendada: '', shouldCreateCategory: false };
+          }
+          return { ...r, categoriaRecomendada: decision.name };
+        }
+      }
+      return { ...r };
+    });
 
     // Processar sugestões da IA automaticamente se o usuário não fez seleções
     for (const registro of novosRegistros) {
@@ -445,6 +508,19 @@ export function ExtratoPreview({
     setShowConflictModal(false);
     setConflictData(null);
   };
+
+  function handleConfirmCategories(decisions: Record<string, CategoryDecision>) {
+    setShowCategoryConfirm(false);
+    const args = pendingSaveArgs;
+    setPendingSaveArgs(null);
+    handleSaveComSaldo(args?.saldoAnterior, args?.deleteExisting, decisions);
+  }
+
+  function handleCancelCategoryConfirm() {
+    setShowCategoryConfirm(false);
+    setPendingNewCategories([]);
+    setPendingSaveArgs(null);
+  }
 
   return (
     <div className="space-y-4">
@@ -544,6 +620,15 @@ export function ExtratoPreview({
           totalConflicts={conflictData.totalConflicts || 0}
         />
       )}
+
+      {/* Confirmação em lote de categorias novas antes de salvar */}
+      <CategoryConfirmationModal
+        open={showCategoryConfirm}
+        categories={pendingNewCategories}
+        onConfirm={handleConfirmCategories}
+        onCancel={handleCancelCategoryConfirm}
+        loading={saving}
+      />
     </div>
   );
 }

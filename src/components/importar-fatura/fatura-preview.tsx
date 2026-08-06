@@ -9,6 +9,11 @@ import { MonthSelector } from '@/components/ui/month-selector';
 import { Sparkles, CreditCard, Info, Wand2 } from 'lucide-react';
 import { FaturaTransactionRow } from './fatura-transaction-row';
 import { ConflictResolutionModal } from '@/components/ui/conflict-resolution-modal';
+import {
+  CategoryConfirmationModal,
+  type PendingNewCategory,
+  type CategoryDecision,
+} from '@/components/ui/category-confirmation-modal';
 
 interface FaturaPreviewProps {
   preview: any[];
@@ -43,6 +48,29 @@ export function FaturaPreview({
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [showCategoryConfirm, setShowCategoryConfirm] = useState(false);
+  const [pendingNewCategories, setPendingNewCategories] = useState<PendingNewCategory[]>([]);
+  const [pendingDeleteExisting, setPendingDeleteExisting] = useState(false);
+
+  // Levanta, sem duplicar, as categorias novas que seriam criadas
+  // automaticamente ao salvar (usadas na tela de confirmação em lote).
+  function collectPendingNewCategories(regs: any[]): PendingNewCategory[] {
+    const map = new Map<string, PendingNewCategory>();
+    for (const r of regs) {
+      if (!r.categoriaId && r.categoriaSugerida && r.isNewCategory) {
+        const key = r.categoriaSugerida;
+        const valor = typeof r.valor === 'number' ? r.valor : parseFloat(String(r.valor)) || 0;
+        const type: 'EXPENSE' | 'INCOME' = valor < 0 ? 'INCOME' : 'EXPENSE';
+        const existing = map.get(key);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          map.set(key, { originalName: key, type, count: 1 });
+        }
+      }
+    }
+    return Array.from(map.values());
+  }
 
   useEffect(() => {
     // Inicializar registros - garantir que valor seja número
@@ -194,18 +222,54 @@ export function FaturaPreview({
   async function handleSave() {
     // Verificar se já existe fatura para o período
     const conflictCheck = await checkExistingBill();
-    
+
     if (conflictCheck && conflictCheck.hasConflict) {
       // Mostrar modal de conflito
       setConflictData(conflictCheck);
       setShowConflictModal(true);
     } else {
-      // Não há conflitos, prosseguir com o salvamento
-      processSave(false);
+      // Não há conflitos, segue para a confirmação de categorias novas (se houver)
+      maybeConfirmCategoriesThenSave(false);
     }
   }
 
-  const processSave = async (deleteExisting: boolean) => {
+  function maybeConfirmCategoriesThenSave(
+    deleteExisting: boolean,
+    categoryDecisions?: Record<string, CategoryDecision>,
+  ) {
+    if (!categoryDecisions) {
+      const pending = collectPendingNewCategories(registros);
+      if (pending.length > 0) {
+        setPendingNewCategories(pending);
+        setPendingDeleteExisting(deleteExisting);
+        setShowCategoryConfirm(true);
+        return;
+      }
+    }
+    processSave(deleteExisting, categoryDecisions);
+  }
+
+  const processSave = async (
+    deleteExisting: boolean,
+    categoryDecisions?: Record<string, CategoryDecision>,
+  ) => {
+    // Aplica as decisões da tela de confirmação (renomear ou não criar)
+    if (categoryDecisions) {
+      for (const registro of registros) {
+        if (!registro.categoriaId && registro.categoriaSugerida && registro.isNewCategory) {
+          const decision = categoryDecisions[registro.categoriaSugerida];
+          if (decision) {
+            if (decision.skip) {
+              registro.categoriaSugerida = '';
+              registro.isNewCategory = false;
+            } else {
+              registro.categoriaSugerida = decision.name;
+            }
+          }
+        }
+      }
+    }
+
     // Processar criação de categorias e tags antes de salvar
     for (const registro of registros) {
       // Se usuário não selecionou categoria e existe recomendação da IA
@@ -248,9 +312,9 @@ export function FaturaPreview({
   };
 
   const handleConfirmDelete = () => {
-    // Usuário confirmou a exclusão, prosseguir com o salvamento
+    // Usuário confirmou a exclusão, seguir para confirmação de categorias (se houver)
     setShowConflictModal(false);
-    processSave(true);
+    maybeConfirmCategoriesThenSave(true);
   };
 
   const handleCancelDelete = () => {
@@ -258,6 +322,19 @@ export function FaturaPreview({
     setShowConflictModal(false);
     setConflictData(null);
   };
+
+  function handleConfirmCategories(decisions: Record<string, CategoryDecision>) {
+    setShowCategoryConfirm(false);
+    const deleteExisting = pendingDeleteExisting;
+    setPendingDeleteExisting(false);
+    processSave(deleteExisting, decisions);
+  }
+
+  function handleCancelCategoryConfirm() {
+    setShowCategoryConfirm(false);
+    setPendingNewCategories([]);
+    setPendingDeleteExisting(false);
+  }
 
   // Calcular totais separados para despesas e créditos
   const totalDespesas = registros.reduce((acc, r) => {
@@ -437,6 +514,15 @@ export function FaturaPreview({
         loading={saving}
         conflicts={conflictData?.conflicts || []}
         totalConflicts={conflictData?.totalConflicts || 0}
+      />
+
+      {/* Confirmação em lote de categorias novas antes de salvar */}
+      <CategoryConfirmationModal
+        open={showCategoryConfirm}
+        categories={pendingNewCategories}
+        onConfirm={handleConfirmCategories}
+        onCancel={handleCancelCategoryConfirm}
+        loading={saving}
       />
     </div>
   );
