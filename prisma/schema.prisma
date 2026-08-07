@@ -210,19 +210,42 @@ model Member {
 }
 
 model Bill {
-  id          Int               @id @default(autoincrement())
-  title       String
-  description String?
-  amount      Float
-  dueDate     DateTime
-  paid        Boolean           @default(false)
-  userId      String
-  groupId     Int
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shares      BillMemberShare[]
+  id                 Int               @id @default(autoincrement())
+  title              String
+  description        String?
+  amount             Float
+  dueDate            DateTime
+  paid               Boolean           @default(false)
+  scope              BillScope         @default(SHARED)
+  recurrence         BillRecurrence    @default(PUNCTUAL)
+  endDate            DateTime?
+  excludedDates      String[]          @default([])
+  paidMonths         String[]          @default([])
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentCount   Int?
+  userId             String
+  groupId            Int?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  group              Group?            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shares             BillMemberShare[]
+
+  @@index([groupId])
+  @@index([userId])
+  @@index([installmentGroupId])
+}
+
+enum BillScope {
+  INDIVIDUAL
+  SHARED
+}
+
+enum BillRecurrence {
+  PUNCTUAL
+  RECURRING
+  INSTALLMENT
 }
 
 model BillMemberShare {

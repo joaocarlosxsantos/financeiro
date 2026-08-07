@@ -2,12 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+type BillCurrentCycle = { active: boolean; dueDate: string; paid: boolean; monthKey: string };
+
 interface BillWithGroup {
   id: number;
   name: string;
   value: number;
   createdAt: string;
-  group: { id: number; name: string };
+  paid?: boolean;
+  scope: 'INDIVIDUAL' | 'SHARED';
+  recurrence: 'PUNCTUAL' | 'RECURRING' | 'INSTALLMENT';
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
+  currentCycle?: BillCurrentCycle;
+  group: { id: number; name: string } | null;
   shares?: { memberId: number; type: 'value' | 'percent'; amount: number }[];
 }
 
@@ -17,9 +25,11 @@ interface Member {
   phone?: string;
 }
 
+type SharedBillWithGroup = Omit<BillWithGroup, 'group'> & { group: { id: number; name: string } };
+
 interface GroupData {
   name: string;
-  bills: BillWithGroup[];
+  bills: SharedBillWithGroup[];
 }
 
 export function useControleContasState() {
@@ -41,9 +51,11 @@ export function useControleContasState() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Erro');
       setBills(data);
-      
-      // Buscar membros completos de cada grupo
-      const groupIds: number[] = Array.from(new Set(data.map((b: BillWithGroup) => b.group.id)));
+
+      // Buscar membros completos de cada grupo (só contas compartilhadas têm grupo)
+      const groupIds: number[] = Array.from(
+        new Set(data.filter((b: BillWithGroup) => b.group).map((b: BillWithGroup) => b.group!.id))
+      );
       const membersObj: Record<number, Member[]> = {};
       await Promise.all(
         groupIds.map(async (groupId) => {
@@ -62,21 +74,30 @@ export function useControleContasState() {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return bills.filter(b => b.name.toLowerCase().includes(q) || b.group.name.toLowerCase().includes(q));
+    return bills.filter(
+      (b) => b.name.toLowerCase().includes(q) || (b.group?.name.toLowerCase().includes(q) ?? false)
+    );
   }, [bills, query]);
 
-  const total = useMemo(() => bills.reduce((sum: number, b: any) => sum + b.value, 0), [bills]);
-  
-  const groupsCount = useMemo(() => new Set(bills.map(b => b.group.id)).size, [bills]);
+  const sharedBills = useMemo(
+    () => filtered.filter((b): b is SharedBillWithGroup => b.scope === 'SHARED' && !!b.group),
+    [filtered]
+  );
+  const individualBills = useMemo(() => filtered.filter((b) => b.scope === 'INDIVIDUAL'), [filtered]);
+
+  const total = useMemo(() => filtered.reduce((sum: number, b: BillWithGroup) => sum + b.value, 0), [filtered]);
+  const individualTotal = useMemo(() => individualBills.reduce((sum, b) => sum + b.value, 0), [individualBills]);
+
+  const groupsCount = useMemo(() => new Set(sharedBills.map((b) => b.group!.id)).size, [sharedBills]);
 
   const groupedData = useMemo(() => {
-    return filtered.reduce((acc: Record<number, GroupData>, bill: BillWithGroup) => {
+    return sharedBills.reduce((acc: Record<number, GroupData>, bill: SharedBillWithGroup) => {
       const groupId = bill.group.id;
       if (!acc[groupId]) acc[groupId] = { name: bill.group.name, bills: [] };
       acc[groupId].bills.push(bill);
       return acc;
     }, {} as Record<number, GroupData>);
-  }, [filtered]);
+  }, [sharedBills]);
 
   return {
     bills,
@@ -86,7 +107,10 @@ export function useControleContasState() {
     query,
     setQuery,
     filtered,
+    sharedBills,
+    individualBills,
     total,
+    individualTotal,
     groupsCount,
     groupedData,
     fetchBills,

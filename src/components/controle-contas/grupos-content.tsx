@@ -8,7 +8,7 @@ import { useGruposState } from '@/hooks/use-grupos-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Modal } from '@/components/ui/modal';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, Edit, Trash2 } from 'lucide-react';
 import { MembersList } from '@/components/MembersList';
@@ -115,117 +115,114 @@ export function GruposContent() {
       )}
 
       {/* Modal Criar Grupo */}
-      <Dialog open={state.createModalOpen} onOpenChange={state.setCreateModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar Grupo</DialogTitle>
-            <DialogDescription>
-              Crie um novo grupo para organizar suas contas e membros.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={state.handleCreate}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do grupo</Label>
-                <Input
-                  id="name"
-                  placeholder="Digite o nome do grupo"
-                  value={state.name}
-                  onChange={(e) => state.setName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => state.setCreateModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={state.loading}>
-                Criar
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Editar Grupo */}
-      <Dialog open={state.editModalOpen} onOpenChange={state.setEditModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar Grupo</DialogTitle>
-            <DialogDescription>
-              Altere as informações do grupo ou gerencie seus membros.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={state.handleEdit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editName">Nome do grupo</Label>
-                <Input
-                  id="editName"
-                  value={state.editName}
-                  onChange={(e) => state.setEditName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => state.setConfirmDelete(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir Grupo
-              </Button>
-              <Button type="button" variant="outline" onClick={() => state.setEditModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={state.loading}>
-                Salvar
-              </Button>
-            </DialogFooter>
-          </form>
-
-          {/* Lista de Membros */}
-          {state.editGroup && (
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="text-sm font-semibold mb-4">Membros do Grupo</h3>
-              <MembersList
-                groupId={state.editGroup.id}
-                onChange={state.fetchGroups}
-                refreshKey={state.groupsVersion}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Confirmar Exclusão */}
-      <Dialog open={state.confirmDelete} onOpenChange={state.setConfirmDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir o grupo <strong>{state.editGroup?.name}</strong>?
-              Essa ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => state.setConfirmDelete(false)}>
+      <Modal
+        open={state.createModalOpen}
+        onClose={() => state.setCreateModalOpen(false)}
+        title="Criar Grupo"
+      >
+        <p className="text-sm text-muted-foreground -mt-2 mb-4">
+          Crie um novo grupo para organizar suas contas e membros.
+        </p>
+        <form onSubmit={state.handleCreate}>
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome do grupo</Label>
+            <Input
+              id="name"
+              placeholder="Digite o nome do grupo"
+              value={state.name}
+              onChange={(e) => state.setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 mt-6">
+            <Button type="button" variant="outline" onClick={() => state.setCreateModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
+            <Button type="submit" disabled={state.loading} className="w-full sm:w-auto">
+              Criar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Editar Grupo */}
+      <Modal
+        open={state.editModalOpen}
+        onClose={() => state.setEditModalOpen(false)}
+        title="Editar Grupo"
+        size="lg"
+      >
+        <p className="text-sm text-muted-foreground -mt-2 mb-4">
+          Altere as informações do grupo ou gerencie seus membros.
+        </p>
+        <form onSubmit={state.handleEdit}>
+          <div className="space-y-2">
+            <Label htmlFor="editName">Nome do grupo</Label>
+            <Input
+              id="editName"
+              value={state.editName}
+              onChange={(e) => state.setEditName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 mt-6">
             <Button
               type="button"
               variant="destructive"
-              onClick={state.handleDelete}
-              disabled={state.loading}
+              onClick={() => state.setConfirmDelete(true)}
+              className="w-full sm:w-auto"
             >
-              Excluir
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir Grupo
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button type="button" variant="outline" onClick={() => state.setEditModalOpen(false)} className="w-full sm:w-auto">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={state.loading} className="w-full sm:w-auto">
+              Salvar
+            </Button>
+          </div>
+        </form>
+
+        {/* Lista de Membros */}
+        {state.editGroup && (
+          <div className="mt-6 pt-6 border-t border-border">
+            <h3 className="text-sm font-semibold mb-4">Membros do Grupo</h3>
+            <MembersList
+              groupId={state.editGroup.id}
+              onChange={state.fetchGroups}
+              refreshKey={state.groupsVersion}
+            />
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal Confirmar Exclusão */}
+      <Modal
+        open={state.confirmDelete}
+        onClose={() => state.setConfirmDelete(false)}
+        title="Confirmar Exclusão"
+        size="sm"
+      >
+        <p className="text-sm text-muted-foreground mb-4">
+          Tem certeza que deseja excluir o grupo <strong className="text-foreground">{state.editGroup?.name}</strong>?
+          Essa ação não pode ser desfeita.
+        </p>
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => state.setConfirmDelete(false)} className="w-full sm:w-auto">
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={state.handleDelete}
+            disabled={state.loading}
+            className="w-full sm:w-auto"
+          >
+            Excluir
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

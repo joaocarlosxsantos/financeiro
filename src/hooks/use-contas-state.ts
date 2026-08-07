@@ -4,8 +4,28 @@ import { useState, useEffect, useCallback } from 'react';
 
 type Member = { id: number; name: string; phone?: string };
 type BillShare = { memberId: number; type: 'value' | 'percent'; amount: number };
-type Bill = { id: number; name: string; value: number; shares?: BillShare[] };
+type BillScope = 'INDIVIDUAL' | 'SHARED';
+type BillRecurrence = 'PUNCTUAL' | 'RECURRING' | 'INSTALLMENT';
+type BillCurrentCycle = { active: boolean; dueDate: string; paid: boolean; monthKey: string };
+type Bill = {
+  id: number;
+  name: string;
+  value: number;
+  dueDate?: string | null;
+  paid?: boolean;
+  scope: BillScope;
+  recurrence: BillRecurrence;
+  endDate?: string | null;
+  excludedDates?: string[];
+  paidMonths?: string[];
+  installmentGroupId?: string | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
+  currentCycle?: BillCurrentCycle;
+  shares?: BillShare[];
+};
 type Group = { id: number; name: string };
+export type ViewMode = 'shared' | 'individual';
 
 function parseLocaleNumber(v: string | number) {
   if (typeof v === 'number') return v;
@@ -26,7 +46,14 @@ function parseLocaleNumber(v: string | number) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function useContasState() {
+  // View mode: contas compartilhadas (por grupo) vs contas individuais
+  const [viewMode, setViewMode] = useState<ViewMode>('shared');
+
   // Data states
   const [groups, setGroups] = useState<Group[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -42,6 +69,11 @@ export function useContasState() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [name, setName] = useState<string>('');
   const [value, setValue] = useState<string>('');
+  const [dueDate, setDueDate] = useState<string>(todayInputValue());
+  const [recurrence, setRecurrence] = useState<BillRecurrence>('PUNCTUAL');
+  const [endDate, setEndDate] = useState<string>('');
+  const [installmentCount, setInstallmentCount] = useState<string>('2');
+  const [paid, setPaid] = useState(false);
   const [shareType, setShareType] = useState<'value' | 'percent'>('value');
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [shares, setShares] = useState<Array<{ memberId: number; amount: string }>>([]);
@@ -52,12 +84,25 @@ export function useContasState() {
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [editName, setEditName] = useState('');
   const [editValue, setEditValue] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editRecurrence, setEditRecurrence] = useState<BillRecurrence>('PUNCTUAL');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editPaid, setEditPaid] = useState(false);
   const [editShareType, setEditShareType] = useState<'value' | 'percent'>('value');
   const [editSelectedMembers, setEditSelectedMembers] = useState<number[]>([]);
   const [editShares, setEditShares] = useState<Array<{ memberId: number; amount: string }>>([]);
 
   // Delete modal states
   const [confirmDeleteBill, setConfirmDeleteBill] = useState(false);
+  const [installmentDeleteOpen, setInstallmentDeleteOpen] = useState(false);
+
+  function openDeleteConfirm() {
+    if (selectedBill?.recurrence === 'INSTALLMENT') {
+      setInstallmentDeleteOpen(true);
+    } else {
+      setConfirmDeleteBill(true);
+    }
+  }
 
   // Helper function to get equal shares
   const getEqualShares = useCallback((type: "value" | "percent", value: string, members: number[]) => {
@@ -117,11 +162,30 @@ export function useContasState() {
     }
   }
 
+  async function fetchIndividualBills() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/controle-contas/contas?scope=individual`);
+      const data = await res.json();
+      setBills(data);
+    } catch {
+      setError("Erro ao buscar contas individuais");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Modal handlers
   function handleOpenAddModal() {
     setAddModalOpen(true);
     setName('');
     setValue('');
+    setDueDate(todayInputValue());
+    setRecurrence('PUNCTUAL');
+    setEndDate('');
+    setInstallmentCount('2');
+    setPaid(false);
     setSelectedMembers([]);
     setShares(getEqualShares(shareType, '', members.map((m) => m.id)));
     setValidationError('');
@@ -131,6 +195,10 @@ export function useContasState() {
     setSelectedBill(bill);
     setEditName(bill.name);
     setEditValue(String(bill.value));
+    setEditDueDate(bill.dueDate ? new Date(bill.dueDate).toISOString().slice(0, 10) : todayInputValue());
+    setEditRecurrence(bill.recurrence);
+    setEditEndDate(bill.endDate ? new Date(bill.endDate).toISOString().slice(0, 10) : '');
+    setEditPaid(!!bill.paid);
     if (bill.shares && bill.shares.length > 0) {
       setEditShares(bill.shares.map(s => ({ memberId: s.memberId, amount: String(s.amount) })));
       setEditShareType(bill.shares[0].type);
@@ -149,22 +217,25 @@ export function useContasState() {
     setError("");
     setValidationError("");
 
+    const isShared = viewMode === 'shared';
     const ids = selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers;
-    
-    if (shareType === "value") {
-      const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(shares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
-      const val = parseLocaleNumber(value);
-      if (Math.abs(soma - val) > 0.01) {
-        setValidationError("Soma dos valores não corresponde ao total");
-        setLoading(false);
-        return;
-      }
-    } else {
-      const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(shares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
-      if (Math.abs(soma - 100) > 0.1) {
-        setValidationError("Soma das porcentagens deve ser 100%");
-        setLoading(false);
-        return;
+
+    if (isShared) {
+      if (shareType === "value") {
+        const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(shares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+        const val = parseLocaleNumber(value);
+        if (Math.abs(soma - val) > 0.01) {
+          setValidationError("Soma dos valores não corresponde ao total");
+          setLoading(false);
+          return;
+        }
+      } else {
+        const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(shares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+        if (Math.abs(soma - 100) > 0.1) {
+          setValidationError("Soma das porcentagens deve ser 100%");
+          setLoading(false);
+          return;
+        }
       }
     }
 
@@ -173,21 +244,27 @@ export function useContasState() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          groupId: selectedGroup,
+          scope: isShared ? 'SHARED' : 'INDIVIDUAL',
+          groupId: isShared ? selectedGroup : undefined,
           title: name,
           amount: parseLocaleNumber(value),
-          dueDate: new Date().toISOString(),
-          shares: ids.map(id => ({
+          dueDate: new Date(dueDate).toISOString(),
+          recurrence,
+          endDate: recurrence === 'RECURRING' && endDate ? new Date(endDate).toISOString() : undefined,
+          installmentCount: recurrence === 'INSTALLMENT' ? Number(installmentCount) : undefined,
+          paid,
+          shares: isShared ? ids.map(id => ({
             memberId: id,
             type: shareType,
             amount: parseLocaleNumber(shares.find(s => s.memberId === id)?.amount ?? "0")
-          }))
+          })) : undefined,
         }),
       });
       if (!res.ok) throw new Error("Erro ao criar conta");
       setAddModalOpen(false);
-      setToastMsg("Conta cadastrada!");
-      if (selectedGroup) fetchBills(selectedGroup);
+      setToastMsg(recurrence === 'INSTALLMENT' ? `${installmentCount} parcelas cadastradas!` : "Conta cadastrada!");
+      if (isShared && selectedGroup) fetchBills(selectedGroup);
+      else if (!isShared) fetchIndividualBills();
     } catch {
       setError("Erro ao criar conta");
     } finally {
@@ -202,22 +279,25 @@ export function useContasState() {
     setError("");
     setValidationError("");
 
+    const isShared = selectedBill.scope === 'SHARED';
     const ids = editSelectedMembers.length === 0 ? members.map((m) => m.id) : editSelectedMembers;
-    
-    if (editShareType === "value") {
-      const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(editShares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
-      const val = parseLocaleNumber(editValue);
-      if (Math.abs(soma - val) > 0.01) {
-        setValidationError("Soma dos valores não corresponde ao total");
-        setLoading(false);
-        return;
-      }
-    } else {
-      const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(editShares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
-      if (Math.abs(soma - 100) > 0.1) {
-        setValidationError("Soma das porcentagens deve ser 100%");
-        setLoading(false);
-        return;
+
+    if (isShared) {
+      if (editShareType === "value") {
+        const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(editShares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+        const val = parseLocaleNumber(editValue);
+        if (Math.abs(soma - val) > 0.01) {
+          setValidationError("Soma dos valores não corresponde ao total");
+          setLoading(false);
+          return;
+        }
+      } else {
+        const soma = ids.reduce((acc, id) => acc + parseLocaleNumber(editShares.find((s) => s.memberId === id)?.amount ?? "0"), 0);
+        if (Math.abs(soma - 100) > 0.1) {
+          setValidationError("Soma das porcentagens deve ser 100%");
+          setLoading(false);
+          return;
+        }
       }
     }
 
@@ -229,17 +309,22 @@ export function useContasState() {
           id: selectedBill.id,
           title: editName,
           amount: parseLocaleNumber(editValue),
-          shares: ids.map(id => ({
+          dueDate: new Date(editDueDate).toISOString(),
+          recurrence: editRecurrence,
+          endDate: editRecurrence === 'RECURRING' && editEndDate ? new Date(editEndDate).toISOString() : null,
+          paid: editPaid,
+          shares: isShared ? ids.map(id => ({
             memberId: id,
             type: editShareType,
             amount: parseLocaleNumber(editShares.find(s => s.memberId === id)?.amount ?? "0")
-          }))
+          })) : undefined,
         }),
       });
       if (!res.ok) throw new Error("Erro ao editar conta");
       setEditModalOpen(false);
       setToastMsg("Conta editada!");
-      if (selectedGroup) fetchBills(selectedGroup);
+      if (isShared && selectedGroup) fetchBills(selectedGroup);
+      else if (!isShared) fetchIndividualBills();
     } catch {
       setError("Erro ao editar conta");
     } finally {
@@ -247,23 +332,63 @@ export function useContasState() {
     }
   }
 
-  async function handleDelete() {
+  async function handleTogglePaid(bill: Bill) {
+    setLoading(true);
+    setError("");
+    try {
+      const body: any = { id: bill.id };
+      if (bill.recurrence === 'RECURRING' && bill.currentCycle) {
+        body.paidMonth = { monthKey: bill.currentCycle.monthKey, paid: !bill.currentCycle.paid };
+      } else {
+        body.paid = !bill.paid;
+      }
+      const res = await fetch(`/api/controle-contas/contas`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar status");
+      if (bill.scope === 'SHARED' && selectedGroup) fetchBills(selectedGroup);
+      else if (bill.scope === 'INDIVIDUAL') fetchIndividualBills();
+    } catch {
+      setError("Erro ao atualizar status de pagamento");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteBill(mode: 'single' | 'future' | 'all', successMsg: string) {
     if (!selectedBill) return;
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/controle-contas/contas?id=${selectedBill.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/controle-contas/contas?id=${selectedBill.id}&mode=${mode}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erro ao excluir conta");
+      const isShared = selectedBill.scope === 'SHARED';
       setConfirmDeleteBill(false);
+      setInstallmentDeleteOpen(false);
       setEditModalOpen(false);
       setSelectedBill(null);
-      setToastMsg("Conta excluída!");
-      if (selectedGroup) await fetchBills(selectedGroup);
+      setToastMsg(successMsg);
+      if (isShared && selectedGroup) await fetchBills(selectedGroup);
+      else if (!isShared) await fetchIndividualBills();
     } catch {
       setError("Erro ao excluir conta");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleDelete() {
+    await deleteBill('single', 'Conta excluída!');
+  }
+
+  async function handleDeleteInstallment(mode: 'single' | 'future' | 'all') {
+    const msg =
+      mode === 'single' ? 'Parcela excluída!'
+      : mode === 'future' ? 'Parcelas excluídas!'
+      : 'Série de parcelas excluída!';
+    await deleteBill(mode, msg);
   }
 
   // Effects
@@ -275,21 +400,31 @@ export function useContasState() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const groupIdParam = params.get("groupId");
+      const viewParam = params.get("view");
       if (groupIdParam) {
         setSelectedGroup(Number(groupIdParam));
+        setViewMode('shared');
+      } else if (viewParam === 'individual') {
+        setViewMode('individual');
       }
     }
   }, []);
 
   useEffect(() => {
-    if (selectedGroup) {
-      fetchBills(selectedGroup);
-      fetchMembers(selectedGroup);
+    if (viewMode === 'shared') {
+      if (selectedGroup) {
+        fetchBills(selectedGroup);
+        fetchMembers(selectedGroup);
+      } else {
+        setBills([]);
+        setMembers([]);
+      }
     } else {
       setBills([]);
-      setMembers([]);
+      fetchIndividualBills();
     }
-  }, [selectedGroup]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, selectedGroup]);
 
   useEffect(() => {
     const ids = selectedMembers.length === 0 ? members.map((m) => m.id) : selectedMembers;
@@ -302,6 +437,10 @@ export function useContasState() {
   }, [editValue, editSelectedMembers, editShareType, members, getEqualShares]);
 
   return {
+    // View mode
+    viewMode,
+    setViewMode,
+
     // Data
     groups,
     members,
@@ -323,6 +462,16 @@ export function useContasState() {
     setName,
     value,
     setValue,
+    dueDate,
+    setDueDate,
+    recurrence,
+    setRecurrence,
+    endDate,
+    setEndDate,
+    installmentCount,
+    setInstallmentCount,
+    paid,
+    setPaid,
     shareType,
     setShareType,
     selectedMembers,
@@ -341,6 +490,14 @@ export function useContasState() {
     setEditName,
     editValue,
     setEditValue,
+    editDueDate,
+    setEditDueDate,
+    editRecurrence,
+    setEditRecurrence,
+    editEndDate,
+    setEditEndDate,
+    editPaid,
+    setEditPaid,
     editShareType,
     setEditShareType,
     editSelectedMembers,
@@ -349,10 +506,17 @@ export function useContasState() {
     setEditShares,
     handleEdit,
 
+    // Paid toggle (quick action on card)
+    handleTogglePaid,
+
     // Delete
     confirmDeleteBill,
     setConfirmDeleteBill,
     handleDelete,
+    installmentDeleteOpen,
+    setInstallmentDeleteOpen,
+    openDeleteConfirm,
+    handleDeleteInstallment,
 
     // Helpers
     getEqualShares,

@@ -13,6 +13,7 @@
 import { useControleContasState } from '@/hooks/use-controle-contas-state';
 import { ControleContasCards } from './controle-contas-cards';
 import { ControleContasGroups } from './controle-contas-groups';
+import { ControleContasIndividual } from './controle-contas-individual';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Users, Search } from 'lucide-react';
@@ -56,6 +57,7 @@ export function ControleContasContent() {
         groupsCount={state.groupsCount}
         total={state.total}
         billsCount={state.filtered.length}
+        individualCount={state.individualBills.length}
       />
 
       {/* Mensagem de Erro */}
@@ -65,12 +67,21 @@ export function ControleContasContent() {
         </div>
       )}
 
-      {/* Lista de Grupos */}
-      <ControleContasGroups
-        groupedData={state.groupedData}
-        groupMembers={state.groupMembers}
-        loading={state.loading}
-      />
+      {/* Contas Individuais */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2">Contas Individuais</h2>
+        <ControleContasIndividual bills={state.individualBills} loading={state.loading} />
+      </div>
+
+      {/* Contas Compartilhadas (por Grupo) */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2">Contas Compartilhadas</h2>
+        <ControleContasGroups
+          groupedData={state.groupedData}
+          groupMembers={state.groupMembers}
+          loading={state.loading}
+        />
+      </div>
     </div>
   );
 }

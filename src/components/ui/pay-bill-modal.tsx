@@ -177,7 +177,7 @@ export function PayBillModal({
         </div>
 
         {/* Valor e Data do Pagamento */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="amount">Valor do Pagamento</Label>
             <div className="relative">

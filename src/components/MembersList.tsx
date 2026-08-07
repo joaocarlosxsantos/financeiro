@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal } from '@/components/controle-contas/modal';
 import type { Member } from '@/types/controle-contas';
-import { MemberForm } from '@/components/controle-contas/member-form';
 
 function maskPhone(phone: string) {
   const cleaned = (phone || '').toString().replace(/\D/g, '');

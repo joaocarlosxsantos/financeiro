@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,12 +65,7 @@ export function ScenarioForm({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Novo Cenário Financeiro</DialogTitle>
-        </DialogHeader>
-
+    <Modal open={open} onClose={() => onOpenChange(false)} title="Novo Cenário Financeiro" size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Informações Básicas */}
           <div className="space-y-3">
@@ -97,7 +92,7 @@ export function ScenarioForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="duration">Duração (meses) *</Label>
                 <Input
@@ -135,7 +130,7 @@ export function ScenarioForm({
           <div className="space-y-3 pt-3 border-t">
             <h4 className="font-semibold text-sm">Valores Base</h4>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="initialBalance">Saldo Inicial *</Label>
                 <Input
@@ -190,7 +185,7 @@ export function ScenarioForm({
           <div className="space-y-3 pt-3 border-t">
             <h4 className="font-semibold text-sm">Mudanças Propostas (opcional)</h4>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="incomeChange">Mudança na Renda (%)</Label>
                 <Input
@@ -241,7 +236,7 @@ export function ScenarioForm({
 
             {showAdvanced && (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="oneTimeExpense">Gasto Único (R$)</Label>
                     <Input
@@ -314,17 +309,16 @@ export function ScenarioForm({
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Criar Cenário
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 }

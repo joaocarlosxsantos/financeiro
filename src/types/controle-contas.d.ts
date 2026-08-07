@@ -5,6 +5,16 @@ export interface Share {
   amount: number;
 }
 
+export type BillScope = 'INDIVIDUAL' | 'SHARED';
+export type BillRecurrence = 'PUNCTUAL' | 'RECURRING' | 'INSTALLMENT';
+
+export interface BillCurrentCycle {
+  active: boolean;
+  dueDate: string | Date;
+  paid: boolean;
+  monthKey: string;
+}
+
 export interface BillWithGroup {
   id: number;
   name: string;
@@ -14,7 +24,17 @@ export interface BillWithGroup {
   amount?: number | string;
   createdAt?: string;
   dueDate?: string | null;
-  group: { id: number; name: string };
+  paid?: boolean;
+  scope: BillScope;
+  recurrence: BillRecurrence;
+  endDate?: string | null;
+  excludedDates?: string[];
+  paidMonths?: string[];
+  installmentGroupId?: string | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
+  currentCycle?: BillCurrentCycle;
+  group: { id: number; name: string } | null;
   shares?: Share[];
 }
 
