@@ -65,7 +65,7 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+          <div className="text-center text-muted-foreground py-8">
             Nenhum gasto encontrado neste período
           </div>
         </CardContent>
@@ -80,7 +80,7 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
           <PieChart className="h-5 w-5" />
           Distribuição de Gastos por Categoria
         </CardTitle>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-sm text-muted-foreground">
           Total: {new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
@@ -90,21 +90,21 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
       <CardContent>
         <div className="space-y-4">
           {processedData.map((item, index) => (
-            <div key={item.categoryName} className="space-y-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors">
+            <div key={item.categoryName} className="space-y-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
               {/* Header da categoria */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div 
-                    className="w-5 h-5 rounded-full flex-shrink-0 border-2 border-white shadow-md ring-1 ring-gray-200 dark:ring-gray-600"
+                    className="w-5 h-5 rounded-full flex-shrink-0 border-2 border-background shadow-md ring-1 ring-border"
                     style={{ backgroundColor: item.color }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                    <div className="font-semibold text-sm text-foreground truncate">
                       {item.categoryName}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
                       <span>{item.percentage.toFixed(1)}% do total</span>
-                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                      <span className="w-1 h-1 bg-muted-foreground/50 rounded-full"></span>
                       <span className="font-medium">{item.displayAmount}</span>
                     </div>
                   </div>
@@ -113,7 +113,7 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
               
               {/* Barra de progresso melhorada */}
               <div className="relative">
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
+                <div className="w-full bg-muted rounded-full h-4 overflow-hidden shadow-inner">
                   <div 
                     className="h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
                     style={{ 
@@ -136,7 +136,7 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
                 {/* Porcentagem fora da barra se for muito pequena */}
                 {item.percentage <= 8 && (
                   <div className="absolute inset-y-0 right-2 flex items-center">
-                    <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    <span className="text-xs font-semibold text-muted-foreground">
                       {item.percentage.toFixed(1)}%
                     </span>
                   </div>
@@ -147,8 +147,8 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
 
           {/* Resumo */}
           {processedData.length === 6 && data.length > 6 && (
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            <div className="pt-2 border-t border-border">
+              <div className="text-xs text-muted-foreground text-center">
                 Mostrando os 6 maiores gastos de {data.length} categorias
               </div>
             </div>

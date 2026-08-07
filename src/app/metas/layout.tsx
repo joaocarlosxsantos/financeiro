@@ -19,7 +19,7 @@ export default function MetasLayout({ children }: { children: React.ReactNode })
         <div className="fixed inset-0 z-50 flex md:hidden">
           {/* Overlay */}
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-64 bg-gray-900 dark:bg-slate-900 shadow-xl animate-slide-in-mobile z-50">
+          <div className="absolute left-0 top-0 h-full w-64 sidebar-bg shadow-xl border-r animate-slide-in-mobile z-50">
             <Sidebar onClose={handleCloseSidebar} />
           </div>
         </div>
@@ -30,7 +30,7 @@ export default function MetasLayout({ children }: { children: React.ReactNode })
         <div className="md:hidden flex items-center h-14 px-4 border-b border-border bg-background sticky top-0 z-30">
           <button
             aria-label="Abrir menu"
-            className="mr-2 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-slate-800 focus:outline-none"
+            className="mr-2 p-2 rounded-md hover:bg-accent focus:outline-none"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="h-6 w-6" />

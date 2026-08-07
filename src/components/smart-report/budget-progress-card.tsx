@@ -32,16 +32,16 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
 
   const getStatusIcon = (spent: number, budgeted: number) => {
     const percentage = getProgressPercentage(spent, budgeted);
-    if (percentage <= 70) return <CheckCircle className="h-4 w-4 text-green-600" />;
+    if (percentage <= 70) return <CheckCircle className="h-4 w-4 text-success" />;
     if (percentage <= 90) return <TrendingUp className="h-4 w-4 text-yellow-600" />;
-    return <AlertTriangle className="h-4 w-4 text-red-600" />;
+    return <AlertTriangle className="h-4 w-4 text-destructive" />;
   };
 
   const getStatusColor = (spent: number, budgeted: number) => {
     const percentage = getProgressPercentage(spent, budgeted);
-    if (percentage <= 70) return 'text-green-600 dark:text-green-400';
+    if (percentage <= 70) return 'text-success';
     if (percentage <= 90) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    return 'text-destructive';
   };
 
   const getProgressColor = (spent: number, budgeted: number) => {
@@ -61,7 +61,7 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-muted-foreground">
             <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>Nenhuma meta orçamentária definida para este período.</p>
             <p className="text-sm mt-2">Configure suas metas para acompanhar o progresso dos gastos.</p>
@@ -83,7 +83,7 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
           Progresso do Orçamento
         </CardTitle>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-muted-foreground">
             Total orçado: {formatCurrency(totalBudgeted)}
           </div>
           <Badge variant={overallProgress > 90 ? "destructive" : overallProgress > 70 ? "secondary" : "default"}>
@@ -94,7 +94,7 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
       <CardContent>
         <div className="space-y-4">
           {/* Progresso geral */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <div className="p-4 bg-muted/50 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">Progresso Geral</span>
               <span className={cn(
@@ -118,7 +118,7 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
 
           {/* Progresso por categoria */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
+            <h4 className="font-medium text-sm text-foreground/90">
               Por Categoria
             </h4>
             {budgetGoals.map((goal) => {
@@ -139,10 +139,10 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
                       <div className={cn(
                         "text-xs",
                         isOverBudget 
-                          ? "text-red-600 dark:text-red-400" 
+                          ? "text-destructive" 
                           : goal.remaining > 0 
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-gray-600 dark:text-gray-400"
+                            ? "text-success"
+                            : "text-muted-foreground"
                       )}>
                         {isOverBudget 
                           ? `Excedeu em ${formatCurrency(Math.abs(goal.remaining))}` 
@@ -165,7 +165,7 @@ export function BudgetProgressCard({ budgetGoals }: BudgetProgressCardProps) {
                     />
                   </div>
                   
-                  <div className="text-xs text-gray-600 dark:text-gray-400 text-right">
+                  <div className="text-xs text-muted-foreground text-right">
                     {progress.toFixed(1)}% do orçamento
                   </div>
                 </div>

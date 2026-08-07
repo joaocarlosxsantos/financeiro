@@ -122,7 +122,7 @@ export function TransactionRow({
       {/* Valor */}
       <td className="px-4 py-3 text-right w-32">
         <div className={`font-semibold text-sm ${
-          registro.valor < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+          registro.valor < 0 ? 'text-destructive' : 'text-success'
         }`}>
           {formatCurrency(registro.valor)}
         </div>
@@ -197,7 +197,7 @@ export function TransactionRow({
                   size="sm"
                   variant="ghost"
                   onClick={() => onAcceptAISuggestion(index)}
-                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                  className="h-6 w-6 p-0 text-success hover:text-success hover:bg-success/10"
                   title="Aceitar sugestão"
                 >
                   <Check className="w-3 h-3" />
@@ -207,7 +207,7 @@ export function TransactionRow({
                   size="sm"
                   variant="ghost"
                   onClick={() => onRejectAISuggestion(index)}
-                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                   title="Rejeitar sugestão"
                 >
                   <X className="w-3 h-3" />

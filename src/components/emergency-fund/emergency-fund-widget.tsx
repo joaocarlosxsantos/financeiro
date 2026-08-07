@@ -26,29 +26,29 @@ export function EmergencyFundWidget({
   const getStatusIcon = () => {
     switch (data.status) {
       case 'none':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
+        return <AlertTriangle className="h-5 w-5 text-destructive" />;
       case 'started':
-        return <TrendingUp className="h-5 w-5 text-orange-500" />;
+        return <TrendingUp className="h-5 w-5 text-chart-4" />;
       case 'halfway':
-        return <Target className="h-5 w-5 text-blue-500" />;
+        return <Target className="h-5 w-5 text-primary" />;
       case 'complete':
       case 'excellent':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+        return <CheckCircle2 className="h-5 w-5 text-success" />;
     }
   };
 
   const getStatusColor = () => {
     switch (data.status) {
       case 'none':
-        return 'from-red-500/20 to-red-600/20 border-red-500/30';
+        return 'from-destructive/20 to-destructive/10 border-destructive/30';
       case 'started':
-        return 'from-orange-500/20 to-orange-600/20 border-orange-500/30';
+        return 'from-chart-4/20 to-chart-4/10 border-chart-4/30';
       case 'halfway':
-        return 'from-blue-500/20 to-blue-600/20 border-blue-500/30';
+        return 'from-primary/20 to-primary/10 border-primary/30';
       case 'complete':
-        return 'from-green-500/20 to-green-600/20 border-green-500/30';
+        return 'from-success/20 to-success/10 border-success/30';
       case 'excellent':
-        return 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/30';
+        return 'from-success/30 to-success/10 border-success/40';
     }
   };
 

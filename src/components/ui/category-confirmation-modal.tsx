@@ -64,14 +64,14 @@ export function CategoryConfirmationModal({
   return (
     <Modal open={open} onClose={onCancel} title="Novas categorias serão criadas" size="md">
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <Sparkles className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-blue-900 dark:text-blue-200">
+            <h3 className="font-semibold text-foreground">
               {categories.length} categoria{categories.length !== 1 ? 's' : ''} nova
               {categories.length !== 1 ? 's' : ''} identificada{categories.length !== 1 ? 's' : ''}
             </h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Confira os nomes antes de salvar. Você pode renomear ou optar por não criar alguma
               delas — os lançamentos correspondentes ficarão sem categoria.
             </p>

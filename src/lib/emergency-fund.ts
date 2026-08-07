@@ -176,38 +176,38 @@ export function calculateRiskLevel(
   if (percentageComplete === 0) {
     return {
       level: 'Crítico',
-      color: 'text-red-500',
+      color: 'text-destructive',
       description: 'Sem proteção financeira',
     };
   }
-  
+
   if (percentageComplete < 25) {
     return {
       level: 'Alto',
-      color: 'text-orange-500',
+      color: 'text-chart-4',
       description: 'Proteção muito limitada',
     };
   }
-  
+
   if (percentageComplete < 50) {
     return {
       level: 'Moderado',
-      color: 'text-yellow-500',
+      color: 'text-amber-600 dark:text-amber-400',
       description: 'Proteção parcial',
     };
   }
-  
+
   if (percentageComplete < 100) {
     return {
       level: 'Baixo',
-      color: 'text-blue-500',
+      color: 'text-primary',
       description: 'Boa proteção',
     };
   }
-  
+
   return {
     level: 'Muito Baixo',
-    color: 'text-green-500',
+    color: 'text-success',
     description: 'Excelente proteção',
   };
 }

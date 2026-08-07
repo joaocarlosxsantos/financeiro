@@ -67,7 +67,7 @@ export function CategoryCreateModal({ open, onClose, onCreated, initial }: Categ
         <div>
           <Label htmlFor="category-name">Nome</Label>
           <Input id="category-name" value={name} onChange={(e) => setName(e.target.value)} />
-          {error && <span className="text-red-600 text-xs">{error}</span>}
+          {error && <span className="text-destructive text-xs">{error}</span>}
         </div>
         <div>
           <Label htmlFor="category-color">Cor</Label>

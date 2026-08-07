@@ -183,11 +183,11 @@ export function TransferModal({ isOpen, onClose, onSuccess }: TransferModalProps
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div
         ref={modalRef}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-lg shadow-xl dark:shadow-none dark:ring-1 dark:ring-white/[0.04] w-full max-w-md max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">
             💸 Nova Transferência
           </h2>
           <Button
@@ -210,13 +210,13 @@ export function TransferModal({ isOpen, onClose, onSuccess }: TransferModalProps
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded">
+                <div className="bg-success/10 border border-success/30 text-success px-4 py-3 rounded">
                   {success}
                 </div>
               )}
@@ -261,7 +261,7 @@ export function TransferModal({ isOpen, onClose, onSuccess }: TransferModalProps
                 <Label htmlFor="fromWalletId">Carteira de Origem *</Label>
                 <select
                   id="fromWalletId"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={fromWalletId}
                   onChange={(e) => setFromWalletId(e.target.value)}
                   required
@@ -279,7 +279,7 @@ export function TransferModal({ isOpen, onClose, onSuccess }: TransferModalProps
                 <Label htmlFor="toWalletId">Carteira de Destino *</Label>
                 <select
                   id="toWalletId"
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={toWalletId}
                   onChange={(e) => setToWalletId(e.target.value)}
                   required
@@ -294,21 +294,21 @@ export function TransferModal({ isOpen, onClose, onSuccess }: TransferModalProps
               </div>
 
               {fromWallet && toWallet && (
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div className="bg-muted/50 p-4 rounded-lg">
                   <div className="flex items-center justify-center gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{fromWallet.name}</span>
-                      <span className="text-gray-500">({getWalletTypeLabel(fromWallet.type)})</span>
+                      <span className="text-muted-foreground">({getWalletTypeLabel(fromWallet.type)})</span>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{toWallet.name}</span>
-                      <span className="text-gray-500">({getWalletTypeLabel(toWallet.type)})</span>
+                      <span className="text-muted-foreground">({getWalletTypeLabel(toWallet.type)})</span>
                     </div>
                   </div>
                   {amount && (
                     <div className="text-center mt-2">
-                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                      <span className="text-lg font-bold text-primary">
                         R$ {parseFloat(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>

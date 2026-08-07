@@ -340,7 +340,7 @@ export function FaturaPreview({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">Pré-visualização dos dados</h2>
-        <Badge className="bg-blue-100 text-blue-800">
+        <Badge className="bg-primary/15 text-primary">
           <Sparkles className="w-4 h-4 mr-1" />
           IA Ativada
         </Badge>
@@ -371,7 +371,7 @@ export function FaturaPreview({
                     size="sm"
                     variant="ghost"
                     onClick={handleNormalizeAllDescriptions}
-                    className="h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors border border-purple-200 hover:border-purple-300"
+                    className="h-8 px-3 text-xs text-chart-5 hover:bg-chart-5/10 hover:text-chart-5 transition-colors border border-chart-5/30 hover:border-chart-5/50"
                     title="Simplificar todas as descrições automaticamente"
                   >
                     <Wand2 className="w-3 h-3 mr-1" />
@@ -404,7 +404,7 @@ export function FaturaPreview({
 
       {/* Configurações e resumo - DEPOIS da tabela */}
       <div className="bg-card border rounded-lg p-6 space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm text-foreground/90">
           <strong>📅 Período da Fatura:</strong> Selecione o mês/ano da fatura que está importando. 
           Transações com datas fora deste período serão marcadas como antecipadas automaticamente.
         </div>
@@ -447,13 +447,13 @@ export function FaturaPreview({
           </div>
           <div>
             <span className="text-muted-foreground">Despesas:</span>
-            <span className="ml-2 font-semibold text-red-600">
+            <span className="ml-2 font-semibold text-destructive">
               R$ {totalDespesas.toFixed(2)}
             </span>
           </div>
           <div>
             <span className="text-muted-foreground">Créditos:</span>
-            <span className="ml-2 font-semibold text-green-600">
+            <span className="ml-2 font-semibold text-success">
               R$ {totalCreditos.toFixed(2)}
             </span>
           </div>
@@ -462,7 +462,7 @@ export function FaturaPreview({
         <div className="border-t pt-4">
           <div className="flex justify-between items-center text-base font-semibold">
             <span className="text-muted-foreground">Total da Fatura:</span>
-            <span className={totalFinal >= 0 ? 'text-red-600' : 'text-green-600'}>
+            <span className={totalFinal >= 0 ? 'text-destructive' : 'text-success'}>
               R$ {Math.abs(totalFinal).toFixed(2)}
             </span>
           </div>
@@ -475,7 +475,7 @@ export function FaturaPreview({
         )}
 
         {success && (
-          <div className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
+          <div className="bg-success/10 text-success px-4 py-3 rounded-lg">
             ✓ Fatura importada com sucesso!
           </div>
         )}

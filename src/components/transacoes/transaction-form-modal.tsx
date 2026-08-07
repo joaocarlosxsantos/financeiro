@@ -104,7 +104,7 @@ export function TransactionFormModal({
           <Label htmlFor="type">Tipo</Label>
           <select
             id="type"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mb-2"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
             value={form.type}
             onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
           >
@@ -117,7 +117,8 @@ export function TransactionFormModal({
             id="recurring"
             type="checkbox"
             checked={form.recurring}
-            onChange={e => setForm(f => ({ ...f, recurring: e.target.checked }))} 
+            onChange={e => setForm(f => ({ ...f, recurring: e.target.checked }))}
+            className="h-4 w-4 accent-primary rounded border-input focus:ring-2 focus:ring-ring cursor-pointer"
           />
           <Label htmlFor="recurring">Recorrente</Label>
         </div>
@@ -150,7 +151,7 @@ export function TransactionFormModal({
             value={form.description}
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
           />
-          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+          {errors.description && <p className="text-destructive text-xs mt-1">{errors.description}</p>}
         </div>
         <div>
           <Label htmlFor="amount">Valor</Label>
@@ -161,7 +162,7 @@ export function TransactionFormModal({
             value={form.amount}
             onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
           />
-          {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+          {errors.amount && <p className="text-destructive text-xs mt-1">{errors.amount}</p>}
         </div>
         <div>
           <Label htmlFor="date">Data</Label>
@@ -171,13 +172,13 @@ export function TransactionFormModal({
             value={form.date}
             onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
           />
-          {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
+          {errors.date && <p className="text-destructive text-xs mt-1">{errors.date}</p>}
         </div>
         <div>
           <Label htmlFor="category">Categoria</Label>
           <select
             id="category"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
             value={form.categoryId}
             onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
           >
@@ -191,7 +192,7 @@ export function TransactionFormModal({
           <Label htmlFor="wallet">Carteira</Label>
           <select
             id="wallet"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
             value={form.walletId}
             onChange={e => setForm(f => ({ ...f, walletId: e.target.value }))}
           >
@@ -249,7 +250,7 @@ export function TransactionFormModal({
                               setForm(f => ({ ...f, tagIds: f.tagIds.filter(id => id !== t.id) }));
                             }
                           }}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
                         />
                         <span className="text-sm flex-1">{t.name}</span>
                       </label>

@@ -106,7 +106,7 @@ export function TransferList({ refreshTrigger }: TransferListProps) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center text-red-600">{error}</div>
+          <div className="text-center text-destructive">{error}</div>
         </CardContent>
       </Card>
     );
@@ -121,7 +121,7 @@ export function TransferList({ refreshTrigger }: TransferListProps) {
       </CardHeader>
       <CardContent>
         {transfers.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-muted-foreground py-8">
             Nenhuma transferência encontrada
           </div>
         ) : (
@@ -129,26 +129,26 @@ export function TransferList({ refreshTrigger }: TransferListProps) {
             {transfers.map((transfer) => (
               <div
                 key={transfer.id}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-2">
                       <div className="flex items-center gap-2 text-sm">
                         <span className="font-medium">{transfer.fromWallet.name}</span>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{transfer.toWallet.name}</span>
                       </div>
-                      <div className="text-lg font-bold text-blue-600">
+                      <div className="text-lg font-bold text-primary">
                         {formatCurrency(transfer.amount)}
                       </div>
                     </div>
                     
                     {transfer.description && (
-                      <p className="text-gray-600 text-sm mb-2">{transfer.description}</p>
+                      <p className="text-muted-foreground text-sm mb-2">{transfer.description}</p>
                     )}
                     
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>Data: {formatDate(transfer.date)}</span>
                       <span>Criado em: {formatDate(transfer.createdAt)}</span>
                     </div>
@@ -159,7 +159,7 @@ export function TransferList({ refreshTrigger }: TransferListProps) {
                     size="sm"
                     onClick={() => handleDelete(transfer.id)}
                     disabled={deletingId === transfer.id}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     {deletingId === transfer.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

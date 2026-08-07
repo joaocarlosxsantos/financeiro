@@ -70,7 +70,7 @@ export function MultiTagSelector({
             >
               {tag!.name}
               <X
-                className="w-3 h-3 cursor-pointer hover:bg-red-100 rounded"
+                className="w-3 h-3 cursor-pointer hover:bg-destructive/15 rounded"
                 onClick={() => removeTag(tag!.id)}
               />
             </Badge>

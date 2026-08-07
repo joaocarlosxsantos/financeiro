@@ -170,7 +170,7 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
       case 'PARTIAL':
         return <Badge variant="secondary">Paga Parcialmente</Badge>;
       case 'PAID':
-        return <Badge className="bg-green-100 text-green-800">Paga</Badge>;
+        return <Badge className="bg-success/15 text-success">Paga</Badge>;
       case 'OVERDUE':
         return <Badge variant="destructive">Vencida</Badge>;
       default:
@@ -197,7 +197,7 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+      <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-md">
         <p><strong>Erro:</strong> {error}</p>
         <Button 
           variant="outline" 
@@ -315,7 +315,7 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                             )}
                           </p>
                         </div>
-                        <p className="font-semibold text-red-600">
+                        <p className="font-semibold text-destructive">
                           {formatCurrency(expense.amount)}
                         </p>
                       </div>
@@ -325,23 +325,23 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                     {bill.creditIncomes?.map((income) => (
                       <div 
                         key={income.id} 
-                        className="flex justify-between items-center p-2 rounded bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+                        className="flex justify-between items-center p-2 rounded bg-success/10 border border-success/30"
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-green-900 dark:text-green-100">{income.description}</p>
-                            <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
+                            <p className="font-medium text-success">{income.description}</p>
+                            <Badge variant="outline" className="text-success border-success/50">
                               CRÉDITO
                             </Badge>
                           </div>
-                          <p className="text-xs text-green-700 dark:text-green-300">
+                          <p className="text-xs text-success">
                             {new Date(income.date).toLocaleDateString('pt-BR')}
                             {income.category && (
                               <span> • {income.category.name}</span>
                             )}
                           </p>
                         </div>
-                        <p className="font-semibold text-green-700 dark:text-green-300">
+                        <p className="font-semibold text-success">
                           -{formatCurrency(income.amount)}
                         </p>
                       </div>
@@ -354,9 +354,9 @@ export default function CreditBillsList({ currentDate }: CreditBillsListProps) {
                     <h4 className="font-semibold mb-3">Pagamentos</h4>
                     <div className="space-y-2">
                       {bill.payments.map((payment) => (
-                        <div key={payment.id} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                        <div key={payment.id} className="flex justify-between items-center p-2 bg-success/10 rounded">
                           <p className="text-sm">Pagamento em {formatDate(payment.paymentDate)}</p>
-                          <p className="font-semibold text-green-700">{formatCurrency(payment.amount)}</p>
+                          <p className="font-semibold text-success">{formatCurrency(payment.amount)}</p>
                         </div>
                       ))}
                     </div>

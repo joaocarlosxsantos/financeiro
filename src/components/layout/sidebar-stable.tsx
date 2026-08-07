@@ -169,22 +169,21 @@ const NavItem = React.memo(({ item, active, onClick, isSubItem = false }: {
       aria-current={active ? 'page' : undefined}
       data-tour={getDataTour(item.href)}
       className={cn(
-        'relative group flex items-center gap-3 rounded-xl text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
-        'sidebar-desktop-layout', // CSS responsivo
+        'relative group flex items-center gap-3 rounded-lg text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/60 py-2 min-h-[40px] transition-colors',
         isSubItem ? 'px-4 ml-6' : 'px-3',
         active
-          ? 'bg-primary text-primary-foreground shadow-md'
-          : isSubItem 
-            ? 'text-white/65 hover:text-white/90 hover:bg-white/8'
-            : 'text-white/70 hover:text-white/90 hover:bg-white/5'
+          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+          : isSubItem
+            ? 'text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.06]'
+            : 'text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.04]'
       )}
     >
       <span className={cn(
-        'relative flex items-center justify-center rounded-md',
-  'h-7 w-7', // Tamanho fixo
+        'relative flex items-center justify-center rounded-md flex-none',
+        'h-7 w-7',
         active
-          ? 'bg-white/20 ring-1 ring-white/30 scale-105'
-          : 'group-hover:bg-white/10'
+          ? 'bg-black/15'
+          : 'group-hover:bg-white/[0.08]'
       )}>
         <item.icon className="h-4 w-4" />
       </span>
@@ -224,25 +223,22 @@ const NavSection = React.memo(({
     <div className="space-y-1">
       <button
         onClick={onToggle}
-        className={cn(
-          "w-full flex items-center gap-3 rounded-xl text-sm font-medium text-white/90 hover:text-white hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group",
-          "px-3 py-2" // Tamanho fixo
-        )}
+        className="w-full flex items-center gap-3 rounded-lg text-sm font-medium text-sidebar-foreground/90 hover:text-sidebar-foreground hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group px-3 py-2 min-h-[40px] transition-colors"
       >
-        <span className="flex items-center justify-center rounded-md bg-white/5 group-hover:bg-white/15 h-7 w-7">
+        <span className="flex items-center justify-center rounded-md bg-white/[0.04] group-hover:bg-white/[0.08] h-7 w-7 flex-none">
           <section.icon className="h-4 w-4" />
         </span>
-        <span className="flex-1 truncate text-left font-semibold tracking-wide">
+        <span className="flex-1 truncate text-left font-semibold tracking-wide text-xs uppercase text-sidebar-muted-foreground group-hover:text-sidebar-foreground">
           {section.name}
         </span>
-        <span className="text-white/50 group-hover:text-white/70">
+        <span className="text-sidebar-muted-foreground group-hover:text-sidebar-foreground">
           <ExpandIcon isExpanded={isExpanded} />
         </span>
       </button>
-      
+
       <ExpandedContent isExpanded={isExpanded}>
         <div className="space-y-1 pl-1 mt-1 relative">
-          <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10" />
+          <div className="absolute left-6 top-0 bottom-0 w-px bg-sidebar-border" />
           {section.items?.map((item) => (
             <NavItem 
               key={item.href} 
@@ -370,21 +366,22 @@ export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) 
   }, [pathname, module]);
 
   return (
-    <div className="sidebar-stable-layout flex flex-col sidebar-bg text-white border-r border-white/10 backdrop-blur-sm sidebar-no-transitions">
-  {/* Cabeçalho fixo */}
-      <div className="flex items-center justify-between border-b border-white/10 h-16 px-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+    <div className="sidebar-stable-layout flex flex-col sidebar-bg text-sidebar-foreground border-r border-sidebar-border sidebar-no-transitions">
+      {/* Cabeçalho fixo */}
+      <div className="flex items-center justify-between border-b border-sidebar-border h-16 px-4 flex-none">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center flex-none">
             <DollarSign className="h-5 w-5 text-primary" />
           </div>
-          <span className="font-bold text-lg truncate">Financeiro</span>
+          <span className="font-semibold text-base truncate">Financeiro</span>
         </div>
         {onClose && (
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={onClose}
-            className="text-white/70 hover:text-white hover:bg-white/10"
+            className="text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.06] flex-none"
+            aria-label="Fechar menu"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -392,15 +389,15 @@ export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) 
       </div>
 
       {/* Module Selector */}
-      <div className="p-4 border-b border-white/10">
-        <div className="flex rounded-lg bg-white/5 p-1">
+      <div className="p-3 border-b border-sidebar-border flex-none">
+        <div className="flex rounded-lg bg-white/[0.04] p-1 gap-1">
           <button
             onClick={() => switchModule('financeiro')}
             className={cn(
-              "flex-1 text-sm font-medium px-3 py-2 rounded-md",
-              module === 'financeiro' 
-                ? 'bg-primary text-primary-foreground shadow-sm' 
-                : 'text-white/70 hover:text-white hover:bg-white/10'
+              'flex-1 text-sm font-medium px-3 py-2 min-h-[36px] rounded-md transition-colors',
+              module === 'financeiro'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.06]'
             )}
           >
             Financeiro
@@ -408,10 +405,10 @@ export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) 
           <button
             onClick={() => switchModule('accounts')}
             className={cn(
-              "flex-1 text-sm font-medium px-3 py-2 rounded-md",
-              module === 'accounts' 
-                ? 'bg-primary text-primary-foreground shadow-sm' 
-                : 'text-white/70 hover:text-white hover:bg-white/10'
+              'flex-1 text-sm font-medium px-3 py-2 min-h-[36px] rounded-md transition-colors',
+              module === 'accounts'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.06]'
             )}
           >
             Contas
@@ -435,27 +432,27 @@ export const SidebarStable = React.memo(({ onClose }: { onClose?: () => void }) 
       </nav>
 
       {/* Footer - Usuário */}
-      <div className="border-t border-white/10 mt-auto p-4">
-        <div className="flex items-center justify-between">
+      <div className="border-t border-sidebar-border mt-auto p-3 flex-none">
+        <div className="flex items-center justify-between gap-2">
           <Link
             href="/user"
             onClick={onClose}
-            className="group flex items-center gap-3 flex-1 min-w-0 rounded-xl"
+            className="group flex items-center gap-3 flex-1 min-w-0 rounded-lg p-1 -m-1 hover:bg-white/[0.04] transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-              <User className="h-5 w-5 text-primary" />
+            <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <User className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white truncate">{user?.name || user?.email || 'Usuário'}</p>
-              <p className="text-xs text-white/60 truncate">Configurações</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || user?.email || 'Usuário'}</p>
+              <p className="text-xs text-sidebar-muted-foreground truncate">Configurações</p>
             </div>
           </Link>
-          
+
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={logout}
-            className="ml-3 text-white/70 hover:text-white hover:bg-white/10"
+            className="flex-none text-sidebar-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.06]"
             aria-label="Sair"
           >
             <LogOut className="h-5 w-5" />

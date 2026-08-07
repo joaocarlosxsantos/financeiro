@@ -102,7 +102,7 @@ export function NotificationItem({
     <div 
       className={cn(
         'flex items-start gap-3 p-4 border rounded-lg transition-all duration-200 hover:shadow-md',
-        !notification.isRead && 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800',
+        !notification.isRead && 'bg-primary/5 border-primary/20',
         notification.isRead && 'bg-background border-border',
         compact && 'p-3'
       )}
@@ -162,7 +162,7 @@ export function NotificationItem({
                   variant="ghost"
                   size="sm"
                   onClick={handleMarkRead}
-                  className="h-10 w-10 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg"
+                  className="h-10 w-10 p-0 hover:bg-primary/10 rounded-lg"
                   title="Marcar como lida"
                 >
                   <Check className="h-5 w-5" />
@@ -172,7 +172,7 @@ export function NotificationItem({
                 variant="ghost"
                 size="sm"
                 onClick={handleDismiss}
-                className="h-10 w-10 p-0 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
+                className="h-10 w-10 p-0 hover:bg-destructive/10 rounded-lg"
                 title="Dispensar"
               >
                 <X className="h-5 w-5" />
@@ -193,7 +193,7 @@ export function NotificationItem({
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{getTimeAgo(notification.createdAt)}</span>
           {!notification.isRead && (
-            <span className="w-2 h-2 bg-blue-600 rounded-full" title="Não lida" />
+            <span className="w-2 h-2 bg-primary rounded-full" title="Não lida" />
           )}
         </div>
       </div>

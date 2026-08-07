@@ -76,15 +76,15 @@ export function ContasContent() {
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-8">
       {/* Toast */}
       {state.toastMsg && (
-        <div className="fixed top-4 right-4 w-96 z-50 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 shadow-lg">
+        <div className="fixed top-4 right-4 w-96 z-50 bg-success/10 border border-success/40 rounded-lg p-4 shadow-lg">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-success mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm text-green-700 dark:text-green-300">{state.toastMsg}</p>
+              <p className="text-sm text-success">{state.toastMsg}</p>
             </div>
             <button
               onClick={() => state.setToastMsg(null)}
-              className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+              className="text-success hover:text-success/70"
             >
               ✕
             </button>
@@ -246,7 +246,7 @@ export function ContasContent() {
                         state.setSelectedMembers(state.members.map((m) => m.id));
                       }
                     }}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-primary cursor-pointer"
                   />
                   <span className="font-semibold">Todos</span>
                 </label>
@@ -270,7 +270,7 @@ export function ContasContent() {
                           state.setSelectedMembers(newSelected);
                         }
                       }}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-primary cursor-pointer"
                     />
                     <span>{m.name}</span>
                   </label>
@@ -291,7 +291,7 @@ export function ContasContent() {
                         value="value"
                         checked={state.shareType === "value"}
                         onChange={() => state.setShareType("value")}
-                        className="w-4 h-4"
+                        className="w-4 h-4 accent-primary cursor-pointer"
                       />
                       <span>Valor</span>
                     </label>
@@ -302,7 +302,7 @@ export function ContasContent() {
                         value="percent"
                         checked={state.shareType === "percent"}
                         onChange={() => state.setShareType("percent")}
-                        className="w-4 h-4"
+                        className="w-4 h-4 accent-primary cursor-pointer"
                       />
                       <span>Porcentagem</span>
                     </label>
@@ -388,7 +388,7 @@ export function ContasContent() {
                         state.setEditSelectedMembers(state.members.map((m) => m.id));
                       }
                     }}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-primary cursor-pointer"
                   />
                   <span className="font-semibold">Todos</span>
                 </label>
@@ -412,7 +412,7 @@ export function ContasContent() {
                           state.setEditSelectedMembers(newSelected);
                         }
                       }}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-primary cursor-pointer"
                     />
                     <span>{m.name}</span>
                   </label>
@@ -433,7 +433,7 @@ export function ContasContent() {
                         value="value"
                         checked={state.editShareType === "value"}
                         onChange={() => state.setEditShareType("value")}
-                        className="w-4 h-4"
+                        className="w-4 h-4 accent-primary cursor-pointer"
                       />
                       <span>Valor</span>
                     </label>
@@ -444,7 +444,7 @@ export function ContasContent() {
                         value="percent"
                         checked={state.editShareType === "percent"}
                         onChange={() => state.setEditShareType("percent")}
-                        className="w-4 h-4"
+                        className="w-4 h-4 accent-primary cursor-pointer"
                       />
                       <span>Porcentagem</span>
                     </label>

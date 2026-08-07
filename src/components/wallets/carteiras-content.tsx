@@ -183,8 +183,8 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
       return (
         <Card>
           <CardContent className="p-12 text-center">
-            <WalletIcon className="h-12 w-12 text-gray-300 dark:text-foreground mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-foreground">
+            <WalletIcon className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+            <p className="text-muted-foreground">
               {activeTab === 'todas' ? 'Nenhuma carteira cadastrada' : `Nenhuma carteira do tipo ${typeLabels[activeTab.toUpperCase().replace('-', '_')] || activeTab}`}
             </p>
             <Button className="mt-4" onClick={() => setShowForm(true)}>
@@ -230,10 +230,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                     <span
                       className={
                         saldo > 0
-                          ? 'text-green-600 font-bold text-2xl sm:text-3xl'
+                          ? 'text-success font-bold text-2xl sm:text-3xl'
                           : saldo === 0 || Math.abs(saldo) < 0.01
-                          ? 'text-green-600 font-bold text-2xl sm:text-3xl'
-                          : 'text-red-600 font-bold text-2xl sm:text-3xl'
+                          ? 'text-success font-bold text-2xl sm:text-3xl'
+                          : 'text-destructive font-bold text-2xl sm:text-3xl'
                       }
                     >
                       {saldo === 0 || Math.abs(saldo) < 0.01 ? '0,00' : saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -241,14 +241,14 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                    <WalletIcon className="h-8 w-8 text-gray-500 dark:text-foreground flex-shrink-0" />
+                    <WalletIcon className="h-8 w-8 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0">
                       <h3 className="font-semibold text-xl truncate">{wallet.name}</h3>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-500 dark:text-foreground">{typeLabels[wallet.type] ?? wallet.type}</p>
+                    <p className="text-sm text-muted-foreground">{typeLabels[wallet.type] ?? wallet.type}</p>
                     <div className="flex space-x-2">
                       <Button variant="outline" size="sm" onClick={() => handleEdit(wallet.id)}>
                         <Edit className="h-5 w-5" />
@@ -285,13 +285,13 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="h-10 px-4 min-w-[160px] justify-between border border-slate-300/70 bg-white/90 hover:bg-white text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100 dark:hover:bg-slate-800/80"
+                className="h-10 px-4 min-w-[150px] sm:min-w-[160px] justify-between"
               >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="capitalize">{monthLabel} {year}</span>
                 </div>
-                <ChevronDown className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4" align="start">
@@ -361,10 +361,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Carteiras</CardTitle>
-            <WalletIcon className="h-4 w-4 text-blue-600" />
+            <WalletIcon className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totalWallets}</div>
+            <div className="text-2xl font-bold text-primary">{totalWallets}</div>
             <p className="text-xs text-muted-foreground">Carteiras cadastradas</p>
           </CardContent>
         </Card>
@@ -372,10 +372,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saldo Total</CardTitle>
-            <TrendingUp className={`h-4 w-4 ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            <TrendingUp className={`h-4 w-4 ${totalBalance >= 0 ? 'text-success' : 'text-destructive'}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-2xl font-bold ${totalBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
               {totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
             <p className="text-xs text-muted-foreground">Soma de todas as carteiras</p>
@@ -385,10 +385,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Carteiras Ativas</CardTitle>
-            <Building2 className="h-4 w-4 text-green-600" />
+            <Building2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeWallets}</div>
+            <div className="text-2xl font-bold text-success">{activeWallets}</div>
             <p className="text-xs text-muted-foreground">Com saldo diferente de zero</p>
           </CardContent>
         </Card>
@@ -396,10 +396,10 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tipos Diversos</CardTitle>
-            <Folder className="h-4 w-4 text-purple-600" />
+            <Folder className="h-4 w-4 text-chart-5" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{walletTypes}</div>
+            <div className="text-2xl font-bold text-chart-5">{walletTypes}</div>
             <p className="text-xs text-muted-foreground">Diferentes tipos de carteira</p>
           </CardContent>
         </Card>
@@ -497,18 +497,18 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
         <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-shrink-0">
-              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <h3 className="text-lg font-semibold text-destructive">Confirmar exclusão</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Tem certeza que deseja excluir esta carteira? Esta ação é irreversível e removerá todos os
                 registros relacionados.
               </p>
               {deletingWallet && (
-                <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{deletingWallet.name}</p>
+                <p className="mt-3 text-sm font-medium text-foreground">{deletingWallet.name}</p>
               )}
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
                 <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
@@ -516,7 +516,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
                 </Button>
                 <Button
                   onClick={confirmDelete}
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Excluir
                 </Button>
@@ -529,7 +529,7 @@ export function CarteirasContent({ onCreated }: CarteirasContentProps) {
       {/* Estados de Loading e Erro */}
       {isLoading && <Loader text="Carregando carteiras..." />}
       {error && (
-        <div className="text-red-500 text-center">
+        <div className="text-destructive text-center">
           {error}
           <Button className="ml-2" size="sm" onClick={load}>
             Tentar novamente

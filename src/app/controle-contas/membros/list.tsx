@@ -41,12 +41,12 @@ export default function MembrosListPage() {
         {data && data.length > 0 && (
           <ul className="space-y-2">
             {data.map((m) => (
-              <li key={m.id} className="flex items-center justify-between rounded-lg border border-white/6 p-3">
+              <li key={m.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <p className="font-medium">{m.name}</p>
                   <p className="text-sm text-muted-foreground">{m.phone ?? ''}</p>
                 </div>
-                <div className="text-sm text-white/60">{m.groupId ? groupsById[m.groupId]?.name ?? '' : ''}</div>
+                <div className="text-sm text-muted-foreground">{m.groupId ? groupsById[m.groupId]?.name ?? '' : ''}</div>
               </li>
             ))}
           </ul>

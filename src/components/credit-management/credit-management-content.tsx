@@ -97,22 +97,22 @@ export default function CreditManagementContent() {
             size="icon"
             onClick={handlePrevMonth}
             aria-label="Mês anterior"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            className="h-10 w-10 rounded-full"
           >
-            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-muted-foreground" />
           </Button>
           
           <Popover open={monthSelectorOpen} onOpenChange={setMonthSelectorOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="h-10 px-4 min-w-[160px] justify-between border border-slate-300/70 bg-white/90 hover:bg-white text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100 dark:hover:bg-slate-800/80"
+                className="h-10 px-4 min-w-[150px] sm:min-w-[160px] justify-between"
               >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm sm:text-base">{monthLabelCapitalized} {yearLabel}</span>
                 </div>
-                <ChevronDown className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4" align="start">
@@ -163,9 +163,9 @@ export default function CreditManagementContent() {
             onClick={handleNextMonth}
             aria-label="Próximo mês"
             disabled={activeTab !== 'expenses' && activeTab !== 'bills' && new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1) > new Date()}
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 w-10 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-muted-foreground" />
           </Button>
         </div>
       </div>

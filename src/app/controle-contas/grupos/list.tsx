@@ -44,12 +44,12 @@ export default function GruposListPage() {
         {data && data.length > 0 && (
           <ul className="space-y-2">
             {data.map((g) => (
-              <li key={g.id} className="flex items-center justify-between rounded-lg border border-white/6 p-3">
+              <li key={g.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <p className="font-medium">{g.name}</p>
                   {g.description && <p className="text-sm text-muted-foreground">{g.description}</p>}
                 </div>
-                <div className="text-sm text-white/60">{g.membersCount ?? ''}</div>
+                <div className="text-sm text-muted-foreground">{g.membersCount ?? ''}</div>
               </li>
             ))}
           </ul>

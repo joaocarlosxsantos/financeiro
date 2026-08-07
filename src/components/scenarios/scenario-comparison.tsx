@@ -43,11 +43,11 @@ export function ScenarioComparison({ results }: ScenarioComparisonProps) {
               {/* Total Economizado */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
-                  <PiggyBank className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <PiggyBank className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total Economizado</p>
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                  <p className="text-lg font-semibold text-success">
                     R$ {result.summary.totalSaved.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -86,7 +86,7 @@ export function ScenarioComparison({ results }: ScenarioComparisonProps) {
                 <span className="text-muted-foreground">Saldo mais baixo:</span>
                 <p className={cn(
                   "font-medium",
-                  result.summary.lowestBalance < 0 ? "text-red-600" : "text-foreground"
+                  result.summary.lowestBalance < 0 ? "text-destructive" : "text-foreground"
                 )}>
                   R$ {result.summary.lowestBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
@@ -94,7 +94,7 @@ export function ScenarioComparison({ results }: ScenarioComparisonProps) {
               
               <div>
                 <span className="text-muted-foreground">Saldo mais alto:</span>
-                <p className="font-medium text-green-600">
+                <p className="font-medium text-success">
                   R$ {result.summary.highestBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -139,7 +139,7 @@ export function ScenarioComparison({ results }: ScenarioComparisonProps) {
                       {best.name}
                     </span>
                     {' '}é o cenário mais vantajoso, resultando em{' '}
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-success">
                       R$ {diff.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                     {' '}a mais que{' '}

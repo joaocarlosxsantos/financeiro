@@ -66,7 +66,7 @@ export function TagCreateModal({ open, onClose, onCreated, initial }: TagCreateM
         <div>
           <Label htmlFor="tag-name">Nome</Label>
           <Input id="tag-name" value={name} onChange={(e) => setName(e.target.value)} />
-          {error && <span className="text-red-600 text-xs">{error}</span>}
+          {error && <span className="text-destructive text-xs">{error}</span>}
         </div>
         <div className="flex gap-2">
           <Button type="submit" disabled={loading}>

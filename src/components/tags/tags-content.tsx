@@ -133,8 +133,8 @@ export function TagsContent({ onCreated }: TagsContentProps) {
       return (
         <Card>
           <CardContent className="p-12 text-center">
-            <Tag className="h-12 w-12 text-gray-400 dark:text-foreground mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-foreground">
+            <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
               {activeTab === 'todas' ? 'Nenhuma tag cadastrada' 
                : activeTab === 'recentes' ? 'Nenhuma tag recente'
                : 'Nenhuma tag encontrada'}
@@ -159,7 +159,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center space-x-3 min-w-0">
-                  <Tag className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <Tag className="w-4 h-4 text-primary flex-shrink-0" />
                   <span className="font-semibold text-lg truncate">{tag.name}</span>
                 </div>
                 <div className="flex space-x-2 flex-shrink-0">
@@ -193,22 +193,22 @@ export function TagsContent({ onCreated }: TagsContentProps) {
             size="icon"
             onClick={handlePrevMonth}
             aria-label="Mês anterior"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            className="h-10 w-10 rounded-full"
           >
-            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-muted-foreground" />
           </Button>
           
           <Popover open={monthSelectorOpen} onOpenChange={setMonthSelectorOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="h-10 px-4 min-w-[160px] justify-between border border-slate-300/70 bg-white/90 hover:bg-white text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100 dark:hover:bg-slate-800/80"
+                className="h-10 px-4 min-w-[150px] sm:min-w-[160px] justify-between"
               >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm sm:text-base">{monthLabelCapitalized} {yearLabel}</span>
                 </div>
-                <ChevronDown className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4" align="start">
@@ -258,9 +258,9 @@ export function TagsContent({ onCreated }: TagsContentProps) {
             size="icon"
             onClick={handleNextMonth}
             aria-label="Próximo mês"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            className="h-10 w-10 rounded-full"
           >
-            <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-muted-foreground" />
           </Button>
         </div>
         
@@ -279,10 +279,10 @@ export function TagsContent({ onCreated }: TagsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Tags</CardTitle>
-            <Hash className="h-4 w-4 text-blue-600" />
+            <Hash className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-primary">
               {tags.length}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -294,10 +294,10 @@ export function TagsContent({ onCreated }: TagsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Mais Utilizadas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-success">
               {Math.floor(tags.length / 2)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -309,10 +309,10 @@ export function TagsContent({ onCreated }: TagsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pouco Utilizadas</CardTitle>
-            <TrendingDown className="h-4 w-4 text-orange-600" />
+            <TrendingDown className="h-4 w-4 text-chart-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-2xl font-bold text-chart-4">
               {Math.ceil(tags.length / 2)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -360,16 +360,16 @@ export function TagsContent({ onCreated }: TagsContentProps) {
         <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-shrink-0">
-              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <h3 className="text-lg font-semibold text-destructive">Confirmar exclusão</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Tem certeza que deseja excluir esta tag? Esta ação é irreversível e removerá todos os registros relacionados.
               </p>
-              <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">
+              <p className="mt-3 text-sm font-medium text-foreground">
                 {tags.find((t) => t.id === confirmingDelete)?.name}
               </p>
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
@@ -378,7 +378,7 @@ export function TagsContent({ onCreated }: TagsContentProps) {
                 </Button>
                 <Button
                   onClick={confirmDelete}
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Excluir
                 </Button>

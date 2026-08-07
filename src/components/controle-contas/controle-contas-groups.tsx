@@ -154,7 +154,7 @@ export function ControleContasGroups({ groupedData, groupMembers, loading }: Con
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Subtotal:</span>
-                  <span className="font-bold text-green-600 dark:text-green-400">
+                  <span className="font-bold text-success">
                     {subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </span>
                 </div>
@@ -196,7 +196,7 @@ export function ControleContasGroups({ groupedData, groupMembers, loading }: Con
                             <Button
                               size="default"
                               variant="outline"
-                              className="h-9 px-3 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 dark:border-green-800 dark:hover:bg-green-950"
+                              className="h-9 px-3 text-success hover:text-success hover:bg-success/10 border-success/30"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(whatsappUrl, '_blank');

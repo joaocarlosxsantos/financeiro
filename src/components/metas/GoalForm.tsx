@@ -191,7 +191,7 @@ export default function GoalForm({ onClose, onSaved, initial }: GoalFormProps) {
     <Modal open={true} onClose={() => onClose && onClose()}>
       <form onSubmit={handleSubmit} className="w-full max-w-xl p-6">
         <h3 className="text-xl font-bold mb-4">{initial ? 'Editar Meta' : 'Nova Meta'}</h3>
-        {error && <div className="text-sm text-red-500 mb-2">{error}</div>}
+        {error && <div className="text-sm text-destructive mb-2">{error}</div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium mb-1">Título</label>

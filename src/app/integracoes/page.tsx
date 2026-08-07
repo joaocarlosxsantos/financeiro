@@ -209,11 +209,11 @@ export default function IntegrationPage() {
                         
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                            <CheckCircle2 className="h-3 w-3 text-success" />
                             {webhook.successCount} sucessos
                           </span>
                           <span className="flex items-center gap-1">
-                            <XCircle className="h-3 w-3 text-red-600" />
+                            <XCircle className="h-3 w-3 text-destructive" />
                             {webhook.failureCount} falhas
                           </span>
                           {webhook.lastTriggered && (

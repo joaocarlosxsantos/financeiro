@@ -117,7 +117,7 @@ export function TransactionsList({
 
   if (loading) {
     return (
-      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-8 text-muted-foreground">
         Carregando transações...
       </div>
     );
@@ -125,13 +125,13 @@ export function TransactionsList({
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
+      <div className="text-center py-8 text-destructive">{error}</div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-8 text-muted-foreground">
         Nenhuma transação encontrada
       </div>
     );
@@ -139,26 +139,26 @@ export function TransactionsList({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+            <tr className="border-b border-border bg-muted/50">
+              <th className="text-left py-3 px-4 font-semibold text-foreground">
                 Data
               </th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-semibold text-foreground">
                 Descrição
               </th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-semibold text-foreground">
                 Categoria
               </th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-semibold text-foreground">
                 Carteira
               </th>
-              <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+              <th className="text-right py-3 px-4 font-semibold text-foreground">
                 Valor
               </th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-semibold text-foreground">
                 Tags
               </th>
             </tr>
@@ -167,20 +167,20 @@ export function TransactionsList({
             {data.map((transaction) => (
               <tr
                 key={transaction.id}
-                className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                className="border-b border-border hover:bg-muted/50 dark:hover:bg-accent/50 transition-colors"
               >
-                <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">
+                <td className="py-3 px-4 text-foreground font-medium">
                   {formatDate(transaction.date)}
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     {transaction.isRecurringExpanded && (
                       <span
-                        className="inline-block w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full flex-shrink-0"
+                        className="inline-block w-2 h-2 bg-primary rounded-full flex-shrink-0"
                         title="Recorrente expandida"
                       ></span>
                     )}
-                    <span className="text-gray-900 dark:text-gray-100">
+                    <span className="text-foreground">
                       {transaction.description}
                     </span>
                   </div>
@@ -190,20 +190,20 @@ export function TransactionsList({
                     {transaction.category && (
                       <>
                         <div
-                          className="w-3 h-3 rounded flex-shrink-0 border border-gray-300 dark:border-gray-600"
+                          className="w-3 h-3 rounded flex-shrink-0 border border-border"
                           style={{ backgroundColor: getCategoryColor(transaction.category) }}
                         ></div>
-                        <span className="text-gray-900 dark:text-gray-100">
+                        <span className="text-foreground">
                           {transaction.category.name}
                         </span>
                       </>
                     )}
                   </div>
                 </td>
-                <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                <td className="py-3 px-4 text-foreground">
                   {transaction.wallet.name}
                 </td>
-                <td className="py-3 px-4 text-right font-semibold text-gray-900 dark:text-gray-100">
+                <td className="py-3 px-4 text-right font-semibold text-foreground">
                   {formatAmount(transaction.amount)}
                 </td>
                 <td className="py-3 px-4">
@@ -212,14 +212,14 @@ export function TransactionsList({
                       {transaction.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded font-medium"
+                          className="px-2 py-1 bg-muted text-foreground/90 text-xs rounded font-medium"
                         >
                           {tag}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <span className="text-gray-400 dark:text-gray-500">—</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </td>
               </tr>
@@ -229,18 +229,18 @@ export function TransactionsList({
       </div>
 
       {/* Paginação */}
-      <div className="flex items-center justify-between mt-6 text-sm text-gray-700 dark:text-gray-300">
+      <div className="flex items-center justify-between mt-6 text-sm text-foreground/90">
         <div>
           Mostrando{' '}
-          <span className="font-medium text-gray-900 dark:text-gray-100">
+          <span className="font-medium text-foreground">
             {(pagination.page - 1) * pagination.limit + 1}
           </span>{' '}
           a{' '}
-          <span className="font-medium text-gray-900 dark:text-gray-100">
+          <span className="font-medium text-foreground">
             {Math.min(pagination.page * pagination.limit, pagination.total)}
           </span>{' '}
           de{' '}
-          <span className="font-medium text-gray-900 dark:text-gray-100">
+          <span className="font-medium text-foreground">
             {pagination.total}
           </span>{' '}
           resultados
@@ -252,11 +252,11 @@ export function TransactionsList({
               window.history.replaceState({}, '', `?page=${newPage}`);
             }}
             disabled={!pagination.hasPrev}
-            className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-900 dark:text-gray-100 transition-colors"
+            className="px-3 py-1 rounded border border-border hover:bg-muted dark:hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed font-medium text-foreground transition-colors"
           >
             Anterior
           </button>
-          <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded font-semibold text-gray-900 dark:text-gray-100">
+          <span className="px-3 py-1 bg-muted rounded font-semibold text-foreground">
             {pagination.page}
           </span>
           <button
@@ -265,7 +265,7 @@ export function TransactionsList({
               window.history.replaceState({}, '', `?page=${newPage}`);
             }}
             disabled={!pagination.hasNext}
-            className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-900 dark:text-gray-100 transition-colors"
+            className="px-3 py-1 rounded border border-border hover:bg-muted dark:hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed font-medium text-foreground transition-colors"
           >
             Próximo
           </button>

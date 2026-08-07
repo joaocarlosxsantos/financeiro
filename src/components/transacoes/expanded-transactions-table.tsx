@@ -372,7 +372,7 @@ export function ExpandedTransactionsTable({
 
   if (loading) {
     return (
-      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-8 text-muted-foreground">
         Carregando transações...
       </div>
     );
@@ -380,13 +380,13 @@ export function ExpandedTransactionsTable({
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-600 dark:text-red-400">{error}</div>
+      <div className="text-center py-8 text-destructive">{error}</div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-8 text-muted-foreground">
         Nenhuma transação encontrada
       </div>
     );
@@ -425,12 +425,12 @@ export function ExpandedTransactionsTable({
         />
       )}
       
-      <div ref={tableRef} className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700" style={{ maxHeight: '500px' }}>
+      <div ref={tableRef} className="overflow-x-auto overflow-y-auto rounded-lg border border-border" style={{ maxHeight: '500px' }}>
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10">
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <tr className="border-b border-border bg-muted/50">
               <th 
-                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                 onClick={() => handleSort('date')}
               >
                 <div className="flex items-center">
@@ -439,7 +439,7 @@ export function ExpandedTransactionsTable({
                 </div>
               </th>
               <th 
-                className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                className="text-center py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                 onClick={() => handleSort('recurring')}
               >
                 <div className="flex items-center justify-center">
@@ -448,7 +448,7 @@ export function ExpandedTransactionsTable({
                 </div>
               </th>
               <th 
-                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                 onClick={() => handleSort('description')}
               >
                 <div className="flex items-center">
@@ -457,7 +457,7 @@ export function ExpandedTransactionsTable({
                 </div>
               </th>
               <th 
-                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                 onClick={() => handleSort('category')}
               >
                 <div className="flex items-center">
@@ -466,7 +466,7 @@ export function ExpandedTransactionsTable({
                 </div>
               </th>
               <th 
-                className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                 onClick={() => handleSort('wallet')}
               >
                 <div className="flex items-center">
@@ -475,7 +475,7 @@ export function ExpandedTransactionsTable({
                 </div>
               </th>
               <th 
-                className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                className="text-right py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                 onClick={() => handleSort('amount')}
               >
                 <div className="flex items-center justify-end">
@@ -483,37 +483,37 @@ export function ExpandedTransactionsTable({
                   <SortIcon column="amount" />
                 </div>
               </th>
-              <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tags</th>
-              <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Ações</th>
+              <th className="text-left py-4 px-4 font-semibold text-foreground">Tags</th>
+              <th className="text-center py-4 px-4 font-semibold text-foreground">Ações</th>
             </tr>
           </thead>
           <tbody>
             {sortedData.map((transaction) => (
               <tr
                 key={transaction.id}
-                className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                className="border-b border-border hover:bg-accent/50 transition-colors"
               >
-                <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">
+                <td className="py-3 px-4 text-foreground font-medium">
                   {formatDate(transaction.date)}
                 </td>
                 <td className="py-3 px-4 text-center">
                   {transaction.type === 'RECURRING' || transaction.isRecurringExpanded ? (
                     <div className="flex items-center justify-center" title="Transação Recorrente">
-                      <span className="inline-block w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                      <span className="inline-block w-3 h-3 bg-primary rounded-full"></span>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                    <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     {transaction.isRecurringExpanded && (
                       <span
-                        className="inline-block w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full flex-shrink-0"
+                        className="inline-block w-2 h-2 bg-primary rounded-full flex-shrink-0"
                         title="Transação recorrente expandida (simulada para este mês)"
                       ></span>
                     )}
-                    <span className="text-gray-900 dark:text-gray-100">
+                    <span className="text-foreground">
                       {transaction.description}
                     </span>
                   </div>
@@ -523,20 +523,20 @@ export function ExpandedTransactionsTable({
                     {transaction.category && (
                       <>
                         <div
-                          className="w-3 h-3 rounded flex-shrink-0 border border-gray-300 dark:border-gray-600"
+                          className="w-3 h-3 rounded flex-shrink-0 border border-border"
                           style={{ backgroundColor: getCategoryColor(transaction.category) }}
                         ></div>
-                        <span className="text-gray-900 dark:text-gray-100">
+                        <span className="text-foreground">
                           {transaction.category.name}
                         </span>
                       </>
                     )}
                   </div>
                 </td>
-                <td className="py-3 px-4 text-gray-900 dark:text-gray-100 text-sm font-medium">
+                <td className="py-3 px-4 text-foreground text-sm font-medium">
                   {transaction.wallet.name}
                 </td>
-                <td className="py-3 px-4 text-right font-semibold text-gray-900 dark:text-gray-100">
+                <td className="py-3 px-4 text-right font-semibold text-foreground">
                   {formatAmount(transaction.amount)}
                 </td>
                 <td className="py-3 px-4">
@@ -545,20 +545,20 @@ export function ExpandedTransactionsTable({
                       {transaction.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded font-medium"
+                          className="px-2 py-1 bg-muted text-foreground/90 text-xs rounded font-medium"
                         >
                           {tag}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <span className="text-gray-400 dark:text-gray-500">—</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </td>
                 <td className="py-3 px-4 text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 p-0">
                         <MoreVertical className="h-4 w-4" />
                         <span className="sr-only">Ações</span>
                       </Button>
@@ -567,7 +567,7 @@ export function ExpandedTransactionsTable({
                       <DropdownMenuItem onClick={() => handleEdit(transaction)}>
                         <Pencil className="mr-2 h-4 w-4" /> Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(transaction)} className="text-red-600 focus:text-red-700">
+                      <DropdownMenuItem onClick={() => handleDelete(transaction)} className="text-destructive focus:text-destructive">
                         <Trash className="mr-2 h-4 w-4" /> Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -580,12 +580,12 @@ export function ExpandedTransactionsTable({
       </div>
 
       {/* Resumo */}
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-        <div className="text-sm text-gray-700 dark:text-gray-300">
-          <strong className="text-gray-900 dark:text-gray-100">
+      <div className="bg-muted/50 rounded-lg p-4 border border-border">
+        <div className="text-sm text-foreground/90">
+          <strong className="text-foreground">
             Total ({sortedData.length} transações):
           </strong>{' '}
-          <span className="font-bold text-gray-900 dark:text-gray-100">
+          <span className="font-bold text-foreground">
             {formatAmount(sortedData.reduce((sum, t) => sum + Number(t.amount), 0).toString())}
           </span>
         </div>

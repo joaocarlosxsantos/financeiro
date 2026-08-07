@@ -402,7 +402,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+      <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-md">
         <p><strong>Erro:</strong> {error}</p>
         <Button 
           variant="outline" 
@@ -507,30 +507,30 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                   <div className="flex flex-col items-end gap-1">
                     <span className={`font-semibold ${
                       (expense as any).isIncome || expense.type === 'INCOME' 
-                        ? 'text-green-600' 
-                        : expense.type === 'REFUND' 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
+                        ? 'text-success'
+                        : expense.type === 'REFUND'
+                        ? 'text-success'
+                        : 'text-destructive'
                     }`}>
                       {formatCurrency(expense.amount)}
                     </span>
                     <div className="flex gap-1">
                       {((expense as any).isIncome || expense.type === 'INCOME') && (
-                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                        <Badge variant="outline" className="text-xs text-success border-success">
                           CRÉDITO
                         </Badge>
                       )}
                       {expense.type === 'REFUND' && (
-                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                        <Badge variant="outline" className="text-xs text-success border-success">
                           ESTORNO
                         </Badge>
                       )}
-                      {expense.tags?.some(tag => 
-                        typeof tag === 'string' 
-                          ? tag.includes('refunded') 
+                      {expense.tags?.some(tag =>
+                        typeof tag === 'string'
+                          ? tag.includes('refunded')
                           : false
                       ) && expense.type !== 'REFUND' && (
-                        <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
+                        <Badge variant="outline" className="text-xs text-amber-600 dark:text-amber-400 border-amber-600 dark:border-amber-400">
                           ESTORNADO
                         </Badge>
                       )}
@@ -644,7 +644,7 @@ export default function CreditExpensesList({ onEdit, currentDate }: CreditExpens
                       variant="ghost" 
                       onClick={() => handleDelete(expense)}
                       title="Excluir gasto"
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-6 w-6" />
                     </Button>

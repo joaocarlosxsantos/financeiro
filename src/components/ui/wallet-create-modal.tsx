@@ -62,7 +62,7 @@ export function WalletCreateModal({ open, onClose, onCreated, initial }: WalletC
         <div>
           <Label htmlFor="wallet-name">Nome</Label>
           <Input id="wallet-name" value={name} onChange={(e) => setName(e.target.value)} />
-          {error && <span className="text-red-600 text-xs">{error}</span>}
+          {error && <span className="text-destructive text-xs">{error}</span>}
         </div>
         <div>
           <Label htmlFor="wallet-type">Tipo</Label>

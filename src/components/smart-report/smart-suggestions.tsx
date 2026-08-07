@@ -236,7 +236,7 @@ export function SmartSuggestions({ financialData, insights }: SmartSuggestionsPr
           <Lightbulb className="h-5 w-5" />
           Sugestões Personalizadas
         </CardTitle>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Recomendações baseadas na sua situação financeira atual
         </p>
       </CardHeader>
@@ -251,13 +251,13 @@ export function SmartSuggestions({ financialData, insights }: SmartSuggestionsPr
                   </div>
                   <div>
                     <h4 className="font-semibold text-base mb-1">{suggestion.title}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm text-muted-foreground mb-2">
                       {suggestion.description}
                     </p>
                     {suggestion.potentialSaving && (
                       <div className="flex items-center gap-2 text-sm">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        <span className="font-medium text-green-600 dark:text-green-400">
+                        <DollarSign className="h-4 w-4 text-success" />
+                        <span className="font-medium text-success">
                           Economia potencial: {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: 'BRL'
@@ -277,12 +277,12 @@ export function SmartSuggestions({ financialData, insights }: SmartSuggestionsPr
                 </div>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+              <div className="bg-muted/50 rounded-lg p-3">
                 <h5 className="font-medium text-sm mb-2 flex items-center gap-1">
                   <ArrowRight className="h-4 w-4" />
                   Passos recomendados:
                 </h5>
-                <ol className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                <ol className="space-y-1 text-sm text-muted-foreground">
                   {suggestion.actionSteps.map((step, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
@@ -297,7 +297,7 @@ export function SmartSuggestions({ financialData, insights }: SmartSuggestionsPr
           ))}
 
           {suggestions.length === 0 && (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-muted-foreground">
               <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Sua situação financeira está muito bem equilibrada!</p>
               <p className="text-sm mt-2">Continue mantendo seus bons hábitos financeiros.</p>

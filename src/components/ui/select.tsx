@@ -11,7 +11,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         ref={ref}
         className={cn(
           // quando múltiplo, permitir altura maior e overflow auto; caso contrário, altura fixa
-          'flex w-full rounded-md border shadow-sm outline-none border-white/30 dark:border-white/10 bg-white/85 dark:bg-slate-800/80 backdrop-blur-sm px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary/60 dark:focus:ring-primary/70 focus:border-primary/60 dark:focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-50 transition-colors',
+          'flex w-full rounded-md border border-input bg-background outline-none px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 transition-colors',
           isMultiple ? 'min-h-[96px] h-auto overflow-auto' : 'h-10',
           className,
         )}

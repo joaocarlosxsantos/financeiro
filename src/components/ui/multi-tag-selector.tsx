@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Search, Tag as TagIcon, Check } from 'lucide-react';
+import { X, Plus, Search, Tag as TagIcon } from 'lucide-react';
 
 interface Tag {
   id: string;
@@ -18,7 +18,6 @@ interface MultiTagSelectorProps {
   className?: string;
   disabled?: boolean;
   onCreateTag?: (tagName: string) => Promise<Tag | null>;
-  suggestedTags?: string[]; // Tags sugeridas pela IA
 }
 
 export function MultiTagSelector({
@@ -30,7 +29,6 @@ export function MultiTagSelector({
   className = "",
   disabled = false,
   onCreateTag,
-  suggestedTags = []
 }: MultiTagSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,25 +56,6 @@ export function MultiTagSelector({
     }
   }, [searchTerm, tags, selectedTags]);
 
-  // Filtra sugestões da IA que ainda não foram selecionadas e não existem nas tags
-  const filteredSuggestedTags = suggestedTags.filter(suggestedTag => {
-    // Verifica se já foi selecionada como tag normal
-    const isAlreadySelected = selectedTags.some(tagId => {
-      const tag = tags.find(t => t.id === tagId);
-      return tag && tag.name.toLowerCase() === suggestedTag.toLowerCase();
-    });
-    
-    // Verifica se já foi selecionada como tag sugerida
-    const isAlreadySuggested = selectedTags.includes(`suggested:${suggestedTag}`);
-    
-    // Verifica se já existe nas tags disponíveis
-    const existsInTags = tags.some(tag => tag.name.toLowerCase() === suggestedTag.toLowerCase());
-    
-    const matchesSearch = !searchTerm.trim() || suggestedTag.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return !isAlreadySelected && !isAlreadySuggested && !existsInTags && matchesSearch;
-  });
-
   // Fecha dropdown quando clica fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -95,18 +74,6 @@ export function MultiTagSelector({
     if (selectedTags.length >= maxTags) return;
     if (!selectedTags.includes(tagId)) {
       onTagsChange([...selectedTags, tagId]);
-    }
-    setSearchTerm('');
-    inputRef.current?.focus();
-  };
-
-  // Adiciona tag sugerida (temporária)
-  const addSuggestedTag = (suggestedTagName: string) => {
-    if (selectedTags.length >= maxTags) return;
-    // Usa o nome da tag como ID temporário para tags sugeridas
-    const tempId = `suggested:${suggestedTagName}`;
-    if (!selectedTags.includes(tempId)) {
-      onTagsChange([...selectedTags, tempId]);
     }
     setSearchTerm('');
     inputRef.current?.focus();
@@ -146,10 +113,6 @@ export function MultiTagSelector({
 
   // Obtém o nome da tag pelo ID
   const getTagName = (tagId: string) => {
-    // Se é uma tag sugerida
-    if (tagId.startsWith('suggested:')) {
-      return tagId.replace('suggested:', '');
-    }
     const tag = tags.find(t => t.id === tagId);
     return tag?.name || tagId;
   };
@@ -180,37 +143,25 @@ export function MultiTagSelector({
       {/* Tags Selecionadas */}
       <div className="min-h-[42px] border border-input rounded-md p-2 bg-background focus-within:border-ring focus-within:ring-1 focus-within:ring-ring transition-colors">
         <div className="flex flex-wrap gap-1 items-center">
-          {selectedTags.map(tagId => {
-            const isSuggested = tagId.startsWith('suggested:');
-            return (
-              <Badge
-                key={tagId}
-                variant="secondary"
-                className={`flex items-center gap-1 transition-colors ${
-                  isSuggested 
-                    ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800"
-                    : "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20 dark:text-primary-foreground dark:hover:bg-primary/30 border border-primary/20"
-                }`}
-              >
-                <TagIcon className="w-3 h-3" />
-                {getTagName(tagId)}
-                {isSuggested && <span className="text-xs">🤖</span>}
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tagId)}
-                    className={`ml-1 rounded-full p-0.5 transition-colors ${
-                      isSuggested
-                        ? "hover:bg-blue-300 dark:hover:bg-blue-800"
-                        : "hover:bg-primary/30 dark:hover:bg-primary/40"
-                    }`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </Badge>
-            );
-          })}
+          {selectedTags.map(tagId => (
+            <Badge
+              key={tagId}
+              variant="secondary"
+              className="flex items-center gap-1 transition-colors bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20 dark:text-primary-foreground dark:hover:bg-primary/30 border border-primary/20"
+            >
+              <TagIcon className="w-3 h-3" />
+              {getTagName(tagId)}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removeTag(tagId)}
+                  className="ml-1 rounded-full p-0.5 transition-colors hover:bg-primary/30 dark:hover:bg-primary/40"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
           
           {/* Input de busca */}
           <input
@@ -255,33 +206,6 @@ export function MultiTagSelector({
             </button>
           )}
 
-          {/* Tags sugeridas pela IA */}
-          {filteredSuggestedTags.length > 0 && (
-            <div className="border-b border-border">
-              <div className="px-3 py-1 text-xs font-medium text-muted-foreground bg-muted/50">
-                🤖 Sugestões da IA
-              </div>
-              {filteredSuggestedTags.map(suggestedTag => (
-                <div
-                  key={`suggested-${suggestedTag}`}
-                  className="w-full px-3 py-2 flex items-center gap-2 text-popover-foreground border-l-2 border-l-blue-500 hover:bg-accent/50 transition-colors"
-                >
-                  <TagIcon className="w-4 h-4 text-blue-500" />
-                  <span className="flex-1">{suggestedTag}</span>
-                  <span className="text-xs text-muted-foreground">(sugestão IA)</span>
-                  <button
-                    type="button"
-                    onClick={() => addSuggestedTag(suggestedTag)}
-                    className="ml-3 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 transition-all duration-150 font-semibold shadow-sm hover:shadow-md border border-blue-700 hover:border-blue-800 flex items-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4" />
-                    Aplicar
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
           {/* Tags disponíveis */}
           {filteredTags.length > 0 ? (
             <div className="max-h-40 overflow-auto">
@@ -297,15 +221,15 @@ export function MultiTagSelector({
                 </button>
               ))}
             </div>
-          ) : searchTerm && !canCreateTag && filteredSuggestedTags.length === 0 ? (
+          ) : searchTerm && !canCreateTag ? (
             <div className="px-3 py-2 text-sm text-muted-foreground text-center">
               Nenhuma tag encontrada
             </div>
-          ) : !searchTerm && filteredTags.length === 0 && filteredSuggestedTags.length === 0 && selectedTags.length < tags.length ? (
+          ) : !searchTerm && filteredTags.length === 0 && selectedTags.length < tags.length ? (
             <div className="px-3 py-2 text-sm text-muted-foreground text-center">
               Todas as tags já foram selecionadas
             </div>
-          ) : filteredTags.length === 0 && filteredSuggestedTags.length === 0 && !searchTerm ? (
+          ) : filteredTags.length === 0 && !searchTerm ? (
             <div className="px-3 py-2 text-sm text-muted-foreground text-center">
               Nenhuma tag disponível
             </div>

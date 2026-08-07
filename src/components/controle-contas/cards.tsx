@@ -125,7 +125,7 @@ function BillCardComp({ name, value, onClick, children, shares, members }: { nam
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-lg md:text-2xl text-emerald-900 dark:text-emerald-200 line-clamp-1">{name}</div>
-          <div className={`mt-0.5 text-sm md:text-lg ${value < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300'}`}>
+          <div className={`mt-0.5 text-sm md:text-lg ${value < 0 ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-300'}`}>
             R$ {value < 0 ? `-${Math.abs(value).toFixed(2)}` : value.toFixed(2)}
           </div>
         </div>

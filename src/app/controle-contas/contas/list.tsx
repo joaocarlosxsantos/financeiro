@@ -39,12 +39,12 @@ export default function ContasListPage() {
         {data && data.length > 0 && (
           <ul className="space-y-2">
             {data.map((b) => (
-              <li key={b.id} className="flex items-center justify-between rounded-lg border border-white/6 p-3">
+              <li key={b.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <p className="font-medium">{b.title ?? b.name}</p>
                   <p className="text-sm text-muted-foreground">{b.description}</p>
                 </div>
-                <div className="text-sm text-white/60">{Number(b.amount).toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">{Number(b.amount).toFixed(2)}</div>
               </li>
             ))}
           </ul>

@@ -127,13 +127,13 @@ export default function QuickTransferForm({ onSuccess }: QuickTransferFormProps)
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 rounded text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-3 py-2 rounded text-sm">
+        <div className="bg-success/10 border border-success/30 text-success px-3 py-2 rounded text-sm">
           {success}
         </div>
       )}
@@ -182,7 +182,7 @@ export default function QuickTransferForm({ onSuccess }: QuickTransferFormProps)
         <Label htmlFor="quick-from-wallet" className="text-sm">De *</Label>
         <select
           id="quick-from-wallet"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-9 text-sm"
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring h-9 text-sm"
           value={fromWalletId}
           onChange={(e) => setFromWalletId(e.target.value)}
           required
@@ -200,7 +200,7 @@ export default function QuickTransferForm({ onSuccess }: QuickTransferFormProps)
         <Label htmlFor="quick-to-wallet" className="text-sm">Para *</Label>
         <select
           id="quick-to-wallet"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-9 text-sm"
+          className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring h-9 text-sm"
           value={toWalletId}
           onChange={(e) => setToWalletId(e.target.value)}
           required
@@ -215,15 +215,15 @@ export default function QuickTransferForm({ onSuccess }: QuickTransferFormProps)
       </div>
 
       {fromWallet && toWallet && (
-        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+        <div className="bg-muted/50 p-3 rounded-lg">
           <div className="flex items-center justify-center gap-2 text-sm">
             <span className="font-medium">{fromWallet.name}</span>
-            <ArrowRight className="h-4 w-4 text-gray-400" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium">{toWallet.name}</span>
           </div>
           {amount && (
             <div className="text-center mt-1">
-              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-lg font-bold text-primary">
                 R$ {parseFloat(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>

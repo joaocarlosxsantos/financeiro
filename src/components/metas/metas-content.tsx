@@ -132,8 +132,8 @@ export function MetasContent({ onCreated }: MetasContentProps) {
       return (
         <Card>
           <CardContent className="p-12 text-center">
-            <Target className="h-12 w-12 text-gray-300 dark:text-foreground mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-foreground">
+            <Target className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+            <p className="text-muted-foreground">
               {activeTab === 'todas' ? 'Nenhuma meta cadastrada' : `Nenhuma meta ${activeTab}`}
             </p>
             <Button className="mt-4" onClick={() => {
@@ -183,13 +183,13 @@ export function MetasContent({ onCreated }: MetasContentProps) {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="h-10 px-4 min-w-[160px] justify-between border border-slate-300/70 bg-white/90 hover:bg-white text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100 dark:hover:bg-slate-800/80"
+                className="h-10 px-4 min-w-[150px] sm:min-w-[160px] justify-between"
               >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="capitalize">{monthLabel} {year}</span>
                 </div>
-                <ChevronDown className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4" align="start">
@@ -252,10 +252,10 @@ export function MetasContent({ onCreated }: MetasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Metas</CardTitle>
-            <Target className="h-4 w-4 text-blue-600" />
+            <Target className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totalGoals}</div>
+            <div className="text-2xl font-bold text-primary">{totalGoals}</div>
             <p className="text-xs text-muted-foreground">Metas cadastradas</p>
           </CardContent>
         </Card>
@@ -263,10 +263,10 @@ export function MetasContent({ onCreated }: MetasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{completedGoals}</div>
+            <div className="text-2xl font-bold text-success">{completedGoals}</div>
             <p className="text-xs text-muted-foreground">Metas finalizadas</p>
           </CardContent>
         </Card>
@@ -274,10 +274,10 @@ export function MetasContent({ onCreated }: MetasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-600" />
+            <TrendingUp className="h-4 w-4 text-chart-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{activeGoals}</div>
+            <div className="text-2xl font-bold text-chart-4">{activeGoals}</div>
             <p className="text-xs text-muted-foreground">Metas ativas</p>
           </CardContent>
         </Card>
@@ -285,10 +285,10 @@ export function MetasContent({ onCreated }: MetasContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Atrasadas</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{overdueGoals}</div>
+            <div className="text-2xl font-bold text-destructive">{overdueGoals}</div>
             <p className="text-xs text-muted-foreground">Prazo vencido</p>
           </CardContent>
         </Card>
@@ -352,7 +352,7 @@ export function MetasContent({ onCreated }: MetasContentProps) {
       {/* Estados de Loading e Erro */}
       {isLoading && <Loader text="Carregando metas..." />}
       {error && (
-        <div className="text-red-500 text-center">
+        <div className="text-destructive text-center">
           {error}
           <Button className="ml-2" size="sm" onClick={fetchGoals}>
             Tentar novamente

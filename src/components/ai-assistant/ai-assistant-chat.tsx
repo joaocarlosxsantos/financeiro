@@ -142,9 +142,9 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:p-6 pointer-events-none">
-      <div className="pointer-events-auto w-full max-w-md h-[600px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800">
+      <div className="pointer-events-auto w-full max-w-md h-[600px] bg-card rounded-2xl shadow-2xl dark:shadow-none dark:ring-1 dark:ring-white/[0.04] flex flex-col border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-purple-600 to-blue-600 rounded-t-2xl">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-purple-600 to-blue-600 rounded-t-2xl">
           <div className="flex items-center gap-2 text-white">
             <Sparkles className="h-5 w-5" />
             <h2 className="font-semibold">Consultor Financeiro IA</h2>
@@ -170,7 +170,7 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
                 className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                   message.role === 'user'
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                    : 'bg-muted text-foreground'
                 }`}
               >
                 <div className="text-sm whitespace-pre-wrap">{message.content}</div>
@@ -180,11 +180,11 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
+              <div className="bg-muted rounded-2xl px-4 py-2">
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                 </div>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
 
         {/* Insights */}
         {insights.length > 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-800 p-3 max-h-32 overflow-y-auto">
+          <div className="border-t border-border p-3 max-h-32 overflow-y-auto">
             <div className="space-y-2">
               {insights.slice(0, 2).map((insight, idx) => (
                 <div
@@ -215,15 +215,15 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
 
         {/* Suggestions */}
         {suggestions.length > 0 && messages.length <= 2 && (
-          <div className="border-t border-gray-200 dark:border-gray-800 p-3">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Sugestões:</div>
+          <div className="border-t border-border p-3">
+            <div className="text-xs text-muted-foreground mb-2">Sugestões:</div>
             <div className="flex flex-wrap gap-2">
               {suggestions.map((suggestion, idx) => (
                 <button
                   key={idx}
                   onClick={() => sendMessage(suggestion)}
                   disabled={loading}
-                  className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
+                  className="text-xs px-3 py-1.5 bg-muted hover:bg-accent rounded-full transition-colors disabled:opacity-50"
                 >
                   {suggestion}
                 </button>
@@ -233,7 +233,7 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
         )}
 
         {/* Input */}
-        <div className="border-t border-gray-200 dark:border-gray-800 p-4">
+        <div className="border-t border-border p-4">
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -243,7 +243,7 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
               onKeyPress={handleKeyPress}
               placeholder="Digite sua pergunta..."
               disabled={loading}
-              className="flex-1 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-600 disabled:opacity-50"
+              className="flex-1 px-4 py-2 rounded-xl border border-input bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             />
             <Button
               onClick={() => sendMessage()}

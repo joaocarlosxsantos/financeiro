@@ -220,7 +220,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Valor Total:</span>
-              <span className="text-sm font-semibold text-red-600">
+              <span className="text-sm font-semibold text-destructive">
                 {formatCurrency(expense.amount)}
               </span>
             </div>
@@ -254,13 +254,13 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
           <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Parcelas Pagas:</span>
-              <span className="text-sm font-medium text-green-600">
+              <span className="text-sm font-medium text-success">
                 {refundAnalysis.paidInstallments} ({formatCurrency(refundAnalysis.paidAmount)})
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Parcelas Pendentes:</span>
-              <span className="text-sm font-medium text-yellow-600">
+              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
                 {refundAnalysis.pendingInstallments} ({formatCurrency(refundAnalysis.pendingAmount)})
               </span>
             </div>
@@ -281,7 +281,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                 checked={refundType === 'FULL'}
                 onChange={(e) => setRefundType(e.target.value as 'FULL')}
                 disabled={!refundAnalysis.canFullRefund}
-                className="h-4 w-4"
+                className="h-4 w-4 accent-primary cursor-pointer"
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                   Estorna todo o valor da compra ({formatCurrency(refundAnalysis.totalAmount)})
                 </p>
                 {!refundAnalysis.canFullRefund && (
-                  <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
+                  <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                     <AlertTriangle className="h-3 w-3" />
                     Não disponível - algumas parcelas já foram pagas
                   </p>
@@ -309,7 +309,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                 value="PARTIAL"
                 checked={refundType === 'PARTIAL'}
                 onChange={(e) => setRefundType(e.target.value as 'PARTIAL')}
-                className="h-4 w-4"
+                className="h-4 w-4 accent-primary cursor-pointer"
               />
               <div className="flex-1">
                 <span className="font-medium">Estorno Parcial</span>
@@ -329,10 +329,10 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                   placeholder="0,00"
                   value={partialAmount}
                   onChange={(e) => setPartialAmount(e.target.value)}
-                  className={errors.partialAmount ? 'border-red-500' : ''}
+                  className={errors.partialAmount ? 'border-destructive' : ''}
                 />
                 {errors.partialAmount && (
-                  <p className="text-red-500 text-xs">{errors.partialAmount}</p>
+                  <p className="text-destructive text-xs">{errors.partialAmount}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   Máximo: {formatCurrency(refundAnalysis.maxPartialRefund)}
@@ -351,7 +351,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                   value="INSTALLMENT"
                   checked={refundType === 'INSTALLMENT'}
                   onChange={(e) => setRefundType(e.target.value as 'INSTALLMENT')}
-                  className="h-4 w-4"
+                  className="h-4 w-4 accent-primary cursor-pointer"
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -392,7 +392,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                                 setSelectedInstallments(selectedInstallments.filter(n => n !== item.installmentNumber));
                               }
                             }}
-                            className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                            className="h-5 w-5 accent-primary text-primary rounded focus:ring-2 focus:ring-primary"
                           />
                           <div className="flex-1 grid grid-cols-3 gap-4 items-center">
                             <div>
@@ -421,8 +421,8 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                                 variant={isPaid ? 'default' : 'secondary'}
                                 className={`text-xs font-medium ${
                                   isPaid 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
-                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                                    ? 'bg-success/15 text-success' 
+                                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                                 }`}
                               >
                                 {isPaid ? '✓ Paga' : '⏳ Pendente'}
@@ -434,7 +434,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
                     })}
                   </div>
                   {errors.installments && (
-                    <p className="text-red-500 text-xs">{errors.installments}</p>
+                    <p className="text-destructive text-xs">{errors.installments}</p>
                   )}
                   {selectedInstallments.length > 0 && (
                     <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
@@ -469,10 +469,10 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
         </div>
 
         {/* Informações do que acontecerá */}
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-4">
-            <h4 className="font-medium text-blue-900 mb-2">O que acontecerá:</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
+            <h4 className="font-medium text-primary mb-2">O que acontecerá:</h4>
+            <ul className="text-sm text-foreground/90 space-y-1">
               {refundType === 'FULL' ? (
                 <>
                   <li>• Uma transação de estorno será criada</li>
@@ -499,7 +499,7 @@ export default function RefundDialog({ expense, open, onClose, onSuccess }: Refu
 
         {/* Erro geral */}
         {errors.general && (
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+          <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-md">
             <p><strong>Erro:</strong> {errors.general}</p>
           </div>
         )}

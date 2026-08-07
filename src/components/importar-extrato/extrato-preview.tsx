@@ -510,7 +510,7 @@ export function ExtratoPreview({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">Pré-visualização dos dados</h2>
-        <Badge className="bg-blue-100 text-blue-800">
+        <Badge className="bg-primary/15 text-primary">
           <Sparkles className="w-4 h-4 mr-1" />
           IA Ativada
         </Badge>
@@ -540,7 +540,7 @@ export function ExtratoPreview({
                     size="sm"
                     variant="ghost"
                     onClick={handleNormalizeAllDescriptions}
-                    className="h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors border border-purple-200 hover:border-purple-300"
+                    className="h-8 px-3 text-xs text-chart-5 hover:bg-chart-5/10 hover:text-chart-5 transition-colors border border-chart-5/30 hover:border-chart-5/50"
                     title="Simplificar todas as descrições automaticamente"
                   >
                     <Wand2 className="w-3 h-3 mr-1" />

@@ -255,7 +255,7 @@ export default function QuickRendaForm() {
         <div className="md:col-span-2">
           <Label htmlFor="description">Descrição</Label>
           <Input id="description" placeholder="Ex: Salário, Freelance, Vendas..." value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
-          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+          {errors.description && <p className="text-destructive text-xs mt-1">{errors.description}</p>}
           
           {/* Sugestões Inteligentes */}
           {smartSuggestions.suggestions && (
@@ -290,16 +290,16 @@ export default function QuickRendaForm() {
         <div>
           <Label htmlFor="amount">Valor</Label>
           <Input id="amount" type="number" step="0.01" ref={amountRef} value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(e as any); }} />
-          {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+          {errors.amount && <p className="text-destructive text-xs mt-1">{errors.amount}</p>}
         </div>
         <div>
           <Label htmlFor="date">Data</Label>
           <Input id="date" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-          {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
+          {errors.date && <p className="text-destructive text-xs mt-1">{errors.date}</p>}
         </div>
         <div>
           <Label htmlFor="category">Categoria</Label>
-          <select id="category" ref={categorySelectRef} onKeyDown={handleCategoryKeyDown} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.categoryId} onChange={(e) => { 
+          <select id="category" ref={categorySelectRef} onKeyDown={handleCategoryKeyDown} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors" value={form.categoryId} onChange={(e) => { 
             if (e.target.value === '__create__') {
               // Criar categoria 
             } else {
@@ -316,7 +316,7 @@ export default function QuickRendaForm() {
             <option value="">Sem categoria</option>
             {/* Sugestão da IA como opção especial */}
             {smartSuggestions.suggestions?.category?.isNew && (
-              <option value={`suggested:${smartSuggestions.suggestions.category.name}`} className="text-green-600 bg-green-50 font-medium">
+              <option value={`suggested:${smartSuggestions.suggestions.category.name}`} className="text-success bg-success/10 font-medium">
                 🤖 {smartSuggestions.suggestions.category.name} (sugestão IA)
               </option>
             )}
@@ -328,7 +328,7 @@ export default function QuickRendaForm() {
           <Label htmlFor="paymentType">Tipo de Pagamento</Label>
           <select 
             id="paymentType" 
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors" 
             value={form.paymentType} 
             onChange={(e) => setForm((f) => ({ 
               ...f, 
@@ -349,24 +349,24 @@ export default function QuickRendaForm() {
             <Label htmlFor="creditCard">Cartão de Crédito</Label>
             <select 
               id="creditCard" 
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors" 
               value={form.creditCardId} 
               onChange={(e) => setForm((f) => ({ ...f, creditCardId: e.target.value }))}
             >
               <option value="">Selecione</option>
               {creditCards.map((cc) => (<option key={cc.id} value={cc.id}>{cc.name}</option>))}
             </select>
-            {errors.creditCardId && <p className="text-red-500 text-xs mt-1">{errors.creditCardId}</p>}
+            {errors.creditCardId && <p className="text-destructive text-xs mt-1">{errors.creditCardId}</p>}
           </div>
         ) : (
           <div>
             <Label htmlFor="wallet">Carteira</Label>
-            <select id="wallet" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.walletId} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, walletId: e.target.value })); }}>
+            <select id="wallet" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors" value={form.walletId} onChange={(e) => { if (e.target.value === '__create__') {} else setForm((f) => ({ ...f, walletId: e.target.value })); }}>
               <option value="__create__">➕ Criar carteira</option>
               <option value="">Selecione</option>
               {wallets.map((w) => (<option key={w.id} value={w.id}>{w.name}</option>))}
             </select>
-            {errors.walletId && <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>}
+            {errors.walletId && <p className="text-destructive text-xs mt-1">{errors.walletId}</p>}
           </div>
         )}
         <div>
@@ -388,7 +388,6 @@ export default function QuickRendaForm() {
               setForm(f => ({ ...f, tags: newTags }));
             }}
             availableTags={tags}
-            suggestedTags={smartSuggestions.suggestions?.tags.map(tag => tag.name) || []}
             placeholder="Selecione ou crie tags..."
             maxTags={5}
             onCreateTag={async (tagName) => {
@@ -411,12 +410,12 @@ export default function QuickRendaForm() {
           />
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <input type="checkbox" id="isRecurring" checked={form.isRecurring} onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))} className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150" />
+          <input type="checkbox" id="isRecurring" checked={form.isRecurring} onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))} className="h-5 w-5 rounded border border-input bg-background accent-primary text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150" />
           <Label htmlFor="isRecurring" className="ml-1 select-none cursor-pointer text-sm">Receita Recorrente?</Label>
         </div>
       </div>
 
-  {showToast && <div className="text-sm text-green-600 mb-2">Ganho cadastrado</div>}
+  {showToast && <div className="text-sm text-success mb-2">Ganho cadastrado</div>}
 
       <div className="flex justify-end gap-2 mt-4">
         <Button type="submit">Cadastrar</Button>

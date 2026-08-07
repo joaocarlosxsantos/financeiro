@@ -55,10 +55,10 @@ export function MemberForm({ open, onClose, initial, groups, onSuccess }: { open
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" />
   {/* email removed */}
         <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" />
-        <select className="w-full rounded-md bg-input p-2" value={String(groupId)} onChange={(e) => setGroupId(Number(e.target.value))}>
+        <select className="w-full rounded-md border border-input bg-background text-foreground p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors" value={String(groupId)} onChange={(e) => setGroupId(Number(e.target.value))}>
           {groups?.map((g) => (<option key={g.id} value={g.id}>{g.name}</option>))}
         </select>
-  {error && <div className="text-sm text-red-600">{error}</div>}
+  {error && <div className="text-sm text-destructive">{error}</div>}
   <div className="flex justify-end"><Button type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button></div>
       </form>
     </Modal>

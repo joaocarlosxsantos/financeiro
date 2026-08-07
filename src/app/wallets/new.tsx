@@ -59,7 +59,7 @@ export default function NovaCarteiraPage() {
             <div>
               <label className="block mb-1">Tipo</label>
               <select
-                className="w-full border rounded p-2"
+                className="w-full rounded-md border border-input bg-background text-foreground p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                 value={form.type}
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                 required

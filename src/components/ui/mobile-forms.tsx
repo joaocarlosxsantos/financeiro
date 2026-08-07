@@ -407,7 +407,7 @@ export const MobileCheckbox = memo(forwardRef<HTMLInputElement, MobileCheckboxPr
           ref={ref}
           type="checkbox"
           className={cn(
-            "mt-1 h-4 w-4 text-primary focus:ring-ring border-input rounded",
+            "mt-1 h-4 w-4 accent-primary text-primary focus:ring-2 focus:ring-ring border-input rounded",
             isMobile && [
               "h-5 w-5", // Maior no mobile
               "mt-0.5"

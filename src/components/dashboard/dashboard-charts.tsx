@@ -179,7 +179,7 @@ export function DashboardCharts({
             ) : chartsLoaded && summary.dailyBalanceData.length > 0 ? (
               <DailyBalanceChart data={summary.dailyBalanceData} />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -201,7 +201,7 @@ export function DashboardCharts({
                 )} 
               />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -221,7 +221,7 @@ export function DashboardCharts({
             ) : summary.expensesByCategory.length > 0 ? (
               <ExpenseChart data={summary.expensesByCategory} maxItems={5} />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -238,7 +238,7 @@ export function DashboardCharts({
             ) : summary.incomesByCategory.length > 0 ? (
               <IncomeChart data={summary.incomesByCategory} maxItems={5} />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -258,7 +258,7 @@ export function DashboardCharts({
             ) : summary.monthlyData.length > 0 ? (
               <MonthlyBarChart data={summary.monthlyData} />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -275,7 +275,7 @@ export function DashboardCharts({
             ) : summary.topExpenseCategories.length > 0 ? (
               <TopExpenseCategoriesChart data={summary.topExpenseCategories} />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -300,7 +300,7 @@ export function DashboardCharts({
                 )}
               />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -320,7 +320,7 @@ export function DashboardCharts({
                 walletsMeta={wallets.map((w) => ({ name: w.name, type: w.type || 'cash' }))} 
               />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}
@@ -337,7 +337,7 @@ export function DashboardCharts({
             ) : chartsLoaded && dailyByTag.length > 0 ? (
               <DynamicDailyTagChart data={dailyByTag} tagNames={tagNames} />
             ) : (
-              <div className="text-sm text-gray-500 dark:text-foreground">
+              <div className="text-sm text-muted-foreground">
                 Sem dados para o período selecionado
               </div>
             )}

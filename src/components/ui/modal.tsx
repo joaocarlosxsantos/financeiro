@@ -105,7 +105,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 dark:bg-background/80 shadow border border-gray-200 dark:border-gray-700 text-xl font-bold text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all z-10"
+          className="absolute top-2 right-2 w-9 h-9 flex items-center justify-center rounded-full bg-background/80 shadow border border-border text-xl font-bold text-foreground/70 hover:bg-accent hover:text-destructive focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all z-10"
           onClick={onClose}
           aria-label="Fechar"
           type="button"

@@ -65,7 +65,7 @@ export function ChallengeCard({ challenge, onUpdate }: ChallengeCardProps) {
       case 'FAILED':
         return 'bg-red-500/10 text-red-500';
       case 'ABANDONED':
-        return 'bg-gray-500/10 text-gray-500';
+        return 'bg-muted text-muted-foreground';
       default:
         return 'bg-muted';
     }

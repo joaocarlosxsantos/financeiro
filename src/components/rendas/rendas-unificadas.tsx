@@ -464,7 +464,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   />
                   {errors.description && (
-                    <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.description}</p>
                   )}
                   
                   {/* Sugestões Inteligentes */}
@@ -505,7 +505,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     value={form.amount}
                     onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                   />
-                  {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+                  {errors.amount && <p className="text-destructive text-xs mt-1">{errors.amount}</p>}
                 </div>
                 <div>
                   <Label htmlFor="date">Data</Label>
@@ -515,13 +515,13 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     value={form.date}
                     onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
                   />
-                  {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
+                  {errors.date && <p className="text-destructive text-xs mt-1">{errors.date}</p>}
                 </div>
                 <div>
                   <Label htmlFor="category">Categoria</Label>
                   <select
                     id="category"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                     value={form.categoryId}
                     onChange={(e) => {
                       if (e.target.value === '__create__') {
@@ -541,7 +541,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     <option value="">Sem categoria</option>
                     {/* Sugestão da IA como opção especial */}
                     {smartSuggestions.suggestions?.category?.isNew && (
-                      <option value={`suggested:${smartSuggestions.suggestions.category.name}`} className="text-green-600 bg-green-50 font-medium">
+                      <option value={`suggested:${smartSuggestions.suggestions.category.name}`} className="text-success bg-success/10 font-medium">
                         🤖 {smartSuggestions.suggestions.category.name} (sugestão IA)
                       </option>
                     )}
@@ -558,7 +558,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                   <Label htmlFor="paymentType">Tipo de Pagamento</Label>
                   <select
                     id="paymentType"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                     value={form.paymentType}
                     onChange={(e) => setForm((f) => ({ 
                       ...f, 
@@ -579,7 +579,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     <Label htmlFor="creditCard">Cartão de Crédito</Label>
                     <select
                       id="creditCard"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                       value={form.creditCardId}
                       onChange={(e) => setForm((f) => ({ ...f, creditCardId: e.target.value }))}
                     >
@@ -591,7 +591,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                       ))}
                     </select>
                     {errors.creditCardId && (
-                      <p className="text-red-500 text-xs mt-1">{errors.creditCardId}</p>
+                      <p className="text-destructive text-xs mt-1">{errors.creditCardId}</p>
                     )}
                   </div>
                 ) : (
@@ -599,7 +599,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     <Label htmlFor="wallet">Carteira</Label>
                   <select
                     id="wallet"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors"
                     value={form.walletId}
                     onChange={(e) => {
                       if (e.target.value === '__create__') setShowWalletModal(true);
@@ -615,7 +615,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     ))}
                   </select>
                   {errors.walletId && (
-                    <p className="text-red-500 text-xs mt-1">{errors.walletId}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.walletId}</p>
                   )}
                   </div>
                 )}
@@ -638,7 +638,6 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                       setForm(f => ({ ...f, tags: newTags }));
                     }}
                     availableTags={tags}
-                    suggestedTags={smartSuggestions.suggestions?.tags.map(tag => tag.name) || []}
                     placeholder="Selecione ou crie tags..."
                     maxTags={5}
                     onCreateTag={async (tagName) => {
@@ -666,7 +665,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                     id="isRecurring"
                     checked={form.isRecurring}
                     onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))}
-                    className="h-5 w-5 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150"
+                    className="h-5 w-5 rounded border border-input bg-background accent-primary text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-150"
                   />
                   <Label htmlFor="isRecurring" className="ml-1 select-none cursor-pointer text-sm">
                     Receita Recorrente?
@@ -703,10 +702,10 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Ganhos
             </h1>
-            <p className="text-gray-600 dark:text-foreground">
+            <p className="text-muted-foreground">
               Gerencie todas as suas receitas (recorrentes e pontuais) do mês
             </p>
           </div>
@@ -763,7 +762,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                 {filteredRendas.map((renda) => (
                   <tr key={renda.id} className="border-b hover:bg-accent transition-colors">
                     <td className="px-3 py-2 max-w-xs truncate">{renda.description}</td>
-                    <td className="px-3 py-2 text-right text-green-600 font-semibold">
+                    <td className="px-3 py-2 text-right text-success font-semibold">
                       {formatCurrency(renda.amount)}
                     </td>
                     <td className="px-3 py-2 text-center">{renda.date ? formatDate(renda.date) : '-'}</td>
@@ -776,7 +775,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
                             return tag ? (
                               <span
                                 key={tid}
-                                className="inline-block px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                className="inline-block px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground"
                               >
                                 {tag.name}
                               </span>
@@ -831,7 +830,7 @@ export default function RendasUnificadas({ currentDate, defaultDate }: { current
         {filteredRendas.length === 0 && !showForm && (
           <Card>
             <CardContent className="p-12 text-center">
-              <p className="text-gray-500">Nenhum ganho cadastrado</p>
+              <p className="text-muted-foreground">Nenhum ganho cadastrado</p>
               <Button
                 className="mt-4"
                 onClick={() => {

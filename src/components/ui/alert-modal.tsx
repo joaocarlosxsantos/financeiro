@@ -23,9 +23,9 @@ export function AlertModal({
   const getIcon = () => {
     switch (type) {
       case 'error':
-        return <XCircle className="h-12 w-12 text-red-600 dark:text-red-400 mx-auto" />;
+        return <XCircle className="h-12 w-12 text-destructive mx-auto" />;
       case 'success':
-        return <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400 mx-auto" />;
+        return <CheckCircle className="h-12 w-12 text-success mx-auto" />;
       case 'warning':
         return <AlertCircle className="h-12 w-12 text-amber-600 dark:text-amber-400 mx-auto" />;
       case 'info':
@@ -55,7 +55,7 @@ export function AlertModal({
         <div className="py-4">
           {getIcon()}
         </div>
-        <div className="text-base text-center text-gray-700 dark:text-gray-300">
+        <div className="text-base text-center text-foreground/90">
           {message}
         </div>
         <div className="flex justify-center mt-6">

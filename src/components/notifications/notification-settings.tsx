@@ -146,14 +146,14 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <Settings className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-center w-10 h-10 bg-primary/15 rounded-lg">
+            <Settings className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl font-bold text-foreground">
               Configurações de Notificações
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Gerencie seus alertas financeiros personalizados
             </p>
           </div>
@@ -164,7 +164,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
             size="sm"
             onClick={openCreateModal}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-primary/90"
           >
             <Plus className="h-4 w-4 mr-2" />
             Novo Alerta
@@ -176,10 +176,10 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <h2 className="text-xl font-semibold text-foreground">
               Alertas Configurados
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {configs.length > 0 
                 ? `Você tem ${configs.length} alerta${configs.length > 1 ? 's' : ''} configurado${configs.length > 1 ? 's' : ''}`
                 : 'Nenhum alerta configurado ainda'
@@ -194,23 +194,23 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
         </div>
         
         {configs.length === 0 ? (
-          <Card className="border-dashed border-2 hover:border-blue-300 transition-colors">
+          <Card className="border-dashed border-2 hover:border-primary/40 transition-colors">
             <CardContent className="p-8 text-center">
               <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-8 w-8 text-gray-300 dark:text-gray-400" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                  <h3 className="font-medium text-foreground">
                     Nenhum alerta configurado
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 max-w-sm">
+                  <p className="text-sm text-muted-foreground max-w-sm">
                     Configure alertas inteligentes para monitorar seus gastos, saldos e metas financeiras automaticamente.
                   </p>
                 </div>
                 <Button 
                   onClick={openCreateModal}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary hover:bg-primary/90"
                   disabled={saving}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -223,13 +223,13 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
             {configs.map((config) => {
               const typeOption = [
-                { type: AlertConfigType.BUDGET_EXCEEDED, label: 'Orçamento Excedido', icon: AlertTriangle, color: 'text-red-500' },
-                { type: AlertConfigType.UNUSUAL_SPENDING, label: 'Gastos Incomuns', icon: TrendingUp, color: 'text-orange-500' },
-                { type: AlertConfigType.LOW_BALANCE, label: 'Saldo Baixo', icon: AlertCircle, color: 'text-yellow-500' },
-                { type: AlertConfigType.GOAL_AT_RISK, label: 'Meta em Risco', icon: Target, color: 'text-blue-500' },
-                { type: AlertConfigType.RECURRING_DUE, label: 'Cobrança Recorrente', icon: Calendar, color: 'text-purple-500' },
-                { type: AlertConfigType.DUPLICATE_TRANSACTION, label: 'Transação Duplicada', icon: Users, color: 'text-gray-500' },
-                { type: AlertConfigType.MONTHLY_SUMMARY, label: 'Resumo Mensal', icon: Settings, color: 'text-indigo-500' },
+                { type: AlertConfigType.BUDGET_EXCEEDED, label: 'Orçamento Excedido', icon: AlertTriangle, color: 'text-destructive' },
+                { type: AlertConfigType.UNUSUAL_SPENDING, label: 'Gastos Incomuns', icon: TrendingUp, color: 'text-chart-4' },
+                { type: AlertConfigType.LOW_BALANCE, label: 'Saldo Baixo', icon: AlertCircle, color: 'text-amber-500' },
+                { type: AlertConfigType.GOAL_AT_RISK, label: 'Meta em Risco', icon: Target, color: 'text-primary' },
+                { type: AlertConfigType.RECURRING_DUE, label: 'Cobrança Recorrente', icon: Calendar, color: 'text-chart-5' },
+                { type: AlertConfigType.DUPLICATE_TRANSACTION, label: 'Transação Duplicada', icon: Users, color: 'text-muted-foreground' },
+                { type: AlertConfigType.MONTHLY_SUMMARY, label: 'Resumo Mensal', icon: Settings, color: 'text-chart-3' },
               ].find(opt => opt.type === config.type);
 
               if (!typeOption) {
@@ -243,7 +243,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Bell className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                          <Bell className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <CardTitle className="text-base font-medium truncate">
                               {config.type} (Tipo Desconhecido)
@@ -265,7 +265,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
                               deleteConfig(config.id);
                             }}
                             disabled={saving}
-                            className="h-10 w-10 p-0 hover:bg-red-50 hover:text-red-600"
+                            className="h-10 w-10 p-0 hover:bg-destructive/10 hover:text-destructive"
                           >
                             <Trash2 className="h-5 w-5" />
                           </Button>
@@ -314,7 +314,7 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
                             deleteConfig(config.id);
                           }}
                           disabled={saving}
-                          className="h-10 w-10 p-0 hover:bg-red-50 hover:text-red-600"
+                          className="h-10 w-10 p-0 hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-5 w-5" />
                         </Button>

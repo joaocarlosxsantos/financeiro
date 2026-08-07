@@ -13,11 +13,11 @@ export function ConfirmDeleteModal({ open, onClose, onConfirm, description }: Co
   return (
     <Modal open={open} onClose={onClose} title="Confirmar exclusão">
       <div className="py-4">
-        <p className="mb-4 text-gray-700 dark:text-gray-200">
+        <p className="mb-4 text-foreground/90">
           Tem certeza que deseja excluir esta transação?
         </p>
         {description && (
-          <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded text-gray-900 dark:text-gray-100">
+          <div className="mb-4 p-2 bg-muted rounded text-foreground">
             {description}
           </div>
         )}

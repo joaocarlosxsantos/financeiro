@@ -21,9 +21,8 @@ export function MonthSelector({ value, onChange, className }: MonthSelectorProps
         type="month"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-background dark:bg-white/5 border border-input 
-                   dark:border-white/15 rounded-md backdrop-blur-sm transition-colors
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 
+        className="w-full px-3 py-2 bg-background border border-input rounded-md transition-colors
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60
                    focus-visible:border-primary/50 hover:border-muted-foreground/40
                    placeholder:text-muted-foreground/80 text-sm text-foreground
                    month-selector-input"

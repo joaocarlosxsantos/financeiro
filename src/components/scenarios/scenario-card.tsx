@@ -78,7 +78,7 @@ export function ScenarioCard({
             {scenario.incomeChange && (
               <span className={cn(
                 "ml-2 text-xs",
-                scenario.incomeChange > 0 ? "text-green-600" : "text-red-600"
+                scenario.incomeChange > 0 ? "text-success" : "text-destructive"
               )}>
                 {scenario.incomeChange > 0 ? '+' : ''}{scenario.incomeChange}%
               </span>
@@ -93,7 +93,7 @@ export function ScenarioCard({
             {scenario.expensesChange && (
               <span className={cn(
                 "ml-2 text-xs",
-                scenario.expensesChange < 0 ? "text-green-600" : "text-red-600"
+                scenario.expensesChange < 0 ? "text-success" : "text-destructive"
               )}>
                 {scenario.expensesChange > 0 ? '+' : ''}{scenario.expensesChange}%
               </span>
@@ -139,7 +139,7 @@ export function ScenarioCard({
           <span className="text-sm text-muted-foreground">Resultado mensal:</span>
           <span className={cn(
             "font-semibold",
-            isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+            isPositive ? "text-success" : "text-destructive"
           )}>
             {isPositive ? '+' : ''}R$ {netChange.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </span>

@@ -241,7 +241,7 @@ export default function ImportarExtratoPage() {
           {step === 'preview' && (
             <button
               onClick={resetToUpload}
-              className="text-sm text-blue-600 hover:text-blue-800 underline"
+              className="text-sm text-primary hover:text-primary/80 underline"
             >
               ← Voltar para upload
             </button>
@@ -249,11 +249,11 @@ export default function ImportarExtratoPage() {
         </div>
 
         {step === 'upload' && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+          <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+            <h3 className="font-semibold text-primary">
               Upload de Extratos com Processamento Otimizado
             </h3>
-            <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
+            <p className="text-sm text-foreground/80 mt-1">
               • Selecione um ou vários arquivos de extrato<br/>
               • Metas atualizadas apenas após todo o processamento<br/>
               • Visualização consolidada de todas as transações

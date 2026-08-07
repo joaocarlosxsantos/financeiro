@@ -158,7 +158,7 @@ export function MonthComparisonCard({ data }: MonthComparisonCardProps) {
         {increases.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
-              <ArrowUp className="w-4 h-4 text-red-600" />
+              <ArrowUp className="w-4 h-4 text-destructive" />
               Categorias que mais cresceram
             </h4>
             <div className="space-y-1.5">
@@ -180,7 +180,7 @@ export function MonthComparisonCard({ data }: MonthComparisonCardProps) {
         {decreases.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
-              <ArrowDown className="w-4 h-4 text-green-600" />
+              <ArrowDown className="w-4 h-4 text-success" />
               Categorias que mais reduziram
             </h4>
             <div className="space-y-1.5">

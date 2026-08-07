@@ -149,9 +149,9 @@ export default function BiometricAuthPage() {
       )}
 
       {success && (
-        <div className="mb-4 p-4 bg-green-500/10 border border-green-500 rounded-lg flex items-center gap-2">
-          <CheckCircle className="h-5 w-5 text-green-500" />
-          <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+        <div className="mb-4 p-4 bg-success/10 border border-success/40 rounded-lg flex items-center gap-2">
+          <CheckCircle className="h-5 w-5 text-success" />
+          <p className="text-sm text-success">{success}</p>
         </div>
       )}
 
@@ -201,7 +201,7 @@ export default function BiometricAuthPage() {
             >
               {isRegistering ? (
                 <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                   Registrando...
                 </>
               ) : (

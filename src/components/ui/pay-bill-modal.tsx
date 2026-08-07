@@ -181,7 +181,7 @@ export function PayBillModal({
           <div>
             <Label htmlFor="amount">Valor do Pagamento</Label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="amount"
                 type="number"
@@ -197,7 +197,7 @@ export function PayBillModal({
           <div>
             <Label htmlFor="paymentDate">Data do Pagamento</Label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="paymentDate"
                 type="date"
@@ -213,18 +213,18 @@ export function PayBillModal({
         {/* Vincular a uma despesa existente */}
         <div className="border-t pt-4">
           <div className="flex items-center gap-2 mb-3">
-            <Link className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Vincular a uma Despesa (Opcional)</h3>
+            <Link className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold text-foreground">Vincular a uma Despesa (Opcional)</h3>
           </div>
           
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Selecione uma despesa do mês para vincular este pagamento. Isso ajuda a rastrear de qual conta foi pago.
           </p>
 
           {/* Busca */}
           <div className="mb-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar despesa por descrição, categoria ou valor..."
                 value={searchTerm}
@@ -237,45 +237,45 @@ export function PayBillModal({
 
           {/* Lista de despesas */}
           {loadingExpenses ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               Carregando despesas...
             </div>
           ) : filteredExpenses.length > 0 ? (
             <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-2">
               <div
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  expenseId === '' ? 'bg-blue-100 border-2 border-blue-500' : 'bg-gray-50 hover:bg-gray-100'
+                  expenseId === '' ? 'bg-primary/10 border-2 border-primary' : 'bg-muted/50 hover:bg-accent'
                 }`}
                 onClick={() => handleSelectExpense(null)}
               >
-                <p className="font-medium text-gray-700">Nenhuma (criar novo registro)</p>
-                <p className="text-xs text-gray-500">O pagamento será registrado sem vincular a uma despesa existente</p>
+                <p className="font-medium text-foreground/90">Nenhuma (criar novo registro)</p>
+                <p className="text-xs text-muted-foreground">O pagamento será registrado sem vincular a uma despesa existente</p>
               </div>
 
               {filteredExpenses.map((expense) => (
                 <div
                   key={expense.id}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    expenseId === expense.id ? 'bg-blue-100 border-2 border-blue-500' : 'bg-gray-50 hover:bg-gray-100'
+                    expenseId === expense.id ? 'bg-primary/10 border-2 border-primary' : 'bg-muted/50 hover:bg-accent'
                   }`}
                   onClick={() => handleSelectExpense(expense)}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{expense.description}</p>
-                      <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                      <p className="font-medium text-foreground">{expense.description}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
                         <span>{formatDate(expense.date)}</span>
                         {expense.category && <span>• {expense.category.name}</span>}
                         {expense.wallet && <span>• {expense.wallet.name}</span>}
                       </div>
                     </div>
-                    <p className="font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
+                    <p className="font-semibold text-destructive">{formatCurrency(expense.amount)}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               {searchTerm ? 'Nenhuma despesa encontrada com este critério' : 'Nenhuma despesa encontrada no mês'}
             </div>
           )}

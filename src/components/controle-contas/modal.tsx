@@ -73,13 +73,13 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className={`relative w-full ${sizeClass[size]} animate-in fade-in zoom-in rounded-2xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900 max-h-[90vh] overflow-hidden ring-1 ring-transparent focus:outline-none`}
+        className={`relative w-full ${sizeClass[size]} animate-in fade-in zoom-in rounded-2xl border border-border bg-card shadow-lg dark:shadow-none dark:ring-1 dark:ring-white/[0.03] max-h-[90vh] overflow-hidden focus:outline-none`}
       >
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-transparent dark:border-neutral-800">
-          {title && <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-neutral-900 dark:text-neutral-100 flex-1 truncate">{title}</h3>}
+        <div className="flex items-center gap-4 px-6 py-4 border-b border-border">
+          {title && <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-foreground flex-1 truncate">{title}</h3>}
           <button
             onClick={onClose}
-            className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Fechar"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5">
@@ -88,7 +88,7 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
           </button>
         </div>
 
-        <div className="px-6 py-5 overflow-auto max-h-[70vh] text-base leading-relaxed text-neutral-700 dark:text-neutral-300">
+        <div className="px-6 py-5 overflow-auto max-h-[70vh] text-base leading-relaxed text-foreground/90">
           {children}
         </div>
       </div>

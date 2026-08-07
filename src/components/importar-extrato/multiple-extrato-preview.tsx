@@ -166,13 +166,13 @@ export function MultipleExtratoPreview({
     <div className="space-y-6">
       {/* Cabeçalho com Estatísticas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className={stats.totalFiles > 5 ? 'border-blue-200 bg-blue-50/50' : ''}>
+        <Card className={stats.totalFiles > 5 ? 'border-primary/30 bg-primary/5' : ''}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Arquivos</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalFiles}</div>
+            <div className="text-2xl font-bold text-primary">{stats.totalFiles}</div>
             <p className="text-xs text-muted-foreground">
               {stats.totalFiles > 5 ? 'Muitos extratos' : 'Extratos processados'}
             </p>
@@ -182,10 +182,10 @@ export function MultipleExtratoPreview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Transações</CardTitle>
-            <Package className="h-4 w-4 text-purple-600" />
+            <Package className="h-4 w-4 text-chart-5" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.totalTransactions}</div>
+            <div className="text-2xl font-bold text-chart-5">{stats.totalTransactions}</div>
             <p className="text-xs text-muted-foreground">Total de lançamentos</p>
           </CardContent>
         </Card>
@@ -193,10 +193,10 @@ export function MultipleExtratoPreview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Receitas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-success">
               {stats.totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
             <p className="text-xs text-muted-foreground">Entradas consolidadas</p>
@@ -206,10 +206,10 @@ export function MultipleExtratoPreview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Despesas</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-destructive">
               {stats.totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
             <p className="text-xs text-muted-foreground">Saídas consolidadas</p>

@@ -116,7 +116,7 @@ function SummaryCards({
       {/* Ganhos Totais */}
       <Card
         onClick={() => onCardClick('income')}
-        className="group relative order-1 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
+        className="group relative order-1 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden hover:border-success/40 transition-colors"
         aria-label="Ganhos Totais"
         data-tour="card-income"
       >
@@ -124,16 +124,16 @@ function SummaryCards({
           <div className="flex flex-1 items-center justify-between gap-2">
             <AutoFitNumber
               value={formatCurrency(totalIncome)}
-              className="text-green-600"
+              className="text-success"
               max={40}
               min={16}
             />
-            <TrendingUp className="hidden 2xl:block h-7 w-7 text-green-500/80" />
+            <TrendingUp className="hidden 2xl:block h-7 w-7 text-success/70" />
           </div>
           <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
             Ganhos Totais
           </div>
-          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[180px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
+          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[180px] px-2 py-1 rounded bg-popover text-popover-foreground border border-border text-[10px] shadow-md z-10">
             Soma dos ganhos do mês selecionado
           </span>
         </CardContent>
@@ -142,7 +142,7 @@ function SummaryCards({
       {/* Gastos Totais */}
       <Card
         onClick={() => onCardClick('expense')}
-        className="group relative order-2 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
+        className="group relative order-2 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden hover:border-destructive/40 transition-colors"
         aria-label="Gastos Totais"
         data-tour="card-expense"
       >
@@ -150,16 +150,16 @@ function SummaryCards({
           <div className="flex flex-1 items-center justify-between gap-2">
             <AutoFitNumber
               value={formatCurrency(totalExpenses)}
-              className="text-red-600"
+              className="text-destructive"
               max={40}
               min={16}
             />
-            <TrendingDown className="hidden 2xl:block h-7 w-7 text-red-500/80" />
+            <TrendingDown className="hidden 2xl:block h-7 w-7 text-destructive/70" />
           </div>
           <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
             Gastos Totais
           </div>
-          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[180px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
+          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[180px] px-2 py-1 rounded bg-popover text-popover-foreground border border-border text-[10px] shadow-md z-10">
             Soma dos gastos do mês selecionado
           </span>
         </CardContent>
@@ -168,7 +168,7 @@ function SummaryCards({
       {/* Saldo do mês */}
       <Card
         onClick={() => onCardClick('balance')}
-        className="group relative order-3 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
+        className="group relative order-3 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden hover:border-chart-3/40 transition-colors"
         aria-label="Saldo do mês"
         data-tour="cards-totals"
       >
@@ -176,16 +176,16 @@ function SummaryCards({
           <div className="flex flex-1 items-center justify-between gap-2">
             <AutoFitNumber
               value={formatCurrency(saldoDoMes)}
-              className="text-blue-600"
+              className="text-chart-3"
               max={42}
               min={18}
             />
-            <DollarSign className="hidden 2xl:block h-7 w-7 text-blue-500/80" />
+            <DollarSign className="hidden 2xl:block h-7 w-7 text-chart-3/70" />
           </div>
           <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
             Saldo do mês
           </div>
-          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[200px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
+          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[200px] px-2 py-1 rounded bg-popover text-popover-foreground border border-border text-[10px] shadow-md z-10">
             Ganhos menos Gastos do mês
           </span>
         </CardContent>
@@ -194,7 +194,7 @@ function SummaryCards({
 
       {/* Saldo Acumulado */}
       <Card
-        className="group relative order-3 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden"
+        className="group relative order-3 cursor-pointer flex flex-col h-full min-h-[150px] overflow-hidden hover:border-chart-5/40 transition-colors"
         aria-label="Saldo Acumulado"
         data-tour="card-accumulated"
       >
@@ -202,16 +202,16 @@ function SummaryCards({
           <div className="flex flex-1 items-center justify-between gap-2">
             <AutoFitNumber
               value={formatCurrency(saldoAcumulado)}
-              className="text-indigo-600 dark:text-indigo-400"
+              className="text-chart-5"
               max={40}
               min={18}
             />
-            <DollarSign className="hidden 2xl:block h-7 w-7 text-indigo-500/80" />
+            <DollarSign className="hidden 2xl:block h-7 w-7 text-chart-5/70" />
           </div>
           <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
             Saldo Acumulado
           </div>
-          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
+          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-popover text-popover-foreground border border-border text-[10px] shadow-md z-10">
             Ganhos - Gastos de todos os meses até o selecionado
           </span>
         </CardContent>
@@ -219,7 +219,7 @@ function SummaryCards({
 
       {/* Limite Diário */}
       <Card
-        className="group relative order-5 flex flex-col h-full min-h-[150px] overflow-hidden col-span-2 lg:col-span-1"
+        className="group relative order-5 flex flex-col h-full min-h-[150px] overflow-hidden col-span-2 lg:col-span-1 hover:border-chart-4/40 transition-colors"
         aria-label="Limite Diário"
         data-tour="card-daily-limit"
       >
@@ -227,7 +227,7 @@ function SummaryCards({
           <div className="flex flex-1 items-center justify-between gap-2">
             <AutoFitNumber
               value={formatCurrency(limiteDiario)}
-              className="text-orange-500"
+              className="text-chart-4"
               max={40}
               min={16}
             />
@@ -238,7 +238,7 @@ function SummaryCards({
           <div className="mt-1 text-center text-xs sm:text-sm font-semibold text-foreground">
             Limite Diário
           </div>
-          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-slate-900 text-white text-[10px] shadow z-10">
+          <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[210px] px-2 py-1 rounded bg-popover text-popover-foreground border border-border text-[10px] shadow-md z-10">
             Gasto médio diário restante para manter saldo ≥ 0
           </span>
         </CardContent>
@@ -308,24 +308,24 @@ function DateNavigationHeader({
           size="icon"
           onClick={onPreviousMonth}
           aria-label="Mês anterior"
-          className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+          className="h-10 w-10 rounded-full"
         >
-          <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+          <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
         </Button>
       
       <Popover open={monthSelectorOpen} onOpenChange={setMonthSelectorOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="h-10 px-4 min-w-[160px] justify-between border border-slate-300/70 bg-white/90 hover:bg-white text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100 dark:hover:bg-slate-800/80"
+            className="h-10 px-4 min-w-[150px] sm:min-w-[160px] justify-between"
           >
             <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+              <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium text-sm sm:text-base">
                 {monthYearLabel.charAt(0).toUpperCase() + monthYearLabel.slice(1)}
               </span>
             </div>
-            <ChevronDown className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-4" align="start">
@@ -377,9 +377,9 @@ function DateNavigationHeader({
         disabled={isAtCurrentMonth}
         aria-disabled={isAtCurrentMonth}
         aria-label="Próximo mês"
-        className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm disabled:opacity-50"
+        className="h-10 w-10 rounded-full disabled:opacity-50"
       >
-        <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+        <ArrowRight className="h-5 w-5 stroke-[2.5]" />
       </Button>
       </div>
       
@@ -464,7 +464,7 @@ function DetailModal({
                 .map((item) => (
                   <li key={item.category} className="flex justify-between items-center">
                     <span>{item.category}</span>
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-success">
                       {formatCurrency(item.amount)}
                     </span>
                   </li>
@@ -485,7 +485,7 @@ function DetailModal({
                 .map((item) => (
                   <li key={item.category} className="flex justify-between items-center">
                     <span>{item.category}</span>
-                    <span className="font-semibold text-red-600">
+                    <span className="font-semibold text-destructive">
                       {formatCurrency(item.amount)}
                     </span>
                   </li>
@@ -508,7 +508,7 @@ function DetailModal({
                   .map((item) => (
                     <li key={item.category} className="flex justify-between items-center">
                       <span>{item.category}</span>
-                      <span className="font-semibold text-green-600">
+                      <span className="font-semibold text-success">
                         {formatCurrency(item.amount)}
                       </span>
                     </li>
@@ -527,7 +527,7 @@ function DetailModal({
                   .map((item) => (
                     <li key={item.category} className="flex justify-between items-center">
                       <span>{item.category}</span>
-                      <span className="font-semibold text-red-600">
+                      <span className="font-semibold text-destructive">
                         {formatCurrency(item.amount)}
                       </span>
                     </li>
@@ -559,8 +559,8 @@ function DetailModal({
                     <span
                       className={
                         item.diff > 0
-                          ? 'font-semibold text-red-600'
-                          : 'font-semibold text-green-600'
+                          ? 'font-semibold text-destructive'
+                          : 'font-semibold text-success'
                       }
                     >
                       {item.diff > 0 ? '+' : ''}
@@ -614,8 +614,8 @@ export function DashboardCards({
       {/* Header with date navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div data-tour="dashboard-title">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-600 dark:text-foreground">Visão geral das suas finanças</p>
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral das suas finanças</p>
         </div>
         <DateNavigationHeader
           monthYearLabel={monthYearLabel}
@@ -665,7 +665,7 @@ export function DashboardCards({
               className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'despesa'
-                    ? 'bg-primary text-white border-primary shadow'
+                    ? 'bg-primary text-primary-foreground border-primary shadow'
                     : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
                 }
               `}
@@ -678,7 +678,7 @@ export function DashboardCards({
               className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'renda'
-                    ? 'bg-primary text-white border-primary shadow'
+                    ? 'bg-primary text-primary-foreground border-primary shadow'
                     : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
                 }
               `}
@@ -691,7 +691,7 @@ export function DashboardCards({
               className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'cartao'
-                    ? 'bg-primary text-white border-primary shadow'
+                    ? 'bg-primary text-primary-foreground border-primary shadow'
                     : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
                 }
               `}
@@ -704,7 +704,7 @@ export function DashboardCards({
               className={`border rounded-md py-2 px-3 transition-colors text-sm font-medium
                 ${
                   quickTab === 'transferencia'
-                    ? 'bg-primary text-white border-primary shadow'
+                    ? 'bg-primary text-primary-foreground border-primary shadow'
                     : 'bg-muted text-foreground border-border hover:bg-accent hover:text-accent-foreground'
                 }
               `}

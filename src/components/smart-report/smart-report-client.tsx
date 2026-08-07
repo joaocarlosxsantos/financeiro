@@ -382,9 +382,9 @@ export default function SmartReportClient() {
   };
 
   const getHealthScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 dark:text-green-400';
+    if (score >= 80) return 'text-success';
     if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    return 'text-destructive';
   };
 
   const getHealthScoreDescription = (score: number) => {
@@ -431,7 +431,7 @@ export default function SmartReportClient() {
       {/* Header com seletor de mês */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-foreground">
             Relatórios Inteligentes
           </h2>
         </div>
@@ -441,12 +441,12 @@ export default function SmartReportClient() {
             size="icon"
             onClick={handlePreviousMonth}
             aria-label="Mês anterior"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            className="h-10 w-10 rounded-full"
           >
-            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-muted-foreground" />
           </Button>
-          <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 rounded-md w-full sm:w-auto justify-center border bg-white/90 border-slate-300/70 text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100">
-            <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+          <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 h-10 rounded-md w-full sm:w-auto justify-center border border-input bg-background text-foreground shadow-sm">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-sm sm:text-base">
               {(() => {
                 const label = getMonthYear(currentDate);
@@ -462,9 +462,9 @@ export default function SmartReportClient() {
             disabled={isAtCurrentMonth}
             aria-disabled={isAtCurrentMonth}
             aria-label="Próximo mês"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm disabled:opacity-50"
+            className="h-10 w-10 rounded-full disabled:opacity-50"
           >
-            <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-muted-foreground" />
           </Button>
         </div>
       </div>
@@ -486,7 +486,7 @@ export default function SmartReportClient() {
                 {financialData.healthScore}
               </div>
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">de 100</div>
+                <div className="text-sm text-muted-foreground">de 100</div>
                 <div className="text-sm font-medium">
                   {getHealthScoreDescription(financialData.healthScore)}
                 </div>
@@ -495,9 +495,9 @@ export default function SmartReportClient() {
             <div className="text-right">
               <div className="flex items-center gap-1 text-sm">
                 {financialData.healthScore > (financialData.previousHealthScores.slice(-1)[0]?.score || 0) ? (
-                  <ArrowUp className="h-4 w-4 text-green-600" />
+                  <ArrowUp className="h-4 w-4 text-success" />
                 ) : (
-                  <ArrowDown className="h-4 w-4 text-red-600" />
+                  <ArrowDown className="h-4 w-4 text-destructive" />
                 )}
                 <span>vs. mês anterior</span>
               </div>
@@ -514,44 +514,44 @@ export default function SmartReportClient() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-4">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Receitas
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-2xl font-bold text-success">
             R$ {financialData.totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <TrendingDown className="h-4 w-4" />
             Despesas
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+          <div className="text-2xl font-bold text-destructive">
             R$ {financialData.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Wallet className="h-4 w-4" />
             Saldo
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${financialData.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>R$ {financialData.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <div className={`text-2xl font-bold ${financialData.balance >= 0 ? 'text-success' : 'text-destructive'}`}>R$ {financialData.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
             {financialData.balance > financialData.previousMonthBalance ? (
-              <ArrowUp className="h-3 w-3 text-green-600" />
+              <ArrowUp className="h-3 w-3 text-success" />
             ) : (
-              <ArrowDown className="h-3 w-3 text-red-600" />
+              <ArrowDown className="h-3 w-3 text-destructive" />
             )}
             vs. mês anterior
           </div>
@@ -559,7 +559,7 @@ export default function SmartReportClient() {
       </Card>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <PiggyBank className="h-4 w-4" />
             Taxa de Poupança
           </CardTitle>
@@ -568,14 +568,14 @@ export default function SmartReportClient() {
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             {financialData.savingsRate.toFixed(1)}%
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <div className="text-sm text-muted-foreground mt-1">
             Meta: 20%
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
             Cartão de Crédito
           </CardTitle>
@@ -586,14 +586,14 @@ export default function SmartReportClient() {
               ? ((financialData.creditCardUsage / financialData.creditCardLimit) * 100).toFixed(1)
               : 0}%
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <div className="text-sm text-muted-foreground mt-1">
             R$ {financialData.creditCardUsage.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} usado
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Gastos Recorrentes
           </CardTitle>
@@ -602,7 +602,7 @@ export default function SmartReportClient() {
           <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
             R$ {financialData.recurringExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <div className="text-sm text-muted-foreground mt-1">
             {financialData.totalExpenses > 0 
               ? ((financialData.recurringExpenses / financialData.totalExpenses) * 100).toFixed(1)
               : 0}% do total
@@ -616,46 +616,46 @@ export default function SmartReportClient() {
   {/* Novas métricas avançadas - grid separado */}
   {financialData && (
     <div className="w-full mt-8">
-      <h4 className="text-base font-semibold text-slate-700 dark:text-slate-100 mb-4 flex items-center gap-2">
-        <Info className="h-5 w-5 text-blue-500" /> Métricas Avançadas do Mês
+      <h4 className="text-base font-semibold text-foreground/90 mb-4 flex items-center gap-2">
+        <Info className="h-5 w-5 text-primary" /> Métricas Avançadas do Mês
       </h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Bloco 1: Médias e Projeções */}
         <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-100 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" /> Médias & Projeções
+            <CardTitle className="text-base font-semibold text-foreground/90 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-success" /> Médias & Projeções
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <TrendingUp className="h-4 w-4 text-green-600" /> Média diária receitas:
-              <span className="font-bold text-green-700 dark:text-green-300">R$ {financialData.dailyIncomeAvg?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <TrendingUp className="h-4 w-4 text-success" /> Média diária receitas:
+              <span className="font-bold text-success">R$ {financialData.dailyIncomeAvg?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <TrendingDown className="h-4 w-4 text-red-600" /> Média diária despesas:
-              <span className="font-bold text-red-700 dark:text-red-300">R$ {financialData.dailyExpenseAvg?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <TrendingDown className="h-4 w-4 text-destructive" /> Média diária despesas:
+              <span className="font-bold text-destructive">R$ {financialData.dailyExpenseAvg?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Calendar className="h-4 w-4 text-blue-500" /> Projeção saldo mês:
-              <span className={`font-bold ${financialData.projectedBalance && financialData.projectedBalance >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>R$ {financialData.projectedBalance?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <Calendar className="h-4 w-4 text-primary" /> Projeção saldo mês:
+              <span className={`font-bold ${financialData.projectedBalance && financialData.projectedBalance >= 0 ? 'text-success' : 'text-destructive'}`}>R$ {financialData.projectedBalance?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
-            <div className="text-xs text-gray-500 mt-1">Proj. receitas: R$ {financialData.projectedIncome?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Proj. despesas: R$ {financialData.projectedExpense?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            <div className="text-xs text-muted-foreground mt-1">Proj. receitas: R$ {financialData.projectedIncome?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Proj. despesas: R$ {financialData.projectedExpense?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           </CardContent>
         </Card>
 
         {/* Card: Top receitas */}
         <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
-              <ArrowUp className="h-5 w-5 text-green-600" /> Top Receitas
+            <CardTitle className="text-base font-semibold text-success flex items-center gap-2">
+              <ArrowUp className="h-5 w-5 text-success" /> Top Receitas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="text-xs mb-2">
               {financialData.topIncomes?.length ? financialData.topIncomes.map((inc, i) => (
-                <li key={i} className="mb-1">R$ {inc.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{inc.description}</span></li>
-              )) : <span className="text-gray-400">Nenhuma</span>}
+                <li key={i} className="mb-1">R$ {inc.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-muted-foreground">{inc.description}</span></li>
+              )) : <span className="text-muted-foreground">Nenhuma</span>}
             </ul>
           </CardContent>
         </Card>
@@ -663,15 +663,15 @@ export default function SmartReportClient() {
         {/* Card: Top despesas */}
         <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
-              <ArrowDown className="h-5 w-5 text-red-600" /> Top Despesas
+            <CardTitle className="text-base font-semibold text-destructive flex items-center gap-2">
+              <ArrowDown className="h-5 w-5 text-destructive" /> Top Despesas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="text-xs mb-2">
               {financialData.topExpenses?.length ? financialData.topExpenses.map((exp, i) => (
-                <li key={i} className="mb-1">R$ {exp.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{exp.description}</span></li>
-              )) : <span className="text-gray-400">Nenhuma</span>}
+                <li key={i} className="mb-1">R$ {exp.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-muted-foreground">{exp.description}</span></li>
+              )) : <span className="text-muted-foreground">Nenhuma</span>}
             </ul>
           </CardContent>
         </Card>
@@ -679,24 +679,24 @@ export default function SmartReportClient() {
         {/* Bloco 3: Percentuais e contagens */}
         <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-100 flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-500" /> Percentuais & Contagens
+            <CardTitle className="text-base font-semibold text-foreground/90 flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" /> Percentuais & Contagens
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <Info className="h-4 w-4 text-blue-500" /> Recorrente:
+              <Info className="h-4 w-4 text-primary" /> Recorrente:
               <span className="font-bold">{financialData.percentRecurringExpenses?.toFixed(1)}%</span>
               <span className="ml-2">Variável: <span className="font-bold">{financialData.percentVariableExpenses?.toFixed(1)}%</span></span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <ArrowUp className="h-4 w-4 text-green-600" /> Qtd. receitas:
+              <ArrowUp className="h-4 w-4 text-success" /> Qtd. receitas:
               <span className="font-bold">{financialData.incomeCount}</span>
-              <ArrowDown className="h-4 w-4 text-red-600 ml-2" /> Qtd. despesas:
+              <ArrowDown className="h-4 w-4 text-destructive ml-2" /> Qtd. despesas:
               <span className="font-bold">{financialData.expenseCount}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Activity className="h-4 w-4 text-orange-500" /> Recorrentes:
+              <Activity className="h-4 w-4 text-chart-4" /> Recorrentes:
               <span className="font-bold">{financialData.recurringIncomeCount}</span> receitas / <span className="font-bold">{financialData.recurringExpenseCount}</span> despesas
             </div>
           </CardContent>
@@ -705,20 +705,20 @@ export default function SmartReportClient() {
         {/* Card: Dias topo receitas + média receitas 3m */}
         <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-green-600" /> Dias Topo Receitas & Média 3m
+            <CardTitle className="text-base font-semibold text-success flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-success" /> Dias Topo Receitas & Média 3m
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="font-semibold text-green-700 dark:text-green-300 mb-1">Dias topo receitas</div>
+            <div className="font-semibold text-success mb-1">Dias topo receitas</div>
             <ul className="text-xs mb-2">
               {financialData.topIncomeDays?.length ? financialData.topIncomeDays.map((d, i) => (
-                <li key={i}>R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{d.date}</span></li>
-              )) : <span className="text-gray-400">Nenhum</span>}
+                <li key={i}>R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-muted-foreground">{d.date}</span></li>
+              )) : <span className="text-muted-foreground">Nenhum</span>}
             </ul>
             <div className="flex items-center gap-2 text-sm mt-2">
-              <TrendingUp className="h-4 w-4 text-green-600" /> Média receitas 3m:
-              <span className="font-bold text-green-700 dark:text-green-300">R$ {financialData.avgIncome3m?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <TrendingUp className="h-4 w-4 text-success" /> Média receitas 3m:
+              <span className="font-bold text-success">R$ {financialData.avgIncome3m?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           </CardContent>
         </Card>
@@ -726,20 +726,20 @@ export default function SmartReportClient() {
         {/* Card: Dias topo despesas + média despesas 3m */}
         <Card className="p-4 flex flex-col justify-between h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-red-600" /> Dias Topo Despesas & Média 3m
+            <CardTitle className="text-base font-semibold text-destructive flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-destructive" /> Dias Topo Despesas & Média 3m
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="font-semibold text-red-700 dark:text-red-300 mb-1">Dias topo despesas</div>
+            <div className="font-semibold text-destructive mb-1">Dias topo despesas</div>
             <ul className="text-xs mb-2">
               {financialData.topExpenseDays?.length ? financialData.topExpenseDays.map((d, i) => (
-                <li key={i}>R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-500">{d.date}</span></li>
-              )) : <span className="text-gray-400">Nenhum</span>}
+                <li key={i}>R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-muted-foreground">{d.date}</span></li>
+              )) : <span className="text-muted-foreground">Nenhum</span>}
             </ul>
             <div className="flex items-center gap-2 text-sm mt-2">
-              <TrendingDown className="h-4 w-4 text-red-600" /> Média despesas 3m:
-              <span className="font-bold text-red-700 dark:text-red-300">R$ {financialData.avgExpense3m?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <TrendingDown className="h-4 w-4 text-destructive" /> Média despesas 3m:
+              <span className="font-bold text-destructive">R$ {financialData.avgExpense3m?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           </CardContent>
         </Card>

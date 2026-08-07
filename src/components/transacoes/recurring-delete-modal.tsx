@@ -57,9 +57,9 @@ export function RecurringDeleteModal({
           {/* Opção 2: Excluir este e parar recorrência */}
           <button
             onClick={() => handleOptionClick('stopRecurring')}
-            className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all group"
+            className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-chart-4 hover:bg-chart-4/10 transition-all group"
           >
-            <div className="font-medium text-foreground group-hover:text-orange-600">
+            <div className="font-medium text-foreground group-hover:text-chart-4">
               2. Excluir este e parar recorrência
             </div>
             <div className="text-xs text-muted-foreground mt-1">
@@ -70,9 +70,9 @@ export function RecurringDeleteModal({
           {/* Opção 3: Excluir todos */}
           <button
             onClick={() => handleOptionClick('all')}
-            className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all group"
+            className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-destructive hover:bg-destructive/10 transition-all group"
           >
-            <div className="font-medium text-foreground group-hover:text-red-600">
+            <div className="font-medium text-foreground group-hover:text-destructive">
               3. Excluir todos os registros
             </div>
             <div className="text-xs text-muted-foreground mt-1">

@@ -33,7 +33,7 @@ export function ControleContasCards({ groupsCount, total, billsCount }: Controle
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-2xl font-bold text-success">
             {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </div>
           <p className="text-xs text-muted-foreground">

@@ -74,8 +74,8 @@ export function FaturaTransactionRow({
   const valor = typeof registro.valor === 'number' ? registro.valor : parseFloat(String(registro.valor)) || 0;
   const isCredito = valor < 0;
   const colorClass = isCredito 
-    ? 'text-green-600 dark:text-green-400' 
-    : 'text-red-600 dark:text-red-400';
+    ? 'text-success' 
+    : 'text-destructive';
 
   return (
     <tr className="border-b hover:bg-accent/50 transition-colors group">
@@ -152,7 +152,7 @@ export function FaturaTransactionRow({
                   className="h-5 w-5"
                   onClick={() => onAcceptAISuggestion(index)}
                 >
-                  <Check className="h-3 w-3 text-green-600" />
+                  <Check className="h-3 w-3 text-success" />
                 </Button>
                 <Button
                   type="button"
@@ -161,7 +161,7 @@ export function FaturaTransactionRow({
                   className="h-5 w-5"
                   onClick={() => onRejectAISuggestion(index)}
                 >
-                  <X className="h-3 w-3 text-red-600" />
+                  <X className="h-3 w-3 text-destructive" />
                 </Button>
               </div>
             </div>

@@ -22,23 +22,23 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
     return () => window.removeEventListener('openSidebar', handleOpen as EventListener);
   }, []);
 
-  // Previne scroll do body quando sidebar mobile está aberta
+  // Trava o scroll do body apenas enquanto o drawer mobile está aberto.
   useEffect(() => {
     if (sidebarOpen) {
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'hidden'; // Sempre hidden
+      document.body.style.overflow = '';
     }
-    
+
     return () => {
-      document.body.style.overflow = 'hidden'; // Sempre hidden
+      document.body.style.overflow = '';
     };
   }, [sidebarOpen]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar desktop */}
-      <aside className="hidden md:block h-full">
+      <aside className="hidden md:block h-full flex-none">
         <Sidebar />
       </aside>
 
@@ -46,36 +46,36 @@ export function DashboardLayout({ children, maxWidth = "max-w-5xl" }: DashboardL
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           {/* Overlay com animação suave */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" 
-            onClick={() => setSidebarOpen(false)} 
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setSidebarOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-full max-w-sm bg-gray-900 dark:bg-slate-900 shadow-2xl animate-slide-in-mobile z-50">
+          <div className="relative h-full w-full max-w-[19rem] bg-sidebar border-r border-sidebar-border shadow-2xl animate-slide-in-mobile z-50">
             <Sidebar onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
 
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
-        {/* Topbar mobile otimizada */}
-        <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30 shadow-sm h-16 px-4 flex-none">
-          <div className="flex items-center">
+      <main className="flex-1 flex flex-col overflow-hidden w-full min-w-0">
+        {/* Topbar mobile */}
+        <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30 h-16 px-4 flex-none">
+          <div className="flex items-center min-w-0">
             <button
               aria-label="Abrir menu"
-              className="mr-3 p-2 rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/60 transition-colors"
+              className="mr-2 -ml-2 h-10 w-10 flex items-center justify-center rounded-lg hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors flex-none"
               onClick={() => setSidebarOpen(true)}
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5" />
             </button>
-            <span className="text-lg font-bold truncate">Controle Financeiro</span>
+            <span className="text-base font-semibold truncate">Controle Financeiro</span>
           </div>
-          
+
           {/* Notificações no header mobile */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-none">
             <NotificationCenter className="text-muted-foreground hover:text-foreground" />
           </div>
         </div>
-        <div className={`w-full ${maxWidth} mx-auto p-4 sm:p-8 overflow-auto flex-1`}>{children}</div>
+        <div className={`w-full ${maxWidth} mx-auto p-4 sm:p-6 lg:p-8 overflow-auto flex-1`}>{children}</div>
       </main>
     </div>
   );

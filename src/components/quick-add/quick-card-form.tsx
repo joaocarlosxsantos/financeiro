@@ -180,7 +180,7 @@ export default function QuickCardForm({ onSuccess }: QuickCardFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {errors.general && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-md text-sm">
           {errors.general}
         </div>
       )}
@@ -193,10 +193,10 @@ export default function QuickCardForm({ onSuccess }: QuickCardFormProps) {
             value={form.description}
             onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
             placeholder="Ex: Compra no supermercado"
-            className={errors.description ? 'border-red-500' : ''}
+            className={errors.description ? 'border-destructive' : ''}
           />
           {errors.description && (
-            <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+            <p className="text-destructive text-xs mt-1">{errors.description}</p>
           )}
           
           {/* Sugestões Inteligentes */}
@@ -238,10 +238,10 @@ export default function QuickCardForm({ onSuccess }: QuickCardFormProps) {
               value={form.amount}
               onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))}
               placeholder="0,00"
-              className={errors.amount ? 'border-red-500' : ''}
+              className={errors.amount ? 'border-destructive' : ''}
             />
             {errors.amount && (
-              <p className="text-red-500 text-xs mt-1">{errors.amount}</p>
+              <p className="text-destructive text-xs mt-1">{errors.amount}</p>
             )}
           </div>
 
@@ -278,10 +278,10 @@ export default function QuickCardForm({ onSuccess }: QuickCardFormProps) {
             type="date"
             value={form.purchaseDate}
             onChange={(e) => setForm(f => ({ ...f, purchaseDate: e.target.value }))}
-            className={errors.purchaseDate ? 'border-red-500' : ''}
+            className={errors.purchaseDate ? 'border-destructive' : ''}
           />
           {errors.purchaseDate && (
-            <p className="text-red-500 text-xs mt-1">{errors.purchaseDate}</p>
+            <p className="text-destructive text-xs mt-1">{errors.purchaseDate}</p>
           )}
         </div>
 
@@ -291,7 +291,7 @@ export default function QuickCardForm({ onSuccess }: QuickCardFormProps) {
             id="creditCardId"
             value={form.creditCardId}
             onChange={(e) => setForm(f => ({ ...f, creditCardId: e.target.value }))}
-            className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${errors.creditCardId ? 'border-red-500' : ''}`}
+            className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${errors.creditCardId ? 'border-destructive' : ''}`}
           >
             <option value="">Selecione um cartão</option>
             {creditCards.map((card) => (
@@ -301,7 +301,7 @@ export default function QuickCardForm({ onSuccess }: QuickCardFormProps) {
             ))}
           </select>
           {errors.creditCardId && (
-            <p className="text-red-500 text-xs mt-1">{errors.creditCardId}</p>
+            <p className="text-destructive text-xs mt-1">{errors.creditCardId}</p>
           )}
         </div>
 

@@ -52,7 +52,7 @@ export interface DialogContentProps {
 export function DialogContent({ className, children }: DialogContentProps) {
   return (
     <div className={cn(
-      "bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-md w-full mx-4",
+      "bg-card border border-border rounded-lg shadow-lg dark:shadow-none dark:ring-1 dark:ring-white/[0.03] max-w-md w-full mx-4",
       className
     )}>
       {children}
@@ -80,7 +80,7 @@ export interface DialogTitleProps {
 
 export function DialogTitle({ className, children }: DialogTitleProps) {
   return (
-    <h2 className={cn("text-lg font-semibold text-slate-900 dark:text-slate-100", className)}>
+    <h2 className={cn("text-lg font-semibold text-foreground", className)}>
       {children}
     </h2>
   );
@@ -93,7 +93,7 @@ export interface DialogDescriptionProps {
 
 export function DialogDescription({ className, children }: DialogDescriptionProps) {
   return (
-    <p className={cn("text-sm text-slate-600 dark:text-slate-300 mt-2", className)}>
+    <p className={cn("text-sm text-muted-foreground mt-2", className)}>
       {children}
     </p>
   );

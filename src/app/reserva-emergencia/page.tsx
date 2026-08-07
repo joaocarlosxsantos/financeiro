@@ -260,7 +260,7 @@ export default function EmergencyFundPage() {
                       </p>
                     </div>
                     {suggestion.priority === 'medium' && (
-                      <Badge className="bg-blue-500">Recomendado</Badge>
+                      <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
                     )}
                   </div>
 

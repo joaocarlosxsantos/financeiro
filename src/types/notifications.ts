@@ -220,59 +220,59 @@ export interface NotificationIcon {
 export const NOTIFICATION_ICONS: Record<NotificationType, NotificationIcon> = {
   [NotificationType.BUDGET_EXCEEDED]: {
     icon: 'AlertTriangle',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100'
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10'
   },
   [NotificationType.UNUSUAL_SPENDING]: {
     icon: 'TrendingUp',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-100'
+    color: 'text-chart-4',
+    bgColor: 'bg-chart-4/10'
   },
   [NotificationType.LOW_BALANCE]: {
     icon: 'AlertCircle',
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-100'
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-500/10'
   },
   [NotificationType.GOAL_AT_RISK]: {
     icon: 'Target',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100'
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10'
   },
   [NotificationType.DUPLICATE_TRANSACTION]: {
     icon: 'Copy',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100'
+    color: 'text-primary',
+    bgColor: 'bg-primary/10'
   },
   [NotificationType.RECURRING_DUE]: {
     icon: 'Calendar',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100'
+    color: 'text-chart-5',
+    bgColor: 'bg-chart-5/10'
   },
   [NotificationType.MONTHLY_SUMMARY]: {
     icon: 'FileText',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100'
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted'
   },
   [NotificationType.ACHIEVEMENT]: {
     icon: 'Award',
-    color: 'text-green-600',
-    bgColor: 'bg-green-100'
+    color: 'text-success',
+    bgColor: 'bg-success/10'
   },
   [NotificationType.SYSTEM]: {
     icon: 'Info',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100'
+    color: 'text-primary',
+    bgColor: 'bg-primary/10'
   },
   [NotificationType.CUSTOM]: {
     icon: 'Bell',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100'
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted'
   },
 };
 
 export const PRIORITY_COLORS: Record<NotificationPriority, string> = {
-  [NotificationPriority.LOW]: 'text-gray-500',
-  [NotificationPriority.MEDIUM]: 'text-blue-500',
-  [NotificationPriority.HIGH]: 'text-orange-500',
-  [NotificationPriority.URGENT]: 'text-red-500',
+  [NotificationPriority.LOW]: 'text-muted-foreground',
+  [NotificationPriority.MEDIUM]: 'text-primary',
+  [NotificationPriority.HIGH]: 'text-chart-4',
+  [NotificationPriority.URGENT]: 'text-destructive',
 };

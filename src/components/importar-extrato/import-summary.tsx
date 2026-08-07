@@ -169,56 +169,56 @@ export function ImportSummary({
       <div className="space-y-4">
         {/* Resumo das transações */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="p-3 bg-blue-50 border-blue-200">
+          <Card className="p-3 bg-primary/5 border-primary/20">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-600" />
+              <FileText className="h-4 w-4 text-primary" />
               <div>
-                <div className="text-lg font-bold text-blue-600">{totalFiles}</div>
-                <div className="text-xs text-blue-600">
+                <div className="text-lg font-bold text-primary">{totalFiles}</div>
+                <div className="text-xs text-primary/90">
                   {totalFiles === 1 ? 'Arquivo' : 'Arquivos'}
                 </div>
               </div>
             </div>
           </Card>
-          
-          <Card className="p-3 bg-purple-50 border-purple-200">
+
+          <Card className="p-3 bg-chart-5/10 border-chart-5/30">
             <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-purple-600" />
+              <Package className="h-4 w-4 text-chart-5" />
               <div>
-                <div className="text-lg font-bold text-purple-600">{totalTransactions}</div>
-                <div className="text-xs text-purple-600">Transações</div>
+                <div className="text-lg font-bold text-chart-5">{totalTransactions}</div>
+                <div className="text-xs text-chart-5">Transações</div>
               </div>
             </div>
           </Card>
-          
-          <Card className="p-3 bg-green-50 border-green-200">
+
+          <Card className="p-3 bg-success/10 border-success/30">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-success" />
               <div>
-                <div className="text-lg font-bold text-green-600">
-                  {totalIncome.toLocaleString('pt-BR', { 
-                    style: 'currency', 
-                    currency: 'BRL', 
-                    minimumFractionDigits: 0 
+                <div className="text-lg font-bold text-success">
+                  {totalIncome.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 0
                   })}
                 </div>
-                <div className="text-xs text-green-600">Receitas</div>
+                <div className="text-xs text-success">Receitas</div>
               </div>
             </div>
           </Card>
-          
-          <Card className="p-3 bg-red-50 border-red-200">
+
+          <Card className="p-3 bg-destructive/10 border-destructive/30">
             <div className="flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-red-600" />
+              <TrendingDown className="h-4 w-4 text-destructive" />
               <div>
-                <div className="text-lg font-bold text-red-600">
-                  {totalExpense.toLocaleString('pt-BR', { 
-                    style: 'currency', 
-                    currency: 'BRL', 
-                    minimumFractionDigits: 0 
+                <div className="text-lg font-bold text-destructive">
+                  {totalExpense.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 0
                   })}
                 </div>
-                <div className="text-xs text-red-600">Despesas</div>
+                <div className="text-xs text-destructive">Despesas</div>
               </div>
             </div>
           </Card>
@@ -268,7 +268,7 @@ export function ImportSummary({
               <p className="text-muted-foreground">
                 Esse valor será lançado como receita com categoria "Saldo" na data do primeiro lançamento.
               </p>
-              <p className="text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 inline-block">
+              <p className="text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-600/30 dark:border-amber-400/30 inline-block">
                 ⚠️ Apenas caso seja a primeira importação dessa carteira
               </p>
             </div>
@@ -326,12 +326,12 @@ export function ImportSummary({
 
         {/* Mensagens de erro/sucesso */}
         {error && (
-          <div className="text-red-600 text-sm p-2 bg-red-50 border border-red-200 rounded">
+          <div className="text-destructive text-sm p-2 bg-destructive/10 border border-destructive/30 rounded">
             {error}
           </div>
         )}
         {success && (
-          <div className="text-green-600 text-sm p-2 bg-green-50 border border-green-200 rounded">
+          <div className="text-success text-sm p-2 bg-success/10 border border-success/30 rounded">
             Importação realizada com sucesso!
           </div>
         )}

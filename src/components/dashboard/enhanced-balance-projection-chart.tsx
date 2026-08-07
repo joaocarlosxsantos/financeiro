@@ -172,7 +172,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       {real !== undefined && (
         <div className="flex justify-between items-center gap-4 mb-1">
           <span className="text-xs text-muted-foreground">Saldo Real:</span>
-          <span className="font-bold text-sm text-green-600">{formatCurrency(real)}</span>
+          <span className="font-bold text-sm text-green-600 dark:text-green-400">{formatCurrency(real)}</span>
         </div>
       )}
       
@@ -180,15 +180,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <>
           <div className="border-t border-border my-2" />
           <div className="flex justify-between items-center gap-4 mb-1">
-            <span className="text-xs text-blue-600">Realista:</span>
+            <span className="text-xs text-blue-600 dark:text-blue-400">Realista:</span>
             <span className="font-medium text-sm">{formatCurrency(realistic)}</span>
           </div>
           <div className="flex justify-between items-center gap-4 mb-1">
-            <span className="text-xs text-green-600">Otimista:</span>
+            <span className="text-xs text-green-600 dark:text-green-400">Otimista:</span>
             <span className="font-medium text-sm">{formatCurrency(optimistic)}</span>
           </div>
           <div className="flex justify-between items-center gap-4">
-            <span className="text-xs text-red-600">Pessimista:</span>
+            <span className="text-xs text-red-600 dark:text-red-400">Pessimista:</span>
             <span className="font-medium text-sm">{formatCurrency(pessimistic)}</span>
           </div>
         </>

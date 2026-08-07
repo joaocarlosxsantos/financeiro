@@ -87,17 +87,17 @@ export default function MultiSelect({
           <div
             ref={dropdownRef}
             style={{ ...(dropdownStyle ?? {}), zIndex: 99999 }}
-            className="mt-2 max-h-64 overflow-hidden rounded-md border bg-white p-2 shadow-lg dark:bg-slate-800 dark:border-white/10 border-gray-200"
+            className="mt-2 max-h-64 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground p-2 shadow-md"
           >
             <div className="flex items-center px-2 py-1">
-              <button type="button" className="text-sm text-slate-700 dark:text-slate-200 hover:underline mr-3" onClick={clearAll}>
+              <button type="button" className="text-sm text-muted-foreground hover:text-foreground hover:underline mr-3" onClick={clearAll}>
                 Limpar
               </button>
               <input
                 type="text"
                 aria-label="Pesquisar"
                 placeholder="Pesquisar..."
-                className="flex-1 px-2 py-1 rounded border border-gray-200 bg-white text-sm focus:outline-none"
+                className="flex-1 px-2 py-1 rounded border border-input bg-background text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -105,18 +105,18 @@ export default function MultiSelect({
             </div>
             <div className="mt-1 overflow-auto" style={{ maxHeight: '14rem' }}>
               {filteredItems.length === 0 ? (
-                <div className="px-2 py-2 text-sm text-slate-500">Nenhum resultado</div>
+                <div className="px-2 py-2 text-sm text-muted-foreground">Nenhum resultado</div>
               ) : (
                 filteredItems.map((it) => (
                   <label
                     key={it.id}
                     className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-colors ${
                       value.includes(it.id)
-                        ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                        : 'hover:bg-slate-50 text-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                        ? 'bg-accent text-accent-foreground'
+                        : 'hover:bg-accent/60 text-foreground/90'
                     }`}
                   >
-                    <input type="checkbox" checked={value.includes(it.id)} onChange={() => toggle(it.id)} className="h-5 w-5" />
+                    <input type="checkbox" checked={value.includes(it.id)} onChange={() => toggle(it.id)} className="h-5 w-5 accent-primary cursor-pointer" />
                     <span className="truncate">{it.name}</span>
                   </label>
                 ))
@@ -128,17 +128,17 @@ export default function MultiSelect({
           <div
             ref={dropdownRef}
             style={{ ...(dropdownStyle ?? {}), zIndex: 99999 }}
-            className="absolute mt-2 left-0 right-0 sm:left-auto sm:right-auto sm:w-72 max-h-64 overflow-hidden rounded-md border bg-white p-2 shadow-lg dark:bg-slate-800 dark:border-white/10 border-gray-200"
+            className="absolute mt-2 left-0 right-0 sm:left-auto sm:right-auto sm:w-72 max-h-64 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground p-2 shadow-md"
           >
             <div className="flex items-center px-2 py-1">
-              <button type="button" className="text-sm text-slate-700 dark:text-slate-200 hover:underline mr-3" onClick={clearAll}>
+              <button type="button" className="text-sm text-muted-foreground hover:text-foreground hover:underline mr-3" onClick={clearAll}>
                 Limpar
               </button>
               <input
                 type="text"
                 aria-label="Pesquisar"
                 placeholder="Pesquisar..."
-                className="flex-1 px-2 py-1 rounded border border-gray-200 bg-white text-sm focus:outline-none"
+                className="flex-1 px-2 py-1 rounded border border-input bg-background text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -146,18 +146,18 @@ export default function MultiSelect({
             </div>
             <div className="mt-1 overflow-auto" style={{ maxHeight: '14rem' }}>
               {filteredItems.length === 0 ? (
-                <div className="px-2 py-2 text-sm text-slate-500">Nenhum resultado</div>
+                <div className="px-2 py-2 text-sm text-muted-foreground">Nenhum resultado</div>
               ) : (
                 filteredItems.map((it) => (
                   <label
                     key={it.id}
                     className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-colors ${
                       value.includes(it.id)
-                        ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                        : 'hover:bg-slate-50 text-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                        ? 'bg-accent text-accent-foreground'
+                        : 'hover:bg-accent/60 text-foreground/90'
                     }`}
                   >
-                    <input type="checkbox" checked={value.includes(it.id)} onChange={() => toggle(it.id)} className="h-5 w-5" />
+                    <input type="checkbox" checked={value.includes(it.id)} onChange={() => toggle(it.id)} className="h-5 w-5 accent-primary cursor-pointer" />
                     <span className="truncate">{it.name}</span>
                   </label>
                 ))

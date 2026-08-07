@@ -89,11 +89,11 @@ export default function PaymentTypeMultiSelect({
           <div
             ref={dropdownRef}
             style={{ ...(dropdownStyle ?? {}), zIndex: 99999 }}
-            className="mt-2 max-h-64 overflow-auto rounded-md border bg-white p-2 shadow-lg dark:bg-slate-800 dark:border-white/10 border-gray-200"
+            className="mt-2 max-h-64 overflow-auto rounded-md border border-border bg-popover text-popover-foreground p-2 shadow-md"
           >
             <div className="flex items-center px-2 py-1">
               <button
-                className="text-sm text-slate-700 dark:text-slate-200 hover:underline"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                 onClick={() => {
                   clearAll();
                 }}
@@ -107,15 +107,15 @@ export default function PaymentTypeMultiSelect({
                   key={type}
                   className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-colors ${
                     value.includes(type)
-                      ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                      : 'hover:bg-slate-50 text-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'hover:bg-accent/60 text-foreground/90'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={value.includes(type)}
                     onChange={() => toggle(type)}
-                    className="h-5 w-5"
+                    className="h-5 w-5 accent-primary cursor-pointer"
                   />
                   <span className="truncate">{PAYMENT_TYPE_LABELS[type]}</span>
                 </label>
@@ -127,11 +127,11 @@ export default function PaymentTypeMultiSelect({
           <div
             ref={dropdownRef}
             style={{ ...(dropdownStyle ?? {}), zIndex: 99999 }}
-            className="absolute mt-2 left-0 right-0 sm:left-auto sm:right-auto sm:w-64 max-h-64 overflow-auto rounded-md border bg-white p-2 shadow-lg dark:bg-slate-800 dark:border-white/10 border-gray-200"
+            className="absolute mt-2 left-0 right-0 sm:left-auto sm:right-auto sm:w-64 max-h-64 overflow-auto rounded-md border border-border bg-popover text-popover-foreground p-2 shadow-md"
           >
             <div className="flex items-center px-2 py-1">
               <button
-                className="text-sm text-slate-700 dark:text-slate-200 hover:underline"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline"
                 onClick={() => {
                   clearAll();
                 }}
@@ -145,15 +145,15 @@ export default function PaymentTypeMultiSelect({
                   key={type}
                   className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-colors ${
                     value.includes(type)
-                      ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                      : 'hover:bg-slate-50 text-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'hover:bg-accent/60 text-foreground/90'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={value.includes(type)}
                     onChange={() => toggle(type)}
-                    className="h-5 w-5"
+                    className="h-5 w-5 accent-primary cursor-pointer"
                   />
                   <span className="truncate">{PAYMENT_TYPE_LABELS[type]}</span>
                 </label>

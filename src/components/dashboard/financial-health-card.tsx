@@ -256,12 +256,12 @@ function ScoreGauge({ score }: { score: number }) {
               strokeLinecap="round"
               className={`transition-all duration-1000 ease-out ${
                 score >= 80
-                  ? 'text-green-500'
+                  ? 'text-green-500 dark:text-green-400'
                   : score >= 60
-                  ? 'text-blue-500'
+                  ? 'text-blue-500 dark:text-blue-400'
                   : score >= 40
-                  ? 'text-yellow-500'
-                  : 'text-red-500'
+                  ? 'text-yellow-500 dark:text-yellow-400'
+                  : 'text-red-500 dark:text-red-400'
               }`}
             />
           )}
@@ -322,8 +322,8 @@ export function FinancialHealthCard({ data }: FinancialHealthCardProps) {
                 key={achievement.id}
                 className={`relative p-2.5 rounded-lg text-center transition-all ${
                   achievement.unlocked
-                    ? 'bg-white dark:bg-gray-800 shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-900 opacity-40'
+                    ? 'bg-card shadow-sm border border-border'
+                    : 'bg-muted opacity-40'
                 }`}
                 title={`${achievement.title}: ${achievement.description}`}
               >
@@ -334,7 +334,7 @@ export function FinancialHealthCard({ data }: FinancialHealthCardProps) {
 
                 {/* Barra de progresso (se não desbloqueado) */}
                 {!achievement.unlocked && achievement.progress !== undefined && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 rounded-b-lg overflow-hidden">
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted rounded-b-lg overflow-hidden">
                     <div
                       className="h-full bg-primary transition-all"
                       style={{ width: `${achievement.progress}%` }}

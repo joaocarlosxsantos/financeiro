@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { filterRows } from '@/lib/reportFilters';
-import { useTheme } from '@/components/providers/theme-provider';
 import Papa from 'papaparse';
 import ReactSelect from 'react-select';
 import { Input } from '../ui/input';
@@ -50,9 +49,6 @@ export default function ReportsClient() {
     return now.toISOString().slice(0, 10);
   });
 
-  // theme
-  const { resolvedTheme } = useTheme();
-
   // options & selections
   const [tags, setTags] = useState<Option[]>([]);
   const [categories, setCategories] = useState<Option[]>([]);
@@ -78,51 +74,59 @@ export default function ReportsClient() {
   const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'description' | 'category' | 'wallet' | 'card' | 'amount'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // select styles for react-select (theme aware)
-  const selectStyles = useMemo(() => {
-    const isDark = resolvedTheme === 'dark';
-    return {
-      control: (provided: any, state: any) => ({
-        ...provided,
-        background: isDark ? '#0b1220' : '#fff',
-        borderRadius: 8,
-        borderColor: state.isFocused ? (isDark ? '#334155' : '#60a5fa') : provided.borderColor,
-        boxShadow: 'none',
-        minHeight: 38,
-      }),
-      valueContainer: (provided: any) => ({ ...provided, padding: '6px 8px' }),
-      multiValue: (provided: any) => ({
-        ...provided,
-        background: isDark ? '#075985' : '#e0f2fe',
-        color: isDark ? '#f1f5f9' : '#0c4a6e',
-      }),
-      multiValueLabel: (provided: any) => ({ ...provided, color: isDark ? '#f1f5f9' : '#0c4a6e' }),
-      option: (provided: any, state: any) => ({
-        ...provided,
-        padding: '8px 10px',
-        backgroundColor: state.isSelected
-          ? isDark
-            ? '#083344'
-            : '#bfdbfe'
-          : state.isFocused
-          ? isDark
-            ? '#06232b'
-            : '#eff6ff'
-          : 'transparent',
-        color: isDark ? '#f3f4f6' : '#0f172a',
-        cursor: 'pointer',
-      }),
-      menu: (provided: any) => ({
-        ...provided,
-        zIndex: 9999,
-        background: isDark ? '#0b1220' : '#ffffff',
-        boxShadow: isDark ? '0 6px 18px rgba(2,6,23,0.6)' : '0 6px 18px rgba(15,23,42,0.12)',
-        borderRadius: 8,
-      }),
-      menuList: (provided: any) => ({ ...provided, maxHeight: '320px' }),
-      menuPortal: (provided: any) => ({ ...provided, zIndex: 999999 }),
-    };
-  }, [resolvedTheme]);
+  // select styles for react-select — usa os design tokens (CSS vars) para acompanhar o tema
+  // automaticamente, em vez de hex fixos por isDark.
+  const selectStyles = useMemo(() => ({
+    control: (provided: any, state: any) => ({
+      ...provided,
+      background: 'hsl(var(--background))',
+      borderRadius: 8,
+      borderColor: state.isFocused ? 'hsl(var(--ring))' : 'hsl(var(--input))',
+      boxShadow: state.isFocused ? '0 0 0 2px hsl(var(--ring) / 0.35)' : 'none',
+      minHeight: 38,
+      ':hover': { borderColor: state.isFocused ? 'hsl(var(--ring))' : 'hsl(var(--muted-foreground) / 0.5)' },
+    }),
+    valueContainer: (provided: any) => ({ ...provided, padding: '6px 8px' }),
+    singleValue: (provided: any) => ({ ...provided, color: 'hsl(var(--foreground))' }),
+    input: (provided: any) => ({ ...provided, color: 'hsl(var(--foreground))' }),
+    placeholder: (provided: any) => ({ ...provided, color: 'hsl(var(--muted-foreground))' }),
+    indicatorSeparator: (provided: any) => ({ ...provided, background: 'hsl(var(--border))' }),
+    dropdownIndicator: (provided: any) => ({ ...provided, color: 'hsl(var(--muted-foreground))' }),
+    clearIndicator: (provided: any) => ({ ...provided, color: 'hsl(var(--muted-foreground))' }),
+    multiValue: (provided: any) => ({
+      ...provided,
+      background: 'hsl(var(--primary) / 0.15)',
+      color: 'hsl(var(--primary))',
+      borderRadius: 6,
+    }),
+    multiValueLabel: (provided: any) => ({ ...provided, color: 'hsl(var(--primary))' }),
+    multiValueRemove: (provided: any) => ({
+      ...provided,
+      color: 'hsl(var(--primary))',
+      ':hover': { background: 'hsl(var(--primary) / 0.25)', color: 'hsl(var(--primary))' },
+    }),
+    option: (provided: any, state: any) => ({
+      ...provided,
+      padding: '8px 10px',
+      backgroundColor: state.isSelected
+        ? 'hsl(var(--primary) / 0.18)'
+        : state.isFocused
+        ? 'hsl(var(--accent))'
+        : 'transparent',
+      color: state.isSelected ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
+      cursor: 'pointer',
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      zIndex: 9999,
+      background: 'hsl(var(--popover))',
+      boxShadow: '0 6px 18px hsl(var(--background) / 0.35)',
+      borderRadius: 8,
+      border: '1px solid hsl(var(--border))',
+    }),
+    menuList: (provided: any) => ({ ...provided, maxHeight: '320px' }),
+    menuPortal: (provided: any) => ({ ...provided, zIndex: 999999 }),
+  }), []);
 
   // load option lists on mount
   useEffect(() => {
@@ -757,15 +761,15 @@ export default function ReportsClient() {
       </form>
 
       <div className="grid grid-cols-1 gap-3 items-stretch w-full">
-        <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-md shadow-sm w-full">
+        <div className="bg-muted/50 p-3 rounded-md shadow-sm w-full">
           <div
             aria-live="polite"
-            className="mt-1 font-semibold text-slate-900 dark:text-slate-100 w-full"
+            className="mt-1 font-semibold text-foreground w-full"
           >
             {totals ? (
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center text-sm w-full justify-between">
                 <div className="flex-1 flex flex-col items-center justify-center">
-                    <span className="block text-xs text-slate-500">Ganhos</span>
+                    <span className="block text-xs text-muted-foreground">Ganhos</span>
                     <span className="text-lg font-semibold">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                             Number(totals.incomes),
@@ -773,7 +777,7 @@ export default function ReportsClient() {
                     </span>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center">
-                    <span className="block text-xs text-slate-500">Despesas</span>
+                    <span className="block text-xs text-muted-foreground">Despesas</span>
                     <span className="text-lg font-semibold">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                             Number(totals.expenses),
@@ -781,7 +785,7 @@ export default function ReportsClient() {
                     </span>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center">
-                    <span className="block text-xs text-slate-500">Saldo</span>
+                    <span className="block text-xs text-muted-foreground">Saldo</span>
                     <span className="text-xl font-bold">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                             Number(totals.net),
@@ -885,7 +889,7 @@ export default function ReportsClient() {
           <div role="status" aria-live="polite" className="p-4">
             Nenhum resultado
             {filterDebug ? (
-              <div className="mt-2 text-xs text-slate-500">
+              <div className="mt-2 text-xs text-muted-foreground">
                 <div>DEBUG: tags disponíveis: {filterDebug.availableTags.join(', ') || '-'}</div>
                 <div>DEBUG: tags selecionadas: {filterDebug.selectedTags.join(', ') || '-'}</div>
               </div>
@@ -947,12 +951,12 @@ export default function ReportsClient() {
             });
 
             return (
-          <div className="flex-1 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex-1 overflow-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10">
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <tr className="border-b border-border bg-muted/50">
                   <th 
-                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('date')}
                   >
                     <div className="flex items-center">
@@ -961,7 +965,7 @@ export default function ReportsClient() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('type')}
                   >
                     <div className="flex items-center">
@@ -970,7 +974,7 @@ export default function ReportsClient() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('description')}
                   >
                     <div className="flex items-center">
@@ -979,7 +983,7 @@ export default function ReportsClient() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('category')}
                   >
                     <div className="flex items-center">
@@ -988,7 +992,7 @@ export default function ReportsClient() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('wallet')}
                   >
                     <div className="flex items-center">
@@ -997,7 +1001,7 @@ export default function ReportsClient() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-left py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('card')}
                   >
                     <div className="flex items-center">
@@ -1005,11 +1009,11 @@ export default function ReportsClient() {
                       <SortIcon column="card" />
                     </div>
                   </th>
-                  <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tipo Pgto</th>
-                  <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Tags</th>
-                  <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-gray-100">Recorrente</th>
+                  <th className="text-left py-4 px-4 font-semibold text-foreground">Tipo Pgto</th>
+                  <th className="text-left py-4 px-4 font-semibold text-foreground">Tags</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground">Recorrente</th>
                   <th 
-                    className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+                    className="text-right py-4 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors select-none"
                     onClick={() => handleSort('amount')}
                   >
                     <div className="flex items-center justify-end">
@@ -1023,17 +1027,17 @@ export default function ReportsClient() {
                 {sortedData.map((d) => (
                   <tr
                     key={d.id}
-                    className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="border-b border-border hover:bg-accent/50 transition-colors"
                   >
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">
+                    <td className="py-3 px-4 text-foreground font-medium">
                       {d.date ? new Date(d.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''}
                     </td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.kind === 'income' ? 'Ganhos' : 'Gastos'}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.description}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.categoryName ?? '-'}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.walletName ?? '-'}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{d.creditCardName ?? '-'}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{getPaymentTypeLabel(d.paymentType)}</td>
+                    <td className="py-3 px-4 text-foreground">{d.kind === 'income' ? 'Ganhos' : 'Gastos'}</td>
+                    <td className="py-3 px-4 text-foreground">{d.description}</td>
+                    <td className="py-3 px-4 text-foreground">{d.categoryName ?? '-'}</td>
+                    <td className="py-3 px-4 text-foreground">{d.walletName ?? '-'}</td>
+                    <td className="py-3 px-4 text-foreground">{d.creditCardName ?? '-'}</td>
+                    <td className="py-3 px-4 text-foreground">{getPaymentTypeLabel(d.paymentType)}</td>
                     <td className="py-3 px-4">
                       {Array.isArray(d.tags) && d.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
@@ -1047,19 +1051,19 @@ export default function ReportsClient() {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-500">-</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {d.isRecurring ? (
                         <div className="flex items-center justify-center">
-                          <span className="inline-block w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                          <span className="inline-block w-3 h-3 bg-primary rounded-full"></span>
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100 font-medium">
+                    <td className="py-3 px-4 text-right text-foreground font-medium">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',

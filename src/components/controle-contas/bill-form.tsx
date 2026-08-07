@@ -59,7 +59,7 @@ export function BillForm({ open, onClose, initial, groups }: { open: boolean; on
         <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição" />
         <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Valor" />
         <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} placeholder="Vencimento" />
-        <select className="w-full rounded-md bg-input p-2" value={String(groupId)} onChange={(e) => setGroupId(Number(e.target.value))}>
+        <select className="w-full rounded-md border border-input bg-background text-foreground p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring transition-colors" value={String(groupId)} onChange={(e) => setGroupId(Number(e.target.value))}>
           {groups?.map((g) => (<option key={g.id} value={g.id}>{g.name}</option>))}
         </select>
         <div className="flex justify-end"><Button type="submit">Salvar</Button></div>

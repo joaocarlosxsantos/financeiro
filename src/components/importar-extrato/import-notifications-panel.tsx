@@ -30,13 +30,13 @@ export function ImportNotificationsPanel({ className }: ImportNotificationsPanel
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-success" />;
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+        return <AlertCircle className="h-5 w-5 text-destructive" />;
       case 'progress':
-        return <Clock className="h-5 w-5 text-blue-500 animate-spin" />;
+        return <Clock className="h-5 w-5 text-primary animate-spin" />;
       default:
-        return <Info className="h-5 w-5 text-blue-500" />;
+        return <Info className="h-5 w-5 text-primary" />;
     }
   };
 
@@ -60,13 +60,13 @@ export function ImportNotificationsPanel({ className }: ImportNotificationsPanel
     <div className={`space-y-4 ${className}`}>
       {/* Progresso da Importação Atual */}
       {progress.status === 'processing' && (
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+        <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <CardTitle className="text-sm font-medium text-primary">
                 Importação em Andamento
               </CardTitle>
-              <Badge variant="outline" className="text-blue-700 border-blue-300">
+              <Badge variant="outline" className="text-primary border-primary/40">
                 {getProgressPercentage()}%
               </Badge>
             </div>
@@ -74,21 +74,21 @@ export function ImportNotificationsPanel({ className }: ImportNotificationsPanel
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-600" />
+                <FileText className="h-4 w-4 text-primary" />
                 <span>{progress.processedFiles}/{progress.totalFiles} arquivos</span>
               </div>
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-blue-600" />
+                <Package className="h-4 w-4 text-primary" />
                 <span>{progress.processedTransactions}/{progress.totalTransactions} transações</span>
               </div>
             </div>
-            
-            <Progress 
-              value={getProgressPercentage()} 
+
+            <Progress
+              value={getProgressPercentage()}
               className="h-2"
             />
-            
-            <p className="text-xs text-blue-700 dark:text-blue-200">
+
+            <p className="text-xs text-primary/90">
               {progress.currentFile ? `Processando: ${progress.currentFile}` : 'Processando arquivos...'}
             </p>
           </CardContent>

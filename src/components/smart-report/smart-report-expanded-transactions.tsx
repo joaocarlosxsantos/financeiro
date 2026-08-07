@@ -70,9 +70,9 @@ export function SmartReportExpandedTransactions({
   };
 
   const getDiffColor = (diff: number): string => {
-    if (diff > 0) return 'text-red-600'; // expenses increased (bad)
-    if (diff < 0) return 'text-green-600'; // expenses decreased (good)
-    return 'text-gray-600';
+    if (diff > 0) return 'text-destructive'; // expenses increased (bad)
+    if (diff < 0) return 'text-success'; // expenses decreased (good)
+    return 'text-muted-foreground';
   };
 
   const getDiffIcon = (diff: number) => {
@@ -84,7 +84,7 @@ export function SmartReportExpandedTransactions({
   if (loading) {
     return (
       <Card className="p-6">
-        <div className="text-center text-gray-500">Carregando dados...</div>
+        <div className="text-center text-muted-foreground">Carregando dados...</div>
       </Card>
     );
   }
@@ -97,16 +97,16 @@ export function SmartReportExpandedTransactions({
         <Card className="p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Despesas</span>
-              <ArrowDownLeft className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-medium text-foreground/90">Despesas</span>
+              <ArrowDownLeft className="w-4 h-4 text-destructive" />
             </div>
             <div className="space-y-1">
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-2xl font-bold text-foreground">
                 {formatCurrency(data.current.totalExpenses)}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Mês anterior:</span>
-                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                <span className="text-xs text-muted-foreground">Mês anterior:</span>
+                <span className="text-sm text-foreground font-medium">
                   {formatCurrency(data.previous.totalExpenses)}
                 </span>
               </div>
@@ -121,7 +121,7 @@ export function SmartReportExpandedTransactions({
                   ? formatCurrency(Math.abs(data.comparison.expensesDiff))
                   : 'Sem variação'}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 pt-1">
+              <div className="text-xs text-muted-foreground pt-1">
                 {data.current.recurringExpensesCount > 0 && (
                   <span className="inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded font-medium">
                     • {data.current.recurringExpensesCount} recorrências
@@ -136,16 +136,16 @@ export function SmartReportExpandedTransactions({
         <Card className="p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ganhos</span>
-              <ArrowUpRight className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-medium text-foreground/90">Ganhos</span>
+              <ArrowUpRight className="w-4 h-4 text-success" />
             </div>
             <div className="space-y-1">
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-2xl font-bold text-foreground">
                 {formatCurrency(data.current.totalIncomes)}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Mês anterior:</span>
-                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                <span className="text-xs text-muted-foreground">Mês anterior:</span>
+                <span className="text-sm text-foreground font-medium">
                   {formatCurrency(data.previous.totalIncomes)}
                 </span>
               </div>
@@ -153,10 +153,10 @@ export function SmartReportExpandedTransactions({
                 className={cn(
                   'flex items-center gap-1 text-sm font-medium',
                   data.comparison.incomesDiff > 0
-                    ? 'text-green-600 dark:text-green-400'
+                    ? 'text-success'
                     : data.comparison.incomesDiff < 0
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-gray-600 dark:text-gray-400'
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
                 )}
               >
                 {data.comparison.incomesDiff > 0 && <TrendingUp className="w-4 h-4" />}
@@ -165,7 +165,7 @@ export function SmartReportExpandedTransactions({
                   ? formatCurrency(Math.abs(data.comparison.incomesDiff))
                   : 'Sem variação'}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 pt-1">
+              <div className="text-xs text-muted-foreground pt-1">
                 {data.current.recurringIncomesCount > 0 && (
                   <span className="inline-block bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded font-medium">
                     • {data.current.recurringIncomesCount} recorrências
@@ -180,8 +180,8 @@ export function SmartReportExpandedTransactions({
         <Card className="p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Saldo</span>
-              <div className={cn('w-4 h-4', data.current.balance >= 0 ? 'text-green-600' : 'text-red-600')}>
+              <span className="text-sm font-medium text-foreground/90">Saldo</span>
+              <div className={cn('w-4 h-4', data.current.balance >= 0 ? 'text-success' : 'text-destructive')}>
                 {data.current.balance >= 0 ? (
                   <ArrowUpRight className="w-4 h-4" />
                 ) : (
@@ -194,15 +194,15 @@ export function SmartReportExpandedTransactions({
                 className={cn(
                   'text-2xl font-bold',
                   data.current.balance >= 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? 'text-success'
+                    : 'text-destructive'
                 )}
               >
                 {formatCurrency(data.current.balance)}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Mês anterior:</span>
-                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                <span className="text-xs text-muted-foreground">Mês anterior:</span>
+                <span className="text-sm text-foreground font-medium">
                   {formatCurrency(data.previous.balance)}
                 </span>
               </div>
@@ -210,10 +210,10 @@ export function SmartReportExpandedTransactions({
                 className={cn(
                   'flex items-center gap-1 text-sm font-medium',
                   data.comparison.balanceDiff > 0
-                    ? 'text-green-600 dark:text-green-400'
+                    ? 'text-success'
                     : data.comparison.balanceDiff < 0
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-gray-600 dark:text-gray-400'
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
                 )}
               >
                 {data.comparison.balanceDiff > 0 && <TrendingUp className="w-4 h-4" />}
@@ -231,9 +231,9 @@ export function SmartReportExpandedTransactions({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expenses */}
         <Card className="overflow-hidden">
-          <div className="p-4 border-b bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <ArrowDownLeft className="w-4 h-4 text-red-600" />
+          <div className="p-4 border-b bg-muted/50 border-border">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <ArrowDownLeft className="w-4 h-4 text-destructive" />
               Despesas ({data.current.expenses.length})
             </h3>
           </div>
@@ -241,17 +241,17 @@ export function SmartReportExpandedTransactions({
             {data.current.expenses.length > 0 ? (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                    <th className="text-left py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="text-left py-3 px-3 font-semibold text-foreground">
                       Data
                     </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <th className="text-left py-3 px-3 font-semibold text-foreground">
                       Descrição
                     </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <th className="text-left py-3 px-3 font-semibold text-foreground">
                       Categoria
                     </th>
-                    <th className="text-right py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <th className="text-right py-3 px-3 font-semibold text-foreground">
                       Valor
                     </th>
                   </tr>
@@ -260,32 +260,32 @@ export function SmartReportExpandedTransactions({
                   {data.current.expenses.map((tx) => (
                     <tr
                       key={tx.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-border hover:bg-muted/50 dark:hover:bg-accent/50 transition-colors"
                     >
-                      <td className="py-2 px-3 text-gray-700 dark:text-gray-300">
+                      <td className="py-2 px-3 text-foreground/90">
                         <div className="flex items-center gap-1">
                           {tx.isRecurringExpanded && (
                             <div
-                              className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 flex-shrink-0"
+                              className="w-2 h-2 rounded-full bg-primary flex-shrink-0"
                               title="Projeção de recorrência"
                             />
                           )}
                           {formatDate(tx.date)}
                         </div>
                       </td>
-                      <td className="py-2 px-3 font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
+                      <td className="py-2 px-3 font-medium text-foreground truncate max-w-xs">
                         {tx.description}
                       </td>
                       <td className="py-2 px-3">
                         {tx.category ? (
-                          <span className="inline-block px-2 py-1 rounded text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 text-xs font-medium border border-gray-200 dark:border-gray-700">
+                          <span className="inline-block px-2 py-1 rounded text-foreground bg-muted text-xs font-medium border border-border">
                             {tx.category.name}
                           </span>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </td>
-                      <td className="py-2 px-3 text-right font-semibold text-red-600 dark:text-red-400">
+                      <td className="py-2 px-3 text-right font-semibold text-destructive">
                         -{formatCurrency(tx.amount)}
                       </td>
                     </tr>
@@ -293,15 +293,15 @@ export function SmartReportExpandedTransactions({
                 </tbody>
               </table>
             ) : (
-              <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-4 text-center text-sm text-muted-foreground">
                 Nenhuma despesa registrada
               </div>
             )}
           </div>
-          <div className="p-3 border-t bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-right">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <div className="p-3 border-t bg-muted/50 border-border text-right">
+            <span className="text-sm font-semibold text-foreground">
               Total:{' '}
-              <span className="text-red-600 dark:text-red-400">
+              <span className="text-destructive">
                 {formatCurrency(data.current.totalExpenses)}
               </span>
             </span>
@@ -310,9 +310,9 @@ export function SmartReportExpandedTransactions({
 
         {/* Incomes */}
         <Card className="overflow-hidden">
-          <div className="p-4 border-b bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <ArrowUpRight className="w-4 h-4 text-green-600" />
+          <div className="p-4 border-b bg-muted/50 border-border">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <ArrowUpRight className="w-4 h-4 text-success" />
               Ganhos ({data.current.incomes.length})
             </h3>
           </div>
@@ -320,17 +320,17 @@ export function SmartReportExpandedTransactions({
             {data.current.incomes.length > 0 ? (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                    <th className="text-left py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="text-left py-3 px-3 font-semibold text-foreground">
                       Data
                     </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <th className="text-left py-3 px-3 font-semibold text-foreground">
                       Descrição
                     </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <th className="text-left py-3 px-3 font-semibold text-foreground">
                       Categoria
                     </th>
-                    <th className="text-right py-3 px-3 font-semibold text-gray-900 dark:text-gray-100">
+                    <th className="text-right py-3 px-3 font-semibold text-foreground">
                       Valor
                     </th>
                   </tr>
@@ -339,32 +339,32 @@ export function SmartReportExpandedTransactions({
                   {data.current.incomes.map((tx) => (
                     <tr
                       key={tx.id}
-                      className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      className="border-b border-border hover:bg-muted/50 dark:hover:bg-accent/50 transition-colors"
                     >
-                      <td className="py-2 px-3 text-gray-700 dark:text-gray-300">
+                      <td className="py-2 px-3 text-foreground/90">
                         <div className="flex items-center gap-1">
                           {tx.isRecurringExpanded && (
                             <div
-                              className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 flex-shrink-0"
+                              className="w-2 h-2 rounded-full bg-primary flex-shrink-0"
                               title="Projeção de recorrência"
                             />
                           )}
                           {formatDate(tx.date)}
                         </div>
                       </td>
-                      <td className="py-2 px-3 font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
+                      <td className="py-2 px-3 font-medium text-foreground truncate max-w-xs">
                         {tx.description}
                       </td>
                       <td className="py-2 px-3">
                         {tx.category ? (
-                          <span className="inline-block px-2 py-1 rounded text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 text-xs font-medium border border-gray-200 dark:border-gray-700">
+                          <span className="inline-block px-2 py-1 rounded text-foreground bg-muted text-xs font-medium border border-border">
                             {tx.category.name}
                           </span>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </td>
-                      <td className="py-2 px-3 text-right font-semibold text-green-600 dark:text-green-400">
+                      <td className="py-2 px-3 text-right font-semibold text-success">
                         +{formatCurrency(tx.amount)}
                       </td>
                     </tr>
@@ -372,15 +372,15 @@ export function SmartReportExpandedTransactions({
                 </tbody>
               </table>
             ) : (
-              <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-4 text-center text-sm text-muted-foreground">
                 Nenhum ganho registrado
               </div>
             )}
           </div>
-          <div className="p-3 border-t bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-right">
-            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <div className="p-3 border-t bg-muted/50 border-border text-right">
+            <span className="text-sm font-semibold text-foreground">
               Total:{' '}
-              <span className="text-green-600 dark:text-green-400">
+              <span className="text-success">
                 {formatCurrency(data.current.totalIncomes)}
               </span>
             </span>

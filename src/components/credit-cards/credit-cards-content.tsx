@@ -284,8 +284,8 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
       return (
         <Card>
           <CardContent className="p-12 text-center">
-            <CreditCardIcon className="h-12 w-12 text-gray-300 dark:text-foreground mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-foreground">
+            <CreditCardIcon className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+            <p className="text-muted-foreground">
               {activeTab === 'todos' ? 'Nenhum cartão de crédito cadastrado' : `Nenhum cartão ${activeTab}`}
             </p>
             <Button className="mt-4" onClick={() => {
@@ -317,7 +317,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                 </div>
               </div>
               {creditCard.bank && (
-                <p className="text-sm text-gray-500 dark:text-foreground">{creditCard.bank.name}</p>
+                <p className="text-sm text-muted-foreground">{creditCard.bank.name}</p>
               )}
             </CardHeader>
             <CardContent className="space-y-4">
@@ -332,7 +332,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                   value={creditCard.usagePercentage || 0}
                   className="h-2"
                 />
-                <div className="flex justify-between text-sm text-gray-600 dark:text-foreground">
+                <div className="flex justify-between text-sm text-muted-foreground">
                   <span>
                     R$ {(creditCard.usedAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
@@ -353,7 +353,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Disponível:</span>
-                  <span className="font-medium text-green-600">
+                  <span className="font-medium text-success">
                     R$ {(creditCard.availableLimit ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -413,10 +413,10 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Limite Total</CardTitle>
-            <Target className="h-4 w-4 text-indigo-600" />
+            <Target className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">
+            <div className="text-2xl font-bold text-primary">
               {formatCurrency(totalLimit)}
             </div>
             <p className="text-xs text-muted-foreground">Soma de todos os limites</p>
@@ -427,10 +427,10 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Valor Usado</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-600" />
+            <TrendingUp className="h-4 w-4 text-chart-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-2xl font-bold text-chart-4">
               {formatCurrency(totalUsed)}
             </div>
             <p className="text-xs text-muted-foreground">Total utilizado</p>
@@ -440,10 +440,10 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Limite Disponível</CardTitle>
-            <Target className="h-4 w-4 text-green-600" />
+            <Target className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-success">
               {formatCurrency(totalAvailable)}
             </div>
             <p className="text-xs text-muted-foreground">Total disponível para uso</p>
@@ -453,10 +453,10 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Alto Uso</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{highUsageCards}</div>
+            <div className="text-2xl font-bold text-destructive">{highUsageCards}</div>
             <p className="text-xs text-muted-foreground">Cartões com uso ≥ 70%</p>
           </CardContent>
         </Card>
@@ -535,9 +535,9 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
               placeholder="Ex: Nubank, Inter, C6 Bank..."
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={errors.name ? 'border-red-500' : ''}
+              className={errors.name ? 'border-destructive' : ''}
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
           </div>
 
           <div>
@@ -550,9 +550,9 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
               placeholder="0,00"
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
-              className={errors.limit ? 'border-red-500' : ''}
+              className={errors.limit ? 'border-destructive' : ''}
             />
-            {errors.limit && <p className="text-red-500 text-sm mt-1">{errors.limit}</p>}
+            {errors.limit && <p className="text-destructive text-sm mt-1">{errors.limit}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -566,9 +566,9 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                 placeholder="Ex: 15"
                 value={closingDay}
                 onChange={(e) => setClosingDay(e.target.value)}
-                className={errors.closingDay ? 'border-red-500' : ''}
+                className={errors.closingDay ? 'border-destructive' : ''}
               />
-              {errors.closingDay && <p className="text-red-500 text-sm mt-1">{errors.closingDay}</p>}
+              {errors.closingDay && <p className="text-destructive text-sm mt-1">{errors.closingDay}</p>}
             </div>
 
             <div>
@@ -581,9 +581,9 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                 placeholder="Ex: 10"
                 value={dueDay}
                 onChange={(e) => setDueDay(e.target.value)}
-                className={errors.dueDay ? 'border-red-500' : ''}
+                className={errors.dueDay ? 'border-destructive' : ''}
               />
-              {errors.dueDay && <p className="text-red-500 text-sm mt-1">{errors.dueDay}</p>}
+              {errors.dueDay && <p className="text-destructive text-sm mt-1">{errors.dueDay}</p>}
             </div>
           </div>
 
@@ -593,7 +593,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
               id="bankId"
               value={bankId}
               onChange={(e) => setBankId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-background text-foreground"
+              className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
             >
               <option value="">Nenhum banco selecionado</option>
               {wallets.map((wallet) => (
@@ -623,7 +623,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
       {/* Estados de Loading e Erro */}
       {isLoading && <Loader text="Carregando cartões..." />}
       {error && (
-        <div className="text-red-500 text-center">
+        <div className="text-destructive text-center">
           {error}
           <Button className="ml-2" size="sm" onClick={load}>
             Tentar novamente
@@ -636,18 +636,18 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
         <Modal open={!!confirmingDelete} onClose={() => setConfirmingDelete(null)} size="sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-shrink-0">
-              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 flex items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-red-700">Confirmar exclusão</h3>
+              <h3 className="text-lg font-semibold text-destructive">Confirmar exclusão</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Tem certeza que deseja excluir este cartão de crédito? Esta ação é irreversível e removerá todos os
                 registros relacionados.
               </p>
               {deletingCard && (
-                <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{deletingCard.name}</p>
+                <p className="mt-3 text-sm font-medium text-foreground">{deletingCard.name}</p>
               )}
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
                 <Button variant="outline" onClick={() => setConfirmingDelete(null)} className="w-full sm:w-auto">
@@ -655,7 +655,7 @@ export function CreditCardsContent({ onCreated }: CreditCardsContentProps) {
                 </Button>
                 <Button
                   onClick={confirmDelete}
-                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Excluir
                 </Button>

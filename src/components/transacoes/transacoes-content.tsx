@@ -145,7 +145,7 @@ export default function TransacoesContent() {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Transações</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-foreground">Transações</h1>
         <p className="text-muted-foreground">Gerencie seus gastos e ganhos em um só lugar</p>
       </div>
 
@@ -157,22 +157,22 @@ export default function TransacoesContent() {
             size="icon"
             onClick={handlePrevMonth}
             aria-label="Mês anterior"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            className="h-10 w-10 rounded-full"
           >
-            <ArrowLeft className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
           </Button>
-          
+
           <Popover open={monthSelectorOpen} onOpenChange={setMonthSelectorOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="h-10 px-4 min-w-[160px] justify-between border border-slate-300/70 bg-white/90 hover:bg-white text-slate-900 shadow-sm backdrop-blur-sm dark:bg-slate-800/60 dark:border-white/15 dark:text-slate-100 dark:hover:bg-slate-800/80"
+                className="h-10 px-4 min-w-[150px] sm:min-w-[160px] justify-between"
               >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium text-sm sm:text-base">{monthLabelCapitalized} {yearLabel}</span>
                 </div>
-                <ChevronDown className="h-4 w-4 text-slate-700 dark:text-slate-200" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4" align="start">
@@ -222,9 +222,9 @@ export default function TransacoesContent() {
             size="icon"
             onClick={handleNextMonth}
             aria-label="Próximo mês"
-            className="h-10 w-10 rounded-full border border-slate-300/60 dark:border-white/15 bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 shadow-sm backdrop-blur-sm"
+            className="h-10 w-10 rounded-full"
           >
-            <ArrowRight className="h-5 w-5 stroke-[2.5] text-slate-700 dark:text-slate-200" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5]" />
           </Button>
         </div>
         <Button onClick={() => setShowForm(true)}>
@@ -235,13 +235,13 @@ export default function TransacoesContent() {
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="hover:border-success/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Ganhos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-success">
               {summary.isLoading ? '...' : formatCurrency(summary.totalGanhos)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -250,13 +250,13 @@ export default function TransacoesContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:border-destructive/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Gastos</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-destructive">
               {summary.isLoading ? '...' : formatCurrency(summary.totalGastos)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -265,13 +265,13 @@ export default function TransacoesContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:border-chart-3/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saldo do Mês</CardTitle>
-            <DollarSign className={`h-4 w-4 ${summary.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            <DollarSign className={`h-4 w-4 ${summary.saldo >= 0 ? 'text-success' : 'text-destructive'}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${summary.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-2xl font-bold ${summary.saldo >= 0 ? 'text-success' : 'text-destructive'}`}>
               {summary.isLoading ? '...' : formatCurrency(summary.saldo)}
             </div>
             <p className="text-xs text-muted-foreground">
