@@ -6,12 +6,68 @@ import { ptBR } from 'date-fns/locale';
  * Sistema de análise de perguntas do usuário
  * Identifica intenção e extrai parâmetros
  */
-interface QueryIntent {
+export interface QueryIntent {
   action: 'balance' | 'expenses' | 'incomes' | 'goals' | 'category' | 'wallet' | 'creditCard' | 'summary' | 'savings' | 'comparison' | 'unknown';
   period?: { month: number; year: number };
   category?: string;
   wallet?: string;
   cardName?: string;
+  /** Preenchido quando `action === 'comparison'` e dois períodos puderam ser identificados na pergunta. */
+  comparisonPeriods?: [{ month: number; year: number }, { month: number; year: number }];
+}
+
+/**
+ * Tenta identificar dois períodos distintos numa pergunta de comparação
+ * (ex.: "compare outubro com novembro", "compare este mês com o mês passado").
+ * Retorna os dois primeiros períodos distintos mencionados, na ordem em que aparecem no
+ * texto, ou undefined se não conseguir identificar pelo menos dois.
+ */
+function detectComparisonPeriods(
+  msg: string,
+  currentMonth: number,
+  currentYear: number,
+  monthNames: Record<string, number>
+): [{ month: number; year: number }, { month: number; year: number }] | undefined {
+  const mentions: Array<{ month: number; year: number; idx: number }> = [];
+
+  const lastMonthIdx = ['mes passado', 'ultimo mes', 'last month']
+    .map((t) => msg.indexOf(t))
+    .filter((i) => i !== -1)
+    .sort((a, b) => a - b)[0];
+  if (lastMonthIdx !== undefined) {
+    const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    mentions.push({ month: lastMonth, year: lastMonthYear, idx: lastMonthIdx });
+  }
+
+  const thisMonthIdx = ['este mes', 'esse mes', 'mes atual', 'this month']
+    .map((t) => msg.indexOf(t))
+    .filter((i) => i !== -1)
+    .sort((a, b) => a - b)[0];
+  if (thisMonthIdx !== undefined) {
+    mentions.push({ month: currentMonth, year: currentYear, idx: thisMonthIdx });
+  }
+
+  const yearMatch = msg.match(/\b(20\d{2})\b/);
+  const yearForNamedMonths = yearMatch ? parseInt(yearMatch[1]) : currentYear;
+  for (const [monthName, monthNum] of Object.entries(monthNames)) {
+    const idx = msg.indexOf(monthName);
+    if (idx !== -1) {
+      mentions.push({ month: monthNum, year: yearForNamedMonths, idx });
+    }
+  }
+
+  mentions.sort((a, b) => a.idx - b.idx);
+
+  const distinct: Array<{ month: number; year: number }> = [];
+  for (const m of mentions) {
+    if (!distinct.some((d) => d.month === m.month && d.year === m.year)) {
+      distinct.push({ month: m.month, year: m.year });
+    }
+    if (distinct.length === 2) break;
+  }
+
+  return distinct.length === 2 ? [distinct[0], distinct[1]] : undefined;
 }
 
 /**
@@ -110,6 +166,7 @@ export function analyzeQuery(message: string): QueryIntent {
   }
   else if (msg.includes('comparar') || msg.includes('comparacao') || msg.includes('compare')) {
     intent.action = 'comparison';
+    intent.comparisonPeriods = detectComparisonPeriods(msg, currentMonth, currentYear, monthNames);
   }
   // Se mencionou uma categoria sem verbo específico, assumir que quer ver gastos
   else if (!intent.action || intent.action === 'unknown') {
@@ -396,6 +453,122 @@ export function processSavings(context: FinancialContext): string {
 }
 
 /**
+ * Processa consulta de gastos por cartão de crédito.
+ * Antes retornava sempre uma mensagem fixa dizendo que a funcionalidade "seria
+ * implementada em breve" — agora usa os dados reais coletados em `context.creditCards`
+ * (ver getFinancialContext em /api/ai-assistant/chat), incluindo limite usado/disponível
+ * e a próxima fatura em aberto de cada cartão.
+ */
+export function processCreditCard(
+  creditCards: FinancialContext['creditCards'],
+  cardName?: string
+): string {
+  if (!creditCards || creditCards.length === 0) {
+    return '💳 Você ainda não possui cartões de crédito cadastrados.';
+  }
+
+  const formatBill = (card: NonNullable<FinancialContext['creditCards']>[number]) => {
+    if (!card.nextBill) return '   • Sem fatura em aberto no momento\n';
+    const statusLabel: Record<string, string> = {
+      PENDING: 'pendente',
+      PARTIAL: 'parcialmente paga',
+      OVERDUE: 'atrasada',
+      PAID: 'paga',
+    };
+    const label = statusLabel[card.nextBill.status] || card.nextBill.status.toLowerCase();
+    return `   • Fatura ${label}: R$ ${card.nextBill.totalAmount.toFixed(2)} (vencimento ${format(card.nextBill.dueDate, 'dd/MM/yyyy')})\n`;
+  };
+
+  if (cardName) {
+    const card = creditCards.find(
+      (c) => c.name.toLowerCase().includes(cardName.toLowerCase()) || cardName.toLowerCase().includes(c.name.toLowerCase())
+    );
+    if (!card) {
+      return `❌ Cartão "${cardName}" não encontrado.\n\nSeus cartões:\n` +
+        creditCards.map((c) => `• ${c.name}`).join('\n');
+    }
+    let response = `💳 **${card.name}**\n\n`;
+    response += `• Limite: R$ ${card.limit.toFixed(2)}\n`;
+    response += `• Usado: R$ ${card.usedAmount.toFixed(2)} (${card.usagePercentage.toFixed(1)}%)\n`;
+    response += `• Disponível: R$ ${card.availableLimit.toFixed(2)}\n`;
+    response += formatBill(card);
+    return response;
+  }
+
+  let response = '💳 **Seus cartões de crédito:**\n\n';
+  creditCards.forEach((card) => {
+    response += `**${card.name}**\n`;
+    response += `   • Limite: R$ ${card.limit.toFixed(2)} — usado ${card.usagePercentage.toFixed(1)}% (R$ ${card.usedAmount.toFixed(2)})\n`;
+    response += formatBill(card);
+  });
+  const totalLimit = creditCards.reduce((s, c) => s + c.limit, 0);
+  const totalUsed = creditCards.reduce((s, c) => s + c.usedAmount, 0);
+  response += `\n💰 **Total usado**: R$ ${totalUsed.toFixed(2)} de R$ ${totalLimit.toFixed(2)} em limite`;
+  return response;
+}
+
+/**
+ * Monta a resposta de comparação entre dois períodos (dois contextos financeiros já
+ * buscados separadamente pela rota, cada um com o mês correspondente). Antes disso o
+ * assistente só devolvia um pedido para o usuário especificar os meses, sem nunca
+ * comparar nada de fato.
+ */
+export function buildComparisonResponse(
+  contextA: FinancialContext,
+  labelA: string,
+  contextB: FinancialContext,
+  labelB: string
+): ChatResponse {
+  const pct = (from: number, to: number) => (from !== 0 ? ((to - from) / Math.abs(from)) * 100 : to !== 0 ? 100 : 0);
+
+  const incomeDiff = contextB.summary.totalIncome - contextA.summary.totalIncome;
+  const expenseDiff = contextB.summary.totalExpense - contextA.summary.totalExpense;
+  const balanceDiff = contextB.summary.balance - contextA.summary.balance;
+
+  const arrow = (v: number) => (v > 0 ? '📈' : v < 0 ? '📉' : '➖');
+
+  let message = `📊 **Comparação: ${labelA} vs ${labelB}**\n\n`;
+  message += `💵 **Receitas**\n`;
+  message += `   • ${labelA}: R$ ${contextA.summary.totalIncome.toFixed(2)}\n`;
+  message += `   • ${labelB}: R$ ${contextB.summary.totalIncome.toFixed(2)}\n`;
+  message += `   ${arrow(incomeDiff)} ${incomeDiff >= 0 ? '+' : ''}R$ ${incomeDiff.toFixed(2)} (${pct(contextA.summary.totalIncome, contextB.summary.totalIncome).toFixed(1)}%)\n\n`;
+
+  message += `💸 **Despesas**\n`;
+  message += `   • ${labelA}: R$ ${contextA.summary.totalExpense.toFixed(2)}\n`;
+  message += `   • ${labelB}: R$ ${contextB.summary.totalExpense.toFixed(2)}\n`;
+  message += `   ${arrow(expenseDiff)} ${expenseDiff >= 0 ? '+' : ''}R$ ${expenseDiff.toFixed(2)} (${pct(contextA.summary.totalExpense, contextB.summary.totalExpense).toFixed(1)}%)\n\n`;
+
+  message += `💰 **Saldo**\n`;
+  message += `   • ${labelA}: R$ ${contextA.summary.balance.toFixed(2)}\n`;
+  message += `   • ${labelB}: R$ ${contextB.summary.balance.toFixed(2)}\n`;
+  message += `   ${arrow(balanceDiff)} ${balanceDiff >= 0 ? '+' : ''}R$ ${balanceDiff.toFixed(2)}\n`;
+
+  // Categoria com maior variação de gasto entre os dois períodos
+  const expensesA = new Map(contextA.topCategories.filter((c) => c.type === 'EXPENSE').map((c) => [c.name, c.total]));
+  const expensesB = contextB.topCategories.filter((c) => c.type === 'EXPENSE');
+  let biggestChange: { name: string; diff: number } | null = null;
+  for (const cat of expensesB) {
+    const diff = cat.total - (expensesA.get(cat.name) || 0);
+    if (!biggestChange || Math.abs(diff) > Math.abs(biggestChange.diff)) {
+      biggestChange = { name: cat.name, diff };
+    }
+  }
+  if (biggestChange && Math.abs(biggestChange.diff) > 0.01) {
+    message += `\n🔍 **Maior variação**: ${biggestChange.name} ${biggestChange.diff > 0 ? 'aumentou' : 'diminuiu'} R$ ${Math.abs(biggestChange.diff).toFixed(2)}\n`;
+  }
+
+  return {
+    message,
+    contextUsed: true,
+    suggestions: [
+      'Me dê um resumo financeiro',
+      'Como posso economizar mais?',
+      'Como estão minhas metas?',
+    ],
+  };
+}
+
+/**
  * Gera resposta baseada na intenção identificada
  */
 export function generateSmartResponse(
@@ -439,8 +612,7 @@ export function generateSmartResponse(
       break;
       
     case 'creditCard':
-      message = '💳 **Gastos com Cartão de Crédito**\n\n' +
-        'Esta funcionalidade será implementada em breve para mostrar detalhes de faturas e gastos por cartão.';
+      message = processCreditCard(context.creditCards, intent.cardName);
       break;
       
     default:

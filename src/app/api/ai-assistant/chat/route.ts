@@ -4,38 +4,70 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { FinancialContext, AssistantInsight, ChatResponse } from '@/types/ai-assistant';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
-import { analyzeQuery, generateSmartResponse } from '@/lib/ai-assistant-processor';
+import { ptBR } from 'date-fns/locale';
+import { analyzeQuery, generateSmartResponse, buildComparisonResponse, type QueryIntent } from '@/lib/ai-assistant-processor';
+import { expandRecurringAllOccurrencesForMonth } from '@/lib/transaction-filters';
+import { calculateGoalProgress } from '@/lib/goal-progress';
+import { calculateCreditCardUsage, calculateBillStatus } from '@/lib/credit-utils';
 
 /**
- * Coleta contexto financeiro completo do usuário
- * Agora inclui dados de cartões de crédito e análises mais detalhadas
+ * Coleta contexto financeiro completo do usuário.
+ *
+ * Se `period` for informado (detectado pela análise da pergunta do usuário — ex.: "quanto
+ * gastei em janeiro?"), busca exatamente aquele mês. Caso contrário, usa os últimos 3 meses
+ * como padrão (comportamento anterior).
+ *
+ * Recorrentes são buscadas sem filtro de data e expandidas mês a mês com
+ * `expandRecurringAllOccurrencesForMonth` — a mesma função usada em /api/smart-report e
+ * /api/dashboard/charts — em vez de um filtro `date: { gte, lte }` ingênuo, que faria uma
+ * despesa/receita recorrente só aparecer no mês em que foi originalmente criada.
  */
-async function getFinancialContext(userId: string): Promise<FinancialContext> {
+async function getFinancialContext(
+  userId: string,
+  period?: { month: number; year: number }
+): Promise<FinancialContext> {
   const now = new Date();
-  const startDate = startOfMonth(subMonths(now, 2)); // Últimos 3 meses
-  const endDate = endOfMonth(now);
 
-  // Buscar transações do período
-  const [incomes, expenses, wallets, goals] = await Promise.all([
+  // Meses a considerar: um único mês específico (pergunta com período) ou os últimos 3
+  // (padrão, quando a pergunta não menciona um período).
+  const months = period
+    ? [{ year: period.year, month: period.month }]
+    : [2, 1, 0].map((i) => {
+        const d = subMonths(now, i);
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+      });
+
+  const startDate = period
+    ? startOfMonth(new Date(period.year, period.month - 1, 1))
+    : startOfMonth(subMonths(now, 2));
+  const endDate = period
+    ? endOfMonth(new Date(period.year, period.month - 1, 1))
+    : endOfMonth(now);
+
+  // Buscar transações do período: pontuais filtradas pela janela de datas, recorrentes
+  // buscadas por completo (sem filtro de data) para poderem ser expandidas mês a mês.
+  const [punctualIncomes, punctualExpenses, recurringIncomesRaw, recurringExpensesRaw, wallets, goals, creditCardsRaw] = await Promise.all([
     prisma.income.findMany({
-      where: { 
-        userId,
-        date: { gte: startDate, lte: endDate }
-      },
+      where: { userId, type: 'PUNCTUAL', date: { gte: startDate, lte: endDate } },
       include: { category: true }
     }),
     prisma.expense.findMany({
-      where: { 
-        userId,
-        date: { gte: startDate, lte: endDate }
-      },
+      where: { userId, type: 'PUNCTUAL', date: { gte: startDate, lte: endDate } },
+      include: { category: true }
+    }),
+    prisma.income.findMany({
+      where: { userId, type: 'RECURRING' },
+      include: { category: true }
+    }),
+    prisma.expense.findMany({
+      where: { userId, type: 'RECURRING' },
       include: { category: true }
     }),
     prisma.wallet.findMany({
       where: { userId },
-      select: { 
-        id: true, 
-        name: true, 
+      select: {
+        id: true,
+        name: true,
         type: true,
         incomes: {
           select: { amount: true }
@@ -47,7 +79,8 @@ async function getFinancialContext(userId: string): Promise<FinancialContext> {
     }),
     prisma.goal.findMany({
       where: { userId, active: true },
-      select: { 
+      select: {
+        id: true,
         title: true,
         description: true,
         type: true,
@@ -57,8 +90,68 @@ async function getFinancialContext(userId: string): Promise<FinancialContext> {
         startDate: true,
         endDate: true
       }
+    }),
+    // Mesma consulta usada por /api/credit-cards, para que o assistente responda com o
+    // mesmo limite usado/disponível mostrado na tela de Cartões de Crédito.
+    prisma.creditCard.findMany({
+      where: { userId },
+      include: {
+        creditExpenses: { include: { childExpenses: true } },
+        creditIncomes: true,
+        creditBills: true,
+      },
+      orderBy: { name: 'asc' }
     })
   ]);
+
+  // Expande as recorrentes em ocorrências reais de cada mês da janela considerada.
+  const expandedIncomes = months.flatMap(({ year, month }) =>
+    expandRecurringAllOccurrencesForMonth(recurringIncomesRaw as any, year, month, now)
+  );
+  const expandedExpenses = months.flatMap(({ year, month }) =>
+    expandRecurringAllOccurrencesForMonth(recurringExpensesRaw as any, year, month, now)
+  );
+
+  const incomes = [...punctualIncomes, ...expandedIncomes];
+  const expenses = [...punctualExpenses, ...expandedExpenses];
+
+  // Progresso real de cada meta (substitui os valores fixos em 0 que existiam antes).
+  const goalsWithProgress = await Promise.all(
+    goals.map((g: any) => calculateGoalProgress(userId, g))
+  );
+
+  // Uso de limite + próxima fatura em aberto de cada cartão (antes o assistente não tinha
+  // nenhum dado de cartão de crédito, então perguntas sobre isso caíam numa resposta fixa
+  // de "em breve").
+  const creditCards = creditCardsRaw.map((card: any) => {
+    const { usedAmount, availableLimit, usagePercentage } = calculateCreditCardUsage({
+      limit: Number(card.limit),
+      creditExpenses: card.creditExpenses || [],
+      creditIncomes: card.creditIncomes || [],
+      creditBills: card.creditBills || [],
+    });
+
+    const openBill = (card.creditBills || [])
+      .map((b: any) => ({
+        ...b,
+        totalAmount: Number(b.totalAmount),
+        paidAmount: Number(b.paidAmount),
+        status: calculateBillStatus(Number(b.totalAmount), Number(b.paidAmount), new Date(b.dueDate)),
+      }))
+      .filter((b: any) => b.status !== 'PAID')
+      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+
+    return {
+      name: card.name,
+      limit: Number(card.limit),
+      usedAmount,
+      availableLimit,
+      usagePercentage,
+      nextBill: openBill
+        ? { totalAmount: openBill.totalAmount, dueDate: openBill.dueDate, status: openBill.status }
+        : undefined,
+    };
+  });
 
   // Calcular totais
   const totalIncome = incomes.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
@@ -104,9 +197,10 @@ async function getFinancialContext(userId: string): Promise<FinancialContext> {
     .sort((a, b) => b.total - a.total)
     .slice(0, 3);
 
-  // Despesas recorrentes
-  const recurringExpenses = expenses
-    .filter((e: any) => e.isRecurring)
+  // Despesas recorrentes (lista de definições, não de ocorrências — por isso usa
+  // recurringExpensesRaw, uma linha por recorrência, em vez de `expenses`, que no caso de
+  // janela de 3 meses teria a mesma recorrência repetida uma vez por mês expandido).
+  const recurringExpenses = recurringExpensesRaw
     .map((e: any) => ({
       description: e.description,
       amount: Number(e.amount),
@@ -157,12 +251,13 @@ async function getFinancialContext(userId: string): Promise<FinancialContext> {
       };
     }),
     recurringExpenses,
-    goals: goals.map((g: any) => ({
+    goals: goals.map((g: any, idx: number) => ({
       name: g.title,
-      targetAmount: Number(g.amount),
-      currentAmount: 0, // Seria necessário calcular baseado nas transações
-      progress: 0 // Simplificado por enquanto
+      targetAmount: goalsWithProgress[idx].targetAmount,
+      currentAmount: goalsWithProgress[idx].currentAmount,
+      progress: goalsWithProgress[idx].progress
     })),
+    creditCards,
     recentTransactions
   };
 }
@@ -255,7 +350,8 @@ function generateInsights(context: FinancialContext): AssistantInsight[] {
  */
 async function generateAssistantResponse(
   userMessage: string,
-  context: FinancialContext
+  context: FinancialContext,
+  intent: QueryIntent
 ): Promise<ChatResponse> {
   const openaiKey = process.env.OPENAI_API_KEY;
   
@@ -320,7 +416,7 @@ Responda de forma clara, empática e acionável. Use emojis quando apropriado. S
   }
 
   // Fallback: Resposta baseada em regras
-  return generateRuleBasedResponse(userMessage, context);
+  return generateRuleBasedResponse(context, intent);
 }
 
 /**
@@ -328,13 +424,11 @@ Responda de forma clara, empática e acionável. Use emojis quando apropriado. S
  * Agora usa o processador inteligente para análise de perguntas
  */
 function generateRuleBasedResponse(
-  userMessage: string,
-  context: FinancialContext
+  context: FinancialContext,
+  intent: QueryIntent
 ): ChatResponse {
-  // Analisar intenção da pergunta
-  const intent = analyzeQuery(userMessage);
-  
-  // Gerar resposta inteligente baseada na intenção
+  // Gerar resposta inteligente baseada na intenção (já analisada em POST, para poder
+  // filtrar o contexto financeiro pelo período certo antes de chegar aqui)
   const response = generateSmartResponse(intent, context);
   
   // Adicionar insights se não foram incluídos
@@ -371,14 +465,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mensagem inválida' }, { status: 400 });
     }
 
+    // Analisar a intenção/período da pergunta ANTES de buscar o contexto, para que o
+    // contexto já venha filtrado pelo mês certo (antes, o período detectado era usado só
+    // como rótulo no texto da resposta — os números continuavam sempre dos últimos 3 meses).
+    const intent = analyzeQuery(message);
+
+    // Comparação entre dois períodos: busca um contexto financeiro para cada mês
+    // identificado e monta a comparação diretamente — antes isso nunca comparava nada de
+    // verdade, só pedia pro usuário especificar os meses.
+    if (includeContext && intent.action === 'comparison' && intent.comparisonPeriods) {
+      const [periodA, periodB] = intent.comparisonPeriods;
+      const [contextA, contextB] = await Promise.all([
+        getFinancialContext(user.id, periodA),
+        getFinancialContext(user.id, periodB),
+      ]);
+      const labelA = format(new Date(periodA.year, periodA.month - 1), 'MMMM/yyyy', { locale: ptBR });
+      const labelB = format(new Date(periodB.year, periodB.month - 1), 'MMMM/yyyy', { locale: ptBR });
+      const comparisonResponse = buildComparisonResponse(contextA, labelA, contextB, labelB);
+      return NextResponse.json(comparisonResponse);
+    }
+
     // Coletar contexto financeiro
-    const context = includeContext 
-      ? await getFinancialContext(user.id)
+    const context = includeContext
+      ? await getFinancialContext(user.id, intent.period)
       : null;
 
     // Gerar resposta
-    const response = context 
-      ? await generateAssistantResponse(message, context)
+    const response = context
+      ? await generateAssistantResponse(message, context, intent)
       : {
           message: 'Por favor, ative o contexto financeiro para obter análises personalizadas.',
           contextUsed: false

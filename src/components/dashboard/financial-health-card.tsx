@@ -37,60 +37,17 @@ export interface Achievement {
 }
 
 /**
- * Calcula o score de saúde financeira (0-100)
+ * Calcula o score de saúde financeira (0-100).
+ *
+ * Usa exatamente a mesma fórmula do "Relatório Inteligente" (`/api/smart-report`:
+ * `savingsRate > 0 ? Math.min(100, Math.round(savingsRate)) : 0`), para que as duas
+ * telas nunca mostrem números diferentes para o mesmo conceito. Antes este card tinha
+ * uma fórmula multi-fator própria, mas parte dos fatores (metas, meses consecutivos)
+ * vinha sempre zerada/simplificada no dashboard — o que fazia o score aqui divergir do
+ * Relatório Inteligente sem motivo real.
  */
 export function calculateHealthScore(data: HealthScoreData): number {
-  let score = 0;
-
-  // 1. Taxa de poupança (30 pontos max)
-  if (data.savingsRate >= 20) {
-    score += 30;
-  } else if (data.savingsRate >= 10) {
-    score += 20;
-  } else if (data.savingsRate >= 5) {
-    score += 10;
-  } else if (data.savingsRate > 0) {
-    score += 5;
-  }
-
-  // 2. Saldo positivo (20 pontos)
-  if (data.saldoDoMes > 0) {
-    score += 20;
-  } else if (data.saldoDoMes > -100) {
-    score += 10; // Quase zerado
-  }
-
-  // 3. Consistência (20 pontos max)
-  if (data.consecutivePositiveMonths >= 6) {
-    score += 20;
-  } else if (data.consecutivePositiveMonths >= 3) {
-    score += 15;
-  } else if (data.consecutivePositiveMonths >= 1) {
-    score += 10;
-  }
-
-  // 4. Metas (15 pontos max)
-  if (data.totalGoals > 0) {
-    const goalsRate = (data.goalsAchieved / data.totalGoals) * 100;
-    if (goalsRate >= 80) {
-      score += 15;
-    } else if (goalsRate >= 50) {
-      score += 10;
-    } else if (goalsRate >= 20) {
-      score += 5;
-    }
-  }
-
-  // 5. Controle de gastos (15 pontos max)
-  if (data.expensesVsAverage <= -10) {
-    score += 15; // Gastando menos que a média
-  } else if (data.expensesVsAverage <= 0) {
-    score += 10;
-  } else if (data.expensesVsAverage <= 10) {
-    score += 5;
-  }
-
-  return Math.min(100, Math.max(0, score));
+  return data.savingsRate > 0 ? Math.min(100, Math.round(data.savingsRate)) : 0;
 }
 
 /**

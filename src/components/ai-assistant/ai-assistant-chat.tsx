@@ -130,12 +130,12 @@ export default function AIAssistantChat({ isOpen, onClose }: AIAssistantChatProp
 
   const getInsightColor = (type: AssistantInsight['type'], priority: AssistantInsight['priority']) => {
     if (priority === 'high') {
-      return type === 'warning' ? 'bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-300' : 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-300';
+      return type === 'warning' ? 'bg-destructive/10 border-destructive/20 text-destructive' : 'bg-success/10 border-success/20 text-success';
     }
     if (priority === 'medium') {
-      return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-300';
+      return 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400';
     }
-    return 'bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300';
+    return 'bg-primary/10 border-primary/20 text-primary';
   };
 
   if (!isOpen) return null;

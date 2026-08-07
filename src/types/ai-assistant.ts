@@ -43,6 +43,18 @@ export interface FinancialContext {
     currentAmount: number;
     progress: number;
   }>;
+  creditCards?: Array<{
+    name: string;
+    limit: number;
+    usedAmount: number;
+    availableLimit: number;
+    usagePercentage: number;
+    nextBill?: {
+      totalAmount: number;
+      dueDate: Date;
+      status: string;
+    };
+  }>;
   recentTransactions: Array<{
     date: Date;
     description: string;
