@@ -22,18 +22,34 @@ export interface InstallmentInfo {
 }
 
 /**
- * Calcula as datas de vencimento das parcelas baseado no cartão de crédito
- * 
- * Lógica:
- * - Compras feitas APÓS o fechamento (ex: dia 31 se fechamento é dia 30) 
- *   vão para a fatura do MÊS SEGUINTE ao mês seguinte (ou seja, +2 meses)
- * - Compras feitas ATÉ o fechamento (ex: até dia 30)
- *   vão para a fatura do MÊS SEGUINTE (+1 mês)
- * 
- * Exemplo: Fechamento dia 30, vencimento dia 7
- * - Compra em 05/jan → Fatura de fevereiro (vence 07/fev)
- * - Compra em 29/jan → Fatura de fevereiro (vence 07/fev)  
- * - Compra em 31/jan → Fatura de março (vence 07/mar)
+ * ------------------------------------------------------------------------------------
+ * ADAPTADORES para `src/lib/billing-cycle.ts`
+ * ------------------------------------------------------------------------------------
+ * As três funções abaixo mantêm a assinatura original (para não tocar nos ~8 pontos de
+ * chamada de uma vez), mas toda a matemática foi movida para o motor único
+ * `billing-cycle.ts`, que corrige três defeitos confirmados da implementação anterior:
+ *
+ *  1. O deslocamento fixo de +1/+2 meses só valia para cartões com `dueDay < closingDay`.
+ *     Num cartão que fecha dia 05 e vence dia 15, toda compra caía uma fatura atrasada.
+ *  2. O clamp de dia inválido era aplicado DEPOIS de construir a data, que já havia
+ *     transbordado — a fatura de fevereiro de um cartão que fecha dia 31 virava 28/MAR.
+ *  3. `purchaseDay > closingDay` nunca era verdade para `closingDay = 31`.
+ *
+ * @deprecated Preferir `billing-cycle.ts` diretamente em código novo. Estes adaptadores
+ * existem só para a transição; ver AUDITORIA-CARTAO-E-PROJETO.md, fase 1.
+ */
+import {
+  getCycleByDueMonth,
+  getInstallmentCycles,
+  type BillingCard,
+} from './billing-cycle';
+
+/**
+ * Datas de vencimento das parcelas de uma compra.
+ *
+ * @deprecated Usar `getInstallmentCycles` de `billing-cycle.ts`, que devolve também a
+ * data de fechamento e o `billKey` do ciclo — evitando o round-trip
+ * `dueDate → getBillPeriodForInstallment → calculateClosingDate`.
  */
 export function calculateInstallmentDates(
   creditCard: CreditCard,
@@ -41,82 +57,33 @@ export function calculateInstallmentDates(
   installmentCount: number,
   totalAmount: number
 ): InstallmentInfo[] {
-  const installments: InstallmentInfo[] = [];
-  const installmentAmount = Math.round((totalAmount / installmentCount) * 100) / 100;
-  
-  // Determinar a qual fatura a compra pertence
-  const purchaseDay = purchaseDate.getDate();
-  const purchaseMonth = purchaseDate.getMonth(); // 0-based (Jan=0, Fev=1...)
-  const purchaseYear = purchaseDate.getFullYear();
-  
-  // Se a compra foi APÓS o fechamento do mês atual, vai para a fatura do mês seguinte ao próximo (+2)
-  // Se foi ATÉ o fechamento, vai para a fatura do mês seguinte (+1)  
-  const isAfterClosing = purchaseDay > creditCard.closingDay;
-  
-  for (let i = 0; i < installmentCount; i++) {
-    // Calcular quantos meses adicionar à data da compra
-    // Se foi após fechamento: primeira parcela +2 meses, depois +3, +4...
-    // Se foi até fechamento: primeira parcela +1 mês, depois +2, +3...
-    const monthsToAdd = isAfterClosing ? i + 2 : i + 1;
-    
-    // Calcular o mês de vencimento da parcela (0-based)
-    const targetMonth = purchaseMonth + monthsToAdd;
-    const dueYear = purchaseYear + Math.floor(targetMonth / 12);
-    const dueMonth = targetMonth % 12; // Normalized month (0-based)
-    
-    // Definir o dia de vencimento da fatura
-    const dueDate = new Date(dueYear, dueMonth, creditCard.dueDay);
-    
-    // Ajustar o valor da última parcela para compensar arredondamentos
-    const amount = i === installmentCount - 1 
-      ? totalAmount - (installmentAmount * (installmentCount - 1))
-      : installmentAmount;
-    
-    installments.push({
-      installment: i + 1,
-      totalInstallments: installmentCount,
-      value: amount,
-      dueDate: dueDate
-    });
-  }
-  return installments;
+  const card: BillingCard = { closingDay: creditCard.closingDay, dueDay: creditCard.dueDay };
+  return getInstallmentCycles(card, purchaseDate, installmentCount, totalAmount).map((cycle) => ({
+    installment: cycle.installmentNumber,
+    totalInstallments: cycle.installmentCount,
+    value: cycle.amount,
+    dueDate: cycle.dueDate,
+  }));
 }
 
 /**
- * Calcula a data de fechamento de uma fatura para um mês específico
- * IMPORTANTE: O mês passado como parâmetro é o mês de VENCIMENTO da fatura (0-based)
- * Se o vencimento for antes do fechamento, o fechamento é no mês anterior
+ * Data de fechamento da fatura que VENCE em `month`/`year` (mês 0-based).
+ *
+ * @deprecated Usar `getCycleByDueMonth(card, year, month).closingDate`.
  */
 export function calculateClosingDate(creditCard: CreditCard, year: number, month: number): Date {
-  // Se o dia de vencimento for menor que o dia de fechamento, 
-  // significa que o fechamento é no mês anterior ao vencimento
-  const closingMonth = creditCard.dueDay < creditCard.closingDay ? month - 1 : month;
-  const closingDate = new Date(year, closingMonth, creditCard.closingDay);
-  
-  // Se o dia de fechamento for maior que os dias do mês, usar o último dia
-  const lastDayOfMonth = new Date(year, closingMonth + 1, 0).getDate();
-  if (creditCard.closingDay > lastDayOfMonth) {
-    closingDate.setDate(lastDayOfMonth);
-  }
-  
-  return closingDate;
+  const card: BillingCard = { closingDay: creditCard.closingDay, dueDay: creditCard.dueDay };
+  return getCycleByDueMonth(card, year, month).closingDate;
 }
 
 /**
- * Calcula a data de vencimento de uma fatura para um mês específico
- * IMPORTANTE: O mês passado como parâmetro é o mês de VENCIMENTO da fatura (0-based)
+ * Data de vencimento da fatura que VENCE em `month`/`year` (mês 0-based).
+ *
+ * @deprecated Usar `getCycleByDueMonth(card, year, month).dueDate`.
  */
 export function calculateDueDate(creditCard: CreditCard, year: number, month: number): Date {
-  // O vencimento é sempre no mês especificado (que é o mês de vencimento da fatura)
-  const dueDate = new Date(year, month, creditCard.dueDay);
-  
-  // Se o dia de vencimento for maior que os dias do mês, usar o último dia
-  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-  if (creditCard.dueDay > lastDayOfMonth) {
-    dueDate.setDate(lastDayOfMonth);
-  }
-  
-  return dueDate;
+  const card: BillingCard = { closingDay: creditCard.closingDay, dueDay: creditCard.dueDay };
+  return getCycleByDueMonth(card, year, month).dueDate;
 }
 
 /**

@@ -246,9 +246,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cartão de crédito não encontrado' }, { status: 404 });
     }
 
-    // Calcular datas da fatura
-    const closingDate = calculateClosingDate(creditCard, year, month);
-    const dueDate = calculateDueDate(creditCard, year, month);
+    // Calcular datas da fatura.
+    // ATENÇÃO: `month` chega do body em base 1 (1-12), mas calculateClosingDate/
+    // calculateDueDate esperam base 0 (como todos os outros pontos de chamada do
+    // projeto, que passam `billPeriod.month - 1`). Sem o `- 1` a fatura era criada um
+    // mês adiante, gerando duplicata (closingDate faz parte da chave única de CreditBill).
+    const closingDate = calculateClosingDate(creditCard, year, month - 1);
+    const dueDate = calculateDueDate(creditCard, year, month - 1);
 
     // Verificar se já existe fatura para este período
     const existingBill = await prisma.creditBill.findFirst({
